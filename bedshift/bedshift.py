@@ -11,6 +11,8 @@ import random
 from . import __version__
 
 _LOGGER = logging.getLogger(__name__)
+
+
 chroms = ['chr'+str(num) for num in list(range(1, 23)) + ['X', 'Y']]
 chrom_lens = [247249719, 242951149, 199501827, 191273063, 180857866, 170899992, 158821424, 146274826, 140273252, 135374737, 134452384, 132349534, 114142980, 106368585, 100338915, 88827254, 78774742, 76117153, 63811651, 62435964, 46944323, 49691432, 154913754, 57772954]
 
@@ -66,11 +68,11 @@ def build_argparser():
             help="Shift prob.")
 
     parser.add_argument(
-            "-m", "--mean", type=float, default=0.0,
+            "--shiftmean", type=float, default=0.0,
             help="Mean shift")
 
     parser.add_argument(
-            "-s", "--stdev", type=float, default=150.0,
+            "--shiftstdev", type=float, default=150.0,
             help="Stdev shift")
 
     parser.add_argument(
@@ -78,8 +80,12 @@ def build_argparser():
             help="Cut prob.")
 
     parser.add_argument(
-            "--mergerate", type=float, default=0.0,
-            help="Merge prob.")
+            "-m", "--mergerate", type=float, default=0.0,
+            help="Merge prob. WARNING: will likely create regions that are thousands of base pairs long")
+
+    parser.add_argument(
+            "-o", "--outputfile", type=str,
+            help="output file name (including extension). if not specified, will default to bedshifted_{originalname}.bed")
 
 
     return parser
@@ -88,22 +94,10 @@ def build_argparser():
 
 
 def shift(df, row, mean, stdev):
-    # row = random.randint(0, df.shape[0] - 1)
-
     theshift = int(np.random.normal(mean, stdev))
 
-    start = df.iloc[row][1]
-    end = df.iloc[row][2]
-
-    '''
-    if random.random() < 0.5: # shift the start value
-        df.at[row, 1] = start + theshift
-    else: # shift the end value
-        df.at[row, 2] = end + theshift
-
-    if end < start or start > end:
-        return drop(df, row)
-    '''
+    start = df.loc[row][1]
+    end = df.loc[row][2]
 
     df.at[row, 1] = start + theshift
     df.at[row, 2] = end + theshift
@@ -112,59 +106,52 @@ def shift(df, row, mean, stdev):
     return df
 
 
-def drop(df, row=None):
-    if not row or row >= df.shape[0]:
-        row = random.randint(0, df.shape[0] - 1)
-    df = df.drop(row, axis=0)
-    return df
+def drop(df, row):
+    return df.drop(row)
 
 
-def cut(df, row, mean, stdev):
-    # row = random.randint(0, df.shape[0] - 1)
-
-    chrom = df.iloc[row][0]
-    start = df.iloc[row][1]
-    end = df.iloc[row][2]
+def cut(df, row, meanshift, stdevshift):
+    chrom = df.loc[row][0]
+    start = df.loc[row][1]
+    end = df.loc[row][2]
 
     if end-start < 0:
-        print('ERROR: the end value of a region is less than the start value')
-        exit(1)
-    thecut = int(np.random.normal((start+end)/2, (end - start)/4))
+        _LOGGER.error('ERROR: the end value of a region is less than the start value')
+        sys.exit(1)
+    thecut = int(np.random.normal((start+end)/2, (end - start)/6))
     if thecut <= start:
-        thecut = start + 1
+        thecut = start + 10
     if thecut >= end:
-        thecut = end - 1
+        thecut = end - 10
 
-    df = drop(df, row)
     new_segs = pd.DataFrame([[chrom, start, thecut, 2.0], [chrom, thecut, end, 2.0]])
-    df = df.append(new_segs, ignore_index=True)
-
     # adjust the cut regions using the shift function
-    df = shift(df, df.shape[0]-1, mean, stdev)
-    return shift(df, df.shape[0]-2, mean, stdev)
+    new_segs = shift(new_segs, 0, meanshift, stdevshift)
+    new_segs = shift(new_segs, 1, meanshift, stdevshift)
+    new_segs[3] = 2.0
+    df.loc[row] = new_segs.loc[0]
+    return df.append(new_segs.loc[1], ignore_index=True)
 
 
 def add(df, mean, stdev):
-    index = random.randrange(len(chroms))
-    chrom = chroms[index]
-    start = random.randint(1, chrom_lens[index])
-    end = min(start + max(int(np.random.normal(mean, stdev)), 20), chrom_lens[index])
-    return df.append(pd.DataFrame([[chrom, start, end, 3.0]]), ignore_index=True)
+    chrom_index = random.randrange(len(chroms))
+    chrom_num = chroms[chrom_index]
+    start = random.randint(1, chrom_lens[chrom_index])
+    end = min(start + max(int(np.random.normal(mean, stdev)), 20), chrom_lens[chrom_index])
+    return df.append(pd.DataFrame([[chrom_num, start, end, 3.0]]), ignore_index=True)
 
 
 def merge(df, row):
-    tempdf = df.sort_values([0, 1]).reset_index(drop=True)
-
-    if row >= tempdf.shape[0] - 1:
-        print("df bounds exceeded")
+    # check if the regions being merged are on the same chromosome
+    if row + 1 not in df.index or df.loc[row][0] != df.loc[row+1][0]:
         return df
-    # ensure the selected two regions are the same chromosome
-    # row = random.randint(0, df.shape[0] - 2)
-    while tempdf.iloc[row][0] != tempdf.iloc[row+1][0]:
-        row = random.randint(0, df.shape[0] - 2)
 
-    return df.append([[tempdf.iloc[row][0], tempdf.iloc[row][1], tempdf.iloc[row+1][2], 4.0]], ignore_index=True)
-
+    chrom = df.loc[row][0]
+    start = df.loc[row][1]
+    end = df.loc[row+1][2]
+    df = drop(df, row)
+    df.loc[row+1] = [chrom, start, end, 4.0]
+    return df
 
 
 
@@ -179,16 +166,19 @@ def main():
     _LOGGER.info("welcome to bedshift")
     _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
     msg = """Params:
-  droprate: {droprate}
-  addrate: {addrate}
-  addmean: {addmean}
-  addstdev: {addstdev}
-  shiftrate: {shiftrate}
-  mean: {mean}
-  stdev: {stdev}
-  cutrate: {cutrate}
-  mergerate: {mergerate}
-  """
+                drop rate: {droprate}
+                add rate: {addrate}
+                add mean length: {addmean}
+                add stdev: {addstdev}
+                shift rate: {shiftrate}
+                shift mean distance: {shiftmean}
+                shift stdev: {shiftstdev}
+                cut rate: {cutrate}
+                merge rate: {mergerate}
+                outputfile: {outputfile}
+            """
+
+    outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile)) if not args.outputfile else args.outputfile
 
     _LOGGER.info(msg.format(
         droprate=args.droprate,
@@ -196,45 +186,52 @@ def main():
         addmean=args.addmean,
         addstdev=args.addstdev,
         shiftrate=args.shiftrate,
-        mean=args.mean,
-        stdev=args.stdev,
+        shiftmean=args.shiftmean,
+        shiftstdev=args.shiftstdev,
         cutrate=args.cutrate,
-        mergerate=args.mergerate))
+        mergerate=args.mergerate,
+        outputfile=args.outputfile))
 
     if not args.bedfile:
         parser.print_help()
         _LOGGER.error("No bedfile given")
         sys.exit(1)
 
+    if args.addrate < 0 or args.shiftrate < 0 or args.cutrate < 0 or args.mergerate < 0 or args.addrate > 1 or args.shiftrate > 1 or args.cutrate > 1 or args.mergerate > 1:
+        parser.print_help()
+        _LOGGER.error("Rate must be between 0 and 1")
+        sys.exit(1)
+
     df = pd.read_csv(args.bedfile, sep='\t', header=None, usecols=[0,1,2])
-    df[3] = 0
+    df[3] = 0 # column indicating which modifications were made
     rows = df.shape[0]
+    _LOGGER.info('The bedfile contains {} rows'.format(rows))
+    df = df.sort_values([0, 1]).reset_index(drop=True)
+
+    # unmodified rows display a 0
+    for _ in range(rows):
+        if random.random() < args.addrate:
+            df = add(df, args.addmean, args.addstdev) # added rows display a 3
+    for i in range(rows):
+        if random.random() < args.shiftrate:
+            df = shift(df, i, args.shiftmean, args.shiftstdev) # shifted rows display a 1
+    for i in range(rows):
+        if random.random() < args.cutrate:
+            df = cut(df, i, args.shiftmean, args.shiftstdev) # cut rows display a 2
+    df.reset_index(inplace=True, drop=True)
+    i = 0
+    while i < rows:
+        if random.random() < args.mergerate:
+            df = merge(df, i) # merged rows display a 4
+            i += 1
+        i += 1
+    df.reset_index(inplace=True, drop=True)
     for i in range(rows):
         if random.random() < args.droprate:
             df = drop(df, i)
-        if random.random() < args.addrate:
-            df = add(df, args.addmean, args.addstdev)
-        if random.random() < args.shiftrate:
-            df = shift(df, i, args.mean, args.stdev)
-        if random.random() < args.cutrate:
-            df = cut(df, i, args.mean, args.stdev)
-        if random.random() < args.mergerate:
-            df = merge(df, i)
 
-        '''
-        if 0 <= x < 0.2:
-            df = shift(df)
-        elif 0.2 <= x < 0.4:
-            df = delete(df)
-        elif 0.4 <= x < 0.6:
-            df = cut(df)
-        elif 0.6 <= x < 0.8:
-            df = create(df)
-        else:
-            df = merge(df)
-        '''
-
-    df.to_csv('changed_{}'.format(os.path.basename(args.bedfile)), sep='\t', header=False, index=False)
+    _LOGGER.info('The output bedfile located in {} has {} rows'.format(outfile, df.shape[0]))
+    df.to_csv(outfile, sep='\t', header=False, index=False)
 
 
 if __name__ == '__main__':
