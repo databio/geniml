@@ -94,6 +94,12 @@ def build_argparser():
 
 class Bedshift(object):
 
+    def readDF(self, bedfile_path):
+        df = pd.read_csv(bedfile_path, sep='\t', header=None, usecols=[0,1,2])
+        df[3] = 0 # column indicating which modifications were made
+        return df.sort_values([0, 1]).reset_index(drop=True)
+
+
     def shift(self, df, row, mean, stdev):
         theshift = int(np.random.normal(mean, stdev))
 
@@ -203,13 +209,9 @@ def main():
         _LOGGER.error("Rate must be between 0 and 1")
         sys.exit(1)
 
-    df = pd.read_csv(args.bedfile, sep='\t', header=None, usecols=[0,1,2])
-    df[3] = 0 # column indicating which modifications were made
-    rows = df.shape[0]
-    _LOGGER.info('The bedfile contains {} rows'.format(rows))
-    df = df.sort_values([0, 1]).reset_index(drop=True)
-
     bedshift = Bedshift()
+    df = bedshift.readDF(args.bedfile)
+    rows = df.shape[0]
 
     # unmodified rows display a 0
     for _ in range(rows):
@@ -233,7 +235,7 @@ def main():
         if random.random() < args.droprate:
             df = bedshift.drop(df, i)
 
-    _LOGGER.info('The output bedfile located in {} has {} rows'.format(outfile, df.shape[0]))
+    _LOGGER.info('The output bedfile located in {} has {} lines. The original bedfile had {} lines.'.format(outfile, df.shape[0], rows))
     df.to_csv(outfile, sep='\t', header=False, index=False)
 
 
