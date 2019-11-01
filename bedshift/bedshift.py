@@ -5,10 +5,11 @@ import argparse
 import logmuse
 import logging
 import os
+import sys
 import pandas as pd
 import numpy as np
 import random
-from . import __version__
+from _version import __version__
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -91,67 +92,67 @@ def build_argparser():
     return parser
 
 
+class Bedshift(object):
 
+    def shift(self, df, row, mean, stdev):
+        theshift = int(np.random.normal(mean, stdev))
 
-def shift(df, row, mean, stdev):
-    theshift = int(np.random.normal(mean, stdev))
+        start = df.loc[row][1]
+        end = df.loc[row][2]
 
-    start = df.loc[row][1]
-    end = df.loc[row][2]
+        df.at[row, 1] = start + theshift
+        df.at[row, 2] = end + theshift
+        df.at[row, 3] = 1.0
 
-    df.at[row, 1] = start + theshift
-    df.at[row, 2] = end + theshift
-    df.at[row, 3] = 1.0
-
-    return df
-
-
-def drop(df, row):
-    return df.drop(row)
-
-
-def cut(df, row, meanshift, stdevshift):
-    chrom = df.loc[row][0]
-    start = df.loc[row][1]
-    end = df.loc[row][2]
-
-    if end-start < 0:
-        _LOGGER.error('ERROR: the end value of a region is less than the start value')
-        sys.exit(1)
-    thecut = int(np.random.normal((start+end)/2, (end - start)/6))
-    if thecut <= start:
-        thecut = start + 10
-    if thecut >= end:
-        thecut = end - 10
-
-    new_segs = pd.DataFrame([[chrom, start, thecut, 2.0], [chrom, thecut, end, 2.0]])
-    # adjust the cut regions using the shift function
-    new_segs = shift(new_segs, 0, meanshift, stdevshift)
-    new_segs = shift(new_segs, 1, meanshift, stdevshift)
-    new_segs[3] = 2.0
-    df.loc[row] = new_segs.loc[0]
-    return df.append(new_segs.loc[1], ignore_index=True)
-
-
-def add(df, mean, stdev):
-    chrom_index = random.randrange(len(chroms))
-    chrom_num = chroms[chrom_index]
-    start = random.randint(1, chrom_lens[chrom_index])
-    end = min(start + max(int(np.random.normal(mean, stdev)), 20), chrom_lens[chrom_index])
-    return df.append(pd.DataFrame([[chrom_num, start, end, 3.0]]), ignore_index=True)
-
-
-def merge(df, row):
-    # check if the regions being merged are on the same chromosome
-    if row + 1 not in df.index or df.loc[row][0] != df.loc[row+1][0]:
         return df
 
-    chrom = df.loc[row][0]
-    start = df.loc[row][1]
-    end = df.loc[row+1][2]
-    df = drop(df, row)
-    df.loc[row+1] = [chrom, start, end, 4.0]
-    return df
+
+    def drop(self, df, row):
+        return df.drop(row)
+
+
+    def cut(self, df, row, meanshift, stdevshift):
+        chrom = df.loc[row][0]
+        start = df.loc[row][1]
+        end = df.loc[row][2]
+
+        if end-start < 0:
+            _LOGGER.error('ERROR: the end value of a region is less than the start value')
+            sys.exit(1)
+        thecut = int(np.random.normal((start+end)/2, (end - start)/6))
+        if thecut <= start:
+            thecut = start + 10
+        if thecut >= end:
+            thecut = end - 10
+
+        new_segs = pd.DataFrame([[chrom, start, thecut, 2.0], [chrom, thecut, end, 2.0]])
+        # adjust the cut regions using the shift function
+        new_segs = self.shift(new_segs, 0, meanshift, stdevshift)
+        new_segs = self.shift(new_segs, 1, meanshift, stdevshift)
+        new_segs[3] = 2.0
+        df.loc[row] = new_segs.loc[0]
+        return df.append(new_segs.loc[1], ignore_index=True)
+
+
+    def add(self, df, mean, stdev):
+        chrom_index = random.randrange(len(chroms))
+        chrom_num = chroms[chrom_index]
+        start = random.randint(1, chrom_lens[chrom_index])
+        end = min(start + max(int(np.random.normal(mean, stdev)), 20), chrom_lens[chrom_index])
+        return df.append(pd.DataFrame([[chrom_num, start, end, 3.0]]), ignore_index=True)
+
+
+    def merge(self, df, row):
+        # check if the regions being merged are on the same chromosome
+        if row + 1 not in df.index or df.loc[row][0] != df.loc[row+1][0]:
+            return df
+
+        chrom = df.loc[row][0]
+        start = df.loc[row][1]
+        end = df.loc[row+1][2]
+        df = self.drop(df, row)
+        df.loc[row+1] = [chrom, start, end, 4.0]
+        return df
 
 
 
@@ -208,27 +209,29 @@ def main():
     _LOGGER.info('The bedfile contains {} rows'.format(rows))
     df = df.sort_values([0, 1]).reset_index(drop=True)
 
+    bedshift = Bedshift()
+
     # unmodified rows display a 0
     for _ in range(rows):
         if random.random() < args.addrate:
-            df = add(df, args.addmean, args.addstdev) # added rows display a 3
+            df = bedshift.add(df, args.addmean, args.addstdev) # added rows display a 3
     for i in range(rows):
         if random.random() < args.shiftrate:
-            df = shift(df, i, args.shiftmean, args.shiftstdev) # shifted rows display a 1
+            df = bedshift.shift(df, i, args.shiftmean, args.shiftstdev) # shifted rows display a 1
     for i in range(rows):
         if random.random() < args.cutrate:
-            df = cut(df, i, args.shiftmean, args.shiftstdev) # cut rows display a 2
+            df = bedshift.cut(df, i, args.shiftmean, args.shiftstdev) # cut rows display a 2
     df.reset_index(inplace=True, drop=True)
     i = 0
     while i < rows:
         if random.random() < args.mergerate:
-            df = merge(df, i) # merged rows display a 4
+            df = bedshift.merge(df, i) # merged rows display a 4
             i += 1
         i += 1
     df.reset_index(inplace=True, drop=True)
     for i in range(rows):
         if random.random() < args.droprate:
-            df = drop(df, i)
+            df = bedshift.drop(df, i)
 
     _LOGGER.info('The output bedfile located in {} has {} rows'.format(outfile, df.shape[0]))
     df.to_csv(outfile, sep='\t', header=False, index=False)
