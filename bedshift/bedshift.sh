@@ -7,7 +7,7 @@
 NUM_BEDFILES=NUMBER
 for (( c=1; c<=$NUM_BEDFILES; c++ ))
 do
-	BEDFILE=PATH/TO/ORIGINAL/FILE%c.bed
+	BEDFILE=PATH/TO/ORIGINAL/FILE$c.bed
 	DROP_RATE=0.0
 
 	ADD_RATE=0.0
@@ -20,7 +20,7 @@ do
 
 	CUT_RATE=0.0
 	MERGE_RATE=0.0
-	OUTPUT_FILE=PATH/TO/PERTURBED/FILE%c.bed
+	OUTPUT_FILE=PATH/TO/PERTURBED/FILE$c.bed
 
 	bedshift --bedfile $BEDFILE --droprate $DROP_RATE --addrate $ADD_RATE --addmean $ADD_MEAN --addstdev $ADD_STDEV --shiftrate $SHIFT_RATE --shiftmean $SHIFT_MEAN --shiftstdev $SHIFT_STDEV --cutrate $CUT_RATE --mergerate $MERGE_RATE --outputfile $OUTPUT_FILE
 done
