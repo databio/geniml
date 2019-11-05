@@ -218,7 +218,7 @@ class Bedshift(object):
         return df
 
 
-    def all_perturbations(self, df, addrate, addmean, addstdev, shiftrate, shiftmean, shiftstdev, cutrate, mergerate, droprate):
+    def all_perturbations(self, df, addrate=0.0, addmean=320.0, addstdev=30.0, shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0, cutrate=0.0, mergerate=0.0, droprate=0.0):
         self.check_rate([addrate, shiftrate, cutrate, mergerate, droprate])
         df = self.add(df, addrate, addmean, addstdev)
         df = self.shift(df, shiftrate, shiftmean, shiftstdev)
