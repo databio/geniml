@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
+import os, sys
 from bedshift import bedshift
+
+os.chdir(sys.path[0])
 
 bedshifter = bedshift.Bedshift()
 
