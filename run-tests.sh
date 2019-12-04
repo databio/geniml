@@ -1,4 +1,4 @@
 #!/bin/bash
 
-./tests/pypackage_test.py
-./tests/shell_test.sh
+./examples/pypackage_test.py
+./examples/shell_test.sh

@@ -1,3 +1,3 @@
-tests/sh_output.bed
-tests/py_output.bed
+examples/sh_output.bed
+examples/py_output.bed
 *.pyc

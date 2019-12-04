@@ -1,0 +1,9 @@
+site_name: Bedshift
+# site_logo: img/logo_caravel_dark.svg
+site_url: http://code.databio.org/bedshift/
+repo_url: http://github.com/databio/bedshift
+theme: databio
+
+nav:
+  - Introduction: README.md
+  
