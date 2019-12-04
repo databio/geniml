@@ -14,7 +14,8 @@ from _version import __version__
 _LOGGER = logging.getLogger(__name__)
 
 
-chroms = ['chr'+str(num) for num in list(range(1, 23)) + ['X', 'Y']]
+chroms = [-1] + ['chr'+str(num) for num in list(range(1, 23))] + ['X', 'Y']
+
 chrom_lens = [-1, 247249719, 242951149, 199501827, 191273063, 180857866, 170899992, 158821424, 146274826, 140273252, 135374737, 134452384, 132349534, 114142980, 106368585, 100338915, 88827254, 78774742, 76117153, 63811651, 62435964, 46944323, 49691432, 154913754, 57772954]
 
 
@@ -94,9 +95,13 @@ def build_argparser():
 
 class Bedshift(object):
 
+    def __init__(self):
+        self.original_regions = -1
+
     def readDF(self, bedfile_path):
         df = pd.read_csv(bedfile_path, sep='\t', header=None, usecols=[0,1,2])
         df[3] = 0 # column indicating which modifications were made
+        self.original_regions = df.shape[0]
         return df.sort_values([0, 1]).reset_index(drop=True)
 
 
@@ -106,6 +111,11 @@ class Bedshift(object):
                 _LOGGER.error("Rate must be between 0 and 1")
                 sys.exit(1)
 
+    def pick_random_chrom(self):
+        chrom_index = random.randint(1, len(chroms)-1)
+        chrom_num = chroms[chrom_index]
+        chrom_len = chrom_lens[chrom_index]
+        return chrom_num, chrom_len
 
     def __shift(self, df, row, mean, stdev):
         theshift = int(np.random.normal(mean, stdev))
@@ -150,10 +160,9 @@ class Bedshift(object):
 
 
     def __add(self, df, mean, stdev):
-        chrom_index = random.randrange(1, len(chroms)+1)
-        chrom_num = chroms[chrom_index]
-        start = random.randint(1, chrom_lens[chrom_index])
-        end = min(start + max(int(np.random.normal(mean, stdev)), 20), chrom_lens[chrom_index])
+        chrom_num, chrom_len = self.pick_random_chrom()
+        start = random.randint(1, chrom_len)
+        end = min(start + max(int(np.random.normal(mean, stdev)), 20), chrom_len)
         return df.append(pd.DataFrame([[chrom_num, start, end, 3.0]]), ignore_index=True)
 
 
@@ -230,7 +239,7 @@ class Bedshift(object):
 
     def write_csv(self, df, outfile_name):
         df.to_csv(outfile_name, sep='\t', header=False, index=False)
-
+        print("Original bedfile had {} regions. Perturbed bedfile has {} regions".format(self.original_regions, df.shape[0]))
 
 
 
