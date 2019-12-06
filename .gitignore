@@ -1,3 +1,4 @@
 examples/sh_output.bed
 examples/py_output.bed
 *.pyc
+site/
