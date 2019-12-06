@@ -98,7 +98,7 @@ class Bedshift(object):
     def __init__(self):
         self.original_regions = -1
 
-    def readDF(self, bedfile_path):
+    def read_bed(self, bedfile_path):
         df = pd.read_csv(bedfile_path, sep='\t', header=None, usecols=[0,1,2])
         df[3] = 0 # column indicating which modifications were made
         self.original_regions = df.shape[0]
@@ -228,6 +228,22 @@ class Bedshift(object):
 
 
     def all_perturbations(self, df, addrate=0.0, addmean=320.0, addstdev=30.0, shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0, cutrate=0.0, mergerate=0.0, droprate=0.0):
+        '''
+        Perform all five perturbations in the order of add, shift, cut, merge, drop.
+
+        :param df: the dataframe to perturb.
+        :param addrate: the rate (as a proportion of the total number of regions) to add regions
+        :param addmean: the mean length of added regions
+        :param addstdev: the standard deviation of the length of added regions
+        :param shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
+        :param shiftmean: the mean shift distance
+        :param shiftstdev: the standard deviation of the shift distance
+        :param cutrate: the rate to cut regions into two separate regions
+        :param mergerate: the rate to merge two regions into one
+        :param droprate: the rate to drop/remove regions
+        :return pandas.DataFrame: the new dataframe after all perturbations
+        '''
+
         self.check_rate([addrate, shiftrate, cutrate, mergerate, droprate])
         df = self.add(df, addrate, addmean, addstdev)
         df = self.shift(df, shiftrate, shiftmean, shiftstdev)
@@ -237,7 +253,7 @@ class Bedshift(object):
         return df
 
 
-    def write_csv(self, df, outfile_name):
+    def write_bed(self, df, outfile_name):
         df.to_csv(outfile_name, sep='\t', header=False, index=False)
         print("Original bedfile had {} regions. Perturbed bedfile has {} regions".format(self.original_regions, df.shape[0]))
 
@@ -289,13 +305,13 @@ def main():
     bedshifter = Bedshift()
     bedshifter.check_rate([args.addrate, args.shiftrate, args.cutrate, args.mergerate, args.droprate])
 
-    df = bedshifter.readDF(args.bedfile)
+    df = bedshifter.read_bed(args.bedfile)
     original_rows = df.shape[0]
     df = bedshifter.all_perturbations(df, args.addrate, args.addmean, args.addstdev, args.shiftrate, args.shiftmean, args.shiftstdev, args.cutrate, args.mergerate, args.droprate)
 
     _LOGGER.info('The output bedfile located in {} has {} lines. The original bedfile had {} lines.'.format(outfile, df.shape[0], original_rows))
 
-    bedshifter.write_csv(df, outfile)
+    bedshifter.write_bed(df, outfile)
 
 
 if __name__ == '__main__':

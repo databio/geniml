@@ -32,8 +32,8 @@ from bedshift import bedshift
 
 bedshifter = bedshift.Bedshift()
 
-df = bedshifter.readDF('examples/test.bed')
+df = bedshifter.read_bed('examples/test.bed')
 df = bedshifter.shift(df, shiftrate=0.1, shiftmean=0.0, shiftstdev=120.0)
 df = bedshifter.add(df, addrate=0.1, addmean=320.0, addstdev=20.0)
-bedshifter.write_csv(df, 'output_file.bed')
+bedshifter.write_bed(df, 'output_file.bed')
 ```
