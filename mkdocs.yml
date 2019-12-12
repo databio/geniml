@@ -3,7 +3,16 @@ site_name: Bedshift
 site_url: http://code.databio.org/bedshift/
 repo_url: http://github.com/databio/bedshift
 theme: databio
+# paper_link: https://doi.org/10.1101/698704
 
 nav:
-  - Introduction: README.md
-  
+  - Introduction:
+    - Overview: README.md
+  - Reference:
+    - Python API: autodoc_build/bedshift.md
+
+plugins:
+- databio:
+    autodoc_build: "docs/autodoc_build"
+- search
+

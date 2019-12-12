@@ -94,24 +94,38 @@ def build_argparser():
 
 
 class Bedshift(object):
+    """
+    The bedshift object with methods to perturb regions
+    """
 
     def __init__(self):
         self.original_regions = -1
 
     def read_bed(self, bedfile_path):
+        """
+        Read in a bedfile to pandas DataFrame format
+
+        :param str bedfile_path: the path to the bedfile
+        """
+
         df = pd.read_csv(bedfile_path, sep='\t', header=None, usecols=[0,1,2])
         df[3] = 0 # column indicating which modifications were made
         self.original_regions = df.shape[0]
         return df.sort_values([0, 1]).reset_index(drop=True)
 
 
-    def check_rate(self, rates):
+    def __check_rate(self, rates):
         for rate in rates:
             if rate < 0 or rate > 1:
                 _LOGGER.error("Rate must be between 0 and 1")
                 sys.exit(1)
 
     def pick_random_chrom(self):
+        """
+        Utility function to pick a random chromosome
+
+        :return str, float chrom_num, chrom_len: chromosome number and length
+        """
         chrom_index = random.randint(1, len(chroms)-1)
         chrom_num = chroms[chrom_index]
         chrom_len = chrom_lens[chrom_index]
@@ -180,7 +194,16 @@ class Bedshift(object):
 
 
     def add(self, df, addrate, addmean, addstdev):
-        self.check_rate([addrate])
+        """
+        Add regions
+
+        :param pandas.DataFrame df: the dataframe to perturb.
+        :param float addrate: the rate to add regions
+        :param float addmean: the mean length of added regions
+        :param float addstdev: the standard deviation of the length of added regions
+        :return pandas.DataFrame: the new dataframe after adds
+        """
+        self.__check_rate([addrate])
         rows = df.shape[0]
         for _ in range(rows):
             if random.random() < addrate:
@@ -189,7 +212,16 @@ class Bedshift(object):
 
 
     def shift(self, df, shiftrate, shiftmean, shiftstdev):
-        self.check_rate([shiftrate])
+        """
+        Shift regions
+
+        :param pandas.DataFrame df: the dataframe to perturb.
+        :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
+        :param float shiftmean: the mean shift distance
+        :param float shiftstdev: the standard deviation of the shift distance
+        :return pandas.DataFrame: the new dataframe after shifts
+        """
+        self.__check_rate([shiftrate])
         rows = df.shape[0]
         for i in range(rows):
             if random.random() < shiftrate:
@@ -198,7 +230,14 @@ class Bedshift(object):
 
 
     def cut(self, df, cutrate):
-        self.check_rate([cutrate])
+        """
+        Cut regions to create two new regions
+
+        :param pandas.DataFrame df: the dataframe to perturb.
+        :param float cutrate: the rate to cut regions into two separate regions
+        :return pandas.DataFrame: the new dataframe after cuts
+        """
+        self.__check_rate([cutrate])
         rows = df.shape[0]
         for i in range(rows):
             if random.random() < cutrate:
@@ -207,7 +246,15 @@ class Bedshift(object):
 
 
     def merge(self, df, mergerate):
-        self.check_rate([mergerate])
+        """
+        Merge two regions into one new region
+
+        :param pandas.DataFrame df: the dataframe to perturb.
+        :param float mergerate: the rate to merge two regions into one
+        :return pandas.DataFrame: the new dataframe after merges
+        """
+
+        self.__check_rate([mergerate])
         rows = df.shape[0]
         i = 0
         while i < rows:
@@ -219,7 +266,14 @@ class Bedshift(object):
 
 
     def drop(self, df, droprate):
-        self.check_rate([droprate])
+        """
+        Drop regions
+
+        :param pandas.DataFrame df: the dataframe to perturb.
+        :param float droprate: the rate to drop/remove regions
+        :return pandas.DataFrame: the new dataframe after drops
+        """
+        self.__check_rate([droprate])
         rows = df.shape[0]
         for i in range(rows):
             if random.random() < droprate:
@@ -231,20 +285,20 @@ class Bedshift(object):
         '''
         Perform all five perturbations in the order of add, shift, cut, merge, drop.
 
-        :param df: the dataframe to perturb.
-        :param addrate: the rate (as a proportion of the total number of regions) to add regions
-        :param addmean: the mean length of added regions
-        :param addstdev: the standard deviation of the length of added regions
-        :param shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
-        :param shiftmean: the mean shift distance
-        :param shiftstdev: the standard deviation of the shift distance
-        :param cutrate: the rate to cut regions into two separate regions
-        :param mergerate: the rate to merge two regions into one
-        :param droprate: the rate to drop/remove regions
+        :param pandas.DataFrame df: the dataframe to perturb.
+        :param float addrate: the rate (as a proportion of the total number of regions) to add regions
+        :param float addmean: the mean length of added regions
+        :param float addstdev: the standard deviation of the length of added regions
+        :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
+        :param float shiftmean: the mean shift distance
+        :param float shiftstdev: the standard deviation of the shift distance
+        :param float cutrate: the rate to cut regions into two separate regions
+        :param float mergerate: the rate to merge two regions into one
+        :param float droprate: the rate to drop/remove regions
         :return pandas.DataFrame: the new dataframe after all perturbations
         '''
 
-        self.check_rate([addrate, shiftrate, cutrate, mergerate, droprate])
+        self.__check_rate([addrate, shiftrate, cutrate, mergerate, droprate])
         df = self.add(df, addrate, addmean, addstdev)
         df = self.shift(df, shiftrate, shiftmean, shiftstdev)
         df = self.cut(df, cutrate)
@@ -254,6 +308,12 @@ class Bedshift(object):
 
 
     def write_bed(self, df, outfile_name):
+        """
+        Write a pandas dataframe back into bedfile format
+
+        :param pandas.DataFrame df: A dataframe containing regions like a bedfile
+        :param str outfile_name: The name of the output bedfile
+        """
         df.to_csv(outfile_name, sep='\t', header=False, index=False)
         print("Original bedfile had {} regions. Perturbed bedfile has {} regions".format(self.original_regions, df.shape[0]))
 
@@ -303,7 +363,7 @@ def main():
 
 
     bedshifter = Bedshift()
-    bedshifter.check_rate([args.addrate, args.shiftrate, args.cutrate, args.mergerate, args.droprate])
+    bedshifter.__check_rate([args.addrate, args.shiftrate, args.cutrate, args.mergerate, args.droprate])
 
     df = bedshifter.read_bed(args.bedfile)
     original_rows = df.shape[0]
