@@ -111,7 +111,7 @@ class Bedshift(object):
         df = pd.read_csv(bedfile_path, sep='\t', header=None, usecols=[0,1,2])
         df[3] = 0 # column indicating which modifications were made
         self.original_regions = df.shape[0]
-        return df.sort_values([0, 1]).reset_index(drop=True)
+        return df.astype({1: 'int64', 2: 'int64', 3: 'int64'}).sort_values([0, 1]).reset_index(drop=True)
 
 
     def __check_rate(self, rates):
@@ -131,67 +131,6 @@ class Bedshift(object):
         chrom_len = chrom_lens[chrom_index]
         return chrom_num, chrom_len
 
-    def __shift(self, df, row, mean, stdev):
-        theshift = int(np.random.normal(mean, stdev))
-
-        start = df.loc[row][1]
-        end = df.loc[row][2]
-
-        df.at[row, 1] = start + theshift
-        df.at[row, 2] = end + theshift
-        df.at[row, 3] = 1.0
-
-        return df
-
-
-    def __drop(self, df, row):
-        return df.drop(row)
-
-
-    def __cut(self, df, row):
-        chrom = df.loc[row][0]
-        start = df.loc[row][1]
-        end = df.loc[row][2]
-
-        if end-start < 0:
-            _LOGGER.error('ERROR: the end value of a region is less than the start value')
-            sys.exit(1)
-        thecut = int(np.random.normal((start+end)/2, (end - start)/6))
-        if thecut <= start:
-            thecut = start + 10
-        if thecut >= end:
-            thecut = end - 10
-
-        new_segs = pd.DataFrame([[chrom, start, thecut, 2.0], [chrom, thecut, end, 2.0]])
-        ''' may add in later, this makes the api confusing!
-        # adjust the cut regions using the shift function
-        new_segs = self.__shift(new_segs, 0, meanshift, stdevshift)
-        new_segs = self.__shift(new_segs, 1, meanshift, stdevshift)
-        '''
-        new_segs[3] = 2.0
-        df.loc[row] = new_segs.loc[0]
-        return df.append(new_segs.loc[1], ignore_index=True)
-
-
-    def __add(self, df, mean, stdev):
-        chrom_num, chrom_len = self.pick_random_chrom()
-        start = random.randint(1, chrom_len)
-        end = min(start + max(int(np.random.normal(mean, stdev)), 20), chrom_len)
-        return df.append(pd.DataFrame([[chrom_num, start, end, 3.0]]), ignore_index=True)
-
-
-    def __merge(self, df, row):
-        # check if the regions being merged are on the same chromosome
-        if row + 1 not in df.index or df.loc[row][0] != df.loc[row+1][0]:
-            return df
-
-        chrom = df.loc[row][0]
-        start = df.loc[row][1]
-        end = df.loc[row+1][2]
-        df = self.__drop(df, row)
-        df.loc[row+1] = [chrom, start, end, 4.0]
-        return df
-
 
     def add(self, df, addrate, addmean, addstdev):
         """
@@ -201,14 +140,21 @@ class Bedshift(object):
         :param float addrate: the rate to add regions
         :param float addmean: the mean length of added regions
         :param float addstdev: the standard deviation of the length of added regions
-        :return pandas.DataFrame: the new dataframe after adds
+        :return pandas.DataFrame: the new dataframe object after adds
         """
         self.__check_rate([addrate])
         rows = df.shape[0]
-        for _ in range(rows):
-            if random.random() < addrate:
-                df = self.__add(df, addmean, addstdev) # added rows display a 3
-        return df
+        num_add = int(rows * addrate)
+        new_regions = {0: [], 1: [], 2: [], 3: []}
+        for _ in range(num_add):
+            chrom_num, chrom_len = self.pick_random_chrom()
+            start = random.randint(1, chrom_len)
+            end = min(start + max(int(np.random.normal(addmean, addstdev)), 20), chrom_len)
+            new_regions[0].append(chrom_num)
+            new_regions[1].append(start)
+            new_regions[2].append(end)
+            new_regions[3].append(3)
+        return df.append(pd.DataFrame(new_regions), ignore_index=True)
 
 
     def shift(self, df, shiftrate, shiftmean, shiftstdev):
@@ -219,13 +165,25 @@ class Bedshift(object):
         :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
         :param float shiftmean: the mean shift distance
         :param float shiftstdev: the standard deviation of the shift distance
-        :return pandas.DataFrame: the new dataframe after shifts
+        :return pandas.DataFrame: the original dataframe after shifts
         """
         self.__check_rate([shiftrate])
         rows = df.shape[0]
         for i in range(rows):
             if random.random() < shiftrate:
                 df = self.__shift(df, i, shiftmean, shiftstdev) # shifted rows display a 1
+        return df
+
+    def __shift(self, df, row, mean, stdev):
+        theshift = int(np.random.normal(mean, stdev))
+
+        start = df.loc[row][1]
+        end = df.loc[row][2]
+
+        df.at[row, 1] = start + theshift
+        df.at[row, 2] = end + theshift
+        df.at[row, 3] = 1
+
         return df
 
 
@@ -243,6 +201,26 @@ class Bedshift(object):
             if random.random() < cutrate:
                 df = self.__cut(df, i) # cut rows display a 2
         return df.reset_index(drop=True)
+
+    def __cut(self, df, row):
+        chrom = df.loc[row][0]
+        start = df.loc[row][1]
+        end = df.loc[row][2]
+
+        thecut = int(np.random.normal((start+end)/2, (end - start)/6))
+        if thecut <= start:
+            thecut = start + 10
+        if thecut >= end:
+            thecut = end - 10
+
+        new_segs = pd.DataFrame([[chrom, start, thecut, 2], [chrom, thecut, end, 2]])
+        ''' may add in later, this makes the api confusing!
+        # adjust the cut regions using the shift function
+        new_segs = self.__shift(new_segs, 0, meanshift, stdevshift)
+        new_segs = self.__shift(new_segs, 1, meanshift, stdevshift)
+        '''
+        df.loc[row] = new_segs.loc[0]
+        return df.append(new_segs.loc[1], ignore_index=True)
 
 
     def merge(self, df, mergerate):
@@ -264,6 +242,18 @@ class Bedshift(object):
             i += 1
         return df.reset_index(drop=True)
 
+    def __merge(self, df, row):
+        # check if the regions being merged are on the same chromosome
+        if row + 1 not in df.index or df.loc[row][0] != df.loc[row+1][0]:
+            return df
+
+        chrom = df.loc[row][0]
+        start = df.loc[row][1]
+        end = df.loc[row+1][2]
+        df = self.__drop(df, row)
+        df.loc[row+1] = [chrom, start, end, 4]
+        return df
+
 
     def drop(self, df, droprate):
         """
@@ -277,8 +267,8 @@ class Bedshift(object):
         rows = df.shape[0]
         for i in range(rows):
             if random.random() < droprate:
-                df = self.__drop(df, i)
-        return df
+                df = df.drop(i)
+        return df.reset_index(drop=True)
 
 
     def all_perturbations(self, df, addrate=0.0, addmean=320.0, addstdev=30.0, shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0, cutrate=0.0, mergerate=0.0, droprate=0.0):
@@ -314,9 +304,9 @@ class Bedshift(object):
         :param pandas.DataFrame df: A dataframe containing regions like a bedfile
         :param str outfile_name: The name of the output bedfile
         """
-        df.to_csv(outfile_name, sep='\t', header=False, index=False)
-        print("Original bedfile had {} regions. Perturbed bedfile has {} regions".format(self.original_regions, df.shape[0]))
-
+        df.to_csv(outfile_name, sep='\t', header=False, index=False, float_format='%.0f')
+        # print("Original bedfile had {} regions. Perturbed bedfile has {} regions".format(self.original_regions, df.shape[0]))
+        print('The output bedfile located in {} has {} lines. The original bedfile had {} lines.'.format(outfile_name, df.shape[0], self.original_regions))
 
 
 def main():
@@ -363,13 +353,11 @@ def main():
 
 
     bedshifter = Bedshift()
-    bedshifter.__check_rate([args.addrate, args.shiftrate, args.cutrate, args.mergerate, args.droprate])
 
     df = bedshifter.read_bed(args.bedfile)
-    original_rows = df.shape[0]
     df = bedshifter.all_perturbations(df, args.addrate, args.addmean, args.addstdev, args.shiftrate, args.shiftmean, args.shiftstdev, args.cutrate, args.mergerate, args.droprate)
 
-    _LOGGER.info('The output bedfile located in {} has {} lines. The original bedfile had {} lines.'.format(outfile, df.shape[0], original_rows))
+    # _LOGGER.info('The output bedfile located in {} has {} lines. The original bedfile had {} lines.'.format(outfile, df.shape[0], original_rows))
 
     bedshifter.write_bed(df, outfile)
 
