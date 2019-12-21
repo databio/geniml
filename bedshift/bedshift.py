@@ -1,4 +1,4 @@
-""" Computing configuration representation """
+""" Perturb regions in bedfiles """
 
 from __future__ import division, print_function
 import argparse
@@ -12,6 +12,8 @@ import random
 from _version import __version__
 
 _LOGGER = logging.getLogger(__name__)
+
+__all__ = ["Bedshift"]
 
 
 chroms = [-1] + ['chr'+str(num) for num in list(range(1, 23))] + ['X', 'Y']
