@@ -12,7 +12,9 @@ nav:
     - Python API: autodoc_build/bedshift.md
 
 plugins:
-- databio:
-    autodoc_build: "docs/autodoc_build"
-- search
+  - databio:
+      autodoc_build: "docs/autodoc_build"
+      autodoc_package: "bedshift"
+      no_top_level: true
+  - search
 
