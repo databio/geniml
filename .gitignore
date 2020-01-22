@@ -1,4 +1,4 @@
-examples/sh_output.bed
-examples/py_output.bed
+examples/sh_output*
+examples/py_output*
 *.pyc
 site/

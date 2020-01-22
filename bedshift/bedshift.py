@@ -1,6 +1,6 @@
 """ Perturb regions in bedfiles """
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import argparse
 import logmuse
 import logging
@@ -9,7 +9,7 @@ import sys
 import pandas as pd
 import numpy as np
 import random
-from _version import __version__
+from bedshift._version import __version__
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,8 +68,11 @@ def build_argparser():
             help="Stdev add length")
 
     parser.add_argument(
+            "--addfile", type=str, help="Add regions from a bedfile")
+
+    parser.add_argument(
             "-p", "--shiftrate", type=float, default=0.0,
-            help="Shift prob.")
+            help="Shift probability")
 
     parser.add_argument(
             "--shiftmean", type=float, default=0.0,
@@ -81,11 +84,11 @@ def build_argparser():
 
     parser.add_argument(
             "-c", "--cutrate", type=float, default=0.0,
-            help="Cut prob.")
+            help="Cut probability")
 
     parser.add_argument(
             "-m", "--mergerate", type=float, default=0.0,
-            help="Merge prob. WARNING: will likely create regions that are thousands of base pairs long")
+            help="Merge probability. WARNING: will likely create regions that are thousands of base pairs long")
 
     parser.add_argument(
             "-o", "--outputfile", type=str,
@@ -113,7 +116,7 @@ class Bedshift(object):
         df = pd.read_csv(bedfile_path, sep='\t', header=None, usecols=[0,1,2])
         df[3] = 0 # column indicating which modifications were made
         self.original_regions = df.shape[0]
-        return df.astype({1: 'int64', 2: 'int64', 3: 'int64'}).sort_values([0, 1]).reset_index(drop=True)
+        return df.astype({1: 'int64', 2: 'int64', 3: 'int64'}).sort_values([0, 1, 2]).reset_index(drop=True)
 
 
     def __check_rate(self, rates):
@@ -138,7 +141,7 @@ class Bedshift(object):
         """
         Add regions
 
-        :param pandas.DataFrame df: the dataframe to perturb.
+        :param pandas.DataFrame df: the dataframe to perturb
         :param float addrate: the rate to add regions
         :param float addmean: the mean length of added regions
         :param float addstdev: the standard deviation of the length of added regions
@@ -156,6 +159,29 @@ class Bedshift(object):
             new_regions[1].append(start)
             new_regions[2].append(end)
             new_regions[3].append(3)
+        return df.append(pd.DataFrame(new_regions), ignore_index=True)
+
+    def add_from_file(self, df, fp, addrate):
+        """
+        Add regions from another bedfile to this perturbed bedfile
+
+        :param pandas.DataFrame df: the dataframe to perturb
+        :param float addrate: the rate to add regions
+        :param str fp: the filepath to the other bedfile
+        """
+
+        self.__check_rate([addrate])
+        rows = df.shape[0]
+        num_add = int(rows * addrate)
+        new_regions = {0: [], 1: [], 2: [], 3: []}
+        with open(fp, 'r') as f:
+            for region in f:
+                if random.random() < addrate:
+                    region = region.split('\t')
+                    new_regions[0].append(region[0])
+                    new_regions[1].append(int(region[1]))
+                    new_regions[2].append(int(region[2]))
+                    new_regions[3].append(3)
         return df.append(pd.DataFrame(new_regions), ignore_index=True)
 
 
@@ -252,7 +278,7 @@ class Bedshift(object):
         chrom = df.loc[row][0]
         start = df.loc[row][1]
         end = df.loc[row+1][2]
-        df = self.__drop(df, row)
+        df = df.drop(row)
         df.loc[row+1] = [chrom, start, end, 4]
         return df
 
@@ -273,7 +299,7 @@ class Bedshift(object):
         return df.reset_index(drop=True)
 
 
-    def all_perturbations(self, df, addrate=0.0, addmean=320.0, addstdev=30.0, shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0, cutrate=0.0, mergerate=0.0, droprate=0.0):
+    def all_perturbations(self, df, addrate=0.0, addmean=320.0, addstdev=30.0, addfile=None, shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0, cutrate=0.0, mergerate=0.0, droprate=0.0):
         '''
         Perform all five perturbations in the order of add, shift, cut, merge, drop.
 
@@ -291,7 +317,10 @@ class Bedshift(object):
         '''
 
         self.__check_rate([addrate, shiftrate, cutrate, mergerate, droprate])
-        df = self.add(df, addrate, addmean, addstdev)
+        if addfile:
+            df = self.add_from_file(df, addfile, addrate)
+        else:
+            df = self.add(df, addrate, addmean, addstdev)
         df = self.shift(df, shiftrate, shiftmean, shiftstdev)
         df = self.cut(df, cutrate)
         df = self.merge(df, mergerate)
@@ -306,9 +335,9 @@ class Bedshift(object):
         :param pandas.DataFrame df: A dataframe containing regions like a bedfile
         :param str outfile_name: The name of the output bedfile
         """
+        df.sort_values([0,1,2], inplace=True)
         df.to_csv(outfile_name, sep='\t', header=False, index=False, float_format='%.0f')
-        # print("Original bedfile had {} regions. Perturbed bedfile has {} regions".format(self.original_regions, df.shape[0]))
-        print('The output bedfile located in {} has {} lines. The original bedfile had {} lines.'.format(outfile_name, df.shape[0], self.original_regions))
+        print('The output bedfile located in {} has {} regions. The original bedfile had {} regions.'.format(outfile_name, df.shape[0], self.original_regions))
 
 
 def main():
@@ -326,6 +355,7 @@ def main():
                 add rate: {addrate}
                 add mean length: {addmean}
                 add stdev: {addstdev}
+                add from file: {addfile}
                 shift rate: {shiftrate}
                 shift mean distance: {shiftmean}
                 shift stdev: {shiftstdev}
@@ -341,6 +371,7 @@ def main():
         addrate=args.addrate,
         addmean=args.addmean,
         addstdev=args.addstdev,
+        addfile=args.addfile,
         shiftrate=args.shiftrate,
         shiftmean=args.shiftmean,
         shiftstdev=args.shiftstdev,
@@ -357,7 +388,7 @@ def main():
     bedshifter = Bedshift()
 
     df = bedshifter.read_bed(args.bedfile)
-    df = bedshifter.all_perturbations(df, args.addrate, args.addmean, args.addstdev, args.shiftrate, args.shiftmean, args.shiftstdev, args.cutrate, args.mergerate, args.droprate)
+    df = bedshifter.all_perturbations(df, args.addrate, args.addmean, args.addstdev, args.addfile, args.shiftrate, args.shiftmean, args.shiftstdev, args.cutrate, args.mergerate, args.droprate)
 
     # _LOGGER.info('The output bedfile located in {} has {} lines. The original bedfile had {} lines.'.format(outfile, df.shape[0], original_rows))
 
