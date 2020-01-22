@@ -12,7 +12,7 @@ cd bedshift
 pip install .
 ```
 
-## Usage
+## Quickstart
 
 The package is available for use both as a command line interface and a python package.
 
