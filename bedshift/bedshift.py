@@ -114,6 +114,12 @@ class Bedshift(object):
         """
 
         df = pd.read_csv(bedfile_path, sep='\t', header=None, usecols=[0,1,2])
+
+        # if there is 'chrom', 'start', 'stop' in the table, move them to header
+        if not str(df.iloc[0, 1]).isdigit():
+            df.columns = df.iloc[0]
+            df = df[1:]
+
         df[3] = 0 # column indicating which modifications were made
         self.original_regions = df.shape[0]
         return df.astype({1: 'int64', 2: 'int64', 3: 'int64'}).sort_values([0, 1, 2]).reset_index(drop=True)
@@ -175,13 +181,19 @@ class Bedshift(object):
         num_add = int(rows * addrate)
         new_regions = {0: [], 1: [], 2: [], 3: []}
         with open(fp, 'r') as f:
+            lines = 0
             for region in f:
-                if random.random() < addrate:
+                lines += 1
+            f.seek(0)
+            addrate_newfile = num_add / lines
+            for region in f:
+                if random.random() < addrate_newfile:
                     region = region.split('\t')
-                    new_regions[0].append(region[0])
-                    new_regions[1].append(int(region[1]))
-                    new_regions[2].append(int(region[2]))
-                    new_regions[3].append(3)
+                    if str(region[1]).isdigit():
+                        new_regions[0].append(region[0])
+                        new_regions[1].append(int(region[1]))
+                        new_regions[2].append(int(region[2]))
+                        new_regions[3].append(3)
         return df.append(pd.DataFrame(new_regions), ignore_index=True)
 
 
