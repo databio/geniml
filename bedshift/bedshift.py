@@ -71,7 +71,7 @@ def build_argparser():
             "--addfile", type=str, help="Add regions from a bedfile")
 
     parser.add_argument(
-            "-p", "--shiftrate", type=float, default=0.0,
+            "-s", "--shiftrate", type=float, default=0.0,
             help="Shift probability")
 
     parser.add_argument(
