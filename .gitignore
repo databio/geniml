@@ -2,3 +2,4 @@ examples/sh_output*
 examples/py_output*
 *.pyc
 site/
+*.bed
