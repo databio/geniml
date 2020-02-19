@@ -94,6 +94,9 @@ def build_argparser():
             "-o", "--outputfile", type=str,
             help="output file name (including extension). if not specified, will default to bedshifted_{originalname}.bed")
 
+    parser.add_argument(
+            "-r", "--repeat", type=int, default=1,
+            help="the number of times to repeat the operation")
 
     return parser
 
@@ -247,7 +250,7 @@ class Bedshift(object):
         start = df.loc[row][1]
         end = df.loc[row][2]
 
-        thecut = int(np.random.normal((start+end)/2, (end - start)/6))
+        thecut = (start + end) // 2 # int(np.random.normal((start+end)/2, (end - start)/6))
         if thecut <= start:
             thecut = start + 10
         if thecut >= end:
@@ -329,11 +332,11 @@ class Bedshift(object):
         '''
 
         self.__check_rate([addrate, shiftrate, cutrate, mergerate, droprate])
+        df = self.shift(df, shiftrate, shiftmean, shiftstdev)
         if addfile:
             df = self.add_from_file(df, addfile, addrate)
         else:
             df = self.add(df, addrate, addmean, addstdev)
-        df = self.shift(df, shiftrate, shiftmean, shiftstdev)
         df = self.cut(df, cutrate)
         df = self.merge(df, mergerate)
         df = self.drop(df, droprate)
@@ -374,6 +377,7 @@ def main():
                 cut rate: {cutrate}
                 merge rate: {mergerate}
                 outputfile: {outputfile}
+                repeat: {repeat}
             """
 
     outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile)) if not args.outputfile else args.outputfile
@@ -389,7 +393,8 @@ def main():
         shiftstdev=args.shiftstdev,
         cutrate=args.cutrate,
         mergerate=args.mergerate,
-        outputfile=args.outputfile))
+        outputfile=args.outputfile,
+        repeat=args.repeat))
 
     if not args.bedfile:
         parser.print_help()
@@ -400,11 +405,19 @@ def main():
     bedshifter = Bedshift()
 
     df = bedshifter.read_bed(args.bedfile)
-    df = bedshifter.all_perturbations(df, args.addrate, args.addmean, args.addstdev, args.addfile, args.shiftrate, args.shiftmean, args.shiftstdev, args.cutrate, args.mergerate, args.droprate)
-
-    # _LOGGER.info('The output bedfile located in {} has {} lines. The original bedfile had {} lines.'.format(outfile, df.shape[0], original_rows))
-
-    bedshifter.write_bed(df, outfile)
+    if args.repeat == 1:
+        df = bedshifter.all_perturbations(df, args.addrate, args.addmean, args.addstdev, args.addfile, args.shiftrate, args.shiftmean, args.shiftstdev, args.cutrate, args.mergerate, args.droprate)
+        bedshifter.write_bed(df, outfile)
+    elif args.repeat > 1:
+        for i in range(args.repeat):
+            repeat_df = bedshifter.all_perturbations(df, args.addrate, args.addmean, args.addstdev, args.addfile, args.shiftrate, args.shiftmean, args.shiftstdev, args.cutrate, args.mergerate, args.droprate)
+            modified_outfile = outfile.rsplit("/")
+            modified_outfile[-1] = "gen" + str(i+1) + "_" + modified_outfile[-1]
+            modified_outfile = "/".join(modified_outfile)
+            bedshifter.write_bed(repeat_df, modified_outfile)
+    else:
+        _LOGGER.error("repeats specified is less than 1")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
