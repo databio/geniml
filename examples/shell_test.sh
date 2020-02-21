@@ -4,4 +4,4 @@ bedshift --bedfile $(dirname "$0")/test.bed --droprate 0.1 --addrate 0.2 --addme
 
 bedshift --bedfile $(dirname "$0")/test.bed --droprate 0.1 --addrate 0.2 --addfile $(dirname "$0")/test.bed --outputfile $(dirname "$0")/sh_output2.bed
 
-bedshift --bedfile $(dirname "$0")/test.bed --addrate 0.1 --cutrate 0.5 --addfile $(dirname "$0")/test.bed --outputfile $(dirname "$0")/sh_output2.bed -r 10
+bedshift --bedfile $(dirname "$0")/test.bed --addrate 0.1 --cutrate 0.5 --addfile $(dirname "$0")/test.bed --outputfile $(dirname "$0")/sh_output2.bed -r 3

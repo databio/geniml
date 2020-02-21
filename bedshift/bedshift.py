@@ -16,9 +16,9 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = ["Bedshift"]
 
 
-chroms = [-1] + ['chr'+str(num) for num in list(range(1, 23))] + ['chrX', 'chrY']
+chroms = {num: 'chr'+str(num) for num in list(range(1, 23))} + {'X': 'chrX', 'Y': 'chrY'}
 
-chrom_lens = [-1, 247249719, 242951149, 199501827, 191273063, 180857866, 170899992, 158821424, 146274826, 140273252, 135374737, 134452384, 132349534, 114142980, 106368585, 100338915, 88827254, 78774742, 76117153, 63811651, 62435964, 46944323, 49691432, 154913754, 57772954]
+chrom_lens = {'chr1': 247249719, 'chr2': 242951149, 'chr3': 199501827, 'chr4': 191273063, 'chr5': 180857866, 'chr6': 170899992, 'chr7': 158821424, 'chr8': 146274826, 'chr9': 140273252, 'chr10': 135374737, 'chr11': 134452384, 'chr12': 132349534, 'chr13': 114142980, 'chr14': 106368585, 'chr15': 100338915, 'chr16': 88827254, 'chr17': 78774742, 'chr18': 76117153, 'chr19': 63811651, 'chr20': 62435964, 'chr21': 46944323, 'chr22': 49691432, 'chrX': 154913754, 'chrY': 57772954]
 
 
 class _VersionInHelpParser(argparse.ArgumentParser):
@@ -138,12 +138,11 @@ class Bedshift(object):
         """
         Utility function to pick a random chromosome
 
-        :return str, float chrom_num, chrom_len: chromosome number and length
+        :return str, float chrom_str, chrom_len: chromosome number and length
         """
-        chrom_index = random.randint(1, len(chroms)-1)
-        chrom_num = chroms[chrom_index]
-        chrom_len = chrom_lens[chrom_index]
-        return chrom_num, chrom_len
+        chrom_str = random.choice(list(chroms.values()))
+        chrom_len = chrom_lens[chrom_str]
+        return chrom_str, chrom_len
 
 
     def add(self, df, addrate, addmean, addstdev):
@@ -161,10 +160,10 @@ class Bedshift(object):
         num_add = int(rows * addrate)
         new_regions = {0: [], 1: [], 2: [], 3: []}
         for _ in range(num_add):
-            chrom_num, chrom_len = self.pick_random_chrom()
+            chrom_str, chrom_len = self.pick_random_chrom()
             start = random.randint(1, chrom_len)
             end = min(start + max(int(np.random.normal(addmean, addstdev)), 20), chrom_len)
-            new_regions[0].append(chrom_num)
+            new_regions[0].append(chrom_str)
             new_regions[1].append(start)
             new_regions[2].append(end)
             new_regions[3].append(3)
@@ -223,8 +222,13 @@ class Bedshift(object):
         start = df.loc[row][1]
         end = df.loc[row][2]
 
+        if start + theshift < 0 || \
+                end + theshift > chrom_lens(df.loc[row][0]) :
+            return df
+
         df.at[row, 1] = start + theshift
         df.at[row, 2] = end + theshift
+
         df.at[row, 3] = 1
 
         return df
