@@ -16,9 +16,10 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = ["Bedshift"]
 
 
-chroms = {num: 'chr'+str(num) for num in list(range(1, 23))} + {'X': 'chrX', 'Y': 'chrY'}
+chroms = {num: 'chr'+str(num) for num in list(range(1, 23))}
+chroms.update({'X': 'chrX', 'Y': 'chrY'})
 
-chrom_lens = {'chr1': 247249719, 'chr2': 242951149, 'chr3': 199501827, 'chr4': 191273063, 'chr5': 180857866, 'chr6': 170899992, 'chr7': 158821424, 'chr8': 146274826, 'chr9': 140273252, 'chr10': 135374737, 'chr11': 134452384, 'chr12': 132349534, 'chr13': 114142980, 'chr14': 106368585, 'chr15': 100338915, 'chr16': 88827254, 'chr17': 78774742, 'chr18': 76117153, 'chr19': 63811651, 'chr20': 62435964, 'chr21': 46944323, 'chr22': 49691432, 'chrX': 154913754, 'chrY': 57772954]
+chrom_lens = {'chr1': 247249719, 'chr2': 242951149, 'chr3': 199501827, 'chr4': 191273063, 'chr5': 180857866, 'chr6': 170899992, 'chr7': 158821424, 'chr8': 146274826, 'chr9': 140273252, 'chr10': 135374737, 'chr11': 134452384, 'chr12': 132349534, 'chr13': 114142980, 'chr14': 106368585, 'chr15': 100338915, 'chr16': 88827254, 'chr17': 78774742, 'chr18': 76117153, 'chr19': 63811651, 'chr20': 62435964, 'chr21': 46944323, 'chr22': 49691432, 'chrX': 154913754, 'chrY': 57772954}
 
 
 class _VersionInHelpParser(argparse.ArgumentParser):
@@ -134,6 +135,7 @@ class Bedshift(object):
                 _LOGGER.error("Rate must be between 0 and 1")
                 sys.exit(1)
 
+
     def pick_random_chrom(self):
         """
         Utility function to pick a random chromosome
@@ -222,13 +224,13 @@ class Bedshift(object):
         start = df.loc[row][1]
         end = df.loc[row][2]
 
-        if start + theshift < 0 || \
-                end + theshift > chrom_lens(df.loc[row][0]) :
+        if start + theshift < 0 or \
+                end + theshift > chrom_lens[df.loc[row][0]]:
+            # shifting out of bounds check
             return df
 
         df.at[row, 1] = start + theshift
         df.at[row, 2] = end + theshift
-
         df.at[row, 3] = 1
 
         return df
@@ -243,10 +245,18 @@ class Bedshift(object):
         :return pandas.DataFrame: the new dataframe after cuts
         """
         self.__check_rate([cutrate])
+        if cutrate == 0:
+            return df
         rows = df.shape[0]
-        for i in range(rows):
-            if random.random() < cutrate:
-                df = self.__cut(df, i) # cut rows display a 2
+        cut_rows = random.sample(list(range(rows)), int(rows * cutrate))
+        new_row_list = []
+        to_drop = []
+        for row in cut_rows:
+            drop_row, new_regions = self.__cut(df, row) # cut rows display a 2
+            new_row_list.extend(new_regions)
+            to_drop.append(drop_row)
+        df = df.drop(to_drop)
+        df = df.append(new_row_list, ignore_index=True)
         return df.reset_index(drop=True)
 
     def __cut(self, df, row):
@@ -260,14 +270,13 @@ class Bedshift(object):
         if thecut >= end:
             thecut = end - 10
 
-        new_segs = pd.DataFrame([[chrom, start, thecut, 2], [chrom, thecut, end, 2]])
         ''' may add in later, this makes the api confusing!
         # adjust the cut regions using the shift function
         new_segs = self.__shift(new_segs, 0, meanshift, stdevshift)
         new_segs = self.__shift(new_segs, 1, meanshift, stdevshift)
         '''
-        df.loc[row] = new_segs.loc[0]
-        return df.append(new_segs.loc[1], ignore_index=True)
+
+        return row, [{0: chrom, 1: start, 2: thecut, 3: 2}, {0: chrom, 1: thecut, 2: end, 3: 2}]
 
 
     def merge(self, df, mergerate):
@@ -280,26 +289,30 @@ class Bedshift(object):
         """
 
         self.__check_rate([mergerate])
+        if mergerate == 0:
+            return df
         rows = df.shape[0]
-        i = 0
-        while i < rows:
-            if random.random() < mergerate:
-                df = self.__merge(df, i) # merged rows display a 4
-                i += 1
-            i += 1
+        merge_rows = random.sample(list(range(rows)), int(rows * mergerate))
+        to_add = []
+        to_drop = []
+        for row in merge_rows:
+            drop_row, add_row = self.__merge(df, row)
+            if add_row:
+                to_add.append(add_row)
+            to_drop.extend(drop_row)
+        df = df.drop(to_drop)
+        df = df.append(to_add, ignore_index=True)
         return df.reset_index(drop=True)
 
     def __merge(self, df, row):
         # check if the regions being merged are on the same chromosome
         if row + 1 not in df.index or df.loc[row][0] != df.loc[row+1][0]:
-            return df
+            return [], None
 
         chrom = df.loc[row][0]
         start = df.loc[row][1]
         end = df.loc[row+1][2]
-        df = df.drop(row)
-        df.loc[row+1] = [chrom, start, end, 4]
-        return df
+        return [row, row+1], {0: chrom, 1: start, 2: end, 3: 4}
 
 
     def drop(self, df, droprate):
@@ -312,9 +325,8 @@ class Bedshift(object):
         """
         self.__check_rate([droprate])
         rows = df.shape[0]
-        for i in range(rows):
-            if random.random() < droprate:
-                df = df.drop(i)
+        drop_rows = random.sample(list(range(rows)), int(rows * droprate))
+        df = df.drop(drop_rows)
         return df.reset_index(drop=True)
 
 
@@ -370,15 +382,15 @@ def main():
     _LOGGER.info("welcome to bedshift")
     _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
     msg = """Params:
-                drop rate: {droprate}
-                add rate: {addrate}
-                add mean length: {addmean}
-                add stdev: {addstdev}
-                add from file: {addfile}
                 shift rate: {shiftrate}
-                shift mean distance: {shiftmean}
-                shift stdev: {shiftstdev}
+                    shift mean distance: {shiftmean}
+                    shift stdev: {shiftstdev}
+                add rate: {addrate}
+                    add mean length: {addmean}
+                    add stdev: {addstdev}
+                add regions from file: {addfile}
                 cut rate: {cutrate}
+                drop rate: {droprate}
                 merge rate: {mergerate}
                 outputfile: {outputfile}
                 repeat: {repeat}
