@@ -11,7 +11,7 @@ See: `bedshift --help` for parameters.
 ## Python
 
 ```py
-from bedshift import bedshift
+import bedshift
 
 bedshifter = bedshift.Bedshift()
 
