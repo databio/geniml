@@ -1,5 +1,5 @@
 import os, sys
-from bedshift import bedshift
+import bedshift
 
 os.chdir(sys.path[0])
 

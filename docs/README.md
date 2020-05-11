@@ -28,7 +28,7 @@ bedshift -b examples/test.bed -p 0.1 -a 0.1
 Python:
 
 ```py
-from bedshift import bedshift
+import bedshift
 
 bedshifter = bedshift.Bedshift()
 
