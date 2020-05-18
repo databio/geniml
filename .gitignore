@@ -3,3 +3,4 @@ examples/py_output*
 *.pyc
 site/
 *.bed
+.DS_Store
