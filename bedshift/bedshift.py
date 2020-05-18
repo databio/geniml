@@ -1,6 +1,5 @@
 """ Perturb regions in bedfiles """
 
-from __future__ import division, print_function, absolute_import
 import argparse
 import logmuse
 import logging

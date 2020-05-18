@@ -1,1 +1,3 @@
 logmuse
+pandas
+numpy
