@@ -33,7 +33,7 @@ setup(
     name=PACKAGE,
     packages=[PACKAGE],
     version=version,
-    description="BED file shifter",
+    description="BED file perturbations",
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[
@@ -44,16 +44,16 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Topic :: System :: Distributed Computing"
     ],
-    keywords="docker, containers, reproducibility, bioinformatics, workflow",
+    keywords="BED file, perturbation, bioinformatics, region set",
     url="https://bedshift.databio.org",
-    author=u"Nathan Sheffield",
-    author_email=u"nathan@code.databio.org", 
+    author=u"Aaron Gu",
+    author_email=u"ag5ym@virginia.edu", 
     license="BSD2",
     entry_points={
         "console_scripts": [
             'bedshift = bedshift.bedshift:main'
         ],
-    },    
+    },
     package_data={"bedshift": [os.path.join("bedshift", "*")]},
     include_package_data=True,
     test_suite="tests",

@@ -1,0 +1,56 @@
+Metadata-Version: 2.1
+Name: bedshift
+Version: 0.2.0
+Summary: BED file perturbations
+Home-page: https://bedshift.databio.org
+Author: Aaron Gu
+Author-email: ag5ym@virginia.edu
+License: BSD2
+Description: # Bedshift
+        
+        Install with: `pip install --user .`
+        
+        ## Command line
+        
+        Run with: `bedshift -b BEDFILE` or `./bedshift.sh` if running bedshift on multiple bedfiles with a set of parameters, which are editable in bedshift.sh.
+        
+        See: `bedshift --help` for parameters.
+        
+        ## Python
+        
+        ```py
+        from bedshift import bedshift
+        
+        bedshifter = bedshift.Bedshift()
+        
+        df = bedshifter.read_bed('test.bed')
+        df = bedshifter.all_perturbations(df, addrate=0.3, addmean=320.0, addstdev=20.0, shiftrate=0.3, shiftmean=-10.0, shiftstdev=120.0, cutrate=0.1, mergerate=0.11, droprate=0.03)
+        # can also run single operations: shift, add, cut, merge, drop
+        
+        bedshifter.write_bed(df, 'output_file.bed')
+        ```
+        
+        
+        
+        
+        ## Development
+        
+        test changes:
+        
+        ```
+        pip install --user .
+        
+        ./run-tests.sh
+        ```
+        
+        if the tests complete, then bedshift is working properly
+        
+Keywords: BED file,perturbation,bioinformatics,region set
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Topic :: System :: Distributed Computing
+Description-Content-Type: text/markdown
