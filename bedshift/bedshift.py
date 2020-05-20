@@ -55,7 +55,7 @@ def build_argparser():
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return: argparse.ArgumentParser
     """
 
     banner = "%(prog)s - randomize BED files"

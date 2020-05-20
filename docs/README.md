@@ -28,7 +28,7 @@ bedshift -b tests/test.bed -p 0.1 -a 0.1
 Python:
 
 ```py
-from bedshift import bedshift
+import bedshift
 
 bedshifter = bedshift.Bedshift('tests/test.bed')
 bedshifter.shift(shiftrate=0.1, shiftmean=0.0, shiftstdev=120.0)

@@ -11,7 +11,7 @@ See: `bedshift --help` for parameters.
 ## Python
 
 ```py
-from bedshift import bedshift
+import bedshift
 
 bedshifter = bedshift.Bedshift('tests/test.bed')
 bedshifter.all_perturbations(addrate=0.3, addmean=320.0, addstdev=20.0, 
