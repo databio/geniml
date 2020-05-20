@@ -3,13 +3,17 @@ from bedshift import bedshift
 
 os.chdir(sys.path[0])
 
-bedshifter = bedshift.Bedshift()
+bedshifter = bedshift.Bedshift('test.bed')
 
-df = bedshifter.read_bed('test.bed')
-original_rows = df.shape[0]
+bedshifter.all_perturbations(addrate=0.3, addmean=320.0, addstdev=20.0,
+							 shiftrate=0.3, shiftmean=-10.0, shiftstdev=120.0,
+							 cutrate=0.1, 
+							 mergerate=0.11, 
+							 droprate=0.03)
+bedshifter.to_bed('py_output.bed')
+bedshifter.reset_bed()
 
-df = bedshifter.all_perturbations(df, addrate=0.3, addmean=320.0, addstdev=20.0, addfile=None, shiftrate=0.3, shiftmean=-10.0, shiftstdev=120.0, cutrate=0.1, mergerate=0.11, droprate=0.03)
-bedshifter.write_bed(df, 'py_output.bed')
-
-df = bedshifter.all_perturbations(df, addrate=0.3, addmean=320.0, addstdev=20.0, addfile='py_output.bed', shiftrate=0.3, shiftmean=100.0, shiftstdev=30.0)
-bedshifter.write_bed(df, 'py_output2.bed')
+bedshifter.all_perturbations(addrate=0.3, addmean=320.0, addstdev=20.0, 
+							 addfile='py_output.bed', 
+							 shiftrate=0.3, shiftmean=100.0, shiftstdev=30.0)
+bedshifter.to_bed('py_output2.bed')

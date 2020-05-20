@@ -1,4 +1,5 @@
 #!/bin/bash
 
-python3 ./examples/pypackage_test.py
-./examples/shell_test.sh
+pip install .
+python3 ./tests/pypackage_test.py
+./tests/shell_test.sh

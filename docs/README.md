@@ -22,7 +22,7 @@ CLI:
 
 ```
 bedshift -h
-bedshift -b examples/test.bed -p 0.1 -a 0.1
+bedshift -b tests/test.bed -p 0.1 -a 0.1
 ```
 
 Python:
@@ -30,10 +30,8 @@ Python:
 ```py
 from bedshift import bedshift
 
-bedshifter = bedshift.Bedshift()
-
-df = bedshifter.read_bed('examples/test.bed')
-df = bedshifter.shift(df, shiftrate=0.1, shiftmean=0.0, shiftstdev=120.0)
-df = bedshifter.add(df, addrate=0.1, addmean=320.0, addstdev=20.0)
-bedshifter.write_bed(df, 'output_file.bed')
+bedshifter = bedshift.Bedshift('tests/test.bed')
+bedshifter.shift(shiftrate=0.1, shiftmean=0.0, shiftstdev=120.0)
+bedshifter.add(addrate=0.1, addmean=320.0, addstdev=20.0)
+bedshifter.to_bed('tests/test_output.bed')
 ```
