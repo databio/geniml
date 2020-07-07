@@ -1,28 +1,29 @@
 # Bedshift
 
-Bedshift is a tool for randomly perturbing bedfiles. Different kinds of perturbations supported are region shifts, drops, adds, cuts, and merges. This tool is particularly useful for creating test datasets for various tasks, since there often is no ground truth dataset to compare to. By perturbing a file, analysis can be done on both the perturbed file and the original file and be compared.
+Bedshift is a tool for randomly perturbing BED file regions. The perturbations supported on regions are shift, drop, add, cut, and merge. This tool is particularly useful for creating test datasets for various tasks, since there often is no ground truth dataset to compare to. By perturbing a file, a pipeline or analysis can be run on both the perturbed file and the original file, then be compared.
 
 ## Installing
 
-This package is not available on pypi yet, but is available for local install by cloning the repository.
+The package is available for public download on PyPi.
 
 ```
-git clone https://github.com/databio/bedshift.git
-cd bedshift
-pip install .
+pip install bedshift
 ```
 
 ## Quickstart
 
-The package is available for use both as a command line interface and a python package.
+The package is available for use both as a command line interface and a python package. To get started, type on the command line:
+
+```
+bedshift -h
+```
 
 The following examples will shift 10% of the regions and add 10% new regions in `examples/test.bed`. The output is located at `bedshifted_test.bed`.
 
 CLI:
 
 ```
-bedshift -h
-bedshift -b tests/test.bed -p 0.1 -a 0.1
+bedshift -b tests/test.bed -s 0.1 -a 0.1
 ```
 
 Python:
