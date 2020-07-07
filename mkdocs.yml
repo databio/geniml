@@ -8,6 +8,8 @@ theme: databio
 nav:
   - Introduction:
     - Overview: README.md
+  - How-to Guides:
+    - Evaluating Similarity Scores: evaluation_guide.md
   - Reference:
     - Python API: autodoc_build/bedshift.md
 

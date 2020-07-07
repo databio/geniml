@@ -1,12 +1,16 @@
 # Bedshift
 
-Install with: `pip install --user .`
+Docs: bedshift.databio.org
+
+Install from PyPi: `pip install bedshift`
+
+Install from local repository: `pip install .`
 
 ## Command line
 
 Run with: `bedshift -b BEDFILE` or `./bedshift.sh` if running bedshift on multiple bedfiles with a set of parameters, which are editable in bedshift.sh.
 
-See: `bedshift --help` for parameters.
+See `bedshift -h` for parameters.
 
 ## Python
 
@@ -26,15 +30,17 @@ bedshifter.to_bed('test_output.bed')
 
 
 
-
 ## Development
 
 test changes:
 
 ```
-pip install --user .
-
 ./run-tests.sh
 ```
 
-if the tests complete, then bedshift is working properly
+Double check the output files to see if the regions make sense.
+
+build docs:
+
+
+
