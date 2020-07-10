@@ -140,7 +140,7 @@ class Bedshift(object):
         self.original_regions = df.shape[0]
         self.bed = df.astype({1: 'int64', 2: 'int64', 3: 'int64'}) \
                             .sort_values([0, 1, 2]).reset_index(drop=True)
-        self.original_bed = self.bed
+        self.original_bed = self.bed.copy(deep=True)
 
 
     def reset_bed(self):
@@ -148,7 +148,7 @@ class Bedshift(object):
         Reset the stored bedfile to the state before perturbations
         """
 
-        self.bed = self.original_bed
+        self.bed = self.original_bed.copy(deep=True)
 
 
     def __check_rate(self, rates):
