@@ -3,4 +3,5 @@ examples/py_output*
 *.pyc
 site/
 *.bed
+!tests/test.bed
 .DS_Store
