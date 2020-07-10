@@ -129,21 +129,14 @@ class Bedshift(object):
     The bedshift object with methods to perturb regions
     """
 
-    def __init__(self, bedfile_path):
+    def __init__(self, bedfile_path, delimiter='\t'):
         """
         Read in a .bed file to pandas DataFrame format
 
         :param str bedfile_path: the path to the bedfile
         """
 
-        df = pd.read_csv(bedfile_path, sep='\t', header=None, usecols=[0,1,2])
-
-        # if there is 'chrom', 'start', 'stop' in the table, move them to header
-        if not str(df.iloc[0, 1]).isdigit():
-            df.columns = df.iloc[0]
-            df = df[1:]
-
-        df[3] = 0 # column indicating which modifications were made
+        df = self.read_bed(bedfile_path, delimiter=delimiter)
         self.original_regions = df.shape[0]
         self.bed = df.astype({1: 'int64', 2: 'int64', 3: 'int64'}) \
                             .sort_values([0, 1, 2]).reset_index(drop=True)
@@ -200,7 +193,7 @@ class Bedshift(object):
         self.bed = self.bed.append(pd.DataFrame(new_regions), ignore_index=True)
         return len(new_regions)
 
-    def add_from_file(self, fp, addrate):
+    def add_from_file(self, fp, addrate, delimiter='\t'):
         """
         Add regions from another bedfile to this perturbed bedfile
 
@@ -212,23 +205,14 @@ class Bedshift(object):
         self.__check_rate([addrate])
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
-        new_regions = {0: [], 1: [], 2: [], 3: []}
-        with open(fp, 'r') as f:
-            lines = 0
-            for region in f:
-                lines += 1
-            f.seek(0)
-            addrate_newfile = num_add / lines
-            for region in f:
-                if random.random() < addrate_newfile:
-                    region = region.split('\t')
-                    if str(region[1]).isdigit():
-                        new_regions[0].append(region[0])
-                        new_regions[1].append(int(region[1]))
-                        new_regions[2].append(int(region[2]))
-                        new_regions[3].append(3)
-        self.bed = self.bed.append(pd.DataFrame(new_regions), ignore_index=True)
-        return len(new_regions)
+
+        df = self.read_bed(fp, delimiter=delimiter)
+        add_rows = random.sample(list(range(df.shape[0])), num_add)
+        add_df = df.loc[add_rows].reset_index(drop=True)
+        add_df[3] = pd.Series([3] * add_df.shape[0])
+        self.bed = self.bed.append(add_df, ignore_index=True)
+        return num_add
+
 
     def shift(self, shiftrate, shiftmean, shiftstdev):
         """
@@ -404,6 +388,25 @@ class Bedshift(object):
               .format(outfile_name, self.bed.shape[0], self.original_regions))
 
 
+    def read_bed(self, bedfile_path, delimiter='\t'):
+        """
+        Read a BED file into pandas dataframe
+
+        :param str bedfile_path: The path to the BED file
+        """
+
+        df = pd.read_csv(bedfile_path, sep=delimiter, header=None, usecols=[0,1,2])
+
+        # if there is 'chrom', 'start', 'stop' in the table, move them to header
+        if not str(df.iloc[0, 1]).isdigit():
+            df.columns = df.iloc[0]
+            df = df[1:]
+
+        df[3] = 0 # column indicating which modifications were made
+        return df
+
+
+
 def main():
     """ Primary workflow """
 
@@ -460,6 +463,7 @@ def main():
                                           args.mergerate, 
                                           args.droprate)
         bedshifter.to_bed(outfile)
+        print(str(n) + " regions changed")
     elif args.repeat > 1:
         for i in range(args.repeat):
 
@@ -473,6 +477,7 @@ def main():
             modified_outfile[-1] = "rep" + str(i+1) + "_" + modified_outfile[-1]
             modified_outfile = "/".join(modified_outfile)
             bedshifter.to_bed(modified_outfile)
+            print(str(n) + " regions changed")
             bedshifter.reset_bed()
     else:
         _LOGGER.error("repeats specified is less than 1")
