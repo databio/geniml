@@ -1,3 +1,0 @@
-[console_scripts]
-bedshift = bedshift.bedshift:main
-
