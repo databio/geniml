@@ -1,3 +1,0 @@
-logmuse
-pandas
-numpy

@@ -5,3 +5,6 @@ site/
 *.bed
 !tests/test.bed
 .DS_Store
+build/
+bedshift.egg-info/
+dist/
