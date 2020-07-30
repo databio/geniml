@@ -15,33 +15,44 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = ["Bedshift"]
 
 
-chroms = {num: 'chr'+str(num) for num in list(range(1, 23))}
-chroms.update({'X': 'chrX', 'Y': 'chrY'})
+# chroms = {num: 'chr'+str(num) for num in list(range(1, 23))}
+# chroms.update({'X': 'chrX', 'Y': 'chrY'})
 
-chrom_lens = {'chr1': 247249719, 
-              'chr2': 242951149,
-              'chr3': 199501827,
-              'chr4': 191273063, 
-              'chr5': 180857866, 
-              'chr6': 170899992, 
-              'chr7': 158821424, 
-              'chr8': 146274826, 
-              'chr9': 140273252, 
-              'chr10': 135374737, 
-              'chr11': 134452384, 
-              'chr12': 132349534, 
-              'chr13': 114142980, 
-              'chr14': 106368585, 
-              'chr15': 100338915, 
-              'chr16': 88827254, 
-              'chr17': 78774742, 
-              'chr18': 76117153, 
-              'chr19': 63811651, 
-              'chr20': 62435964, 
-              'chr21': 46944323, 
-              'chr22': 49691432, 
-              'chrX': 154913754, 
-              'chrY': 57772954}
+# chrom_lens = {'chr1': 247249719, 
+#               'chr2': 242951149,
+#               'chr3': 199501827,
+#               'chr4': 191273063, 
+#               'chr5': 180857866, 
+#               'chr6': 170899992, 
+#               'chr7': 158821424, 
+#               'chr8': 146274826, 
+#               'chr9': 140273252, 
+#               'chr10': 135374737, 
+#               'chr11': 134452384, 
+#               'chr12': 132349534, 
+#               'chr13': 114142980, 
+#               'chr14': 106368585, 
+#               'chr15': 100338915, 
+#               'chr16': 88827254, 
+#               'chr17': 78774742, 
+#               'chr18': 76117153, 
+#               'chr19': 63811651, 
+#               'chr20': 62435964, 
+#               'chr21': 46944323, 
+#               'chr22': 49691432, 
+#               'chrX': 154913754, 
+#               'chrY': 57772954}
+
+chrom_lens = {}
+
+def read_chromsizes(fp):
+    with open(fp) as f:
+        for line in f:
+            line = line.split('\t')
+            chrom = line[0]
+            size = line[1]
+            chrom_lens[chrom] = size
+
 
 
 class _VersionInHelpParser(argparse.ArgumentParser):
@@ -73,6 +84,11 @@ def build_argparser():
     parser.add_argument(
             "-b", "--bedfile", required=True,
             help="File path to bed file.")
+
+    parser.add_argument(
+            "-l", "--chrom_lengths", type=str, required=True,
+            help="chrom.sizes file"
+            )
 
     parser.add_argument(
             "-d", "--droprate", type=float, default=0.0,
@@ -418,6 +434,7 @@ def main():
     _LOGGER.info("welcome to bedshift")
     _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
     msg = """Params:
+                chrom.sizes file: {chromsizes}
                 shift rate: {shiftrate}
                     shift mean distance: {shiftmean}
                     shift stdev: {shiftstdev}
@@ -435,6 +452,7 @@ def main():
     outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile)) if not args.outputfile else args.outputfile
 
     _LOGGER.info(msg.format(
+        chromsizes=args.chrom_lengths,
         droprate=args.droprate,
         addrate=args.addrate,
         addmean=args.addmean,
@@ -453,6 +471,7 @@ def main():
         _LOGGER.error("No bedfile given")
         sys.exit(1)
 
+    read_chromsizes(args.chrom_lengths)
 
     bedshifter = Bedshift(args.bedfile)
     if args.repeat == 1:
