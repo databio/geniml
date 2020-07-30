@@ -15,34 +15,6 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = ["Bedshift"]
 
 
-# chroms = {num: 'chr'+str(num) for num in list(range(1, 23))}
-# chroms.update({'X': 'chrX', 'Y': 'chrY'})
-
-# chrom_lens = {'chr1': 247249719, 
-#               'chr2': 242951149,
-#               'chr3': 199501827,
-#               'chr4': 191273063, 
-#               'chr5': 180857866, 
-#               'chr6': 170899992, 
-#               'chr7': 158821424, 
-#               'chr8': 146274826, 
-#               'chr9': 140273252, 
-#               'chr10': 135374737, 
-#               'chr11': 134452384, 
-#               'chr12': 132349534, 
-#               'chr13': 114142980, 
-#               'chr14': 106368585, 
-#               'chr15': 100338915, 
-#               'chr16': 88827254, 
-#               'chr17': 78774742, 
-#               'chr18': 76117153, 
-#               'chr19': 63811651, 
-#               'chr20': 62435964, 
-#               'chr21': 46944323, 
-#               'chr22': 49691432, 
-#               'chrX': 154913754, 
-#               'chrY': 57772954}
-
 chrom_lens = {}
 
 def read_chromsizes(fp):
@@ -50,9 +22,8 @@ def read_chromsizes(fp):
         for line in f:
             line = line.split('\t')
             chrom = line[0]
-            size = line[1]
+            size = int(line[1])
             chrom_lens[chrom] = size
-
 
 
 class _VersionInHelpParser(argparse.ArgumentParser):
@@ -145,13 +116,16 @@ class Bedshift(object):
     The bedshift object with methods to perturb regions
     """
 
-    def __init__(self, bedfile_path, delimiter='\t'):
+    def __init__(self, bedfile_path, chrom_sizes, delimiter='\t'):
         """
         Read in a .bed file to pandas DataFrame format
 
-        :param str bedfile_path: the path to the bedfile
+        :param str bedfile_path: the path to the BED file
+        :param str chrom_sizes: the path to the chrom.sizes file
+        :param str delimiter: the delimiter used in the BED file
         """
 
+        read_chromsizes(chrom_sizes)
         df = self.read_bed(bedfile_path, delimiter=delimiter)
         self.original_regions = df.shape[0]
         self.bed = df.astype({1: 'int64', 2: 'int64', 3: 'int64'}) \
@@ -180,7 +154,7 @@ class Bedshift(object):
 
         :return str, float chrom_str, chrom_len: chromosome number and length
         """
-        chrom_str = random.choice(list(chroms.values()))
+        chrom_str = random.choice(list(chrom_lens.keys()))
         chrom_len = chrom_lens[chrom_str]
         return chrom_str, chrom_len
 
@@ -249,11 +223,12 @@ class Bedshift(object):
     def __shift(self, row, mean, stdev):
         theshift = int(np.random.normal(mean, stdev))
 
+        chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
         end = self.bed.loc[row][2]
 
         if start + theshift < 0 or \
-                end + theshift > chrom_lens[self.bed.loc[row][0]]:
+                end + theshift > chrom_lens[chrom]:
             # shifting out of bounds check
             return
 
@@ -357,12 +332,12 @@ class Bedshift(object):
         return len(drop_rows)
 
 
-    def all_perturbations(self, 
-                          addrate=0.0, addmean=320.0, addstdev=30.0, 
-                          addfile=None, 
-                          shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0, 
-                          cutrate=0.0, 
-                          mergerate=0.0, 
+    def all_perturbations(self,
+                          addrate=0.0, addmean=320.0, addstdev=30.0,
+                          addfile=None,
+                          shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0,
+                          cutrate=0.0,
+                          mergerate=0.0,
                           droprate=0.0):
         '''
         Perform all five perturbations in the order of shift, add, cut, merge, drop.
@@ -471,26 +446,25 @@ def main():
         _LOGGER.error("No bedfile given")
         sys.exit(1)
 
-    read_chromsizes(args.chrom_lengths)
 
-    bedshifter = Bedshift(args.bedfile)
+    bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
     if args.repeat == 1:
-        n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev, 
-                                          args.addfile, 
-                                          args.shiftrate, args.shiftmean, args.shiftstdev, 
-                                          args.cutrate, 
-                                          args.mergerate, 
+        n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev,
+                                          args.addfile,
+                                          args.shiftrate, args.shiftmean, args.shiftstdev,
+                                          args.cutrate,
+                                          args.mergerate,
                                           args.droprate)
         bedshifter.to_bed(outfile)
         print(str(n) + " regions changed")
     elif args.repeat > 1:
         for i in range(args.repeat):
 
-            n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev, 
-                                                     args.addfile, 
-                                                     args.shiftrate, args.shiftmean, args.shiftstdev, 
-                                                     args.cutrate, 
-                                                     args.mergerate, 
+            n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev,
+                                                     args.addfile,
+                                                     args.shiftrate, args.shiftmean, args.shiftstdev,
+                                                     args.cutrate,
+                                                     args.mergerate,
                                                      args.droprate)
             modified_outfile = outfile.rsplit("/")
             modified_outfile[-1] = "rep" + str(i+1) + "_" + modified_outfile[-1]
