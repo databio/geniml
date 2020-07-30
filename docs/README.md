@@ -18,12 +18,12 @@ The package is available for use both as a command line interface and a python p
 bedshift -h
 ```
 
-The following examples will shift 10% of the regions and add 10% new regions in `examples/test.bed`. The output is located at `bedshifted_test.bed`.
+The following examples will shift 10% of the regions and add 10% new regions in `examples/test.bed`. The -l argument is the file in which chromosome sizes are located. The output is located at `bedshifted_test.bed`. 
 
 CLI:
 
 ```
-bedshift -b tests/test.bed -s 0.1 -a 0.1
+bedshift -l hg38.chrom.sizes -b tests/test.bed -s 0.1 -a 0.1
 ```
 
 Python:
@@ -31,7 +31,7 @@ Python:
 ```py
 import bedshift
 
-bedshifter = bedshift.Bedshift('tests/test.bed')
+bedshifter = bedshift.Bedshift('tests/test.bed', 'hg38.chrom.sizes')
 bedshifter.shift(shiftrate=0.1, shiftmean=0.0, shiftstdev=120.0)
 bedshifter.add(addrate=0.1, addmean=320.0, addstdev=20.0)
 bedshifter.to_bed('tests/test_output.bed')

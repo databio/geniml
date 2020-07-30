@@ -5,8 +5,8 @@
 Bedshift perturbations include add, drop, shift, cut, and merge. Using any of these perturbations, or combinations of them, you can generate a set of files that are slightly perturbed from the original file. Assuming that the original file is called `original.bed`, and you want 100 files of added regions and 100 files of dropped regions:
 
 ```
-bedshift -b original.bed -a 0.1 -r 100
-bedshift -b original.bed -d 0.3 -r 100
+bedshift -l hg38.chrom.sizes -b original.bed -a 0.1 -r 100
+bedshift -l hg38.chrom.sizes -b original.bed -d 0.3 -r 100
 ```
 
 The output file will be in `bedshifted_original.bed`.
@@ -74,7 +74,7 @@ You will also need to create a `pipeline_interface.yaml` that describes how to f
 pipeline_name: bedshift_run
 pipeline_type: sample
 command_template: >
-    bedshift -b {sample.file} -a {sample.add} -d {sample.drop} -s {sample.shift} -c {sample.cut} -m {sample.merge} -r {sample.repeat} -o {sample.sample_name}.bed
+    bedshift -l hg38.chrom.sizes -b {sample.file} -a {sample.add} -d {sample.drop} -s {sample.shift} -c {sample.cut} -m {sample.merge} -r {sample.repeat} -o {sample.sample_name}.bed
 compute:
   mem: 4000
   cores: 1
