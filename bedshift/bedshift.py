@@ -124,7 +124,7 @@ class Bedshift(object):
     The bedshift object with methods to perturb regions
     """
 
-    def __init__(self, bedfile_path, chrom_sizes, delimiter='\t'):
+    def __init__(self, bedfile_path, chrom_sizes=None, delimiter='\t'):
         """
         Read in a .bed file to pandas DataFrame format
 
@@ -133,7 +133,8 @@ class Bedshift(object):
         :param str delimiter: the delimiter used in the BED file
         """
 
-        read_chromsizes(chrom_sizes)
+        if chrom_sizes:
+            read_chromsizes(chrom_sizes)
         df = self.read_bed(bedfile_path, delimiter=delimiter)
         self.original_regions = df.shape[0]
         self.bed = df.astype({1: 'int64', 2: 'int64', 3: 'int64'}) \
@@ -179,6 +180,10 @@ class Bedshift(object):
         self.__check_rate([addrate])
         if addrate == 0:
             return 0
+        if len(chrom_lens) == 0:
+            _LOGGER.error("chrom.sizes file must be specified when adding regions")
+            sys.exit(1)
+
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
         new_regions = {0: [], 1: [], 2: [], 3: []}
@@ -205,9 +210,12 @@ class Bedshift(object):
         self.__check_rate([addrate])
         if addrate == 0:
             return 0
+        if len(chrom_lens) == 0:
+            _LOGGER.error("chrom.sizes file must be specified when adding regions")
+            sys.exit(1)
+
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
-
         df = self.read_bed(fp, delimiter=delimiter)
         add_rows = random.sample(list(range(df.shape[0])), num_add)
         add_df = df.loc[add_rows].reset_index(drop=True)
@@ -228,6 +236,10 @@ class Bedshift(object):
         self.__check_rate([shiftrate])
         if shiftrate == 0:
             return 0
+        if len(chrom_lens) == 0:
+            _LOGGER.error("chrom.sizes file must be specified when shifting regions")
+            sys.exit(1)
+
         rows = self.bed.shape[0]
         shift_rows = random.sample(list(range(rows)), int(rows * shiftrate))
         for row in shift_rows:
@@ -433,18 +445,20 @@ def main():
         _LOGGER.error("No BED file given")
         sys.exit(1)
 
-    if not args.chrom_lengths:
-        if not args.genome:
+    if args.chrom_lengths:
+        pass
+    elif args.genome:
+        try:
+            import refgenconf
+            rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
+            args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
+        except ModuleNotFoundError:
+            _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
+            sys.exit(1)
+    else:
+        if args.addrate > 0 or args.shiftrate > 0:
             _LOGGER.error("You must provide either chrom sizes or a refgenie genome.")
             sys.exit(1)
-        else:
-            try:
-                import refgenconf
-                rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
-                args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
-            except ModuleNotFoundError:
-                _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
-                sys.exit(1)
 
 
 
