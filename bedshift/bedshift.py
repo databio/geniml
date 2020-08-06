@@ -409,19 +409,19 @@ def main():
     _LOGGER.info("welcome to bedshift")
     _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
     msg = """Params:
-                chrom.sizes file: {chromsizes}
-                shift rate: {shiftrate}
-                    shift mean distance: {shiftmean}
-                    shift stdev: {shiftstdev}
-                add rate: {addrate}
-                    add mean length: {addmean}
-                    add stdev: {addstdev}
-                add regions from file: {addfile}
-                cut rate: {cutrate}
-                drop rate: {droprate}
-                merge rate: {mergerate}
-                outputfile: {outputfile}
-                repeat: {repeat}
+    chrom.sizes file: {chromsizes}
+    shift rate: {shiftrate}
+        shift mean distance: {shiftmean}
+        shift stdev: {shiftstdev}
+    add rate: {addrate}
+        add mean length: {addmean}
+        add stdev: {addstdev}
+    add regions from file: {addfile}
+    cut rate: {cutrate}
+    drop rate: {droprate}
+    merge rate: {mergerate}
+    outputfile: {outputfile}
+    repeat: {repeat}
             """
 
     outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile)) if not args.outputfile else args.outputfile
