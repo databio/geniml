@@ -57,7 +57,7 @@ def build_argparser():
         help="File path to bed file.")
 
     parser.add_argument(
-        "-l", "--chrom_lengths", type=str, required=False,
+        "-l", "--chrom-lengths", type=str, required=False,
         help="TSV text file with one row per chromosomes indicating chromosome sizes"
         )
 
