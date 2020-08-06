@@ -426,7 +426,7 @@ def main():
             try:
                 import refgenconf
                 rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
-                args.chrom_lengths = rgc.seek(args.genome, "fasta", "", "chrom_sizes")
+                args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
             except ModuleNotFoundError:
                 _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
                 sys.exit(1)
