@@ -58,7 +58,7 @@ def build_argparser():
 
     parser.add_argument(
             "-l", "--chrom_lengths", type=str, required=True,
-            help="chrom.sizes file"
+            help="TSV text file with one row per chromosomes indicating chromosome sizes"
             )
 
     parser.add_argument(
@@ -409,20 +409,20 @@ def main():
     _LOGGER.info("welcome to bedshift")
     _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
     msg = """Params:
-    chrom.sizes file: {chromsizes}
-    shift rate: {shiftrate}
-        shift mean distance: {shiftmean}
-        shift stdev: {shiftstdev}
-    add rate: {addrate}
-        add mean length: {addmean}
-        add stdev: {addstdev}
-    add regions from file: {addfile}
-    cut rate: {cutrate}
-    drop rate: {droprate}
-    merge rate: {mergerate}
-    outputfile: {outputfile}
-    repeat: {repeat}
-            """
+  chrom.sizes file: {chromsizes}
+  shift rate: {shiftrate}
+    shift mean distance: {shiftmean}
+    shift stdev: {shiftstdev}
+  add rate: {addrate}
+    add mean length: {addmean}
+    add stdev: {addstdev}
+  add regions from file: {addfile}
+  cut rate: {cutrate}
+  drop rate: {droprate}
+  merge rate: {mergerate}
+  outputfile: {outputfile}
+  repeat: {repeat}
+"""
 
     outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile)) if not args.outputfile else args.outputfile
 
