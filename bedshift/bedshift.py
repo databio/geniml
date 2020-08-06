@@ -423,9 +423,14 @@ def main():
             _LOGGER.error("You must provide either chrom sizes or a refgenie genome.")
             sys.exit(1)
         else:
-            import refgenconf
-            rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
-            args.chrom_lengths = rgc.seek(args.genome, "fasta", "", "chrom_sizes")
+            try:
+                import refgenconf
+                rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
+                args.chrom_lengths = rgc.seek(args.genome, "fasta", "", "chrom_sizes")
+            except ModuleNotFoundError:
+                _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
+                sys.exit(1)
+
 
 
 
