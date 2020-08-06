@@ -20,7 +20,7 @@ chrom_lens = {}
 def read_chromsizes(fp):
     with open(fp) as f:
         for line in f:
-            line = line.split('\t')
+            line = line.strip().split('\t')
             chrom = line[0]
             size = int(line[1])
             chrom_lens[chrom] = size
@@ -179,13 +179,14 @@ class Bedshift(object):
         for _ in range(num_add):
             chrom_str, chrom_len = self.pick_random_chrom()
             start = random.randint(1, chrom_len)
-            end = min(start + max(int(np.random.normal(addmean, addstdev)), 20), chrom_len)
+            # ensure chromosome length is not exceeded
+            end = min(start + int(np.random.normal(addmean, addstdev)), chrom_len)
             new_regions[0].append(chrom_str)
             new_regions[1].append(start)
             new_regions[2].append(end)
             new_regions[3].append(3)
         self.bed = self.bed.append(pd.DataFrame(new_regions), ignore_index=True)
-        return len(new_regions)
+        return num_add
 
     def add_from_file(self, fp, addrate, delimiter='\t'):
         """
