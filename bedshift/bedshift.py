@@ -406,7 +406,7 @@ def main():
     global _LOGGER
     _LOGGER = logmuse.logger_via_cli(args)
 
-    _LOGGER.info("welcome to bedshift")
+    _LOGGER.info("Welcome to bedshift version {}".format(__version__))
     _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
     msg = """Params:
   chrom.sizes file: {chromsizes}
