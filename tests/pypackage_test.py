@@ -3,7 +3,7 @@ import bedshift
 
 os.chdir(sys.path[0])
 
-bedshifter = bedshift.Bedshift('test.bed', chrom_sizes="/project/shefflab/genomes/hg38/fasta/default/hg38.chrom.sizes")
+bedshifter = bedshift.Bedshift('test.bed', chrom_sizes="hg38.chrom.sizes")
 
 bedshifter.all_perturbations(addrate=0.3, addmean=320.0, addstdev=20.0,
 							 shiftrate=0.3, shiftmean=-10.0, shiftstdev=120.0,

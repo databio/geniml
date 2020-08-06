@@ -18,12 +18,16 @@ __all__ = ["Bedshift"]
 chrom_lens = {}
 
 def read_chromsizes(fp):
-    with open(fp) as f:
-        for line in f:
-            line = line.split('\t')
-            chrom = line[0]
-            size = int(line[1])
-            chrom_lens[chrom] = size
+    try:
+        with open(fp) as f:
+            for line in f:
+                line = line.split('\t')
+                chrom = line[0]
+                size = int(line[1])
+                chrom_lens[chrom] = size
+    except FileNotFoundError:
+        _LOGGER.error("fasta file path {} invalid".format(fp))
+        sys.exit(1)
 
 
 class _VersionInHelpParser(argparse.ArgumentParser):
@@ -173,6 +177,8 @@ class Bedshift(object):
         :return int: the number of regions added
         """
         self.__check_rate([addrate])
+        if addrate == 0:
+            return 0
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
         new_regions = {0: [], 1: [], 2: [], 3: []}
@@ -197,6 +203,8 @@ class Bedshift(object):
         """
 
         self.__check_rate([addrate])
+        if addrate == 0:
+            return 0
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
 
@@ -218,6 +226,8 @@ class Bedshift(object):
         :return int: the number of regions shifted
         """
         self.__check_rate([shiftrate])
+        if shiftrate == 0:
+            return 0
         rows = self.bed.shape[0]
         shift_rows = random.sample(list(range(rows)), int(rows * shiftrate))
         for row in shift_rows:
@@ -329,6 +339,8 @@ class Bedshift(object):
         :return int: the number of rows dropped
         """
         self.__check_rate([droprate])
+        if droprate == 0:
+            return 0
         rows = self.bed.shape[0]
         drop_rows = random.sample(list(range(rows)), int(rows * droprate))
         self.bed = self.bed.drop(drop_rows)
@@ -389,8 +401,11 @@ class Bedshift(object):
 
         :param str bedfile_path: The path to the BED file
         """
-
-        df = pd.read_csv(bedfile_path, sep=delimiter, header=None, usecols=[0,1,2])
+        try:
+            df = pd.read_csv(bedfile_path, sep=delimiter, header=None, usecols=[0,1,2])
+        except FileNotFoundError:
+            _LOGGER.error("BED file path {} invalid".format(bedfile_path))
+            sys.exit(1)
 
         # if there is 'chrom', 'start', 'stop' in the table, move them to header
         if not str(df.iloc[0, 1]).isdigit():
@@ -433,9 +448,6 @@ def main():
 
 
 
-
-
-
     msg = """Params:
   chrom.sizes file: {chromsizes}
   shift:
@@ -454,7 +466,10 @@ def main():
   repeat: {repeat}
 """
 
-    outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile)) if not args.outputfile else args.outputfile
+    if args.outputfile:
+        outfile = args.outputfile
+    else:
+        outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile))
 
     _LOGGER.info(msg.format(
         chromsizes=args.chrom_lengths,
