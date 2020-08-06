@@ -57,9 +57,13 @@ def build_argparser():
             help="File path to bed file.")
 
     parser.add_argument(
-            "-l", "--chrom_lengths", type=str, required=True,
+            "-l", "--chrom_lengths", type=str, required=False,
             help="TSV text file with one row per chromosomes indicating chromosome sizes"
             )
+
+    parser.add_argument(
+            "-g", "--genome", type=str, required=False,
+            help="Refgenie genome identifier (used for chrom sizes).")
 
     parser.add_argument(
             "-d", "--droprate", type=float, default=0.0,
@@ -408,15 +412,36 @@ def main():
 
     _LOGGER.info("Welcome to bedshift version {}".format(__version__))
     _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
+
+    if not args.bedfile:
+        parser.print_help()
+        _LOGGER.error("No BED file given")
+        sys.exit(1)
+
+    if not args.chrom_lengths:
+        if not args.genome:
+            _LOGGER.error("You must provide either chrom sizes or a refgenie genome.")
+            sys.exit(1)
+        else:
+            import refgenconf
+            rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
+            args.chrom_lengths = rgc.seek(args.genome, "fasta", "", "chrom_sizes")
+
+
+
+
+
     msg = """Params:
   chrom.sizes file: {chromsizes}
-  shift rate: {shiftrate}
+  shift:
+    shift rate: {shiftrate}
     shift mean distance: {shiftmean}
     shift stdev: {shiftstdev}
-  add rate: {addrate}
+  add: 
+    rate: {addrate}
     add mean length: {addmean}
     add stdev: {addstdev}
-  add regions from file: {addfile}
+    add file: {addfile}
   cut rate: {cutrate}
   drop rate: {droprate}
   merge rate: {mergerate}
@@ -440,11 +465,6 @@ def main():
         mergerate=args.mergerate,
         outputfile=args.outputfile,
         repeat=args.repeat))
-
-    if not args.bedfile:
-        parser.print_help()
-        _LOGGER.error("No bedfile given")
-        sys.exit(1)
 
 
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
