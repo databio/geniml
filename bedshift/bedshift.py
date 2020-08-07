@@ -150,11 +150,10 @@ class Bedshift(object):
         self.bed = self.original_bed.copy(deep=True)
 
 
-    def __check_rate(self, rates):
-        for rate in rates:
-            if rate < 0 or rate > 1:
-                _LOGGER.error("Rate must be between 0 and 1")
-                sys.exit(1)
+    def __check_rate(self, rate):
+        if rate < 0 or rate > 1:
+            _LOGGER.error("Rate must be between 0 and 1")
+            sys.exit(1)
 
 
     def pick_random_chrom(self):
@@ -177,7 +176,9 @@ class Bedshift(object):
         :param float addstdev: the standard deviation of the length of added regions
         :return int: the number of regions added
         """
-        self.__check_rate([addrate])
+        if addrate < 0:
+            _LOGGER.error("Rate must be greater than or equal to 0")
+            sys.exit(1)
         if addrate == 0:
             return 0
         if len(chrom_lens) == 0:
@@ -206,8 +207,9 @@ class Bedshift(object):
         :param str fp: the filepath to the other bedfile
         :return int: the number of regions added
         """
-
-        self.__check_rate([addrate])
+        if addrate < 0:
+            _LOGGER.error("Rate must be greater than or equal to 0")
+            sys.exit(1)
         if addrate == 0:
             return 0
         if len(chrom_lens) == 0:
@@ -217,6 +219,8 @@ class Bedshift(object):
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
         df = self.read_bed(fp, delimiter=delimiter)
+        if num_add > df.shape[0]:
+            num_add = df.shape[0]
         add_rows = random.sample(list(range(df.shape[0])), num_add)
         add_df = df.loc[add_rows].reset_index(drop=True)
         add_df[3] = pd.Series([3] * add_df.shape[0])
@@ -233,7 +237,7 @@ class Bedshift(object):
         :param float shiftstdev: the standard deviation of the shift distance
         :return int: the number of regions shifted
         """
-        self.__check_rate([shiftrate])
+        self.__check_rate(shiftrate)
         if shiftrate == 0:
             return 0
         if len(chrom_lens) == 0:
@@ -270,7 +274,7 @@ class Bedshift(object):
         :param float cutrate: the rate to cut regions into two separate regions
         :return int: the number of regions cut
         """
-        self.__check_rate([cutrate])
+        self.__check_rate(cutrate)
         if cutrate == 0:
             return 0
         rows = self.bed.shape[0]
@@ -315,7 +319,7 @@ class Bedshift(object):
         :return int: number of regions merged
         """
 
-        self.__check_rate([mergerate])
+        self.__check_rate(mergerate)
         if mergerate == 0:
             return 0
         rows = self.bed.shape[0]
@@ -350,7 +354,7 @@ class Bedshift(object):
         :param float droprate: the rate to drop/remove regions
         :return int: the number of rows dropped
         """
-        self.__check_rate([droprate])
+        self.__check_rate(droprate)
         if droprate == 0:
             return 0
         rows = self.bed.shape[0]
@@ -382,7 +386,6 @@ class Bedshift(object):
         :return int: the number of total regions perturbed
         '''
 
-        self.__check_rate([addrate, shiftrate, cutrate, mergerate, droprate])
         n = 0
         n += self.shift(shiftrate, shiftmean, shiftstdev)
         if addfile:
@@ -417,6 +420,9 @@ class Bedshift(object):
             df = pd.read_csv(bedfile_path, sep=delimiter, header=None, usecols=[0,1,2])
         except FileNotFoundError:
             _LOGGER.error("BED file path {} invalid".format(bedfile_path))
+            sys.exit(1)
+        except:
+            _LOGGER.error("file {} could not be read".format(bedfile_path))
             sys.exit(1)
 
         # if there is 'chrom', 'start', 'stop' in the table, move them to header
