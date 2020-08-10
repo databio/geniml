@@ -1,7 +1,7 @@
 #!/bin/bash
 for filename in *.bed; do
 	CHROM_LENGTHS=../tests/hg38.chrom.sizes
-	BEDFILE=filename
+	BEDFILE=$filename
 	DROP_RATE=0.3
 
 	ADD_RATE=0.2
