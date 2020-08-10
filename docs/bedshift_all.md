@@ -8,7 +8,7 @@ Assuming you are bedshifting all files in the current working directory using th
 #!/bin/bash
 for filename in *.bed; do
 	CHROM_LENGTHS=hg38.chrom.sizes
-	BEDFILE=filename
+	BEDFILE=$filename
 	DROP_RATE=0.3
 
 	ADD_RATE=0.2
@@ -28,6 +28,21 @@ done
 
 ## Using Python
 
-```py
+In Python, you need the `os` library to get the filenames in a directory. After that, running bedshift is as easy as passing parameters.
 
+```py
+import bedshift
+import os
+
+
+datafolder = '.'
+
+files = os.listdir()
+for file in files:
+	if file.endswith('.bed'):
+		# you may also pass in a chrom.sizes file as the 
+		# second argument if you are adding or shifting regions
+		b = bedshift.Bedshift(file)
+		b.all_perturbations(cutrate=0.3, droprate=0.2)
+		b.to_bed('bedshifted_' + file)
 ```
