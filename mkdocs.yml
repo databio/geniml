@@ -9,9 +9,9 @@ nav:
   - Introduction:
     - Overview: README.md
   - How-to Guides:
-    - Evaluating Similarity Scores: evaluation_guide.md
-    - Generating a Random BED File: generate_random.md
-    - Bedshifting an Entire Folder: bedshift_all.md
+    - Generate a Random BED File: generate_random.md
+    - Bedshift All BED Files in Folder: bedshift_all.md
+    - Evaluate Similarity Scores: evaluation_guide.md
   - Reference:
     - Python API: autodoc_build/bedshift.md
 
