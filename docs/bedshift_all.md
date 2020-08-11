@@ -28,16 +28,13 @@ done
 
 ## Using Python
 
-In Python, you need the `os` library to get the filenames in a directory. After that, running bedshift is as easy as passing parameters.
+In Python, you need the `os` library to get the filenames in a directory. Then you loop through the filenames and apply bedshift.
 
 ```py
 import bedshift
 import os
 
-
-datafolder = '.'
-
-files = os.listdir()
+files = os.listdir('/path/to/data/')
 for file in files:
 	if file.endswith('.bed'):
 		# you may also pass in a chrom.sizes file as the 
