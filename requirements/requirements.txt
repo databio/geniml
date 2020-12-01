@@ -1,0 +1,9 @@
+Cython
+datetime
+gensim
+matplotlib
+numpy
+pandas
+seaborn
+tbb
+umap-learn

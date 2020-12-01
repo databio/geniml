@@ -1,5 +1,6 @@
 import pandas as pd
 from gensim.models import Word2Vec
+from numba import config, njit, threading_layer
 import numpy as np
 import matplotlib
 import umap
@@ -8,6 +9,8 @@ import matplotlib.pyplot as plt
 from collections import Counter
 import datetime
 
+# set the threading layer before any parallel target compilation
+config.THREADING_LAYER = 'threadsafe'
 
 class singlecellEmbedding(object):
     
@@ -66,11 +69,13 @@ class singlecellEmbedding(object):
 
 
 
-    # train word2vec algorithm
-
-    def trainWord2vec(self, documents, window_size = 100, dim = 100, min_count = 10):
-        model = Word2Vec(sentences=documents, window=window_size, size=dim, min_count=min_count)
-    #     model.save('./word2vec_dim{}_win{}_mincount{}_shuffle{}_constraint.model'.format(dim, window_size, min_count, shuffle_repeat))
+    def trainWord2vec(self, documents, window_size = 100,
+                      dim = 100, min_count = 10, nothreads = 1):
+        """
+        Train word2vec algorithm
+        """
+        model = Word2Vec(sentences=documents, window=window_size,
+                         size=dim, min_count=min_count, workers=nothreads)
         return model
 
 
@@ -85,25 +90,31 @@ class singlecellEmbedding(object):
 
 
     # This function reduce the dimension using umap and plot 
-    def UMAP_plot(self, data_X, y, title, nn, filename, plottitle, output_folder):
+    def UMAP_plot(self, data_X, y, title, nn, filename,
+                  plottitle, output_folder):
 
         np.random.seed(42)
         dp = 300
 
         ump = umap.UMAP(a=None, angular_rp_forest=False, b=None,
-         force_approximation_algorithm=False, init='spectral', learning_rate=1.0,
-         local_connectivity=1.0, low_memory=False, metric=  'euclidean',
-         metric_kwds=None, min_dist=0.1, n_components=2, n_epochs=1000,
-         n_neighbors=nn, negative_sample_rate=5, output_metric='euclidean',
-         output_metric_kwds=None, random_state=42, repulsion_strength=1.0,
-         set_op_mix_ratio=1.0, spread=1.0, target_metric='categorical',
-         target_metric_kwds=None, target_n_neighbors=-1, target_weight=0.5,
-         transform_queue_size=4.0, transform_seed=42, unique=False, verbose=False)
-
+                        force_approximation_algorithm=False, init='spectral',
+                        learning_rate=1.0, local_connectivity=1.0,
+                        low_memory=False, metric='euclidean', metric_kwds=None,
+                        min_dist=0.1, n_components=2, n_epochs=1000,
+                        n_neighbors=nn, negative_sample_rate=5,
+                        output_metric='euclidean', output_metric_kwds=None,
+                        random_state=42, repulsion_strength=1.0,
+                        set_op_mix_ratio=1.0, spread=1.0,
+                        target_metric='categorical', target_metric_kwds=None,
+                        target_n_neighbors=-1, target_weight=0.5,
+                        transform_queue_size=4.0, transform_seed=42,
+                        unique=False, verbose=False)
+        
+        
         ump.fit(data_X) 
         ump_data = pd.DataFrame(ump.transform(data_X)) 
 
-
+        #print("Threading layer chosen: %s" % threading_layer())
         ump_data = pd.DataFrame({'UMAP 1':ump_data[0],
                                 'UMAP 2':ump_data[1],
                                 title:y})
@@ -112,41 +123,51 @@ class singlecellEmbedding(object):
 
         plate =(sns.color_palette("husl", n_colors=len(set(y))))
 
-        sns.scatterplot(x="UMAP 1", y="UMAP 2", hue=title, s= 200,ax= ax, palette = plate,
-
-                    sizes=(100, 900),
-                      data=ump_data, #.sort_values(by = title),
+        sns.scatterplot(x="UMAP 1", y="UMAP 2", hue=title, s= 200,ax= ax,
+                        palette = plate, sizes=(100, 900),
+                        data=ump_data, #.sort_values(by = title),
                         rasterized=True)
 
-        plt.legend(loc='upper left', fontsize =  20, markerscale=3, edgecolor = 'black')
+        plt.legend(loc='upper left', fontsize =  20,
+                   markerscale=3, edgecolor = 'black')
 
         return fig
     
     
-    def main(self, path_file, nocells, noreads, shuffle_repeat = 1, window_size = 100, dimension = 100, min_count = 10, umap_nneighbours = 96, model_filename = './model.model', plot_filename = './name.jpg' ):
+    def main(self, path_file, nocells, noreads, w2v_model, shuffle_repeat = 1,
+             window_size = 100, dimension = 100, min_count = 10, threads = 1,
+             umap_nneighbours = 96, model_filename = './model.model',
+             plot_filename = './name.jpg' ):
+
         data = pd.read_csv(path_file, sep='\t', lineterminator='\n')
         print('number of peaks: ', len(data))
         data = self.preprocessing(data, nocells, noreads)
         print('number of peaks after filtering: ', len(data))
         documents = self.convertMat2document(data)
         print('number of documents: ', len(documents))
-        shuffeled_documents = self.shuffling(documents, shuffle_repeat)
-        print('number of shuffled documents: ', len(shuffeled_documents))
 
+        if not w2v_model:
+            shuffeled_documents = self.shuffling(documents, shuffle_repeat)
+            print('number of shuffled documents: ', len(shuffeled_documents))
+            print('Dimension: ', dimension)
+            model = self.trainWord2vec(shuffeled_documents,
+                                       window_size = window_size,
+                                       dim = dimension,
+                                       min_count = min_count,
+                                       nothreads = threads)
+            model.save(model_filename)
+        else:
+            model = Word2Vec.load(w2v_model)
 
-        print('Dimension: ', dimension)
-        model = self.trainWord2vec(shuffeled_documents, window_size = window_size, dim = dimension, min_count = min_count)
         print('Number of words in w2v model: ', len(model.wv.vocab))
-
-        model.save(model_filename)
-
         document_Embedding_avg = self.document_embedding_avg(documents, model)
         X = pd.DataFrame(document_Embedding_avg).values
         y = list(document_Embedding_avg.keys())
         y = self.label_preprocessing(y)
 
         print(Counter(y))
-        fig = self.UMAP_plot(X.T, y, 'single-cell', umap_nneighbours, 'Single-cell', 'RegionSet2vec', './')
+        fig = self.UMAP_plot(X.T, y, 'single-cell',
+                             umap_nneighbours, 'Single-cell',
+                             'RegionSet2vec', './')
         fig.savefig(plot_filename, format = 'svg')
     
-
