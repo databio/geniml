@@ -21,7 +21,7 @@ class singlecellEmbedding(object):
 
         data.drop(columns=data[list(data)[3:-1]].columns[data[list(data)[3:-1]].sum()< noreads], inplace=True)
 
-        data['chr'] = data['Chr'] + '_' + data['Start'].apply(str) + '_' + data['End'].apply(str)
+        data['chr'] = data['chr'] + '_' + data['start'].apply(str) + '_' + data['end'].apply(str)
 
         data = data[list(data)[3:]]
         print(data.shape)
@@ -140,6 +140,7 @@ class singlecellEmbedding(object):
              plot_filename = './name.jpg' ):
 
         data = pd.read_csv(path_file, sep='\t', lineterminator='\n')
+        data.columns = data.columns.str.strip().str.lower()
         print('number of peaks: ', len(data))
         data = self.preprocessing(data, nocells, noreads)
         print('number of peaks after filtering: ', len(data))
