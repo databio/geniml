@@ -1,4 +1,4 @@
-# SingleCell Embedding
+# Single cell embedding
 
 ## main.py
 This file contains all the hyperparameters. 
