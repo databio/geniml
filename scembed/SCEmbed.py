@@ -25,6 +25,10 @@ def parse_arguments():
     parser.add_argument("-i", "--input", default=None, type=str,
                         required=True,
                         help="Path to region counts matrix file.")
+    
+    parser.add_argument("--mm", action='store_true',
+                        dest="mm", default=False,
+                        help="Input matrix is in MatrixMarket format.")
 
     parser.add_argument("-o", "--output", default=None, type=str.lower,
                         required=True,
@@ -97,6 +101,7 @@ except OSError as error:
 plot_path = os.path.join(fig_dir, plot_filename)
 
 singlecellEmbeddingmodel.main(path_file=args.input,
+                              mm_format=args.mm,
                               nocells=args.nocells,
                               noreads=args.noreads,
                               w2v_model=args.model,

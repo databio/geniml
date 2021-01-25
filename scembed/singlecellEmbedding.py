@@ -1,5 +1,6 @@
 import pandas as pd
 from gensim.models import Word2Vec
+from scipy.io import mmread
 from numba import config, njit, threading_layer
 import numpy as np
 import matplotlib
@@ -8,6 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from collections import Counter
 import datetime
+import re
 
 # set the threading layer before any parallel target compilation
 config.THREADING_LAYER = 'threadsafe'
@@ -16,12 +18,11 @@ class singlecellEmbedding(object):
     
     # Preprocessing to filter based on the number of cells and reads
     def preprocessing(self, data, nocells, noreads):
-
         data.drop(data.loc[data[list(data)[3:-1]].sum(axis=1)< nocells].index, inplace=True)
 
         data.drop(columns=data[list(data)[3:-1]].columns[data[list(data)[3:-1]].sum()< noreads], inplace=True)
 
-        data['chr'] = data['chr'] + '_' + data['start'].apply(str) + '_' + data['end'].apply(str)
+        data['region'] = data['chr'] + '_' + data['start'].apply(str) + '_' + data['end'].apply(str)
 
         data = data[list(data)[3:]]
         print(data.shape)
@@ -50,7 +51,7 @@ class singlecellEmbedding(object):
         documents = {}
         for cell in list(data)[:-1]:
             index = [index for index, value in enumerate(data[cell]) if value >= 1]
-            doc = ' '.join(data.iloc[index]['chr'])
+            doc = ' '.join(data.iloc[index]['region'])
             documents[cell] = doc
         return documents
 
@@ -80,11 +81,18 @@ class singlecellEmbedding(object):
 
 
 
+    def label_split(self, s):
+        return re.split(r'(^[^\d]+)', s)[1:]
+        #return filter(None, re.split(r'(\d+)', s))
+
+
+
     # preprocess the labels
     def label_preprocessing(self, y):
         y_cell = []
         for y1 in y:
-            y_cell.append('-'.join(y1.replace('singles-', '').replace('BM1077-', '').split('-')[0:-1]))    
+            #y_cell.append('-'.join(y1.replace('singles-', '').replace('BM1077-', '').split('-')[0:-1])) # GSE749412
+            y_cell.append(re.split(r'(^[^\d]+)', y1)[1:][0]) # Alexandre and 10X
         return y_cell
 
 
@@ -134,28 +142,37 @@ class singlecellEmbedding(object):
         return fig
     
     
-    def main(self, path_file, nocells, noreads, w2v_model, shuffle_repeat = 1,
-             window_size = 100, dimension = 100, min_count = 10, threads = 1,
-             umap_nneighbours = 96, model_filename = './model.model',
-             plot_filename = './name.jpg' ):
+    def main(self, path_file, mm_format = False, nocells, noreads, w2v_model, ,
+             shuffle_repeat = 1, window_size = 100, dimension = 100, 
+             min_count = 10, threads = 1, umap_nneighbours = 96,
+             model_filename = './model.model', plot_filename = './name.jpg'):
 
-        data = pd.read_csv(path_file, sep='\t', lineterminator='\n')
-        data.columns = data.columns.str.strip().str.lower()
+        # TODO: use SciPy to load a MatrixMarket format and convert to dense format file
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.todense.html
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.mmread.html
+        
+        if mm_format:
+            mm_file = mmread(path_file)
+            data = mm_file.todense()
+        else:
+            data = pd.read_csv(path_file, sep='\t', lineterminator='\n')
+            data.columns = data.columns.str.strip().str.lower()
         print('number of peaks: ', len(data))
-        data = self.preprocessing(data, nocells, noreads)
+        data = self.preprocessing(data, int(nocells), int(noreads))
         print('number of peaks after filtering: ', len(data))
+        
         documents = self.convertMat2document(data)
         print('number of documents: ', len(documents))
 
         if not w2v_model:
-            shuffeled_documents = self.shuffling(documents, shuffle_repeat)
+            shuffeled_documents = self.shuffling(documents, int(shuffle_repeat))
             print('number of shuffled documents: ', len(shuffeled_documents))
             print('Dimension: ', dimension)
             model = self.trainWord2vec(shuffeled_documents,
-                                       window_size = window_size,
-                                       dim = dimension,
-                                       min_count = min_count,
-                                       nothreads = threads)
+                                       window_size = int(window_size),
+                                       dim = int(dimension),
+                                       min_count = int(min_count),
+                                       nothreads = int(threads))
             model.save(model_filename)
         else:
             model = Word2Vec.load(w2v_model)
@@ -168,7 +185,7 @@ class singlecellEmbedding(object):
 
         print(Counter(y))
         fig = self.UMAP_plot(X.T, y, 'single-cell',
-                             umap_nneighbours, 'Single-cell',
+                             int(umap_nneighbours), 'Single-cell',
                              'RegionSet2vec', './')
         fig.savefig(plot_filename, format = 'svg')
     
