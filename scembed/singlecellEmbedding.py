@@ -1,4 +1,5 @@
 import pandas as pd
+import multiprocessing as mp
 from gensim.models import Word2Vec
 from scipy.io import mmread
 from numba import config, njit, threading_layer
@@ -122,7 +123,7 @@ class singlecellEmbedding(object):
         ump.fit(data_X) 
         ump_data = pd.DataFrame(ump.transform(data_X)) 
 
-        #print("Threading layer chosen: %s" % threading_layer())
+        print("Threading layer chosen: %s" % threading_layer())
         ump_data = pd.DataFrame({'UMAP 1':ump_data[0],
                                 'UMAP 2':ump_data[1],
                                 title:y})
@@ -140,28 +141,80 @@ class singlecellEmbedding(object):
                    markerscale=3, edgecolor = 'black')
 
         return fig
+
+
+    def process_frame(self, data, nocells, noreads):
+            # process data frame
+            data = self.preprocessing(data, int(nocells), int(noreads))
+            return self.convertMat2document(data)
+
     
-    
-    def main(self, path_file, mm_format = False, nocells, noreads, w2v_model, ,
+    def main(self, path_file, nocells, noreads, w2v_model, mm_format = False, 
              shuffle_repeat = 1, window_size = 100, dimension = 100, 
-             min_count = 10, threads = 1, umap_nneighbours = 96,
+             min_count = 10, threads = 1, chunks = 10, umap_nneighbours = 96,
              model_filename = './model.model', plot_filename = './name.jpg'):
 
         # TODO: use SciPy to load a MatrixMarket format and convert to dense format file
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.todense.html
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.mmread.html
         
+        # TODO: if path_file outdir doesn't exist, create it!
+        
         if mm_format:
+            print('Loading data via mmread()')
             mm_file = mmread(path_file)
             data = mm_file.todense()
         else:
-            data = pd.read_csv(path_file, sep='\t', lineterminator='\n')
-            data.columns = data.columns.str.strip().str.lower()
-        print('number of peaks: ', len(data))
-        data = self.preprocessing(data, int(nocells), int(noreads))
-        print('number of peaks after filtering: ', len(data))
+            print('Loading data via pandas.read_csv()')
+
+            col_names = pd.read_csv(path_file, nrows=0, sep="\t").columns
+            types_dict = {'chr': str, 'start': int, 'end': int}
+            types_dict.update({col: 'int8' for col in col_names if col not in types_dict})
+
+            reader = pd.read_csv(path_file, sep="\t",
+                                 chunksize=chunks, dtype=types_dict,
+                                 keep_default_na=False, error_bad_lines=False)
+            pool = mp.Pool(int(threads))
+            
+            funclist = []
+            for df in reader:
+                # process each data frame
+                f = pool.apply_async(self.process_frame,[df, nocells, noreads])
+                funclist.append(f)
+
+            chunk_no = 0
+            documents = {}
+            for f in funclist:
+                chunk_no += 1
+                if chunk_no is 1:
+                    print('Loaded first chunk')
+                    documents = f.get()
+                else:
+                    print('Loading {}th chunk'.format(str(chunk_no)))
+                    tmp = f.get()
+                    documents = {key: documents[key] + " " + tmp[key] for key in documents}
+
+            # data = pd.read_csv(path_file, sep='\t', lineterminator='\n',
+                               # dtype=types_dict, keep_default_na=False,
+                               # error_bad_lines=False)
+            #data.columns = data.columns.str.strip().str.lower()
+        #print('number of peaks: ', len(data))
+        #data = self.preprocessing(data, int(nocells), int(noreads))
+        #print('number of peaks after filtering: ', len(data))
         
-        documents = self.convertMat2document(data)
+        # TODO: load in chunks, and generate documents, then concatenate the documents
+        #documents = self.convertMat2document(data)
+        
+        #data_frames = np.array_split(data, 2)
+        #data1 = data_frames[0]
+        #data2 = data_frames[1]
+        
+        #doc1 = self.convertMat2document(data1)
+        #doc2 = self.convertMat2document(data2)
+        
+        # Recombine documents into single document
+        #documents2 = {key: doc1[key] + " " + doc2[key] for key in doc1}
+        
         print('number of documents: ', len(documents))
 
         if not w2v_model:
