@@ -41,6 +41,10 @@ def parse_arguments():
                         help="Number of available processors for  "
                              "Word2Vec training.")
 
+    parser.add_argument("--nochunks", dest="nochunks", default=1000,
+                        help="Chunksize (number of rows) to process "
+                             "for large file loading.")
+
     parser.add_argument("--nocells", dest="nocells", default=5,
                         help="Minimum number of cells with a shared region "
                              "for that region to be included.")
@@ -101,15 +105,16 @@ except OSError as error:
 plot_path = os.path.join(fig_dir, plot_filename)
 
 singlecellEmbeddingmodel.main(path_file=args.input,
-                              mm_format=args.mm,
                               nocells=args.nocells,
                               noreads=args.noreads,
                               w2v_model=args.model,
+                              mm_format=args.mm,
                               shuffle_repeat=args.shuffle_repeat,
                               window_size=args.window_size,
                               dimension=args.dimension,
                               min_count=args.min_count,
                               threads=args.nothreads,
+                              chunks=args.nochunks,
                               umap_nneighbours=args.umap_nneighbours,
                               model_filename=model_path,
                               plot_filename=plot_path)
