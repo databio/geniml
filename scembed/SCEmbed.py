@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__author__ = ["Erfaneh Gharavi"]
+__author__ = ["Erfaneh Gharavi", "Jason Smith"]
 __version__ = "0.0.1"
 
 import os
@@ -14,7 +14,7 @@ def parse_arguments():
     """
     Parse command-line arguments passed to the pipeline.
     """
-    # Argument Parsing from yaml file
+    # Argument Parsing
     ###########################################################################
     parser = argparse.ArgumentParser(
         description='SCEmbed version ' + __version__,
@@ -30,7 +30,7 @@ def parse_arguments():
                         dest="mm", default=False,
                         help="Input matrix is in MatrixMarket format.")
 
-    parser.add_argument("-o", "--output", default=None, type=str.lower,
+    parser.add_argument("-o", "--output", default=None, type=str,
                         required=True,
                         help="Path to output directory to store results.")
 
@@ -88,6 +88,7 @@ def parse_arguments():
 args = parse_arguments()
 
 try:
+    #print('Making output directory if necessary')  # DEBUG
     os.makedirs(args.output, exist_ok = True)
 except OSError as error: 
     print(error) 
@@ -99,10 +100,12 @@ model_path = os.path.join(args.output, model_filename)
 plot_filename = 'umapplot_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}_umap_nneighbours{}.svg'.format(args.nocells, args.noreads, args.dimension, args.window_size, args.min_count, args.shuffle_repeat, args.umap_nneighbours)
 fig_dir = os.path.join(args.output, "figs")
 try:
+    #print('Making figure output directory if necessary')  # DEBUG
     os.makedirs(fig_dir, exist_ok = True)
 except OSError as error: 
     print(error) 
 plot_path = os.path.join(fig_dir, plot_filename)
+#print('plot_path: {}'.format(plot_path)) # DEBUG
 
 singlecellEmbeddingmodel.main(path_file=args.input,
                               nocells=args.nocells,

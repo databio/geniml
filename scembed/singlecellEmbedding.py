@@ -136,8 +136,8 @@ class singlecellEmbedding(object):
                         palette = plate, sizes=(100, 900),
                         data=ump_data, #.sort_values(by = title),
                         rasterized=True)
-
-        plt.legend(loc='upper left', fontsize =  20,
+        # TODO: only label a subset of the samples...
+        plt.legend(bbox_to_anchor=(1.04,1), loc="upper right", fontsize =  10,
                    markerscale=3, edgecolor = 'black')
 
         return fig
@@ -165,7 +165,7 @@ class singlecellEmbedding(object):
             mm_file = mmread(path_file)
             data = mm_file.todense()
         else:
-            print('Loading data via pandas.read_csv()')
+            #print('Loading data via pandas.read_csv()')  # DEBUG
 
             col_names = pd.read_csv(path_file, nrows=0, sep="\t").columns
             types_dict = {'chr': str, 'start': int, 'end': int}
@@ -187,10 +187,10 @@ class singlecellEmbedding(object):
             for f in funclist:
                 chunk_no += 1
                 if chunk_no is 1:
-                    print('Loaded first chunk')
+                    #print('Loaded first chunk')  # DEBUG
                     documents = f.get()
                 else:
-                    print('Loading {}th chunk'.format(str(chunk_no)))
+                    #print('Loading {}th chunk'.format(str(chunk_no)))  # DEBUG
                     tmp = f.get()
                     documents = {key: documents[key] + " " + tmp[key] for key in documents}
 
@@ -236,9 +236,10 @@ class singlecellEmbedding(object):
         y = list(document_Embedding_avg.keys())
         y = self.label_preprocessing(y)
 
-        print(Counter(y))
+        #print(Counter(y))
         fig = self.UMAP_plot(X.T, y, 'single-cell',
                              int(umap_nneighbours), 'Single-cell',
                              'RegionSet2vec', './')
+        print('Saving UMAP plot...')                     
         fig.savefig(plot_filename, format = 'svg')
-    
+        print('DONE!') 
