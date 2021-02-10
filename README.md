@@ -1,4 +1,4 @@
-# SingleCell Embedding
+# Single cell embedding
 
 ## SCEmbed.py
 This file contains all the hyperparameters. 
