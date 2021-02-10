@@ -158,8 +158,6 @@ class singlecellEmbedding(object):
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.todense.html
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.mmread.html
         
-        # TODO: if path_file outdir doesn't exist, create it!
-        
         if mm_format:
             print('Loading data via mmread()')
             mm_file = mmread(path_file)
@@ -193,27 +191,6 @@ class singlecellEmbedding(object):
                     #print('Loading {}th chunk'.format(str(chunk_no)))  # DEBUG
                     tmp = f.get()
                     documents = {key: documents[key] + " " + tmp[key] for key in documents}
-
-            # data = pd.read_csv(path_file, sep='\t', lineterminator='\n',
-                               # dtype=types_dict, keep_default_na=False,
-                               # error_bad_lines=False)
-            #data.columns = data.columns.str.strip().str.lower()
-        #print('number of peaks: ', len(data))
-        #data = self.preprocessing(data, int(nocells), int(noreads))
-        #print('number of peaks after filtering: ', len(data))
-        
-        # TODO: load in chunks, and generate documents, then concatenate the documents
-        #documents = self.convertMat2document(data)
-        
-        #data_frames = np.array_split(data, 2)
-        #data1 = data_frames[0]
-        #data2 = data_frames[1]
-        
-        #doc1 = self.convertMat2document(data1)
-        #doc2 = self.convertMat2document(data2)
-        
-        # Recombine documents into single document
-        #documents2 = {key: doc1[key] + " " + doc2[key] for key in doc1}
         
         print('number of documents: ', len(documents))
 
@@ -242,4 +219,4 @@ class singlecellEmbedding(object):
                              'RegionSet2vec', './')
         print('Saving UMAP plot...')                     
         fig.savefig(plot_filename, format = 'svg')
-        print('DONE!') 
+        print('DONE!')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
