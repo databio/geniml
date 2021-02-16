@@ -180,16 +180,21 @@ class singlecellEmbedding(object):
         if mm_format:
             print('Loading data via mmread()')
             data = scipy.io.mmread(path_file)
-            features_filename = pathlib.Path(path_file).stem + "_coords.tsv.gz"
-            barcodes_filename = pathlib.Path(path_file).stem + "_names.tsv.gz"
+            features_filename = os.path.join(pathlib.Path(path_file).parents[0],
+                pathlib.Path(pathlib.Path(path_file).stem).stem + "_coords.tsv.gz")
+            barcodes_filename = os.path.join(pathlib.Path(path_file).parents[0],
+                pathlib.Path(pathlib.Path(path_file).stem).stem + "_names.tsv.gz")
             feature_chr = [row[0] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
             feature_start = [row[1] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
             feature_end = [row[2] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
             features = [i + "_" + j + "_" + k for i, j, k in zip(feature_chr, feature_start, feature_end)] 
-            features.remove('chr_start_end')
+            try:
+                features.remove('chr_start_end')
+            except ValueError:
+                pass
             barcodes = [row[0] for row in csv.reader(gzip.open(barcodes_filename, mode="rt"), delimiter="\t")]
             documents = self.process_mm(data, features, barcodes, nocells, noreads)
-            #data = mm_file.todense()
+            #data = mm_file.todense()  # Deprecated
         else:
             #print('Loading data via pandas.read_csv()')  # DEBUG
 
