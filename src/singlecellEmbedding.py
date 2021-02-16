@@ -1,7 +1,10 @@
 import pandas as pd
 import multiprocessing as mp
 from gensim.models import Word2Vec
-from scipy.io import mmread
+import scipy.io
+import csv
+import gzip
+import pathlib
 from numba import config, njit, threading_layer
 import numpy as np
 import matplotlib
@@ -56,6 +59,15 @@ class singlecellEmbedding(object):
             documents[cell] = doc
         return documents
 
+
+    def convertMM2document(self, data, features, barcodes):
+        documents = {}
+        ft = pd.DataFrame(features, columns=['region'])
+        for idx, sample in enumerate(barcodes):
+            index = scipy.sparse.find(mm_file2.getcol(idx))[0].tolist()
+            doc = ' '.join(ft.iloc[index]['region'])
+            documents[sample] = doc
+        return documents
 
 
     # shuffle the document to generate data for word2vec
@@ -144,9 +156,16 @@ class singlecellEmbedding(object):
 
 
     def process_frame(self, data, nocells, noreads):
-            # process data frame
-            data = self.preprocessing(data, int(nocells), int(noreads))
-            return self.convertMat2document(data)
+        # process data frame
+        data = self.preprocessing(data, int(nocells), int(noreads))
+        return self.convertMat2document(data)
+
+    
+    def process_mm(self, data, features, barcodes, nocells, noreads):
+        data = data.tocsr()
+        data = data[data.getnnz(1)>int(noreads)][:,data.getnnz(0)>int(nocells)]
+        data = data.tocoo()
+        return self.convertMM2document(data, features, barcodes)
 
     
     def main(self, path_file, nocells, noreads, w2v_model, mm_format = False, 
@@ -160,8 +179,17 @@ class singlecellEmbedding(object):
         
         if mm_format:
             print('Loading data via mmread()')
-            mm_file = mmread(path_file)
-            data = mm_file.todense()
+            data = scipy.io.mmread(path_file)
+            features_filename = pathlib.Path(path_file).stem + "_coords.tsv.gz"
+            barcodes_filename = pathlib.Path(path_file).stem + "_names.tsv.gz"
+            feature_chr = [row[0] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+            feature_start = [row[1] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+            feature_end = [row[2] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+            features = [i + "_" + j + "_" + k for i, j, k in zip(feature_chr, feature_start, feature_end)] 
+            features.remove('chr_start_end')
+            barcodes = [row[0] for row in csv.reader(gzip.open(barcodes_filename, mode="rt"), delimiter="\t")]
+            documents = self.process_mm(data, features, barcodes, nocells, noreads)
+            #data = mm_file.todense()
         else:
             #print('Loading data via pandas.read_csv()')  # DEBUG
 
@@ -172,8 +200,12 @@ class singlecellEmbedding(object):
             reader = pd.read_csv(path_file, sep="\t",
                                  chunksize=chunks, dtype=types_dict,
                                  keep_default_na=False, error_bad_lines=False)
-            pool = mp.Pool(int(threads))
-            
+
+            if mp.cpu_count() < int(threads):
+                pool = mp.Pool(mp.cpu_count())
+            else:
+                pool = mp.Pool(int(threads))
+
             funclist = []
             for df in reader:
                 # process each data frame
@@ -191,7 +223,9 @@ class singlecellEmbedding(object):
                     #print('Loading {}th chunk'.format(str(chunk_no)))  # DEBUG
                     tmp = f.get()
                     documents = {key: documents[key] + " " + tmp[key] for key in documents}
-        
+
+        pool.close()
+        pool.join()
         print('number of documents: ', len(documents))
 
         if not w2v_model:
@@ -219,4 +253,4 @@ class singlecellEmbedding(object):
                              'RegionSet2vec', './')
         print('Saving UMAP plot...')                     
         fig.savefig(plot_filename, format = 'svg')
-        print('DONE!')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+        print('DONE!') 

@@ -4,7 +4,7 @@ __author__ = ["Jason Smith"]
 __version__ = "0.0.1"
 
 import argparse
-import scipy.io as sc
+import scipy.io, scipy.sparse
 import pandas as pd
 import csv
 import pathlib
@@ -53,6 +53,7 @@ data = pd.read_csv(path_file, sep="\t", dtype=types_dict,
                    keep_default_na=False, error_bad_lines=False)
 
 coords = data[['chr', 'start', 'end']]
+# TODO: need to drop header
 coords.to_csv(c_filename, sep='\t', index=False)
 names = list(data.iloc[0:, 4:len(data.columns):1].columns)
 with open(names_filename, 'w') as f:
@@ -62,4 +63,4 @@ with open(names_filename, 'w') as f:
 
 mat = data.drop(columns=['chr', 'start', 'end'])
 
-sc.mmwrite(mtx_filename, mat)
+scipy.io.mmwrite(mtx_filename, scipy.sparse.csr_matrix(mat))
