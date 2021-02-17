@@ -30,6 +30,10 @@ def parse_arguments():
                         dest="mm", default=False,
                         help="Input matrix is in MatrixMarket format.")
 
+    parser.add_argument("--alt", action='store_true',
+                        dest="alt", default=False,
+                        help="Use alternate document generation.")
+
     parser.add_argument("-o", "--output", default=None, type=str,
                         required=True,
                         help="Path to output directory to store results.")
@@ -112,6 +116,7 @@ singlecellEmbeddingmodel.main(path_file=args.input,
                               noreads=args.noreads,
                               w2v_model=args.model,
                               mm_format=args.mm,
+                              alt_approach=args.alt,
                               shuffle_repeat=args.shuffle_repeat,
                               window_size=args.window_size,
                               dimension=args.dimension,
