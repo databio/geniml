@@ -67,7 +67,8 @@ class singlecellEmbedding(object):
         print("-- generate documents --")
         for idx, sample in enumerate(barcodes):
             if idx % 10 == 0:
-                print("idx: {} \n documents['{}']".format(idx, sample)))
+                print("idx: {}".format(idx))
+                print("documents[{}]".format(sample))
             index = scipy.sparse.find(mm_file2.getcol(idx))[0].tolist()
             doc = ' '.join(ft.iloc[index]['region'])
             documents[sample] = doc
@@ -76,7 +77,7 @@ class singlecellEmbedding(object):
 
     def convertMM2document2(self, path_file):
         documents = {}
-        with open(path_file) as file_in:
+        with gzip.open(path_file) as file_in:
             next(file_in)
             next(file_in)
             for line in file_in:
@@ -100,15 +101,15 @@ class singlecellEmbedding(object):
 
 
     # shuffle the document to generate data for word2vec
-    def shuffling(self, documents, shuffle_repeat):
-        common_text = [value.split(' ')  for key, value in documents.items()]
-        training_samples = []
-        training_samples.extend(common_text)
+    # def shuffling(self, documents, shuffle_repeat):
+        # common_text = [value.split(' ')  for key, value in documents.items()]
+        # training_samples = []
+        # training_samples.extend(common_text)
 
-        for rn in range(shuffle_repeat):
-            [(np.random.shuffle(l)) for l in common_text]
-            training_samples.extend(common_text)
-        return training_samples
+        # for rn in range(shuffle_repeat):
+            # [(np.random.shuffle(l)) for l in common_text]
+            # training_samples.extend(common_text)
+        # return training_samples
 
     # shuffle the document to generate data for word2vec
     def shuffling2(self, document_universe, shuffle_repeat):
@@ -209,35 +210,39 @@ class singlecellEmbedding(object):
 
     
     def main(self, path_file, nocells, noreads, w2v_model, mm_format = False, 
-             shuffle_repeat = 1, window_size = 100, dimension = 100, 
-             min_count = 10, threads = 1, chunks = 10, umap_nneighbours = 96,
-             model_filename = './model.model', plot_filename = './name.jpg'):
+             alt_approach = False, shuffle_repeat = 1, window_size = 100,
+             dimension = 100,  min_count = 10, threads = 1, chunks = 10,
+             umap_nneighbours = 96, model_filename = './model.model',
+             plot_filename = './name.jpg'):
 
         # TODO: use SciPy to load a MatrixMarket format and convert to dense format file
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.todense.html
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.mmread.html
         
         if mm_format:
-            print('Loading data via mmread()')
-            data = scipy.io.mmread(path_file)
-            print('-- mtx file loaded --')
-            features_filename = os.path.join(pathlib.Path(path_file).parents[0],
-                pathlib.Path(pathlib.Path(path_file).stem).stem + "_coords.tsv.gz")
-            barcodes_filename = os.path.join(pathlib.Path(path_file).parents[0],
-                pathlib.Path(pathlib.Path(path_file).stem).stem + "_names.tsv.gz")
-            feature_chr = [row[0] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-            feature_start = [row[1] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-            feature_end = [row[2] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-            features = [i + "_" + j + "_" + k for i, j, k in zip(feature_chr, feature_start, feature_end)] 
-            try:
-                features.remove('chr_start_end')
-            except ValueError:
-                pass
-            print('-- features file loaded --')
-            barcodes = [row[0] for row in csv.reader(gzip.open(barcodes_filename, mode="rt"), delimiter="\t")]
-            print('-- barcodes file loaded --')
-            documents = self.process_mm(data, features, barcodes, nocells, noreads)
-            #data = mm_file.todense()  # Deprecated
+            if alt_approach:
+                documents = self.convertMM2document2(path_file)
+            else:
+                print('Loading data via mmread()')
+                data = scipy.io.mmread(path_file)
+                print('-- mtx file loaded --')
+                features_filename = os.path.join(pathlib.Path(path_file).parents[0],
+                    pathlib.Path(pathlib.Path(path_file).stem).stem + "_coords.tsv.gz")
+                barcodes_filename = os.path.join(pathlib.Path(path_file).parents[0],
+                    pathlib.Path(pathlib.Path(path_file).stem).stem + "_names.tsv.gz")
+                feature_chr = [row[0] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+                feature_start = [row[1] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+                feature_end = [row[2] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+                features = [i + "_" + j + "_" + k for i, j, k in zip(feature_chr, feature_start, feature_end)] 
+                try:
+                    features.remove('chr_start_end')
+                except ValueError:
+                    pass
+                print('-- features file loaded --')
+                barcodes = [row[0] for row in csv.reader(gzip.open(barcodes_filename, mode="rt"), delimiter="\t")]
+                print('-- barcodes file loaded --')
+                documents = self.process_mm(data, features, barcodes, nocells, noreads)
+                #data = mm_file.todense()  # Deprecated
         else:
             #print('Loading data via pandas.read_csv()')  # DEBUG
 
