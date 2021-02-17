@@ -69,7 +69,7 @@ class singlecellEmbedding(object):
             if idx % 10 == 0:
                 print("idx: {}".format(idx))
                 print("documents[{}]".format(sample))
-            index = scipy.sparse.find(mm_file2.getcol(idx))[0].tolist()
+            index = scipy.sparse.find(data.getcol(idx))[0].tolist()
             doc = ' '.join(ft.iloc[index]['region'])
             documents[sample] = doc
         return documents
@@ -286,7 +286,7 @@ class singlecellEmbedding(object):
         print('number of documents: ', len(documents))
         
         # Save documents for future loading
-        np.save(docs_filename, os.path.join(pathlib.Path(path_file).parents[0]) 
+        np.save(docs_filename, os.path.join(pathlib.Path(path_file).parents[0])) 
 
         if not w2v_model:
             if alt_approach:
