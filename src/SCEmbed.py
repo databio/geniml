@@ -38,6 +38,9 @@ def parse_arguments():
                         required=True,
                         help="Path to output directory to store results.")
 
+    parser.add_argument("--docs", dest="docs", default=None,
+                        help="Path to previously built documents dictionary.")
+
     parser.add_argument("--model", dest="model", default=None,
                         help="Path to previously built Word2Vec model.")
 
@@ -114,6 +117,7 @@ plot_path = os.path.join(fig_dir, plot_filename)
 singlecellEmbeddingmodel.main(path_file=args.input,
                               nocells=args.nocells,
                               noreads=args.noreads,
+                              docs_file=args.docs,
                               w2v_model=args.model,
                               mm_format=args.mm,
                               alt_approach=args.alt,
