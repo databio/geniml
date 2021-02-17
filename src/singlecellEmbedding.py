@@ -1,10 +1,13 @@
+import os
+import csv
+import datetime
+import gzip
+import pathlib
+import re
 import pandas as pd
 import multiprocessing as mp
 from gensim.models import Word2Vec
 import scipy.io
-import csv
-import gzip
-import pathlib
 from numba import config, njit, threading_layer
 import numpy as np
 import matplotlib
@@ -12,8 +15,6 @@ import umap
 import seaborn as sns
 import matplotlib.pyplot as plt
 from collections import Counter
-import datetime
-import re
 
 # set the threading layer before any parallel target compilation
 config.THREADING_LAYER = 'threadsafe'
@@ -60,16 +61,20 @@ class singlecellEmbedding(object):
         return documents
 
 
-#    def convertMM2document(self, data, features, barcodes):
-#        documents = {}
-#        ft = pd.DataFrame(features, columns=['region'])
-#        for idx, sample in enumerate(barcodes):
-#            index = scipy.sparse.find(mm_file2.getcol(idx))[0].tolist()
-#            doc = ' '.join(ft.iloc[index]['region'])
-#            documents[sample] = doc
-#        return documents
+    def convertMM2document(self, data, features, barcodes):
+        documents = {}
+        ft = pd.DataFrame(features, columns=['region'])
+        print("-- generate documents --")
+        for idx, sample in enumerate(barcodes):
+            if idx % 10 == 0:
+                print("idx: {} \n documents['{}']".format(idx, sample)))
+            index = scipy.sparse.find(mm_file2.getcol(idx))[0].tolist()
+            doc = ' '.join(ft.iloc[index]['region'])
+            documents[sample] = doc
+        return documents
 
-    def convertMM2document(self, path_file):
+
+    def convertMM2document2(self, path_file):
         documents = {}
         with open(path_file) as file_in:
             next(file_in)
@@ -95,18 +100,18 @@ class singlecellEmbedding(object):
 
 
     # shuffle the document to generate data for word2vec
-#     def shuffling(self, documents, shuffle_repeat):
-#         common_text = [value.split(' ')  for key, value in documents.items()]
-#         training_samples = []
-#         training_samples.extend(common_text)
+    def shuffling(self, documents, shuffle_repeat):
+        common_text = [value.split(' ')  for key, value in documents.items()]
+        training_samples = []
+        training_samples.extend(common_text)
 
-#         for rn in range(shuffle_repeat):
-#             [(np.random.shuffle(l)) for l in common_text]
-#             training_samples.extend(common_text)
-#         return training_samples
+        for rn in range(shuffle_repeat):
+            [(np.random.shuffle(l)) for l in common_text]
+            training_samples.extend(common_text)
+        return training_samples
 
     # shuffle the document to generate data for word2vec
-    def shuffling(self, document_universe, shuffle_repeat):
+    def shuffling2(self, document_universe, shuffle_repeat):
         common_text = [value.split(' ')  for key, value in document_universe.items()]
         training_samples = []
         training_samples.extend(common_text)
@@ -215,6 +220,7 @@ class singlecellEmbedding(object):
         if mm_format:
             print('Loading data via mmread()')
             data = scipy.io.mmread(path_file)
+            print('-- mtx file loaded --')
             features_filename = os.path.join(pathlib.Path(path_file).parents[0],
                 pathlib.Path(pathlib.Path(path_file).stem).stem + "_coords.tsv.gz")
             barcodes_filename = os.path.join(pathlib.Path(path_file).parents[0],
@@ -227,7 +233,9 @@ class singlecellEmbedding(object):
                 features.remove('chr_start_end')
             except ValueError:
                 pass
+            print('-- features file loaded --')
             barcodes = [row[0] for row in csv.reader(gzip.open(barcodes_filename, mode="rt"), delimiter="\t")]
+            print('-- barcodes file loaded --')
             documents = self.process_mm(data, features, barcodes, nocells, noreads)
             #data = mm_file.todense()  # Deprecated
         else:
