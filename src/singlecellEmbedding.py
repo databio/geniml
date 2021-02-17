@@ -60,15 +60,50 @@ class singlecellEmbedding(object):
         return documents
 
 
-    def convertMM2document(self, data, features, barcodes):
+#    def convertMM2document(self, data, features, barcodes):
+#        documents = {}
+#        ft = pd.DataFrame(features, columns=['region'])
+#        for idx, sample in enumerate(barcodes):
+#            index = scipy.sparse.find(mm_file2.getcol(idx))[0].tolist()
+#            doc = ' '.join(ft.iloc[index]['region'])
+#            documents[sample] = doc
+#        return documents
+
+    def convertMM2document(self, path_file):
         documents = {}
-        ft = pd.DataFrame(features, columns=['region'])
-        for idx, sample in enumerate(barcodes):
-            index = scipy.sparse.find(mm_file2.getcol(idx))[0].tolist()
-            doc = ' '.join(ft.iloc[index]['region'])
-            documents[sample] = doc
+        with open(path_file) as file_in:
+            next(file_in)
+            next(file_in)
+            for line in file_in:
+                index = (line.split(' '))
+                if(index[1] not in documents):
+                    documents[index[1]] = []
+                documents[index[1]].append(index[0])
         return documents
 
+
+    # shuffle the document to generate data for word2vec
+    def shuffling(self, documents, shuffle_repeat):
+        common_text = list(documents.values())
+        training_samples = []
+        training_samples.extend(common_text)
+
+        for rn in range(shuffle_repeat):
+            [(np.random.shuffle(l)) for l in common_text]
+            training_samples.extend(common_text)
+        return training_samples
+
+
+    # shuffle the document to generate data for word2vec
+#     def shuffling(self, documents, shuffle_repeat):
+#         common_text = [value.split(' ')  for key, value in documents.items()]
+#         training_samples = []
+#         training_samples.extend(common_text)
+
+#         for rn in range(shuffle_repeat):
+#             [(np.random.shuffle(l)) for l in common_text]
+#             training_samples.extend(common_text)
+#         return training_samples
 
     # shuffle the document to generate data for word2vec
     def shuffling(self, document_universe, shuffle_repeat):
