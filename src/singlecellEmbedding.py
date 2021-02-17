@@ -77,7 +77,7 @@ class singlecellEmbedding(object):
 
     def convertMM2document2(self, path_file):
         documents = {}
-        with gzip.open(path_file) as file_in:
+        with gzip.open(path_file, mode = "rt") as file_in:
             next(file_in)
             next(file_in)
             for line in file_in:
