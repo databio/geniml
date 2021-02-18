@@ -75,16 +75,35 @@ class singlecellEmbedding(object):
         return documents
 
 
+    def idx_generator(infile):
+        for line in infile:
+            yield line.split(' ')
+
+
     def convertMM2document2(self, path_file):
+        # documents = {}
+        # with gzip.open(path_file, mode = "rt") as file_in:
+            # next(file_in)
+            # next(file_in)
+            # for line in file_in:
+                # index = (line.split(' '))
+                # if(index[1] not in documents):
+                    # documents[index[1]] = []
+                # documents[index[1]].append(index[0])
+        # return documents
         documents = {}
-        with gzip.open(path_file, mode = "rt") as file_in:
-            next(file_in)
-            next(file_in)
-            for line in file_in:
-                index = (line.split(' '))
+        file_in = gzip.open(path_file, mode = "rt")
+        lineno = 0
+        for index in idx_generator(file_in):
+            lineno += 1
+            if lineno < 3:
+                # Skip the mtx header lines
+                pass
+            else:
                 if(index[1] not in documents):
                     documents[index[1]] = []
                 documents[index[1]].append(index[0])
+        file_in.close()
         return documents
 
 
