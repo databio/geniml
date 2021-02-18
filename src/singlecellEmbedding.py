@@ -75,7 +75,7 @@ class singlecellEmbedding(object):
         return documents
 
 
-    def idx_generator(infile):
+    def idx_generator(self, infile):
         for line in infile:
             yield line.split(' ')
 
@@ -94,7 +94,7 @@ class singlecellEmbedding(object):
         documents = {}
         file_in = gzip.open(path_file, mode = "rt")
         lineno = 0
-        for index in idx_generator(file_in):
+        for index in self.idx_generator(file_in):
             lineno += 1
             if lineno < 3:
                 # Skip the mtx header lines
