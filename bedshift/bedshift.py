@@ -18,12 +18,16 @@ __all__ = ["Bedshift"]
 chrom_lens = {}
 
 def read_chromsizes(fp):
-    with open(fp) as f:
-        for line in f:
-            line = line.strip().split('\t')
-            chrom = line[0]
-            size = int(line[1])
-            chrom_lens[chrom] = size
+    try:
+        with open(fp) as f:
+            for line in f:
+                line = line.strip().split('\t')
+                chrom = line[0]
+                size = int(line[1])
+                chrom_lens[chrom] = size
+    except FileNotFoundError:
+        _LOGGER.error("fasta file path {} invalid".format(fp))
+        sys.exit(1)
 
 
 class _VersionInHelpParser(argparse.ArgumentParser):
@@ -120,7 +124,7 @@ class Bedshift(object):
     The bedshift object with methods to perturb regions
     """
 
-    def __init__(self, bedfile_path, chrom_sizes, delimiter='\t'):
+    def __init__(self, bedfile_path, chrom_sizes=None, delimiter='\t'):
         """
         Read in a .bed file to pandas DataFrame format
 
@@ -129,7 +133,8 @@ class Bedshift(object):
         :param str delimiter: the delimiter used in the BED file
         """
 
-        read_chromsizes(chrom_sizes)
+        if chrom_sizes:
+            read_chromsizes(chrom_sizes)
         df = self.read_bed(bedfile_path, delimiter=delimiter)
         self.original_regions = df.shape[0]
         self.bed = df.astype({1: 'int64', 2: 'int64', 3: 'int64'}) \
@@ -145,11 +150,10 @@ class Bedshift(object):
         self.bed = self.original_bed.copy(deep=True)
 
 
-    def __check_rate(self, rates):
-        for rate in rates:
-            if rate < 0 or rate > 1:
-                _LOGGER.error("Rate must be between 0 and 1")
-                sys.exit(1)
+    def __check_rate(self, rate):
+        if rate < 0 or rate > 1:
+            _LOGGER.error("Rate must be between 0 and 1")
+            sys.exit(1)
 
 
     def pick_random_chrom(self):
@@ -172,7 +176,15 @@ class Bedshift(object):
         :param float addstdev: the standard deviation of the length of added regions
         :return int: the number of regions added
         """
-        self.__check_rate([addrate])
+        if addrate < 0:
+            _LOGGER.error("Rate must be greater than or equal to 0")
+            sys.exit(1)
+        if addrate == 0:
+            return 0
+        if len(chrom_lens) == 0:
+            _LOGGER.error("chrom.sizes file must be specified when adding regions")
+            sys.exit(1)
+
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
         new_regions = {0: [], 1: [], 2: [], 3: []}
@@ -196,12 +208,20 @@ class Bedshift(object):
         :param str fp: the filepath to the other bedfile
         :return int: the number of regions added
         """
+        if addrate < 0:
+            _LOGGER.error("Rate must be greater than or equal to 0")
+            sys.exit(1)
+        if addrate == 0:
+            return 0
+        if len(chrom_lens) == 0:
+            _LOGGER.error("chrom.sizes file must be specified when adding regions")
+            sys.exit(1)
 
-        self.__check_rate([addrate])
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
-
         df = self.read_bed(fp, delimiter=delimiter)
+        if num_add > df.shape[0]:
+            num_add = df.shape[0]
         add_rows = random.sample(list(range(df.shape[0])), num_add)
         add_df = df.loc[add_rows].reset_index(drop=True)
         add_df[3] = pd.Series([3] * add_df.shape[0])
@@ -218,7 +238,13 @@ class Bedshift(object):
         :param float shiftstdev: the standard deviation of the shift distance
         :return int: the number of regions shifted
         """
-        self.__check_rate([shiftrate])
+        self.__check_rate(shiftrate)
+        if shiftrate == 0:
+            return 0
+        if len(chrom_lens) == 0:
+            _LOGGER.error("chrom.sizes file must be specified when shifting regions")
+            sys.exit(1)
+
         rows = self.bed.shape[0]
         shift_rows = random.sample(list(range(rows)), int(rows * shiftrate))
         for row in shift_rows:
@@ -249,7 +275,7 @@ class Bedshift(object):
         :param float cutrate: the rate to cut regions into two separate regions
         :return int: the number of regions cut
         """
-        self.__check_rate([cutrate])
+        self.__check_rate(cutrate)
         if cutrate == 0:
             return 0
         rows = self.bed.shape[0]
@@ -294,7 +320,7 @@ class Bedshift(object):
         :return int: number of regions merged
         """
 
-        self.__check_rate([mergerate])
+        self.__check_rate(mergerate)
         if mergerate == 0:
             return 0
         rows = self.bed.shape[0]
@@ -329,7 +355,9 @@ class Bedshift(object):
         :param float droprate: the rate to drop/remove regions
         :return int: the number of rows dropped
         """
-        self.__check_rate([droprate])
+        self.__check_rate(droprate)
+        if droprate == 0:
+            return 0
         rows = self.bed.shape[0]
         drop_rows = random.sample(list(range(rows)), int(rows * droprate))
         self.bed = self.bed.drop(drop_rows)
@@ -359,7 +387,6 @@ class Bedshift(object):
         :return int: the number of total regions perturbed
         '''
 
-        self.__check_rate([addrate, shiftrate, cutrate, mergerate, droprate])
         n = 0
         n += self.shift(shiftrate, shiftmean, shiftstdev)
         if addfile:
@@ -390,8 +417,14 @@ class Bedshift(object):
 
         :param str bedfile_path: The path to the BED file
         """
-
-        df = pd.read_csv(bedfile_path, sep=delimiter, header=None, usecols=[0,1,2])
+        try:
+            df = pd.read_csv(bedfile_path, sep=delimiter, header=None, usecols=[0,1,2])
+        except FileNotFoundError:
+            _LOGGER.error("BED file path {} invalid".format(bedfile_path))
+            sys.exit(1)
+        except:
+            _LOGGER.error("file {} could not be read".format(bedfile_path))
+            sys.exit(1)
 
         # if there is 'chrom', 'start', 'stop' in the table, move them to header
         if not str(df.iloc[0, 1]).isdigit():
@@ -419,21 +452,20 @@ def main():
         _LOGGER.error("No BED file given")
         sys.exit(1)
 
-    if not args.chrom_lengths:
-        if not args.genome:
+    if args.chrom_lengths:
+        pass
+    elif args.genome:
+        try:
+            import refgenconf
+            rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
+            args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
+        except ModuleNotFoundError:
+            _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
+            sys.exit(1)
+    else:
+        if args.addrate > 0 or args.shiftrate > 0:
             _LOGGER.error("You must provide either chrom sizes or a refgenie genome.")
             sys.exit(1)
-        else:
-            try:
-                import refgenconf
-                rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
-                args.chrom_lengths = rgc.seek(args.genome, "fasta", "", "chrom_sizes")
-            except ModuleNotFoundError:
-                _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
-                sys.exit(1)
-
-
-
 
 
 
@@ -455,7 +487,10 @@ def main():
   repeat: {repeat}
 """
 
-    outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile)) if not args.outputfile else args.outputfile
+    if args.outputfile:
+        outfile = args.outputfile
+    else:
+        outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile))
 
     _LOGGER.info(msg.format(
         chromsizes=args.chrom_lengths,
