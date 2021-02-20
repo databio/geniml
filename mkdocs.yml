@@ -14,7 +14,8 @@ nav:
     - Evaluate Similarity Scores: evaluation_guide.md
   - Reference:
     - Python API: autodoc_build/bedshift.md
-
+    - Changelog: changelog.md
+    
 plugins:
   - databio:
       autodoc_build: "docs/autodoc_build"

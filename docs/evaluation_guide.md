@@ -5,8 +5,8 @@
 Bedshift perturbations include add, drop, shift, cut, and merge. Using any of these perturbations, or combinations of them, you can generate a set of files that are slightly perturbed from the original file. Assuming that the original file is called `original.bed`, and you want 100 files of added regions and 100 files of dropped regions:
 
 ```
-bedshift -b original.bed -l hg38.chrom.sizes -a 0.1 -r 100
-bedshift -b original.bed -d 0.3 -r 100
+bedshift -l hg38.chrom.sizes -b original.bed -a 0.1 -r 100
+bedshift -l hg38.chrom.sizes -b original.bed -d 0.3 -r 100
 ```
 
 Don't forget the add and shift operations require a chrom.sizes file. The output file will be in `bedshifted_original.bed`.
