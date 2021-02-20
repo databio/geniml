@@ -9,7 +9,7 @@ bedshift -l hg38.chrom.sizes -b original.bed -a 0.1 -r 100
 bedshift -l hg38.chrom.sizes -b original.bed -d 0.3 -r 100
 ```
 
-The output file will be in `bedshifted_original.bed`.
+Don't forget the add and shift operations require a chrom.sizes file. The output file will be in `bedshifted_original.bed`.
 
 
 ## Evaluating a similarity score
@@ -17,8 +17,8 @@ The output file will be in `bedshifted_original.bed`.
 This is when the bedshifted file will be put to use. The 100 repetitions of add and drop will be compared against the original file using the similarity score of your choice. The output of the similarity score should reflect the degree of change specified to bedshift. In very general terms, the pseudocode should be like this:
 
 ```
-for each bedshift_file in bedshift_output:
-	score = similarity_score(bedshift_file, original_file, ...)
+for each bedshift_file in folder:
+	score = SimilarityScore(bedshift_file, original_file, ...)
 	add score to score_list
 avg_similarity_score = mean(score_list)
 ```
@@ -28,7 +28,7 @@ You can repeat this for each of the similarity scores and each of the perturbati
 
 ## Using a PEP to quickly submit multiple bedshift jobs
 
-Using a [Portable Encapsulated Project](http://pep.databio.org/en/latest/) (PEP), creating multiple combinations of bedshift files becomes faster and more organized. The PEP consists of a sample table containing the perturbation parameters and a config file. Here is what the `sample_table.csv` may look like:
+Using a [Portable Encapsulated Project](http://pep.databio.org/en/latest/) (PEP), creating multiple combinations of bedshift files becomes faster and more organized. The PEP consists of a sample table containing the perturbation parameters and a config file. Here is what the `sample_table.csv` may look like. Each row specifies the arguments for a bedshift command.
 
 | sample_name | add | drop | shift | cut | merge |
 |-------------|-----|------|------|------|-------|
@@ -51,10 +51,9 @@ sample_modifiers:
     repeat: 100
 ```
 
-Now the project is described neatly in two files. The `sample_modifiers` in the config file just adds extra columns to the sample table in post-processing and makes the project more configurable, instead of having to repeat the same parameter. The columns added are the file which bedshift is to be performed on, and the number of repetitions that bedshift should create. 
+Now the project is described neatly in two files. The `sample_modifiers` in the config file just adds extra columns to the sample table in post-processing and makes the project more configurable, instead of having to repeat the same parameter in the `sample_table.csv`. In this example, the `sample_modifiers` append two columns with the file which bedshift is to be performed on, and the number of repetitions that bedshift should create.
 
-
-The PEP describes the project, but the tool that submits the project jobs is called [looper](http://looper.databio.org/en/latest/). In one line of code, it will interpret the PEP and form commands to be submitted to your processor or a computing cluster. To use looper, you will need to add a few lines to your `project_config.yaml`:
+The PEP describes the project, but the tool that submits the project jobs is called [looper](http://looper.databio.org/en/latest/). In one line of code, it will interpret the PEP and form commands to be submitted to your processor or computing cluster. To use looper, you will need to add a few lines to your `project_config.yaml`:
 
 ```
 pep_version: 2.0.0
@@ -64,7 +63,7 @@ looper:
 sample_modifiers:
   append:
     pipeline_interfaces: "pipeline_interface.yaml"
-    file: "/project/shefflab/resources/regions/LOLACore/hg19/encode_tfbs/regions/wgEncodeAwgTfbsUwHek293CtcfUniPk.narrowPeak"
+    file: "original.bed"
     repeat: 100
 ```
 
@@ -74,11 +73,11 @@ You will also need to create a `pipeline_interface.yaml` that describes how to f
 pipeline_name: bedshift_run
 pipeline_type: sample
 command_template: >
-    bedshift -l hg38.chrom.sizes -b {sample.file} -a {sample.add} -d {sample.drop} -s {sample.shift} -c {sample.cut} -m {sample.merge} -r {sample.repeat} -o {sample.sample_name}.bed
+    bedshift -b {sample.file} -l hg38.chrom.sizes -a {sample.add} -d {sample.drop} -s {sample.shift} -c {sample.cut} -m {sample.merge} -r {sample.repeat} -o {sample.sample_name}.bed
 compute:
   mem: 4000
   cores: 1
-  time: "01:00:00"
+  time: "00:10:00"
 ```
 
 After all of this, the command to run looper and submit the jobs is:
