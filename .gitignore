@@ -8,3 +8,4 @@ site/
 build/
 bedshift.egg-info/
 dist/
+bedshifted*
