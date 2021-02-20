@@ -8,7 +8,7 @@ Install from local repository: `pip install .`
 
 ## Command line
 
-Run with: `bedshift -b BEDFILE` or `./bedshift.sh` if running bedshift on multiple bedfiles with a set of parameters, which are editable in bedshift.sh.
+Run with: `bedshift -l hg38.chrom.sizes -b BEDFILE`
 
 See `bedshift -h` for parameters.
 
@@ -17,7 +17,7 @@ See `bedshift -h` for parameters.
 ```py
 import bedshift
 
-bedshifter = bedshift.Bedshift('tests/test.bed')
+bedshifter = bedshift.Bedshift('tests/test.bed', 'hg38.chrom.sizes')
 bedshifter.all_perturbations(addrate=0.3, addmean=320.0, addstdev=20.0, 
 							 shiftrate=0.3, shiftmean=-10.0, shiftstdev=120.0, 
 							 cutrate=0.1, 
