@@ -475,7 +475,7 @@ def main():
     shift rate: {shiftrate}
     shift mean distance: {shiftmean}
     shift stdev: {shiftstdev}
-  add: 
+  add:
     rate: {addrate}
     add mean length: {addmean}
     add stdev: {addstdev}
