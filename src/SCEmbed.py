@@ -115,12 +115,13 @@ plot_path = os.path.join(fig_dir, plot_filename)
 #print('plot_path: {}'.format(plot_path)) # DEBUG
 
 singlecellEmbeddingmodel.main(path_file=args.input,
-                              nocells=args.nocells,
-                              noreads=args.noreads,
+                              out_dir=args.output,
                               docs_file=args.docs,
                               w2v_model=args.model,
                               mm_format=args.mm,
                               alt_approach=args.alt,
+                              nocells=args.nocells,
+                              noreads=args.noreads,
                               shuffle_repeat=args.shuffle_repeat,
                               window_size=args.window_size,
                               dimension=args.dimension,
