@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib
 import umap
 import seaborn as sns
+from six.moves import cPickle as pickle #for performance
 import matplotlib.pyplot as plt
 from collections import Counter
 
@@ -66,7 +67,7 @@ class singlecellEmbedding(object):
         ft = pd.DataFrame(features, columns=['region'])
         print("-- generate documents --")
         for idx, sample in enumerate(barcodes):
-            if idx % 10 == 0:
+            if idx % 100 == 0:
                 print("idx: {}".format(idx))
                 print("documents[{}]".format(sample))
             index = scipy.sparse.find(data.getcol(idx))[0].tolist()
@@ -108,7 +109,7 @@ class singlecellEmbedding(object):
 
 
     # shuffle the document to generate data for word2vec
-    def shuffling(self, documents, shuffle_repeat):
+    def shuffling2(self, documents, shuffle_repeat):
         common_text = list(documents.values())
         training_samples = []
         training_samples.extend(common_text)
@@ -120,19 +121,8 @@ class singlecellEmbedding(object):
 
 
     # shuffle the document to generate data for word2vec
-    # def shuffling(self, documents, shuffle_repeat):
-        # common_text = [value.split(' ')  for key, value in documents.items()]
-        # training_samples = []
-        # training_samples.extend(common_text)
-
-        # for rn in range(shuffle_repeat):
-            # [(np.random.shuffle(l)) for l in common_text]
-            # training_samples.extend(common_text)
-        # return training_samples
-
-    # shuffle the document to generate data for word2vec
-    def shuffling2(self, document_universe, shuffle_repeat):
-        common_text = [value.split(' ')  for key, value in document_universe.items()]
+    def shuffling(self, documents, shuffle_repeat):
+        common_text = [value.split(' ')  for key, value in documents.items()]
         training_samples = []
         training_samples.extend(common_text)
 
@@ -140,6 +130,17 @@ class singlecellEmbedding(object):
             [(np.random.shuffle(l)) for l in common_text]
             training_samples.extend(common_text)
         return training_samples
+
+    # shuffle the document to generate data for word2vec
+    # def shuffling(self, document_universe, shuffle_repeat):
+        # common_text = [value.split(' ')  for key, value in document_universe.items()]
+        # training_samples = []
+        # training_samples.extend(common_text)
+
+        # for rn in range(shuffle_repeat):
+            # [(np.random.shuffle(l)) for l in common_text]
+            # training_samples.extend(common_text)
+        # return training_samples
 
 
     def trainWord2vec(self, documents, window_size = 100,
@@ -223,9 +224,19 @@ class singlecellEmbedding(object):
         data = data.tocoo()
         return self.convertMM2document(data, features, barcodes)
 
+
+    def save_dict(di_, filename_):
+        with open(filename_, 'wb') as f:
+            pickle.dump(di_, f)
+
+    def load_dict(filename_):
+        with open(filename_, 'rb') as f:
+            ret_di = pickle.load(f)
+        return ret_di
+
     
-    def main(self, path_file, nocells, noreads, w2v_model, docs_file,
-             mm_format = False,  alt_approach = False, shuffle_repeat = 1,
+    def main(self, path_file, out_dir, w2v_model, docs_file, mm_format = False,
+             alt_approach = False, nocells, noreads, shuffle_repeat = 1,
              window_size = 100, dimension = 100,  min_count = 10, threads = 1,
              chunks = 10, umap_nneighbours = 96,
              model_filename = './model.model', plot_filename = './name.jpg'):
@@ -234,12 +245,12 @@ class singlecellEmbedding(object):
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.todense.html
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.mmread.html
         
-        docs_filename = os.path.join(pathlib.Path(path_file).parents[0],
+        docs_filename = os.path.join(out_dir,
             pathlib.Path(pathlib.Path(path_file).stem).stem + ".dict.npy")
         
         if docs_file:
             # Load documents from previous creation
-            documents = np.load(docs_file, allow_pickle='TRUE').item()
+            documents = load_dict(docs_file)
         else:
             if mm_format:
                 if alt_approach:
@@ -305,7 +316,7 @@ class singlecellEmbedding(object):
         print('number of documents: ', len(documents))
         
         # Save documents for future loading
-        np.save(docs_filename, os.path.join(pathlib.Path(path_file).parents[0])) 
+        save_dict(documents, docs_filename) 
 
         if not w2v_model:
             if alt_approach:
