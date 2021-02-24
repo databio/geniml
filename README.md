@@ -32,10 +32,10 @@ bedshifter.to_bed('test_output.bed')
 
 ## Development
 
-test changes:
+Run tests (from this directory):
 
 ```
-./run-tests.sh
+python -m unittest
 ```
 
 Double check the output files to see if the regions make sense.
