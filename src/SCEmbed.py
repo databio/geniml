@@ -101,10 +101,10 @@ except OSError as error:
     print(error) 
 
 #output file names
-model_filename = 'word2vec_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}_umap_nneighbours{}.model'.format(args.nocells, args.noreads, args.dimension, args.window_size , args.min_count, args.shuffle_repeat, args.umap_nneighbours)
+model_filename = 'w2v_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}_umap_nneighbours{}.model'.format(args.nocells, args.noreads, args.dimension, args.window_size , args.min_count, args.shuffle_repeat, args.umap_nneighbours)
 model_path = os.path.join(args.output, model_filename)
 
-plot_filename = 'umapplot_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}_umap_nneighbours{}.svg'.format(args.nocells, args.noreads, args.dimension, args.window_size, args.min_count, args.shuffle_repeat, args.umap_nneighbours)
+plot_filename = 'umap_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}_umap_nneighbours{}.svg'.format(args.nocells, args.noreads, args.dimension, args.window_size, args.min_count, args.shuffle_repeat, args.umap_nneighbours)
 fig_dir = os.path.join(args.output, "figs")
 try:
     #print('Making figure output directory if necessary')  # DEBUG
