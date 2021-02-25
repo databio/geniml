@@ -2,8 +2,10 @@ import os
 import csv
 import datetime
 import gzip
+import io
 import pathlib
 import re
+import shutil
 import pandas as pd
 import multiprocessing as mp
 from gensim.models import Word2Vec
@@ -37,12 +39,18 @@ class singlecellEmbedding(object):
 
     def embedding_avg(self, model, document):
         listOfWVs= []
-        for word in document.split(' '):
-            if word in model.wv.vocab:
-                listOfWVs.append(model[word])
-
-        if(len(listOfWVs) == 0):
-            return np.zeros([len(model[list(model.wv.vocab.keys())[0]])])
+        if type(document) is list: 
+            for word in document:
+                if word in model.wv.vocab:
+                    listOfWVs.append(model[word])
+            if(len(listOfWVs) == 0):
+                return np.zeros([len(model[list(model.wv.vocab.keys())[0]])])
+        else:
+            for word in document.split(' '):
+                if word in model.wv.vocab:
+                    listOfWVs.append(model[word])
+            if(len(listOfWVs) == 0):
+                return np.zeros([len(model[list(model.wv.vocab.keys())[0]])])
         return np.mean(listOfWVs, axis=0)
 
     def document_embedding_avg(self, document_Embedding, model):
@@ -68,6 +76,11 @@ class singlecellEmbedding(object):
         print("-- generate documents --")
         for idx, sample in enumerate(barcodes):
             if idx % 100 == 0:
+                # Instead, go shuffle and train a model
+                # Must consume barcodes, so that when you come back to this
+                # you pick up where you left off. Or just return idx...
+                # Or really, before you get to this function, break off
+                # some number of barcodes...
                 print("idx: {}".format(idx))
                 print("documents[{}]".format(sample))
             index = scipy.sparse.find(data.getcol(idx))[0].tolist()
@@ -81,21 +94,13 @@ class singlecellEmbedding(object):
             yield line.split(' ')
 
 
-    def convertMM2document2(self, path_file):
-        # documents = {}
-        # with gzip.open(path_file, mode = "rt") as file_in:
-            # next(file_in)
-            # next(file_in)
-            # for line in file_in:
-                # index = (line.split(' '))
-                # if(index[1] not in documents):
-                    # documents[index[1]] = []
-                # documents[index[1]].append(index[0])
-        # return documents
+    def convertMM2document2(self, path_file):      
+        gz = gzip.open(path_file, 'rb')
         documents = {}
-        file_in = gzip.open(path_file, mode = "rt")
         lineno = 0
-        for index in self.idx_generator(file_in):
+        f = io.BufferedReader(gz)
+        for line in f:
+            index = line.decode().rstrip('\n').split(' ')
             lineno += 1
             if lineno < 3:
                 # Skip the mtx header lines
@@ -104,7 +109,7 @@ class singlecellEmbedding(object):
                 if(index[1] not in documents):
                     documents[index[1]] = []
                 documents[index[1]].append(index[0])
-        file_in.close()
+        gz.close()
         return documents
 
 
@@ -131,17 +136,6 @@ class singlecellEmbedding(object):
             training_samples.extend(common_text)
         return training_samples
 
-    # shuffle the document to generate data for word2vec
-    # def shuffling(self, document_universe, shuffle_repeat):
-        # common_text = [value.split(' ')  for key, value in document_universe.items()]
-        # training_samples = []
-        # training_samples.extend(common_text)
-
-        # for rn in range(shuffle_repeat):
-            # [(np.random.shuffle(l)) for l in common_text]
-            # training_samples.extend(common_text)
-        # return training_samples
-
 
     def trainWord2vec(self, documents, window_size = 100,
                       dim = 100, min_count = 10, nothreads = 1):
@@ -162,7 +156,6 @@ class singlecellEmbedding(object):
     def label_preprocessing(self, y):
         y_cell = []
         for y1 in y:
-            #y_cell.append('-'.join(y1.replace('singles-', '').replace('BM1077-', '').split('-')[0:-1])) # GSE749412
             y_cell.append(re.split(r'(^[^\d]+)', y1)[1:][0]) # Alexandre and 10X
         return y_cell
 
@@ -170,10 +163,8 @@ class singlecellEmbedding(object):
     # This function reduce the dimension using umap and plot 
     def UMAP_plot(self, data_X, y, title, nn, filename,
                   plottitle, output_folder):
-
         np.random.seed(42)
         dp = 300
-
         ump = umap.UMAP(a=None, angular_rp_forest=False, b=None,
                         force_approximation_algorithm=False, init='spectral',
                         learning_rate=1.0, local_connectivity=1.0,
@@ -187,20 +178,14 @@ class singlecellEmbedding(object):
                         target_n_neighbors=-1, target_weight=0.5,
                         transform_queue_size=4.0, transform_seed=42,
                         unique=False, verbose=False)
-        
-        
         ump.fit(data_X) 
         ump_data = pd.DataFrame(ump.transform(data_X)) 
-
         print("Threading layer chosen: %s" % threading_layer())
         ump_data = pd.DataFrame({'UMAP 1':ump_data[0],
                                 'UMAP 2':ump_data[1],
                                 title:y})
-
         fig, ax = plt.subplots(figsize=(30,25))
-
         plate =(sns.color_palette("husl", n_colors=len(set(y))))
-
         sns.scatterplot(x="UMAP 1", y="UMAP 2", hue=title, s= 200,ax= ax,
                         palette = plate, sizes=(100, 900),
                         data=ump_data, #.sort_values(by = title),
@@ -208,8 +193,102 @@ class singlecellEmbedding(object):
         # TODO: only label a subset of the samples...
         plt.legend(bbox_to_anchor=(1.04,1), loc="upper right", fontsize =  10,
                    markerscale=3, edgecolor = 'black')
-
         return fig
+
+
+    def chunks(self, lst, n):
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
+
+
+    def shuffleDocs(self, documents, shuffle_repeat):
+        # For string values in documents
+        common_text = [value.split(' ')  for key, value in documents.items()]
+        training_samples = []
+        training_samples.extend(common_text)
+        for rn in range(shuffle_repeat):
+            [(np.random.shuffle(l)) for l in common_text]
+            training_samples.extend(common_text)
+        return training_samples
+
+
+    def makeDocs(self, chunk, features, data, pos, shuffle_repeat = 5):
+        documents = {}
+        for sample in list(chunk):
+            index = scipy.sparse.find(data.getcol(pos))[0].tolist()
+            doc = ' '.join(features.iloc[index]['region'])
+            documents[sample] = doc
+            pos += 1
+        print("-- Current sample: {} --".format(sample))  # DEBUG
+        print("-- Current position: {} --".format(pos))  # DEBUG
+        # Shuffle documents to build training set
+        return(self.shuffleDocs(documents, int(shuffle_repeat)))
+
+
+    def buildDocs(self, chunk, data, features, pos):
+        documents = {}
+        print("-- Chunk starting position: {} --".format(pos))  # DEBUG
+        for sample in list(chunk):
+            index = scipy.sparse.find(data.getcol(pos))[0].tolist()
+            try:
+                doc = ' '.join(features.iloc[index]['region'])
+                documents[sample] = doc
+            except IndexError:
+                print("Index out of bounds: {}".format(index))
+                pass
+            pos += 1
+        print("-- Chunk ending sample: {} --".format(sample))  # DEBUG
+        print("-- Chunk ending position: {} --".format(pos))  # DEBUG
+        return documents
+
+
+    def trainModel(self, chunk, data, features, pos, model=None, 
+                   shuffle_repeat = 5, window_size = 100, dim = 100,
+                   min_count = 10, nothreads = 1):
+        documents = self.buildDocs(chunk, data, features, pos)
+        # Shuffle documents to build training set
+        shuffled_docs = self.shuffleDocs(documents, int(shuffle_repeat))
+        if model:
+            # Update the model
+            model.build_vocab(shuffled_docs, update=True)
+            model.train(shuffled_docs,
+                        total_examples=model.corpus_count,
+                        epochs=model.epochs)
+        else:
+            # Initial training of model
+            print("-- Train initial model --")  # DEBUG
+            model = self.trainWord2Vec(shuffled_docs,
+                                       window_size = int(window_size),
+                                       dim = int(dim),
+                                       min_count = int(min_count),
+                                       nothreads = int(nothreads))
+        return model
+
+
+    def calcAverages(self, model, document):
+        listOfWVs= []
+        if type(document) is list: 
+            for word in document:
+                if word in model.wv.vocab:
+                    listOfWVs.append(model[word])
+            if(len(listOfWVs) == 0):
+                return np.zeros([len(model[list(model.wv.vocab.keys())[0]])])
+        else:
+            for word in document.split(' '):
+                if word in model.wv.vocab:
+                    listOfWVs.append(model[word])
+            if(len(listOfWVs) == 0):
+                return np.zeros([len(model[list(model.wv.vocab.keys())[0]])])
+        return np.mean(listOfWVs, axis=0)
+
+
+    def buildDocAverages(self, chunk, data, features, pos, model):
+        documents = self.buildDocs(chunk, data, features, pos)
+        embedding_averages = {}
+        for file, doc  in documents.items():
+            embedding_averages[file] = self.calcAverages(model, doc)
+        return embedding_averages
 
 
     def process_frame(self, data, nocells, noreads):
@@ -225,25 +304,40 @@ class singlecellEmbedding(object):
         return self.convertMM2document(data, features, barcodes)
 
 
-    def save_dict(di_, filename_):
+    def save_dict(self, di_, filename_):
         with open(filename_, 'wb') as f:
             pickle.dump(di_, f)
 
-    def load_dict(filename_):
+
+    def load_dict(self, filename_):
         with open(filename_, 'rb') as f:
             ret_di = pickle.load(f)
         return ret_di
 
-    
-    def main(self, path_file, out_dir, w2v_model, docs_file, mm_format = False,
-             alt_approach = False, nocells, noreads, shuffle_repeat = 1,
+
+    def mergeDict(self, d1, d2):
+        # See: https://stackoverflow.com/questions/26910708/merging-dictionary-value-lists-in-python
+        for key, value in d1.items():
+            if key in d2:
+                if type(value) is dict:
+                    self.mergeDict(d1[key], d2[key])
+                else:
+                    if type(value) in (int, float, str):
+                        d1[key] = [value]
+                    if type(d2[key]) is list:
+                        d1[key].extend(d2[key])
+                    else:
+                        d1[key].append(d2[key])
+        for key, value in d2.items():
+            if key not in d1:
+                d1[key] = value
+
+################################################################################
+    def main(self, path_file, nocells, noreads, out_dir, w2v_model, docs_file, 
+             mm_format = False, alt_approach = False, shuffle_repeat = 1,
              window_size = 100, dimension = 100,  min_count = 10, threads = 1,
              chunks = 10, umap_nneighbours = 96,
              model_filename = './model.model', plot_filename = './name.jpg'):
-
-        # TODO: use SciPy to load a MatrixMarket format and convert to dense format file
-        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.todense.html
-        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.mmread.html
         
         docs_filename = os.path.join(out_dir,
             pathlib.Path(pathlib.Path(path_file).stem).stem + ".dict.npy")
@@ -271,11 +365,52 @@ class singlecellEmbedding(object):
                         features.remove('chr_start_end')
                     except ValueError:
                         pass
+                    features = pd.DataFrame(features, columns=['region'])
                     print('-- features file loaded --')
                     barcodes = [row[0] for row in csv.reader(gzip.open(barcodes_filename, mode="rt"), delimiter="\t")]
                     print('-- barcodes file loaded --')
-                    documents = self.process_mm(data, features, barcodes, nocells, noreads)
-                    #data = mm_file.todense()  # Deprecated
+                    #documents = self.process_mm(data, features, barcodes, nocells, noreads)
+                    model = None
+                    pos = 0
+                    model_filename = os.path.join(os.path.dirname(path_file), "head1k_1kchunk_async_w2v.model")
+                    max_pos = data.shape[1]
+                    n = 1000
+                    for chunk in chunks(barcodes, n):
+                        model = self.trainModel(
+                            chunk, data, features, pos, model,
+                            shuffle_repeat = 5, window_size = 100, dim = 100,
+                            min_count = 10, nothreads = int(mp.cpu_count())
+                        )
+                        pos += 1000
+                        if pos % 100:
+                            print("-- Save current model --")  # DEBUG
+                            model.save(model_filename)
+                    # Calculate embeddings
+                    pool = mp.Pool(mp.cpu_count())
+                    jobs = []
+                    pos = 0
+                    n = 1000
+                    for chunk in chunks(barcodes, n):
+                        jobs.append( pool.apply_async(self.buildDocAverages,
+                            (chunk, data, features, pos, model))
+                        )
+                        pos += 1000
+
+                    #wait for all jobs to finish
+                    documents = {}
+                    initialization = True
+                    for job in jobs:
+                        if initialization:
+                            initialization = False
+                            documents = job.get()
+                        else:
+                            self.mergeDict( documents, job.get() )
+                    #clean up
+                    pool.close()
+                    pool.join()
+                    embedding_avg_file = os.path.join(
+                        out_dir, "embedding_averages.pkl")
+                    self.save_dict(documents, embedding_avg_file)
             else:
                 #print('Loading data via pandas.read_csv()')  # DEBUG
 
@@ -313,34 +448,35 @@ class singlecellEmbedding(object):
                 pool.close()
                 pool.join()
 
-        print('number of documents: ', len(documents))
+        # print('number of documents: ', len(documents))
         
-        # Save documents for future loading
-        save_dict(documents, docs_filename) 
+        # # Save documents for future loading
+        # save_dict(documents, docs_filename) 
 
-        if not w2v_model:
-            if alt_approach:
-                shuffeled_documents = self.shuffling2(documents,
-                                                      int(shuffle_repeat))
-            else:
-                shuffeled_documents = self.shuffling(documents,
-                                                     int(shuffle_repeat))
-            print('number of shuffled documents: ', len(shuffeled_documents))
-            print('Dimension: ', dimension)
-            model = self.trainWord2vec(shuffeled_documents,
-                                       window_size = int(window_size),
-                                       dim = int(dimension),
-                                       min_count = int(min_count),
-                                       nothreads = int(threads))
-            model.save(model_filename)
-        else:
-            model = Word2Vec.load(w2v_model)
+        # if not w2v_model:
+            # if alt_approach:
+                # shuffeled_documents = self.shuffling2(documents,
+                                                      # int(shuffle_repeat))
+            # else:
+                # shuffeled_documents = self.shuffling(documents,
+                                                     # int(shuffle_repeat))
+            # print('number of shuffled documents: ', len(shuffeled_documents))
+            # print('Dimension: ', dimension)
+            # model = self.trainWord2vec(shuffeled_documents,
+                                       # window_size = int(window_size),
+                                       # dim = int(dimension),
+                                       # min_count = int(min_count),
+                                       # nothreads = int(threads))
+            # model.save(model_filename)
+        # else:
+            # model = Word2Vec.load(w2v_model)
 
         print('Number of words in w2v model: ', len(model.wv.vocab))
-        document_Embedding_avg = self.document_embedding_avg(documents, model)
-        X = pd.DataFrame(document_Embedding_avg).values
-        y = list(document_Embedding_avg.keys())
-        y = self.label_preprocessing(y)
+        #document_Embedding_avg = self.document_embedding_avg(documents, model)
+        X = pd.DataFrame(documents).values
+        y = list(documents.keys())
+        if not alt_approach:
+            y = self.label_preprocessing(y)
 
         #print(Counter(y))
         fig = self.UMAP_plot(X.T, y, 'single-cell',
