@@ -196,7 +196,7 @@ class singlecellEmbedding(object):
         return fig
 
 
-    def chunks(self, lst, n):
+    def chunkify(self, lst, n):
         """Yield successive n-sized chunks from lst."""
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
@@ -336,7 +336,7 @@ class singlecellEmbedding(object):
     def main(self, path_file, nocells, noreads, out_dir, w2v_model, docs_file, 
              mm_format = False, alt_approach = False, shuffle_repeat = 1,
              window_size = 100, dimension = 100,  min_count = 10, threads = 1,
-             chunks = 10, umap_nneighbours = 96,
+             nochunks = 10, umap_nneighbours = 96,
              model_filename = './model.model', plot_filename = './name.jpg'):
         
         docs_filename = os.path.join(out_dir,
@@ -375,7 +375,7 @@ class singlecellEmbedding(object):
                     model_filename = os.path.join(os.path.dirname(path_file), "head1k_1kchunk_async_w2v.model")
                     max_pos = data.shape[1]
                     n = 1000
-                    for chunk in chunks(barcodes, n):
+                    for chunk in chunkify(barcodes, n):
                         model = self.trainModel(
                             chunk, data, features, pos, model,
                             shuffle_repeat = 5, window_size = 100, dim = 100,
@@ -390,7 +390,7 @@ class singlecellEmbedding(object):
                     jobs = []
                     pos = 0
                     n = 1000
-                    for chunk in chunks(barcodes, n):
+                    for chunk in chunkify(barcodes, n):
                         jobs.append( pool.apply_async(self.buildDocAverages,
                             (chunk, data, features, pos, model))
                         )
@@ -419,7 +419,7 @@ class singlecellEmbedding(object):
                 types_dict.update({col: 'int8' for col in col_names if col not in types_dict})
 
                 reader = pd.read_csv(path_file, sep="\t",
-                                     chunksize=chunks, dtype=types_dict,
+                                     chunksize=nochunks, dtype=types_dict,
                                      keep_default_na=False, error_bad_lines=False)
 
                 if mp.cpu_count() < int(threads):
