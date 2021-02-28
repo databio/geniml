@@ -150,7 +150,7 @@ class Bedshift(object):
         self.bed = self.original_bed.copy(deep=True)
 
 
-    def __check_rate(self, rate):
+    def _check_rate(self, rate):
         if rate < 0 or rate > 1:
             _LOGGER.error("Rate must be between 0 and 1")
             sys.exit(1)
@@ -238,7 +238,7 @@ class Bedshift(object):
         :param float shiftstdev: the standard deviation of the shift distance
         :return int: the number of regions shifted
         """
-        self.__check_rate(shiftrate)
+        self._check_rate(shiftrate)
         if shiftrate == 0:
             return 0
         if len(chrom_lens) == 0:
@@ -247,26 +247,30 @@ class Bedshift(object):
 
         rows = self.bed.shape[0]
         shift_rows = random.sample(list(range(rows)), int(rows * shiftrate))
+        new_row_list = []
+        to_drop = []
         for row in shift_rows:
-            self.__shift(row, shiftmean, shiftstdev) # shifted rows display a 1
+            drop_row, new_region = self._shift(row, shiftmean, shiftstdev) # shifted rows display a 1
+            if drop_row and new_region:
+                new_row_list.append(new_region)
+                to_drop.append(drop_row)
+        self.bed = self.bed.drop(to_drop)
+        self.bed = self.bed.append(new_row_list, ignore_index=True)
+        self.bed = self.bed.reset_index(drop=True)
         return len(shift_rows)
 
-    def __shift(self, row, mean, stdev):
+    def _shift(self, row, mean, stdev):
         theshift = int(np.random.normal(mean, stdev))
 
         chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
         end = self.bed.loc[row][2]
 
-        if start + theshift < 0 or \
-                end + theshift > chrom_lens[chrom]:
-            # shifting out of bounds check
-            return
+        if start + theshift < 0 or end + theshift > chrom_lens[chrom]:
+            # check if the region is shifted out of chromosome length bounds
+            return None, None
 
-        self.bed.at[row, 1] = start + theshift
-        self.bed.at[row, 2] = end + theshift
-        self.bed.at[row, 3] = 1
-
+        return row, {0: chrom, 1: start + theshift, 2: end + theshift, 3: 1}
 
     def cut(self, cutrate):
         """
@@ -275,7 +279,7 @@ class Bedshift(object):
         :param float cutrate: the rate to cut regions into two separate regions
         :return int: the number of regions cut
         """
-        self.__check_rate(cutrate)
+        self._check_rate(cutrate)
         if cutrate == 0:
             return 0
         rows = self.bed.shape[0]
@@ -283,7 +287,7 @@ class Bedshift(object):
         new_row_list = []
         to_drop = []
         for row in cut_rows:
-            drop_row, new_regions = self.__cut(row) # cut rows display a 2
+            drop_row, new_regions = self._cut(row) # cut rows display a 2
             new_row_list.extend(new_regions)
             to_drop.append(drop_row)
         self.bed = self.bed.drop(to_drop)
@@ -291,7 +295,7 @@ class Bedshift(object):
         self.bed = self.bed.reset_index(drop=True)
         return len(cut_rows)
 
-    def __cut(self, row):
+    def _cut(self, row):
         chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
         end = self.bed.loc[row][2]
@@ -320,7 +324,7 @@ class Bedshift(object):
         :return int: number of regions merged
         """
 
-        self.__check_rate(mergerate)
+        self._check_rate(mergerate)
         if mergerate == 0:
             return 0
         rows = self.bed.shape[0]
@@ -328,7 +332,7 @@ class Bedshift(object):
         to_add = []
         to_drop = []
         for row in merge_rows:
-            drop_row, add_row = self.__merge(row)
+            drop_row, add_row = self._merge(row)
             if add_row:
                 to_add.append(add_row)
             to_drop.extend(drop_row)
@@ -337,7 +341,7 @@ class Bedshift(object):
         self.bed = self.bed.reset_index(drop=True)
         return len(merge_rows)
 
-    def __merge(self, row):
+    def _merge(self, row):
         # check if the regions being merged are on the same chromosome
         if row + 1 not in self.bed.index or self.bed.loc[row][0] != self.bed.loc[row+1][0]:
             return [], None
@@ -355,7 +359,7 @@ class Bedshift(object):
         :param float droprate: the rate to drop/remove regions
         :return int: the number of rows dropped
         """
-        self.__check_rate(droprate)
+        self._check_rate(droprate)
         if droprate == 0:
             return 0
         rows = self.bed.shape[0]

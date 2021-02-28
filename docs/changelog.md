@@ -1,10 +1,13 @@
 # Changelog
 
-This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format. 
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format.
 
 ## [1.1.0] - unreleased
 
 - Added ability to specify chrom sizes file, or refgenie genome.
+- Add --yaml_config option
+- Improve performance of perturbations
+- Add --drop-from-file and --add-from-file options
 
 ## [1.0.0] - released May 20, 2020
 
