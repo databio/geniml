@@ -137,7 +137,7 @@ class singlecellEmbedding(object):
         return training_samples
 
 
-    def trainWord2vec(self, documents, window_size = 100,
+    def trainWord2Vec(self, documents, window_size = 100,
                       dim = 100, min_count = 10, nothreads = 1):
         """
         Train word2vec algorithm
@@ -226,7 +226,7 @@ class singlecellEmbedding(object):
         return(self.shuffleDocs(documents, int(shuffle_repeat)))
 
 
-    def buildDocs(self, chunk, data, features, pos):
+    def buildMiniDocs(self, chunk, data, features, pos):
         documents = {}
         print("-- Chunk starting position: {} --".format(pos))  # DEBUG
         for sample in list(chunk):
@@ -243,10 +243,37 @@ class singlecellEmbedding(object):
         return documents
 
 
+    def buildDocs(self, chunk, data, features, pos, nothreads = 1):     
+        pool = mp.Pool(mp.cpu_count())
+        jobs = []
+        pos = 0
+        max_pos = data.shape[1]
+        n = int(max_pos/mp.cpu_count())
+        for minichunk in self.chunkify(list(chunk), n):
+            jobs.append( pool.apply_async(self.buildMiniDocs,
+                (minichunk, data, features, pos))
+            )
+            pos += n
+
+        #wait for all jobs to finish
+        documents = {}
+        initialization = True
+        for job in jobs:
+            if initialization:
+                initialization = False
+                documents = job.get()
+            else:
+                self.mergeDict( documents, job.get() )
+        #clean up
+        pool.close()
+        pool.join()
+        return documents
+
+
     def trainModel(self, chunk, data, features, pos, model=None, 
                    shuffle_repeat = 5, window_size = 100, dim = 100,
                    min_count = 10, nothreads = 1):
-        documents = self.buildDocs(chunk, data, features, pos)
+        documents = self.buildDocs(chunk, data, features, pos, nothreads)
         # Shuffle documents to build training set
         shuffled_docs = self.shuffleDocs(documents, int(shuffle_repeat))
         if model:
@@ -351,6 +378,7 @@ class singlecellEmbedding(object):
                     documents = self.convertMM2document2(path_file)
                 else:
                     print('Loading data via mmread()')
+                    # TODO: read the mm file in chunks too...
                     data = scipy.io.mmread(path_file)
                     print('-- mtx file loaded --')
                     features_filename = os.path.join(pathlib.Path(path_file).parents[0],
@@ -372,29 +400,30 @@ class singlecellEmbedding(object):
                     #documents = self.process_mm(data, features, barcodes, nocells, noreads)
                     model = None
                     pos = 0
-                    model_filename = os.path.join(os.path.dirname(path_file), "head1k_1kchunk_async_w2v.model")
+                    model_filename = os.path.join(os.path.dirname(out_dir), "w2v.model")
                     max_pos = data.shape[1]
-                    n = 1000
-                    for chunk in chunkify(barcodes, n):
+                    n = int(max_pos/mp.cpu_count())
+                    for chunk in self.chunkify(barcodes, n):
                         model = self.trainModel(
                             chunk, data, features, pos, model,
                             shuffle_repeat = 5, window_size = 100, dim = 100,
                             min_count = 10, nothreads = int(mp.cpu_count())
                         )
-                        pos += 1000
-                        if pos % 100:
-                            print("-- Save current model --")  # DEBUG
-                            model.save(model_filename)
+                        pos += n
+                        print("-- Save current model --")  # DEBUG
+                        print("-- Position: {} --".format(pos))  # DEBUG
+                        model.save(model_filename)
+
                     # Calculate embeddings
                     pool = mp.Pool(mp.cpu_count())
                     jobs = []
                     pos = 0
-                    n = 1000
-                    for chunk in chunkify(barcodes, n):
+                    n = int(max_pos/mp.cpu_count())
+                    for chunk in self.chunkify(barcodes, n):
                         jobs.append( pool.apply_async(self.buildDocAverages,
                             (chunk, data, features, pos, model))
                         )
-                        pos += 1000
+                        pos += n
 
                     #wait for all jobs to finish
                     documents = {}
