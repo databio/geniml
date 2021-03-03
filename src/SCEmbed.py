@@ -60,11 +60,11 @@ def parse_arguments():
                         help="Minimum number of reads that overlap a region "
                              "for that region to be included.")
 
-    parser.add_argument("--dimension", dest="dimension", default=10,
+    parser.add_argument("--dimension", dest="dimension", default=100,
                         help="Number of dimensions to train the word2vec "
                              "model.")
 
-    parser.add_argument("--min-count", dest="min_count", default=100,
+    parser.add_argument("--min-count", dest="min_count", default=10,
                         help="Minimum count for Word2Vec model.")
 
     parser.add_argument("--shuffle-repeat", dest="shuffle_repeat",

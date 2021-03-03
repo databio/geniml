@@ -156,7 +156,8 @@ class singlecellEmbedding(object):
     def label_preprocessing(self, y):
         y_cell = []
         for y1 in y:
-            y_cell.append(re.split(r'(^[^\d]+)', y1)[1:][0]) # Alexandre and 10X
+            #y_cell.append(re.split(r'(^[^\d]+)', y1)[1:][0]) # Alexandre and 10X
+            y_cell.append(y1.split('_')[0])
         return y_cell
 
 
@@ -196,12 +197,54 @@ class singlecellEmbedding(object):
         return fig
 
 
-    def chunkify(self, lst, n):
-        """Yield successive n-sized chunks from lst."""
-        for i in range(0, len(lst), n):
-            yield lst[i:i + n]
+    # def chunkify(self, lst, n):
+        # """Yield successive n-sized chunks from lst."""
+        # for i in range(0, len(lst), n):
+            # yield lst[i:i + n]
+    ############################################################################
+
+    def chunkify(self, csr, barcodes, n):
+        """Yield successive n-sized chunks."""
+        for i in range(0, csr.shape[1], n):
+            yield csr[:,i:i + n], barcodes[i:i + n]
 
 
+    def convertMM2doc(self, csr_slice, barcodes):
+        documents = {}
+        for i in range(0, csr_slice.shape[1]):
+            try:
+                if(barcodes[i] not in documents):
+                    documents[barcodes[i]] = []
+                documents[barcodes[i]].extend(np.array([x + 1 for x in csr_slice[:,i].nonzero()[0].tolist()],dtype=str).tolist()) 
+            except IndexError:
+                #print("i: {}".format(i))
+                pass
+        return documents
+
+
+    def convertDocPool(self, csr, barcodes):
+        pool = mp.Pool(mp.cpu_count())
+        jobs = []
+        pos = 0
+        max_pos = csr.shape[1]
+        n = int(max_pos/mp.cpu_count())
+        n = 1 if n < 1 else n
+        for chunk, names in self.chunkify(csr, barcodes, n):
+            jobs.append( pool.apply_async(self.convertMM2doc, (chunk, names))    )
+        documents = {}
+        initialization = True
+        for job in jobs:
+            if initialization:
+                initialization = False
+                documents = job.get()
+            else:
+                self.mergeDict( documents, job.get() )
+        #clean up
+        pool.close()
+        pool.join()
+        return(documents)
+
+    ############################################################################
     def shuffleDocs(self, documents, shuffle_repeat):
         # For string values in documents
         common_text = [value.split(' ')  for key, value in documents.items()]
@@ -361,9 +404,9 @@ class singlecellEmbedding(object):
 
 ################################################################################
     def main(self, path_file, nocells, noreads, out_dir, w2v_model, docs_file, 
-             mm_format = False, alt_approach = False, shuffle_repeat = 1,
+             mm_format = False, alt_approach = False, shuffle_repeat = 5,
              window_size = 100, dimension = 100,  min_count = 10, threads = 1,
-             nochunks = 10, umap_nneighbours = 96,
+             nochunks = 1000, umap_nneighbours = 100,
              model_filename = './model.model', plot_filename = './name.jpg'):
         
         docs_filename = os.path.join(out_dir,
@@ -381,6 +424,7 @@ class singlecellEmbedding(object):
                     # TODO: read the mm file in chunks too...
                     data = scipy.io.mmread(path_file)
                     print('-- mtx file loaded --')
+                    csr = data.tocsr()
                     features_filename = os.path.join(pathlib.Path(path_file).parents[0],
                         pathlib.Path(pathlib.Path(path_file).stem).stem + "_coords.tsv.gz")
                     barcodes_filename = os.path.join(pathlib.Path(path_file).parents[0],
@@ -398,48 +442,58 @@ class singlecellEmbedding(object):
                     barcodes = [row[0] for row in csv.reader(gzip.open(barcodes_filename, mode="rt"), delimiter="\t")]
                     print('-- barcodes file loaded --')
                     #documents = self.process_mm(data, features, barcodes, nocells, noreads)
-                    model = None
-                    pos = 0
+                    # model = None
+                    # pos = 0
                     model_filename = os.path.join(os.path.dirname(out_dir), "w2v.model")
-                    max_pos = data.shape[1]
-                    n = int(max_pos/mp.cpu_count())
-                    for chunk in self.chunkify(barcodes, n):
-                        model = self.trainModel(
-                            chunk, data, features, pos, model,
-                            shuffle_repeat = 5, window_size = 100, dim = 100,
-                            min_count = 10, nothreads = int(mp.cpu_count())
-                        )
-                        pos += n
-                        print("-- Save current model --")  # DEBUG
-                        print("-- Position: {} --".format(pos))  # DEBUG
-                        model.save(model_filename)
-
+                    # max_pos = data.shape[1]
+                    # n = int(max_pos/mp.cpu_count())
+                    # for chunk in self.chunkify(barcodes, n):
+                        # model = self.trainModel(
+                            # chunk, data, features, pos, model,
+                            # shuffle_repeat = 5, window_size = 100, dim = 100,
+                            # min_count = 10, nothreads = int(mp.cpu_count())
+                        # )
+                        # pos += n
+                        # print("-- Save current model --")  # DEBUG
+                        # print("-- Position: {} --".format(pos))  # DEBUG
+                        # model.save(model_filename)
+                    documents = self.convertDocPool(csr, barcodes)
+                    
+                    shuffeled_documents = self.shuffling2(documents,
+                                                          int(shuffle_repeat))
+                    model = self.trainWord2Vec(shuffeled_documents,
+                                               window_size = int(window_size),
+                                               dim = int(dimension),
+                                               min_count = int(min_count),
+                                               nothreads = int(threads))
+                    model.save(model_filename)
+                    
                     # Calculate embeddings
-                    pool = mp.Pool(mp.cpu_count())
-                    jobs = []
-                    pos = 0
-                    n = int(max_pos/mp.cpu_count())
-                    for chunk in self.chunkify(barcodes, n):
-                        jobs.append( pool.apply_async(self.buildDocAverages,
-                            (chunk, data, features, pos, model))
-                        )
-                        pos += n
+                    # pool = mp.Pool(mp.cpu_count())
+                    # jobs = []
+                    # pos = 0
+                    # n = int(max_pos/mp.cpu_count())
+                    # for chunk in self.chunkify(barcodes, n):
+                        # jobs.append( pool.apply_async(self.buildDocAverages,
+                            # (chunk, data, features, pos, model))
+                        # )
+                        # pos += n
 
-                    #wait for all jobs to finish
-                    documents = {}
-                    initialization = True
-                    for job in jobs:
-                        if initialization:
-                            initialization = False
-                            documents = job.get()
-                        else:
-                            self.mergeDict( documents, job.get() )
-                    #clean up
-                    pool.close()
-                    pool.join()
-                    embedding_avg_file = os.path.join(
-                        out_dir, "embedding_averages.pkl")
-                    self.save_dict(documents, embedding_avg_file)
+                    # #wait for all jobs to finish
+                    # documents = {}
+                    # initialization = True
+                    # for job in jobs:
+                        # if initialization:
+                            # initialization = False
+                            # documents = job.get()
+                        # else:
+                            # self.mergeDict( documents, job.get() )
+                    # #clean up
+                    # pool.close()
+                    # pool.join()
+                    # embedding_avg_file = os.path.join(
+                        # out_dir, "embedding_averages.pkl")
+                    # self.save_dict(documents, embedding_avg_file)
             else:
                 #print('Loading data via pandas.read_csv()')  # DEBUG
 
@@ -501,9 +555,9 @@ class singlecellEmbedding(object):
             # model = Word2Vec.load(w2v_model)
 
         print('Number of words in w2v model: ', len(model.wv.vocab))
-        #document_Embedding_avg = self.document_embedding_avg(documents, model)
-        X = pd.DataFrame(documents).values
-        y = list(documents.keys())
+        document_Embedding_avg = self.document_embedding_avg(documents, model)
+        X = pd.DataFrame(document_Embedding_avg).values
+        y = list(document_Embedding_avg.keys())
         if not alt_approach:
             y = self.label_preprocessing(y)
 
