@@ -359,7 +359,6 @@ class Bedshift(object):
         end = self.bed.loc[row+1][2]
         return [row, row+1], {0: chrom, 1: start, 2: end, 3: 4}
 
-
     def drop(self, droprate):
         """
         Drop regions
@@ -376,18 +375,22 @@ class Bedshift(object):
         self.bed = self.bed.reset_index(drop=True)
         return len(drop_rows)
 
-    def _find_intersection(self, fp, threshold=1):
+    def _find_intersection(self, fp):
         """
         find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file
 
         :param str fp: the filepath to the other bedfile containing regions to be compared to the reference bedfile
-        :param int threshold: the number of base pairs overlap needed for a match
         :return dataframe intersect_ref: the dataframe consisting of matching regions, where regions are 
         """
         reference_bed = pybedtools.example_bedtool(os.path.abspath(self.bedfile_path))
         comparison_bed = pybedtools.example_bedtool(os.path.abspath(fp))
 
-        intersect_ref = reference_bed.intersect(comparison_bed, u=True).to_dataframe()
+        try:
+            intersect_ref = reference_bed.intersect(comparison_bed, u=True).to_dataframe()
+        except ValueError:
+            print("No interection found between two files.")
+            sys.exit(1)
+
         return intersect_ref[['chrom', 'start', 'end']]
 
     def drop_from_file(self, fp, droprate, delimiter='\t'):
@@ -414,8 +417,8 @@ class Bedshift(object):
             num_drop = drop_rows
         
         intersect_regions = self._find_intersection(fp)
-        
-        rows2drop = random.sample(list(range(drop_rows)), num_drop)
+        rows2drop = random.sample(list(range(len(intersect_regions))), num_drop)
+
         self.bed = self.bed.drop(intersect_regions.index[rows2drop]).reset_index(drop=True)
         return num_drop
 
@@ -458,7 +461,8 @@ class Bedshift(object):
         n += self.merge(mergerate)
         if dropfile:
             n += self.drop_from_file(dropfile, droprate)
-        n +=self.drop(droprate)
+        else:
+            n +=self.drop(droprate)
         if yaml:
             n += handle_yaml(bedshifter, yaml)
         return n
