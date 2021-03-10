@@ -1,41 +1,28 @@
-import os
+
+from collections import Counter
 import csv
-import datetime
+from gensim.models import Word2Vec
 import gzip
 import io
-import pathlib
-import re
-import shutil
-import pandas as pd
-import multiprocessing as mp
-from gensim.models import Word2Vec
-import scipy.io
-from numba import config, njit, threading_layer
-import numpy as np
 import matplotlib
-import umap
+import matplotlib.pyplot as plt
+import multiprocessing as mp
+from numba import config, threading_layer
+import numpy as np
+import os
+import pathlib
+import pandas as pd
+import re
+import scipy.io
 import seaborn as sns
 from six.moves import cPickle as pickle #for performance
-import matplotlib.pyplot as plt
-from collections import Counter
+import tempfile
+import umap
 
 # set the threading layer before any parallel target compilation
 config.THREADING_LAYER = 'threadsafe'
 
 class singlecellEmbedding(object):
-    
-    # Preprocessing to filter based on the number of cells and reads
-    def preprocessing(self, data, nocells, noreads):
-        data.drop(data.loc[data[list(data)[3:-1]].sum(axis=1)< nocells].index, inplace=True)
-
-        data.drop(columns=data[list(data)[3:-1]].columns[data[list(data)[3:-1]].sum()< noreads], inplace=True)
-
-        data['region'] = data['chr'] + '_' + data['start'].apply(str) + '_' + data['end'].apply(str)
-
-        data = data[list(data)[3:]]
-        print(data.shape)
-        return data
-
 
     def embedding_avg(self, model, document):
         listOfWVs= []
@@ -53,6 +40,7 @@ class singlecellEmbedding(object):
                 return np.zeros([len(model[list(model.wv.vocab.keys())[0]])])
         return np.mean(listOfWVs, axis=0)
 
+
     def document_embedding_avg(self, document_Embedding, model):
         document_Embedding_avg = {}
         for file, doc  in document_Embedding.items():
@@ -60,77 +48,11 @@ class singlecellEmbedding(object):
         return document_Embedding_avg
 
 
-    # preprocess the data for word2vec 
-    def convertMat2document(self, data):
-        documents = {}
-        for cell in list(data)[:-1]:
-            index = [index for index, value in enumerate(data[cell]) if value >= 1]
-            doc = ' '.join(data.iloc[index]['region'])
-            documents[cell] = doc
-        return documents
-
-
-    def convertMM2document(self, data, features, barcodes):
-        documents = {}
-        ft = pd.DataFrame(features, columns=['region'])
-        print("-- generate documents --")
-        for idx, sample in enumerate(barcodes):
-            if idx % 100 == 0:
-                # Instead, go shuffle and train a model
-                # Must consume barcodes, so that when you come back to this
-                # you pick up where you left off. Or just return idx...
-                # Or really, before you get to this function, break off
-                # some number of barcodes...
-                print("idx: {}".format(idx))
-                print("documents[{}]".format(sample))
-            index = scipy.sparse.find(data.getcol(idx))[0].tolist()
-            doc = ' '.join(ft.iloc[index]['region'])
-            documents[sample] = doc
-        return documents
-
-
-    def idx_generator(self, infile):
-        for line in infile:
-            yield line.split(' ')
-
-
-    def convertMM2document2(self, path_file):      
-        gz = gzip.open(path_file, 'rb')
-        documents = {}
-        lineno = 0
-        f = io.BufferedReader(gz)
-        for line in f:
-            index = line.decode().rstrip('\n').split(' ')
-            lineno += 1
-            if lineno < 3:
-                # Skip the mtx header lines
-                pass
-            else:
-                if(index[1] not in documents):
-                    documents[index[1]] = []
-                documents[index[1]].append(index[0])
-        gz.close()
-        return documents
-
-
     # shuffle the document to generate data for word2vec
-    def shuffling2(self, documents, shuffle_repeat):
+    def shuffling(self, documents, shuffle_repeat):
         common_text = list(documents.values())
         training_samples = []
         training_samples.extend(common_text)
-
-        for rn in range(shuffle_repeat):
-            [(np.random.shuffle(l)) for l in common_text]
-            training_samples.extend(common_text)
-        return training_samples
-
-
-    # shuffle the document to generate data for word2vec
-    def shuffling(self, documents, shuffle_repeat):
-        common_text = [value.split(' ')  for key, value in documents.items()]
-        training_samples = []
-        training_samples.extend(common_text)
-
         for rn in range(shuffle_repeat):
             [(np.random.shuffle(l)) for l in common_text]
             training_samples.extend(common_text)
@@ -156,23 +78,23 @@ class singlecellEmbedding(object):
     def label_preprocessing(self, y):
         y_cell = []
         for y1 in y:
-            #y_cell.append(re.split(r'(^[^\d]+)', y1)[1:][0]) # Alexandre and 10X
             y_cell.append(y1.split('_')[0])
         return y_cell
 
 
     # This function reduce the dimension using umap and plot 
-    def UMAP_plot(self, data_X, y, title, nn, filename,
+    def UMAP_plot(self, data_X, y, title, nn, filename, umet,
                   plottitle, output_folder):
         np.random.seed(42)
         dp = 300
+        # TODO: make points vector graphics too
         ump = umap.UMAP(a=None, angular_rp_forest=False, b=None,
                         force_approximation_algorithm=False, init='spectral',
                         learning_rate=1.0, local_connectivity=1.0,
-                        low_memory=False, metric='euclidean', metric_kwds=None,
+                        low_memory=False, metric=umet, metric_kwds=None,
                         min_dist=0.1, n_components=2, n_epochs=1000,
                         n_neighbors=nn, negative_sample_rate=5,
-                        output_metric='euclidean', output_metric_kwds=None,
+                        output_metric=umet, output_metric_kwds=None,
                         random_state=42, repulsion_strength=1.0,
                         set_op_mix_ratio=1.0, spread=1.0,
                         target_metric='categorical', target_metric_kwds=None,
@@ -197,181 +119,39 @@ class singlecellEmbedding(object):
         return fig
 
 
-    # def chunkify(self, lst, n):
-        # """Yield successive n-sized chunks from lst."""
-        # for i in range(0, len(lst), n):
-            # yield lst[i:i + n]
-    ############################################################################
-
     def chunkify(self, csr, barcodes, n):
         """Yield successive n-sized chunks."""
         for i in range(0, csr.shape[1], n):
             yield csr[:,i:i + n], barcodes[i:i + n]
 
 
-    def convertMM2doc(self, csr_slice, barcodes):
+    def convertMM2doc2FileMap(self, arg):
+        csr_slice, barcodes, temp_dir = arg
         documents = {}
+        temp_file=tempfile.NamedTemporaryFile(dir=temp_dir.name, delete=False)
         for i in range(0, csr_slice.shape[1]):
             try:
                 if(barcodes[i] not in documents):
                     documents[barcodes[i]] = []
                 documents[barcodes[i]].extend(np.array([x + 1 for x in csr_slice[:,i].nonzero()[0].tolist()],dtype=str).tolist()) 
             except IndexError:
-                #print("i: {}".format(i))
+                #print("i: {}".format(i))  # DEBUG
                 pass
-        return documents
-
-
-    def convertDocPool(self, csr, barcodes):
-        pool = mp.Pool(mp.cpu_count())
-        jobs = []
-        pos = 0
-        max_pos = csr.shape[1]
-        n = int(max_pos/mp.cpu_count())
-        n = 1 if n < 1 else n
-        for chunk, names in self.chunkify(csr, barcodes, n):
-            jobs.append( pool.apply_async(self.convertMM2doc, (chunk, names))    )
+        self.save_dict(documents, temp_file.name)
         documents = {}
-        initialization = True
-        for job in jobs:
-            if initialization:
-                initialization = False
-                documents = job.get()
+
+
+    def buildDoc(self, docs, temp_dir, init=True):
+        for f in os.listdir(temp_dir.name):
+            d_file = os.path.join(os.path.dirname(os.path.abspath(temp_dir.name)), temp_dir.name, f)
+            #print("file: {}".format(d_file))  # DEBUG
+            doc = self.load_dict(d_file)
+            if init:
+                init = False
+                docs = self.load_dict(d_file)
             else:
-                self.mergeDict( documents, job.get() )
-        #clean up
-        pool.close()
-        pool.join()
-        return(documents)
-
-    ############################################################################
-    def shuffleDocs(self, documents, shuffle_repeat):
-        # For string values in documents
-        common_text = [value.split(' ')  for key, value in documents.items()]
-        training_samples = []
-        training_samples.extend(common_text)
-        for rn in range(shuffle_repeat):
-            [(np.random.shuffle(l)) for l in common_text]
-            training_samples.extend(common_text)
-        return training_samples
-
-
-    def makeDocs(self, chunk, features, data, pos, shuffle_repeat = 5):
-        documents = {}
-        for sample in list(chunk):
-            index = scipy.sparse.find(data.getcol(pos))[0].tolist()
-            doc = ' '.join(features.iloc[index]['region'])
-            documents[sample] = doc
-            pos += 1
-        print("-- Current sample: {} --".format(sample))  # DEBUG
-        print("-- Current position: {} --".format(pos))  # DEBUG
-        # Shuffle documents to build training set
-        return(self.shuffleDocs(documents, int(shuffle_repeat)))
-
-
-    def buildMiniDocs(self, chunk, data, features, pos):
-        documents = {}
-        print("-- Chunk starting position: {} --".format(pos))  # DEBUG
-        for sample in list(chunk):
-            index = scipy.sparse.find(data.getcol(pos))[0].tolist()
-            try:
-                doc = ' '.join(features.iloc[index]['region'])
-                documents[sample] = doc
-            except IndexError:
-                print("Index out of bounds: {}".format(index))
-                pass
-            pos += 1
-        print("-- Chunk ending sample: {} --".format(sample))  # DEBUG
-        print("-- Chunk ending position: {} --".format(pos))  # DEBUG
-        return documents
-
-
-    def buildDocs(self, chunk, data, features, pos, nothreads = 1):     
-        pool = mp.Pool(mp.cpu_count())
-        jobs = []
-        pos = 0
-        max_pos = data.shape[1]
-        n = int(max_pos/mp.cpu_count())
-        for minichunk in self.chunkify(list(chunk), n):
-            jobs.append( pool.apply_async(self.buildMiniDocs,
-                (minichunk, data, features, pos))
-            )
-            pos += n
-
-        #wait for all jobs to finish
-        documents = {}
-        initialization = True
-        for job in jobs:
-            if initialization:
-                initialization = False
-                documents = job.get()
-            else:
-                self.mergeDict( documents, job.get() )
-        #clean up
-        pool.close()
-        pool.join()
-        return documents
-
-
-    def trainModel(self, chunk, data, features, pos, model=None, 
-                   shuffle_repeat = 5, window_size = 100, dim = 100,
-                   min_count = 10, nothreads = 1):
-        documents = self.buildDocs(chunk, data, features, pos, nothreads)
-        # Shuffle documents to build training set
-        shuffled_docs = self.shuffleDocs(documents, int(shuffle_repeat))
-        if model:
-            # Update the model
-            model.build_vocab(shuffled_docs, update=True)
-            model.train(shuffled_docs,
-                        total_examples=model.corpus_count,
-                        epochs=model.epochs)
-        else:
-            # Initial training of model
-            print("-- Train initial model --")  # DEBUG
-            model = self.trainWord2Vec(shuffled_docs,
-                                       window_size = int(window_size),
-                                       dim = int(dim),
-                                       min_count = int(min_count),
-                                       nothreads = int(nothreads))
-        return model
-
-
-    def calcAverages(self, model, document):
-        listOfWVs= []
-        if type(document) is list: 
-            for word in document:
-                if word in model.wv.vocab:
-                    listOfWVs.append(model[word])
-            if(len(listOfWVs) == 0):
-                return np.zeros([len(model[list(model.wv.vocab.keys())[0]])])
-        else:
-            for word in document.split(' '):
-                if word in model.wv.vocab:
-                    listOfWVs.append(model[word])
-            if(len(listOfWVs) == 0):
-                return np.zeros([len(model[list(model.wv.vocab.keys())[0]])])
-        return np.mean(listOfWVs, axis=0)
-
-
-    def buildDocAverages(self, chunk, data, features, pos, model):
-        documents = self.buildDocs(chunk, data, features, pos)
-        embedding_averages = {}
-        for file, doc  in documents.items():
-            embedding_averages[file] = self.calcAverages(model, doc)
-        return embedding_averages
-
-
-    def process_frame(self, data, nocells, noreads):
-        # process data frame
-        data = self.preprocessing(data, int(nocells), int(noreads))
-        return self.convertMat2document(data)
-
-    
-    def process_mm(self, data, features, barcodes, nocells, noreads):
-        data = data.tocsr()
-        data = data[data.getnnz(1)>int(noreads)][:,data.getnnz(0)>int(nocells)]
-        data = data.tocoo()
-        return self.convertMM2document(data, features, barcodes)
+                self.mergeDict( docs, self.load_dict(d_file) )    
+        return(docs)
 
 
     def save_dict(self, di_, filename_):
@@ -381,8 +161,11 @@ class singlecellEmbedding(object):
 
     def load_dict(self, filename_):
         with open(filename_, 'rb') as f:
-            ret_di = pickle.load(f)
-        return ret_di
+            try:
+                ret_di = pickle.load(f)
+                return ret_di
+            except EOFError:
+                print("Size (In bytes) of '%s':" %filename_, os.path.getsize(filename_))
 
 
     def mergeDict(self, d1, d2):
@@ -402,169 +185,97 @@ class singlecellEmbedding(object):
             if key not in d1:
                 d1[key] = value
 
+
+
 ################################################################################
-    def main(self, path_file, nocells, noreads, out_dir, w2v_model, docs_file, 
-             mm_format = False, alt_approach = False, shuffle_repeat = 5,
+    def main(self, path_file, names_file, out_dir, title, nocells, noreads, 
+             docs_file = None, w2v_model = None, shuffle_repeat = 5, 
              window_size = 100, dimension = 100,  min_count = 10, threads = 1,
-             nochunks = 1000, umap_nneighbours = 100,
-             model_filename = './model.model', plot_filename = './name.jpg'):
+             umap_nneighbours = 100, umap_metric = 'euclidean'):
         
-        docs_filename = os.path.join(out_dir,
-            pathlib.Path(pathlib.Path(path_file).stem).stem + ".dict.npy")
-        
+        # Create pool *before* loading any data
+        pool = mp.Pool(int(threads))
+
+        print('-- Loading data... --')
+        # TODO: read the mm file in chunks? Or load and write chunks, then
+        #       split chunks across processors
+        data = scipy.io.mmread(path_file)
+        print('-- MatrixMarket file loaded --')
+        data = data.tocsr()
+        data = data[data.getnnz(1)>int(noreads)][:,data.getnnz(0)>int(nocells)]
+        # TODO: test using the features file and whether that changes outcome and timing
+        # features_filename = os.path.join(pathlib.Path(path_file).parents[0],
+            # pathlib.Path(pathlib.Path(path_file).stem).stem + "_coords.tsv.gz")
+        # barcodes_filename = os.path.join(pathlib.Path(path_file).parents[0],
+            # pathlib.Path(pathlib.Path(path_file).stem).stem + "_names.tsv.gz")
+        # feature_chr = [row[0] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+        # feature_start = [row[1] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+        # feature_end = [row[2] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
+        # features = [i + "_" + j + "_" + k for i, j, k in zip(feature_chr, feature_start, feature_end)] 
+        # try:
+            # features.remove('chr_start_end')
+        # except ValueError:
+            # pass
+        # features = pd.DataFrame(features, columns=['region'])
+        # print('-- features file loaded --')
+        if names_file.lower().endswith('.gz'):
+            barcodes = [row[0] for row in csv.reader(gzip.open(names_file, mode="rt"), delimiter="\t")]
+        else:
+            barcodes = [row[0] for row in csv.reader(gnames_file, delimiter="\t")]
+        print('-- Sample names file loaded --')
+
         if docs_file:
-            # Load documents from previous creation
             documents = load_dict(docs_file)
         else:
-            if mm_format:
-                if alt_approach:
-                    documents = self.convertMM2document2(path_file)
-                else:
-                    print('Loading data via mmread()')
-                    # TODO: read the mm file in chunks too...
-                    data = scipy.io.mmread(path_file)
-                    print('-- mtx file loaded --')
-                    csr = data.tocsr()
-                    features_filename = os.path.join(pathlib.Path(path_file).parents[0],
-                        pathlib.Path(pathlib.Path(path_file).stem).stem + "_coords.tsv.gz")
-                    barcodes_filename = os.path.join(pathlib.Path(path_file).parents[0],
-                        pathlib.Path(pathlib.Path(path_file).stem).stem + "_names.tsv.gz")
-                    feature_chr = [row[0] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-                    feature_start = [row[1] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-                    feature_end = [row[2] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-                    features = [i + "_" + j + "_" + k for i, j, k in zip(feature_chr, feature_start, feature_end)] 
-                    try:
-                        features.remove('chr_start_end')
-                    except ValueError:
-                        pass
-                    features = pd.DataFrame(features, columns=['region'])
-                    print('-- features file loaded --')
-                    barcodes = [row[0] for row in csv.reader(gzip.open(barcodes_filename, mode="rt"), delimiter="\t")]
-                    print('-- barcodes file loaded --')
-                    #documents = self.process_mm(data, features, barcodes, nocells, noreads)
-                    # model = None
-                    # pos = 0
-                    model_filename = os.path.join(os.path.dirname(out_dir), "w2v.model")
-                    # max_pos = data.shape[1]
-                    # n = int(max_pos/mp.cpu_count())
-                    # for chunk in self.chunkify(barcodes, n):
-                        # model = self.trainModel(
-                            # chunk, data, features, pos, model,
-                            # shuffle_repeat = 5, window_size = 100, dim = 100,
-                            # min_count = 10, nothreads = int(mp.cpu_count())
-                        # )
-                        # pos += n
-                        # print("-- Save current model --")  # DEBUG
-                        # print("-- Position: {} --".format(pos))  # DEBUG
-                        # model.save(model_filename)
-                    documents = self.convertDocPool(csr, barcodes)
-                    
-                    shuffeled_documents = self.shuffling2(documents,
-                                                          int(shuffle_repeat))
-                    model = self.trainWord2Vec(shuffeled_documents,
-                                               window_size = int(window_size),
-                                               dim = int(dimension),
-                                               min_count = int(min_count),
-                                               nothreads = int(threads))
-                    model.save(model_filename)
-                    
-                    # Calculate embeddings
-                    # pool = mp.Pool(mp.cpu_count())
-                    # jobs = []
-                    # pos = 0
-                    # n = int(max_pos/mp.cpu_count())
-                    # for chunk in self.chunkify(barcodes, n):
-                        # jobs.append( pool.apply_async(self.buildDocAverages,
-                            # (chunk, data, features, pos, model))
-                        # )
-                        # pos += n
+            docs_filename = os.path.join(out_dir, title + "_documents.pkl")
+            documents = {}
+            #print("out_dir: {}".format(out_dir))  # DEBUG
+            temp_dir = tempfile.TemporaryDirectory(dir=out_dir) 
+            #print("temp_dir: {}".format(temp_dir.name))  # DEBUG
+            max_pos = data.shape[1]
+            n = int(max_pos/mp.cpu_count())
+            n = 1 if n < 1 else n # Don't allow value below 1
+            n = 100 if n > 100 else n  # TODO: shrink this based on file size...
+            args = ((chunk, names, temp_dir) for chunk, names in self.chunkify(data, barcodes, n))
+            pool.map_async(self.convertMM2doc2FileMap, args)
+            #clean up
+            pool.close()
+            pool.join()
+            #print("convertDocPool2File complete")  # DEBUG
+            documents = self.buildDoc(documents, temp_dir)
+            print('-- Documents created --')
+            temp_dir.cleanup()
 
-                    # #wait for all jobs to finish
-                    # documents = {}
-                    # initialization = True
-                    # for job in jobs:
-                        # if initialization:
-                            # initialization = False
-                            # documents = job.get()
-                        # else:
-                            # self.mergeDict( documents, job.get() )
-                    # #clean up
-                    # pool.close()
-                    # pool.join()
-                    # embedding_avg_file = os.path.join(
-                        # out_dir, "embedding_averages.pkl")
-                    # self.save_dict(documents, embedding_avg_file)
-            else:
-                #print('Loading data via pandas.read_csv()')  # DEBUG
-
-                col_names = pd.read_csv(path_file, nrows=0, sep="\t").columns
-                types_dict = {'chr': str, 'start': int, 'end': int}
-                types_dict.update({col: 'int8' for col in col_names if col not in types_dict})
-
-                reader = pd.read_csv(path_file, sep="\t",
-                                     chunksize=nochunks, dtype=types_dict,
-                                     keep_default_na=False, error_bad_lines=False)
-
-                if mp.cpu_count() < int(threads):
-                    pool = mp.Pool(mp.cpu_count())
-                else:
-                    pool = mp.Pool(int(threads))
-
-                funclist = []
-                for df in reader:
-                    # process each data frame
-                    f = pool.apply_async(self.process_frame,[df, nocells, noreads])
-                    funclist.append(f)
-
-                chunk_no = 0
-                documents = {}
-                for f in funclist:
-                    chunk_no += 1
-                    if chunk_no is 1:
-                        #print('Loaded first chunk')  # DEBUG
-                        documents = f.get()
-                    else:
-                        #print('Loading {}th chunk'.format(str(chunk_no)))  # DEBUG
-                        tmp = f.get()
-                        documents = {key: documents[key] + " " + tmp[key] for key in documents}
-
-                pool.close()
-                pool.join()
-
-        # print('number of documents: ', len(documents))
-        
-        # # Save documents for future loading
-        # save_dict(documents, docs_filename) 
-
-        # if not w2v_model:
-            # if alt_approach:
-                # shuffeled_documents = self.shuffling2(documents,
-                                                      # int(shuffle_repeat))
-            # else:
-                # shuffeled_documents = self.shuffling(documents,
-                                                     # int(shuffle_repeat))
-            # print('number of shuffled documents: ', len(shuffeled_documents))
-            # print('Dimension: ', dimension)
-            # model = self.trainWord2vec(shuffeled_documents,
-                                       # window_size = int(window_size),
-                                       # dim = int(dimension),
-                                       # min_count = int(min_count),
-                                       # nothreads = int(threads))
-            # model.save(model_filename)
-        # else:
-            # model = Word2Vec.load(w2v_model)
+        if not w2v_model:
+            model_name = '_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}.model'.format(
+                str(nocells), str(noreads), str(dimension), str(window_size),
+                str(min_count), str(shuffle_repeat))
+            model_filename = os.path.join(out_dir, title + model_name)
+            shuffeled_documents = self.shuffling(documents,
+                                                 int(shuffle_repeat))
+            model = self.trainWord2Vec(shuffeled_documents,
+                                       window_size = int(window_size),
+                                       dim = int(dimension),
+                                       min_count = int(min_count),
+                                       nothreads = int(threads))
+            model.save(model_filename)
+            print('-- Model created --')
+        else:
+            model = Word2Vec.load(w2v_model)
 
         print('Number of words in w2v model: ', len(model.wv.vocab))
-        document_Embedding_avg = self.document_embedding_avg(documents, model)
-        X = pd.DataFrame(document_Embedding_avg).values
-        y = list(document_Embedding_avg.keys())
-        if not alt_approach:
-            y = self.label_preprocessing(y)
+        embeddings = self.document_embedding_avg(documents, model)
+        X = pd.DataFrame(embeddings).values
+        y = list(embeddings.keys())
+        y = self.label_preprocessing(y)
 
-        #print(Counter(y))
-        fig = self.UMAP_plot(X.T, y, 'single-cell',
-                             int(umap_nneighbours), 'Single-cell',
-                             'RegionSet2vec', './')
-        print('Saving UMAP plot...')                     
+        plot_name = '{}_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}_umap_nneighbours{}_umap-metric{}.svg'.format(
+            title, str(nocells), str(noreads), str(dimension), str(window_size),
+            str(min_count), str(shuffle_repeat), str(umap_nneighbours),
+            str(umap_metric))
+        plot_filename = os.path.join(out_dir, plot_name)
+        fig = self.UMAP_plot(X.T, y, 'single-cell', int(umap_nneighbours),
+                             'Single-cell', umap_metric, 'RegionSet2vec', './')
+        print('-- Saving UMAP plot... --')                     
         fig.savefig(plot_filename, format = 'svg')
-        print('DONE!') 
+        print('-- Pipeline Complete! --') 
