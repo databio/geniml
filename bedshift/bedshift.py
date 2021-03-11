@@ -508,7 +508,7 @@ def main():
         shiftstdev=args.shiftstdev,
         cutrate=args.cutrate,
         mergerate=args.mergerate,
-        outputfile=args.outputfile,
+        outputfile=outfile,
         repeat=args.repeat))
 
 
