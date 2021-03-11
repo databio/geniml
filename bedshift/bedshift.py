@@ -265,8 +265,9 @@ class Bedshift(object):
         chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
         end = self.bed.loc[row][2]
-
-        if start + theshift < 0 or end + theshift > chrom_lens[chrom]:
+        _LOGGER.debug("Chrom lengths: {}".format(str(chrom_lens)))
+        _LOGGER.debug("chrom: {}".format(str(chrom)))
+        if start + theshift < 0 or end + theshift > chrom_lens[str(chrom)]:
             # check if the region is shifted out of chromosome length bounds
             return None, None
 
