@@ -15,21 +15,6 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = ["Bedshift"]
 
 
-chrom_lens = {}
-
-def read_chromsizes(fp):
-    try:
-        with open(fp) as f:
-            for line in f:
-                line = line.strip().split('\t')
-                chrom = line[0]
-                size = int(line[1])
-                chrom_lens[chrom] = size
-    except FileNotFoundError:
-        _LOGGER.error("fasta file path {} invalid".format(fp))
-        sys.exit(1)
-
-
 class _VersionInHelpParser(argparse.ArgumentParser):
     def format_help(self):
         """ Add version information to help text. """
@@ -133,13 +118,30 @@ class Bedshift(object):
         :param str delimiter: the delimiter used in the BED file
         """
 
+        self.chrom_lens = {}
         if chrom_sizes:
-            read_chromsizes(chrom_sizes)
+            self._read_chromsizes(chrom_sizes)
         df = self.read_bed(bedfile_path, delimiter=delimiter)
         self.original_regions = df.shape[0]
         self.bed = df.astype({1: 'int64', 2: 'int64', 3: 'int64'}) \
                             .sort_values([0, 1, 2]).reset_index(drop=True)
         self.original_bed = self.bed.copy(deep=True)
+
+
+    def _read_chromsizes(self, fp):
+        try:
+            with open(fp) as f:
+                for line in f:
+                    line = line.strip().split('\t')
+                    chrom = line[0]
+                    size = int(line[1])
+                    self.chrom_lens[chrom] = size
+        except FileNotFoundError:
+            _LOGGER.error("fasta file path {} invalid".format(fp))
+            sys.exit(1)
+
+        total_len = sum(self.chrom_lens.values())
+        self.chrom_weights = [chrom_len / total_len for chrom_len in self.chrom_lens.values()]
 
 
     def reset_bed(self):
@@ -156,15 +158,15 @@ class Bedshift(object):
             sys.exit(1)
 
 
-    def pick_random_chrom(self):
+    def pick_random_chroms(self, n):
         """
         Utility function to pick a random chromosome
 
         :return str, float chrom_str, chrom_len: chromosome number and length
         """
-        chrom_str = random.choice(list(chrom_lens.keys()))
-        chrom_len = chrom_lens[chrom_str]
-        return chrom_str, chrom_len
+        chrom_strs = random.choices(list(self.chrom_lens.keys()), weights=self.chrom_weights, k=n)
+        chrom_lens = [self.chrom_lens[chrom_str] for chrom_str in chrom_strs]
+        return zip(chrom_strs, chrom_lens)
 
 
     def add(self, addrate, addmean, addstdev):
@@ -181,15 +183,15 @@ class Bedshift(object):
             sys.exit(1)
         if addrate == 0:
             return 0
-        if len(chrom_lens) == 0:
+        if len(self.chrom_lens) == 0:
             _LOGGER.error("chrom.sizes file must be specified when adding regions")
             sys.exit(1)
 
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
         new_regions = {0: [], 1: [], 2: [], 3: []}
-        for _ in range(num_add):
-            chrom_str, chrom_len = self.pick_random_chrom()
+        random_chroms = self.pick_random_chroms(num_add)
+        for chrom_str, chrom_len in random_chroms:
             start = random.randint(1, chrom_len)
             # ensure chromosome length is not exceeded
             end = min(start + int(np.random.normal(addmean, addstdev)), chrom_len)
@@ -199,6 +201,7 @@ class Bedshift(object):
             new_regions[3].append(3)
         self.bed = self.bed.append(pd.DataFrame(new_regions), ignore_index=True)
         return num_add
+
 
     def add_from_file(self, fp, addrate, delimiter='\t'):
         """
@@ -213,7 +216,7 @@ class Bedshift(object):
             sys.exit(1)
         if addrate == 0:
             return 0
-        if len(chrom_lens) == 0:
+        if len(self.chrom_lens) == 0:
             _LOGGER.error("chrom.sizes file must be specified when adding regions")
             sys.exit(1)
 
@@ -241,7 +244,7 @@ class Bedshift(object):
         self._check_rate(shiftrate)
         if shiftrate == 0:
             return 0
-        if len(chrom_lens) == 0:
+        if len(self.chrom_lens) == 0:
             _LOGGER.error("chrom.sizes file must be specified when shifting regions")
             sys.exit(1)
 
@@ -259,18 +262,20 @@ class Bedshift(object):
         self.bed = self.bed.reset_index(drop=True)
         return len(shift_rows)
 
+
     def _shift(self, row, mean, stdev):
         theshift = int(np.random.normal(mean, stdev))
 
-        chrom = self.bed.loc[row][0]
+        chrom = str(self.bed.loc[row][0])
         start = self.bed.loc[row][1]
         end = self.bed.loc[row][2]
 
-        if start + theshift < 0 or end + theshift > chrom_lens[str(chrom)]:
+        if start + theshift < 0 or end + theshift > self.chrom_lens[chrom]:
             # check if the region is shifted out of chromosome length bounds
             return None, None
 
         return row, {0: chrom, 1: start + theshift, 2: end + theshift, 3: 1}
+
 
     def cut(self, cutrate):
         """
@@ -294,6 +299,7 @@ class Bedshift(object):
         self.bed = self.bed.append(new_row_list, ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
         return len(cut_rows)
+
 
     def _cut(self, row):
         chrom = self.bed.loc[row][0]
@@ -340,6 +346,7 @@ class Bedshift(object):
         self.bed = self.bed.append(to_add, ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
         return len(merge_rows)
+
 
     def _merge(self, row):
         # check if the regions being merged are on the same chromosome
