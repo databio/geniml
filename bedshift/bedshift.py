@@ -266,7 +266,7 @@ class Bedshift(object):
     def _shift(self, row, mean, stdev):
         theshift = int(np.random.normal(mean, stdev))
 
-        chrom = self.bed.loc[row][0]
+        chrom = str(self.bed.loc[row][0])
         start = self.bed.loc[row][1]
         end = self.bed.loc[row][2]
 
@@ -515,7 +515,7 @@ def main():
         shiftstdev=args.shiftstdev,
         cutrate=args.cutrate,
         mergerate=args.mergerate,
-        outputfile=args.outputfile,
+        outputfile=outfile,
         repeat=args.repeat))
 
 
