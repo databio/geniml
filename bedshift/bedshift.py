@@ -8,6 +8,9 @@ import sys
 import pandas as pd
 import numpy as np
 import random
+import yaml
+import pyranges as pr
+from pyranges.methods.coverage import _number_overlapping
 from bedshift._version import __version__
 
 _LOGGER = logging.getLogger(__name__)
@@ -94,12 +97,19 @@ def build_argparser():
         help="Merge probability. WARNING: will likely create regions that are thousands of base pairs long")
 
     parser.add_argument(
+        "--dropfile", type=str, help="Drop regions from a bedfile")
+
+    parser.add_argument(
         "-o", "--outputfile", type=str,
         help="output file name (including extension). if not specified, will default to bedshifted_{originalname}.bed")
 
     parser.add_argument(
         "-r", "--repeat", type=int, default=1,
         help="the number of times to repeat the operation")
+    
+    parser.add_argument(
+        "-y", "--yaml_config", type=str,
+        help="run yaml configuration file")
 
     return parser
 
@@ -117,7 +127,7 @@ class Bedshift(object):
         :param str chrom_sizes: the path to the chrom.sizes file
         :param str delimiter: the delimiter used in the BED file
         """
-
+        self.bedfile_path = bedfile_path
         self.chrom_lens = {}
         if chrom_sizes:
             self._read_chromsizes(chrom_sizes)
@@ -321,7 +331,6 @@ class Bedshift(object):
 
         return row, [{0: chrom, 1: start, 2: thecut, 3: 2}, {0: chrom, 1: thecut, 2: end, 3: 2}]
 
-
     def merge(self, mergerate):
         """
         Merge two regions into one new region
@@ -358,7 +367,6 @@ class Bedshift(object):
         end = self.bed.loc[row+1][2]
         return [row, row+1], {0: chrom, 1: start, 2: end, 3: 4}
 
-
     def drop(self, droprate):
         """
         Drop regions
@@ -375,6 +383,55 @@ class Bedshift(object):
         self.bed = self.bed.reset_index(drop=True)
         return len(drop_rows)
 
+    def _find_overlap(self, fp):
+        """
+        find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file
+
+        :param str fp: the filepath to the other bedfile containing regions to be compared to the reference bedfile
+        :return dataframe intersection: the dataframe consisting of matching regions
+        """
+        reference_pr = self.read_bed(self.bedfile_path)
+        comparison_pr = self.read_bed(fp)
+        reference_pr.columns = ['Chromosome', 'Start', 'End', 'modifications']
+        comparison_pr.columns = ['Chromosome', 'Start', 'End', 'modifications']
+        reference_pr = pr.PyRanges(reference_pr)
+        comparison_pr = pr.PyRanges(comparison_pr)
+        try:
+            intersection = reference_pr.overlap(comparison_pr, how='first').as_df()
+            intersection = intersection.drop(['modifications'], axis=1)
+            intersection.columns = ['chrom', 'start', 'end']
+        except ValueError:
+            print("No interection found between two files.")
+            sys.exit(1)
+        return intersection
+
+    def drop_from_file(self, fp, droprate, delimiter='\t'):
+        """
+        drop regions from another bedfile to this perturbed bedfile
+
+        :param float droprate: the rate to drop regions
+        :param str fp: the filepath to the other bedfile containing regions to be dropped
+        :return int: the number of regions dropped
+        """
+        if droprate < 0:
+            _LOGGER.error("Rate must be greater than or equal to 0")
+            sys.exit(1)
+        if droprate == 0:
+            return 0
+
+        rows = self.bed.shape[0]
+        num_drop = int(rows * droprate)
+        drop_bed = self.read_bed(fp, delimiter=delimiter)
+        drop_rows = drop_bed.shape[0]
+        
+        if num_drop >= drop_rows:
+            print("Number of regions to be dropped ({}) is larger than the provided bedfile size ({}). Dropping {} regions.".format(num_drop, drop_rows, drop_rows))
+            num_drop = drop_rows
+        intersect_regions = self._find_overlap(fp)
+        rows2drop = random.sample(list(range(len(intersect_regions))), num_drop)
+
+        self.bed = self.bed.drop(intersect_regions.index[rows2drop]).reset_index(drop=True)
+        return num_drop
 
     def all_perturbations(self,
                           addrate=0.0, addmean=320.0, addstdev=30.0,
@@ -382,19 +439,26 @@ class Bedshift(object):
                           shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0,
                           cutrate=0.0,
                           mergerate=0.0,
-                          droprate=0.0):
+                          droprate=0.0,
+                          dropfile=None,
+                          yaml=None,
+                          bedshifter=None):
         '''
         Perform all five perturbations in the order of shift, add, cut, merge, drop.
 
         :param float addrate: the rate (as a proportion of the total number of regions) to add regions
         :param float addmean: the mean length of added regions
         :param float addstdev: the standard deviation of the length of added regions
+        :param float addfile: the file containing regions to be added
         :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
         :param float shiftmean: the mean shift distance
         :param float shiftstdev: the standard deviation of the shift distance
         :param float cutrate: the rate to cut regions into two separate regions
         :param float mergerate: the rate to merge two regions into one
         :param float droprate: the rate to drop/remove regions
+        :param float dropfile: the file containing regions to be dropped
+        :param string yaml: the yaml_config filepath
+        :param string bedshifter: Bedshift instance
         :return int: the number of total regions perturbed
         '''
 
@@ -406,7 +470,12 @@ class Bedshift(object):
             n += self.add(addrate, addmean, addstdev)
         n += self.cut(cutrate)
         n += self.merge(mergerate)
-        n += self.drop(droprate)
+        if dropfile:
+            n += self.drop_from_file(dropfile, droprate)
+        else:
+            n +=self.drop(droprate)
+        if yaml:
+            n += self.handle_yaml(bedshifter, yaml)
         return n
 
 
@@ -421,7 +490,6 @@ class Bedshift(object):
         print('The output bedfile located in {} has {} regions. The original bedfile had {} regions.' \
               .format(outfile_name, self.bed.shape[0], self.original_regions))
 
-
     def read_bed(self, bedfile_path, delimiter='\t'):
         """
         Read a BED file into pandas dataframe
@@ -429,7 +497,7 @@ class Bedshift(object):
         :param str bedfile_path: The path to the BED file
         """
         try:
-            df = pd.read_csv(bedfile_path, sep=delimiter, header=None, usecols=[0,1,2])
+            df = pd.read_csv(bedfile_path, sep=delimiter, header=None, usecols=[0,1,2], engine='python')
         except FileNotFoundError:
             _LOGGER.error("BED file path {} invalid".format(bedfile_path))
             sys.exit(1)
@@ -445,7 +513,158 @@ class Bedshift(object):
         df[3] = 0 # column indicating which modifications were made
         return df
 
+    def _print_sample_config(self):
+        """
+        bedshift_operations:
+          - add:
+            rate: 0.1
+            mean: 100
+            stdev: 20
+          - add_from_file:
+            file: tests/test.bed
+            rate: 0.1
+            delimiter: \t
+          - drop_from_file:
+            file: tests/test.bed
+            rate: 0.1
+          - add_from_file:
+            file: tests/test.bed
+            rate: 0.2
+          - cut:
+            rate: 0.2
+          - shift:
+            rate: 0.3
+            mean: 100
+            stdev: 200
+          - merge:
+            rate: 0.15
+          - drop:
+            rate: 0.30
+        """
+        print(_print_sample_config.__doc__)
+        print("No changes made.")
 
+    def _read_from_yaml(self, fp):
+        """
+        Loads yaml config data
+
+        :param float fp: the path to the configuration file
+        :return int: loaded yaml data
+        """
+        with open(fp, "r") as yaml_file:
+            config_data = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        print("Loaded configuration settings from {}".format(fp))
+        return config_data
+
+    def handle_yaml(self, bedshifter, yaml_fp):
+        """
+        Performs operations provided in the yaml config file in the order they were provided.
+
+        :param str bedshifter: the current instance of Bedshift
+        :param float yaml_fp: the path to the configuration file
+        :return int: the number of total regions perturbed
+        """
+        data = self._read_from_yaml(yaml_fp)
+        operations = [operation for operation in data["bedshift_operations"]]
+        num_changed = 0
+
+        for operation in operations:
+            ##### add #####
+            if set(['add', 'rate', 'mean', 'stdev']) == set(list(operation.keys())):
+                rate = operation['rate']
+                mean = operation['mean']
+                std = operation['stdev']
+                num_added = bedshifter.add(rate, mean, std)
+                num_changed += num_added
+                print("\t{} regions added.".format(num_added))
+
+            ##### add_from_file with no delimiter provided #####
+            elif set(['add_from_file', 'file', 'rate']) == set(list(operation.keys())):
+                fp = operation['file']
+                if os.path.isfile(fp):
+                    add_rate = operation['rate']
+                    num_added = bedshifter.add_from_file(fp, add_rate)
+                    num_changed += num_added
+                    print("\t{} regions added from {}.".format(num_added, fp))
+                else:
+                    print ("File \'{}\' does not exist.".format(fp))
+                    sys.exit(1)
+
+            ##### add_from_file with delimiter provided #####
+            elif set(['add_from_file', 'file', 'rate', 'delimiter']) == set(list(operation.keys())):
+                fp = operation['file']
+                if os.path.isfile(fp):
+                    add_rate = operation['rate']
+                    delimiter = operation['delimiter']
+                    num_added = bedshifter.add_from_file(fp, add_rate, delimiter)
+                    num_changed += num_added
+                    print("\t{} regions added from {}.".format(num_added, fp))
+                else:
+                    print ("File \'{}\' does not exist.".format(fp))
+                    sys.exit(1)
+
+            ##### drop #####
+            elif set(['drop', 'rate']) == set(list(operation.keys())):
+                rate = operation['rate']
+                num_dropped = bedshifter.drop(rate)
+                num_changed += num_dropped
+                print("\t{} regions dropped.".format(num_dropped))
+
+            ##### drop_from_file with no delimiter provided #####
+            elif set(['drop_from_file', 'file', 'rate']) == set(list(operation.keys())):
+                fp = operation['file']
+                if os.path.isfile(fp):
+                    drop_rate = operation['rate']
+                    num_dropped = bedshifter.drop_from_file(fp, drop_rate)
+                    num_changed += num_dropped
+                    print("\t{} regions dropped from {}.".format(num_dropped, fp))
+                else:
+                    print ("File \'{}\' does not exist.".format(fp))
+                    sys.exit(1)
+
+            ##### drop_from_file with delimiter provided #####
+            elif set(['drop_from_file', 'file', 'rate', 'delimiter']) == set(list(operation.keys())):
+                fp = operation['file']
+                if os.path.isfile(fp):
+                    drop_rate = operation['rate']
+                    delimiter = operation['delimiter']
+                    num_dropped = bedshifter.drop_from_file(fp, drop_rate, delimiter)
+                    num_changed += num_dropped
+                    print("\t{} regions dropped from {}.".format(num_dropped, fp))
+                else:
+                    print ("File \'{}\' does not exist.".format(fp))
+                    sys.exit(1)
+            
+            ##### shift #####
+            elif set(['shift', 'rate', 'mean', 'stdev']) == set(list(operation.keys())):
+                rate = operation['rate']
+                mean = operation['mean']
+                std = operation['stdev']
+                num_shifted = bedshifter.shift(rate, mean, std)
+                num_changed += num_shifted
+                print("\t{} regions shifted.".format(num_shifted))
+
+            ##### cut #####
+            elif set(['cut', 'rate']) == set(list(operation.keys())):
+                rate = operation['rate']
+                num_cut = bedshifter.cut(rate)
+                num_changed += num_cut
+                print("\t{} regions cut.".format(num_cut))
+
+            ##### merge #####
+            elif set(['merge', 'rate']) == set(list(operation.keys())):
+                rate = operation['rate']
+                num_merged = bedshifter.merge(rate)
+                num_changed += num_merged
+                print("\t{} regions merged.".format(num_merged))
+
+            else:
+                print("Invalid settings entered in the config file. Please refer to the example below.")
+                _print_sample_config()
+                sys.exit(1)
+            
+        return num_changed
+        
 
 def main():
     """ Primary workflow """
@@ -478,8 +697,6 @@ def main():
             _LOGGER.error("You must provide either chrom sizes or a refgenie genome.")
             sys.exit(1)
 
-
-
     msg = """Params:
   chrom.sizes file: {chromsizes}
   shift:
@@ -493,9 +710,11 @@ def main():
     add file: {addfile}
   cut rate: {cutrate}
   drop rate: {droprate}
+  drop regions from file: {dropfile}
   merge rate: {mergerate}
   outputfile: {outputfile}
   repeat: {repeat}
+  yaml_config: {yaml_config}
 """
 
     if args.outputfile:
@@ -504,8 +723,10 @@ def main():
         outfile = 'bedshifted_{}'.format(os.path.basename(args.bedfile))
 
     _LOGGER.info(msg.format(
+        bedfile=args.bedfile,
         chromsizes=args.chrom_lengths,
         droprate=args.droprate,
+        dropfile=args.dropfile,
         addrate=args.addrate,
         addmean=args.addmean,
         addstdev=args.addstdev,
@@ -516,34 +737,42 @@ def main():
         cutrate=args.cutrate,
         mergerate=args.mergerate,
         outputfile=outfile,
-        repeat=args.repeat))
+        repeat=args.repeat,
+        yaml_config=args.yaml_config))
 
 
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
     if args.repeat == 1:
         n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev,
-                                          args.addfile,
-                                          args.shiftrate, args.shiftmean, args.shiftstdev,
-                                          args.cutrate,
-                                          args.mergerate,
-                                          args.droprate)
+                                         args.addfile,
+                                         args.shiftrate, args.shiftmean, args.shiftstdev,
+                                         args.cutrate,
+                                         args.mergerate,
+                                         args.droprate,
+                                         args.dropfile,
+                                         args.yaml_config,
+                                         bedshifter)
+        print("\t" + str(n) + " regions changed in total.\n")
         bedshifter.to_bed(outfile)
-        print(str(n) + " regions changed")
+
     elif args.repeat > 1:
         for i in range(args.repeat):
-
             n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev,
-                                                     args.addfile,
-                                                     args.shiftrate, args.shiftmean, args.shiftstdev,
-                                                     args.cutrate,
-                                                     args.mergerate,
-                                                     args.droprate)
+                                             args.addfile,
+                                             args.shiftrate, args.shiftmean, args.shiftstdev,
+                                             args.cutrate,
+                                             args.mergerate,
+                                             args.droprate,
+                                             args.dropfile,
+                                             args.yaml_config,
+                                             bedshifter)
+            print("\t" + str(n) + " regions changed in total.\n")
             modified_outfile = outfile.rsplit("/")
             modified_outfile[-1] = "rep" + str(i+1) + "_" + modified_outfile[-1]
             modified_outfile = "/".join(modified_outfile)
             bedshifter.to_bed(modified_outfile)
-            print(str(n) + " regions changed")
             bedshifter.reset_bed()
+
     else:
         _LOGGER.error("repeats specified is less than 1")
         sys.exit(1)
@@ -555,5 +784,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         _LOGGER.error("Program canceled by user!")
         sys.exit(1)
-
-
