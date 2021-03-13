@@ -106,7 +106,7 @@ def build_argparser():
     parser.add_argument(
         "-r", "--repeat", type=int, default=1,
         help="the number of times to repeat the operation")
-    
+
     parser.add_argument(
         "-y", "--yaml_config", type=str,
         help="run yaml configuration file")
@@ -262,15 +262,22 @@ class Bedshift(object):
         shift_rows = random.sample(list(range(rows)), int(rows * shiftrate))
         new_row_list = []
         to_drop = []
+        num_shifted = 0
+        invalid_shifted = 0
         for row in shift_rows:
             drop_row, new_region = self._shift(row, shiftmean, shiftstdev) # shifted rows display a 1
             if drop_row and new_region:
+                num_shifted += 1
                 new_row_list.append(new_region)
                 to_drop.append(drop_row)
+            else:
+                invalid_shifted += 1
         self.bed = self.bed.drop(to_drop)
         self.bed = self.bed.append(new_row_list, ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
-        return len(shift_rows)
+        if invalid_shifted > 0:
+            _LOGGER.warning(f"{invalid_shifted} regions were prevented from being shifted outside of chromosome boundaries. Reported regions shifted will be less than expected.")
+        return num_shifted
 
 
     def _shift(self, row, mean, stdev):
@@ -423,7 +430,7 @@ class Bedshift(object):
         num_drop = int(rows * droprate)
         drop_bed = self.read_bed(fp, delimiter=delimiter)
         drop_rows = drop_bed.shape[0]
-        
+
         if num_drop >= drop_rows:
             print("Number of regions to be dropped ({}) is larger than the provided bedfile size ({}). Dropping {} regions.".format(num_drop, drop_rows, drop_rows))
             num_drop = drop_rows
@@ -634,7 +641,7 @@ class Bedshift(object):
                 else:
                     print ("File \'{}\' does not exist.".format(fp))
                     sys.exit(1)
-            
+
             ##### shift #####
             elif set(['shift', 'rate', 'mean', 'stdev']) == set(list(operation.keys())):
                 rate = operation['rate']
@@ -662,9 +669,9 @@ class Bedshift(object):
                 print("Invalid settings entered in the config file. Please refer to the example below.")
                 _print_sample_config()
                 sys.exit(1)
-            
+
         return num_changed
-        
+
 
 def main():
     """ Primary workflow """
