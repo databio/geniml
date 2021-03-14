@@ -1,6 +1,6 @@
 import unittest
 from bedshift import bedshift
-from bedshift.bedshift import handle_yaml
+
 
 class TestBedshift(unittest.TestCase):
     def setUp(self):
@@ -28,7 +28,7 @@ class TestBedshift(unittest.TestCase):
 
     def test_shift(self):
         shifted = self.bs.shift(0.129, 200, 30)
-        self.assertEqual(shifted, 1290)
+        self.assertAlmostEqual(shifted, 1290, places=-2)
         self.bs.reset_bed()
 
     def test_cut(self):
@@ -63,7 +63,7 @@ class TestBedshift(unittest.TestCase):
         self.bs.reset_bed()
 
     def test_handle_yaml(self):
-        yamled = handle_yaml(bedshifter=self.bs, yaml_fp="tests/bedshift_analysis.yaml")
+        yamled = self.bs.handle_yaml(bedshifter=self.bs, yaml_fp="tests/bedshift_analysis.yaml")
         self.bs.reset_bed()
 
         added = self.bs.add(addrate=0.1, addmean=100, addstdev=20)
@@ -78,7 +78,7 @@ class TestBedshift(unittest.TestCase):
 
         total = added+f_added_10+f_dropped_15+f_added_20+cut+shifted+merged#+dropped
 
-        self.assertEqual(yamled, total)
+        self.assertAlmostEqual(yamled, total, places=-2)
         self.bs.reset_bed()
 
     def test_all_perturbations1(self):
@@ -87,8 +87,8 @@ class TestBedshift(unittest.TestCase):
                             shiftrate=0.23, shiftmean=-10.0, shiftstdev=120.0,
                             cutrate=0.12,
                             droprate=0.42)
-        self.assertEqual(perturbed, 16156)
-        self.assertEqual(len(self.bs.bed), 9744)
+        self.assertAlmostEqual(perturbed, 16156, places=-2)
+        self.assertAlmostEqual(len(self.bs.bed), 9744, places=-2)
         self.bs.reset_bed()
 
     def test_all_perturbations2(self):

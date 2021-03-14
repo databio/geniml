@@ -1,16 +1,17 @@
 """ Perturb regions in bedfiles """
 
 import argparse
-import logmuse
 import logging
 import os
 import sys
-import pandas as pd
-import numpy as np
 import random
 import yaml
+
+import logmuse
+import pandas as pd
+import numpy as np
 import pyranges as pr
-from pyranges.methods.coverage import _number_overlapping
+
 from bedshift._version import __version__
 
 _LOGGER = logging.getLogger(__name__)
@@ -548,7 +549,7 @@ class Bedshift(object):
           - drop:
             rate: 0.30
         """
-        print(_print_sample_config.__doc__)
+        print(self._print_sample_config.__doc__)
         print("No changes made.")
 
     def _read_from_yaml(self, fp):
@@ -667,7 +668,7 @@ class Bedshift(object):
 
             else:
                 print("Invalid settings entered in the config file. Please refer to the example below.")
-                _print_sample_config()
+                self._print_sample_config()
                 sys.exit(1)
 
         return num_changed
@@ -724,6 +725,10 @@ def main():
   yaml_config: {yaml_config}
 """
 
+    if args.repeat < 1:
+        _LOGGER.error("repeats specified is less than 1")
+        sys.exit(1)
+
     if args.outputfile:
         outfile = args.outputfile
     else:
@@ -749,40 +754,25 @@ def main():
 
 
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
-    if args.repeat == 1:
+    for i in range(args.repeat):
         n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev,
-                                         args.addfile,
-                                         args.shiftrate, args.shiftmean, args.shiftstdev,
-                                         args.cutrate,
-                                         args.mergerate,
-                                         args.droprate,
-                                         args.dropfile,
-                                         args.yaml_config,
-                                         bedshifter)
+                                            args.addfile,
+                                            args.shiftrate, args.shiftmean, args.shiftstdev,
+                                            args.cutrate,
+                                            args.mergerate,
+                                            args.droprate,
+                                            args.dropfile,
+                                            args.yaml_config,
+                                            bedshifter)
         print("\t" + str(n) + " regions changed in total.\n")
-        bedshifter.to_bed(outfile)
-
-    elif args.repeat > 1:
-        for i in range(args.repeat):
-            n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev,
-                                             args.addfile,
-                                             args.shiftrate, args.shiftmean, args.shiftstdev,
-                                             args.cutrate,
-                                             args.mergerate,
-                                             args.droprate,
-                                             args.dropfile,
-                                             args.yaml_config,
-                                             bedshifter)
-            print("\t" + str(n) + " regions changed in total.\n")
+        if args.repeat == 1:
+            bedshifter.to_bed(outfile)
+        else:
             modified_outfile = outfile.rsplit("/")
             modified_outfile[-1] = "rep" + str(i+1) + "_" + modified_outfile[-1]
             modified_outfile = "/".join(modified_outfile)
             bedshifter.to_bed(modified_outfile)
-            bedshifter.reset_bed()
-
-    else:
-        _LOGGER.error("repeats specified is less than 1")
-        sys.exit(1)
+        bedshifter.reset_bed()
 
 
 if __name__ == '__main__':
