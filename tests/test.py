@@ -1,4 +1,6 @@
 import unittest
+import os
+
 from bedshift import bedshift
 
 
@@ -104,4 +106,18 @@ class TestBedshift(unittest.TestCase):
 
     def test_to_bed(self):
         self.bs.to_bed('py_output.bed')
+        self.assertTrue(os.path.exists('tests/py_output.bed'))
+
+    def test_small_file(self):
+        bs_small = bedshift.Bedshift('tests/small_test.bed', chrom_sizes="tests/hg38.chrom.sizes")
+        shifted = bs_small.shift(0.3, 50, 50)
+        self.assertEqual(shifted, 0)
+        shifted = bs_small.shift(1.0, 50, 50)
+        self.assertEqual(shifted, 1)
+        added = bs_small.add(0.2, 100, 50)
+        self.assertEqual(added, 0)
+        added = bs_small.add(1.0, 100, 50)
+        self.assertEqual(added, 1)
+        added = bs_small.add(2.0, 100, 50)
+        self.assertEqual(added, 4)
 
