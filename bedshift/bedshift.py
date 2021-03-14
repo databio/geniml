@@ -144,7 +144,7 @@ class Bedshift(object):
             with open(fp) as f:
                 for line in f:
                     line = line.strip().split('\t')
-                    chrom = line[0]
+                    chrom = str(line[0])
                     size = int(line[1])
                     self.chrom_lens[chrom] = size
         except FileNotFoundError:
@@ -267,7 +267,7 @@ class Bedshift(object):
         invalid_shifted = 0
         for row in shift_rows:
             drop_row, new_region = self._shift(row, shiftmean, shiftstdev) # shifted rows display a 1
-            if drop_row and new_region:
+            if drop_row is not None and new_region is not None:
                 num_shifted += 1
                 new_row_list.append(new_region)
                 to_drop.append(drop_row)

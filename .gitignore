@@ -1,11 +1,18 @@
-examples/sh_output*
-examples/py_output*
 *.pyc
-site/
+
+# BED files
+bedshifted*
 *.bed
 !tests/test.bed
-.DS_Store
+!tests/small_test.bed
+examples/sh_output*
+examples/py_output*
+
+# Python build
+site/
 build/
 bedshift.egg-info/
 dist/
-bedshifted*
+
+# MacOS
+.DS_Store
