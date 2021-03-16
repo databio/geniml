@@ -69,21 +69,18 @@ class TestBedshift(unittest.TestCase):
         self.bs.reset_bed()
 
         added = self.bs.add(addrate=0.1, addmean=100, addstdev=20)
-        f_drop_10 = self.bs.from_from_file(fp="tests/test.bed", addrate=0.2)
+        f_drop_10 = self.bs.drop_from_file(fp="tests/test.bed", droprate=0.1)
         f_shift_30 = self.bs.shift_from_file(fp="bedshifted_test.bed",
-                                            shiftrate=0.50,
+                                            shiftrate=0.30,
                                             shiftmean=100,
                                             shiftstdev=200)
-        f_added_20 = self.bs.add_from_file(fp="tests/test.bed", addrate=0.1)
-        cut = self.bs.cut(cutrate=0.20)
-        shifted = self.bs.shift(shiftrate=0.30, shiftmean=100, shiftstdev=200)
-        dropped = self.bs.drop(droprate=0.30)
+        f_added_20 = self.bs.add_from_file(fp="tests/small_test.bed", addrate=0.2)
+        cut = self.bs.cut(cutrate=0.2)
+        dropped = self.bs.drop(droprate=0.3)
+        shifted = self.bs.shift(shiftrate=0.05, shiftmean=100, shiftstdev=200)
         merged = self.bs.merge(mergerate=0.15)
 
-        total = added+f_drop_10+f_shift_30+f_added_20+cut+shifted+dropped+merged
-
-        self.assertAlmostEqual(yamled, total, places=-2)
-        self.bs.reset_bed()
+        total = added+f_drop_10+f_shift_30+f_added_20+cut+dropped+shifted+merged
 
         self.assertAlmostEqual(yamled, total, places=-2)
         self.bs.reset_bed()
