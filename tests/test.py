@@ -22,6 +22,10 @@ class TestBedshift(unittest.TestCase):
         self.assertEqual(added, 1000)
         self.bs.reset_bed()
 
+    def test_check_rate(self):
+        self.assertRaises(SystemExit, self.bs.shift, -0.1, 250, 250)
+        self.assertRaises(SystemExit, self.bs.cut, 1.5)
+
     def test_add_high_rate(self):
         added = self.bs.add(1.23, 500, 123)
         self.assertEqual(added, 12300)
