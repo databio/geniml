@@ -36,8 +36,8 @@ class Bedshift(object):
         if chrom_sizes:
             self._read_chromsizes(chrom_sizes)
         df = self.read_bed(bedfile_path, delimiter=delimiter)
-        self.original_regions = df.shape[0]
-        self.bed = df.astype({1: 'int64', 2: 'int64', 3: 'int64'}) \
+        self.original_num_regions = df.shape[0]
+        self.bed = df.astype({0: 'object', 1: 'int64', 2: 'int64', 3: 'object'}) \
                             .sort_values([0, 1, 2]).reset_index(drop=True)
         self.original_bed = self.bed.copy()
 
@@ -113,7 +113,7 @@ class Bedshift(object):
             new_regions[0].append(chrom_str)
             new_regions[1].append(start)
             new_regions[2].append(end)
-            new_regions[3].append(3)
+            new_regions[3].append('A')
         self.bed = self.bed.append(pd.DataFrame(new_regions), ignore_index=True)
         return num_add
 
@@ -135,7 +135,7 @@ class Bedshift(object):
             num_add = df.shape[0]
         add_rows = random.sample(list(range(df.shape[0])), num_add)
         add_df = df.loc[add_rows].reset_index(drop=True)
-        add_df[3] = pd.Series([3] * add_df.shape[0])
+        add_df[3] = pd.Series(['A'] * add_df.shape[0])
         self.bed = self.bed.append(add_df, ignore_index=True)
         return num_add
 
@@ -186,7 +186,7 @@ class Bedshift(object):
             # check if the region is shifted out of chromosome length bounds
             return None, None
 
-        return row, {0: chrom, 1: start + theshift, 2: end + theshift, 3: 1}
+        return row, {0: chrom, 1: start + theshift, 2: end + theshift, 3: 'S'}
 
 
     def shift_from_file(self, fp, shiftrate, shiftmean, shiftstdev, delimiter='\t'):
@@ -249,7 +249,7 @@ class Bedshift(object):
         new_segs = self.__shift(new_segs, 1, meanshift, stdevshift)
         '''
 
-        return row, [{0: chrom, 1: start, 2: thecut, 3: 2}, {0: chrom, 1: thecut, 2: end, 3: 2}]
+        return row, [{0: chrom, 1: start, 2: thecut, 3: 'C'}, {0: chrom, 1: thecut, 2: end, 3: 'C'}]
 
     def merge(self, mergerate):
         """
@@ -258,7 +258,6 @@ class Bedshift(object):
         :param float mergerate: the rate to merge two regions into one
         :return int: number of regions merged
         """
-
         self._precheck(mergerate)
 
         rows = self.bed.shape[0]
@@ -284,7 +283,7 @@ class Bedshift(object):
         chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
         end = self.bed.loc[row+1][2]
-        return [row, row+1], {0: chrom, 1: start, 2: end, 3: 4}
+        return [row, row+1], {0: chrom, 1: start, 2: end, 3: 'M'}
 
     def drop(self, droprate):
         """
@@ -421,7 +420,7 @@ class Bedshift(object):
         self.bed.sort_values([0,1,2], inplace=True)
         self.bed.to_csv(outfile_name, sep='\t', header=False, index=False, float_format='%.0f')
         _LOGGER.info('The output bedfile located in {} has {} regions. The original bedfile had {} regions.' \
-              .format(outfile_name, self.bed.shape[0], self.original_regions))
+              .format(outfile_name, self.bed.shape[0], self.original_num_regions))
 
 
     def read_bed(self, bedfile_path, delimiter='\t'):
@@ -443,7 +442,7 @@ class Bedshift(object):
         if not str(df.iloc[0, 1]).isdigit():
             df = df[1:]
 
-        df[3] = 0 # column indicating which modifications were made
+        df[3] = '-' # column indicating which modifications were made
         return df
 
 
