@@ -8,6 +8,10 @@ class TestBedshift(unittest.TestCase):
     def setUp(self):
         self.bs = bedshift.Bedshift('tests/test.bed', chrom_sizes="tests/hg38.chrom.sizes")
 
+    def test_read_bed(self):
+        reader = bedshift.Bedshift('tests/header_test.bed')
+        self.assertTrue(list(reader.bed.columns), [0,1,2,3])
+
     def test_add(self):
         added = self.bs.add(0.1, 100, 20)
         self.assertEqual(added, 1000)
@@ -70,7 +74,7 @@ class TestBedshift(unittest.TestCase):
 
         added = self.bs.add(addrate=0.1, addmean=100, addstdev=20)
         f_drop_10 = self.bs.drop_from_file(fp="tests/test.bed", droprate=0.1)
-        f_shift_30 = self.bs.shift_from_file(fp="bedshifted_test.bed",
+        f_shift_30 = self.bs.shift_from_file(fp="tests/bedshifted_test.bed",
                                             shiftrate=0.30,
                                             shiftmean=100,
                                             shiftstdev=200)

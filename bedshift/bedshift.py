@@ -555,9 +555,8 @@ class Bedshift(object):
             _LOGGER.error("file {} could not be read".format(bedfile_path))
             sys.exit(1)
 
-        # if there is 'chrom', 'start', 'stop' in the table, move them to header
+        # if there is a header line in the table, remove it
         if not str(df.iloc[0, 1]).isdigit():
-            df.columns = df.iloc[0]
             df = df[1:]
 
         df[3] = 0 # column indicating which modifications were made
@@ -683,7 +682,7 @@ class Bedshift(object):
                 else:
                     print ("File \'{}\' does not exist.".format(fp))
                     sys.exit(1)
-            
+
             ##### shift #####
             elif set(['shift', 'rate', 'mean', 'stdev']) == set(list(operation.keys())):
                 rate = operation['rate']
@@ -704,7 +703,7 @@ class Bedshift(object):
                     num_changed += num_shifted
                     print("\t{} regions shifted from {}.".format(num_shifted, fp))
                 else:
-                    print ("File \'{}\' does not exist.".format(fp))
+                    print("File \'{}\' does not exist.".format(fp))
                     sys.exit(1)
 
             ##### shift_from_file with delimiter provided #####
@@ -740,7 +739,7 @@ class Bedshift(object):
                 print("Invalid settings entered in the config file. Please refer to the example below.")
                 self._print_sample_config()
                 sys.exit(1)
-            
+
         return num_changed
 
 
