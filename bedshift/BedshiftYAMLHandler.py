@@ -6,6 +6,13 @@ import logging
 
 class BedshiftYAMLHandler(object):
     def __init__(self, bedshifter, yaml_fp, logger=None):
+        """
+        Handles Bedshift perturbations from yaml files
+
+        :param bedshift.Bedshift bedshifter: a Bedshift object
+        :param str yaml_fp: path to yaml file
+        :param logging.logger logger: logger object
+        """
         self.bedshifter = bedshifter
         self.yaml_fp = yaml_fp
         if logger is not None:
@@ -44,11 +51,9 @@ class BedshiftYAMLHandler(object):
           - merge:
             rate: 0.15
         """
-        print(self._print_sample_config.__doc__)
-        print("No changes made.")
+        self._LOGGER.info(self._print_sample_config.__doc__)
 
     def _read_from_yaml(self, fp):
-        # Loads yaml config data
         with open(fp, "r") as yaml_file:
             config_data = yaml.load(yaml_file, Loader=yaml.FullLoader)
         self._LOGGER.info("Loaded configuration settings from {}".format(fp))
@@ -172,7 +177,7 @@ class BedshiftYAMLHandler(object):
                 num_changed += num_merged
 
             else:
-                self._LOGGER.error("Invalid settings entered in the config file. Please refer to the example below.")
+                self._LOGGER.error("\n\nInvalid settings entered in the config file. Please refer to the example below.\n\n")
                 self._print_sample_config()
                 sys.exit(1)
 

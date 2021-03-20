@@ -43,6 +43,11 @@ class Bedshift(object):
 
 
     def _read_chromsizes(self, fp):
+        """
+        Read chromosome sizes file
+
+        :param str fp: path to the chrom sizes file
+        """
         try:
             with open(fp) as f:
                 for line in f:
@@ -66,14 +71,19 @@ class Bedshift(object):
 
 
     def _precheck(self, rate, requiresChromLens=False, isAdd=False):
-        if isAdd:
-            if rate < 0:
-                _LOGGER.error("Rate must be between 0 and 1")
-                sys.exit(1)
-        else:
-            if rate < 0 or rate > 1:
-                _LOGGER.error("Rate must be between 0 and 1")
-                sys.exit(1)
+        """
+        Check if the rate of perturbation is too high or low
+
+        :param float rate: the rate of perturbation
+        :param bool requiresChromLens: check if the perturbation requires a chromosome lengths file
+        :param bool isAdd: if True, do a special check for the add rate
+        """
+        if isAdd and rate < 0:
+            _LOGGER.error("Rate must be between 0 and 1")
+            sys.exit(1)
+        elif rate < 0 or rate > 1:
+            _LOGGER.error("Rate must be between 0 and 1")
+            sys.exit(1)
         if requiresChromLens:
             if len(self.chrom_lens) == 0:
                 _LOGGER.error("chrom.sizes file must be specified when shifting regions")
@@ -190,6 +200,16 @@ class Bedshift(object):
 
 
     def shift_from_file(self, fp, shiftrate, shiftmean, shiftstdev, delimiter='\t'):
+        """
+        Shift regions that overlap the specified file's regions
+
+        :param str fp: the file on which to find overlaps
+        :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
+        :param float shiftmean: the mean shift distance
+        :param float shiftstdev: the standard deviation of the shift distance
+        :param str delimiter: the delimiter used in fp
+        :return int: the number of regions shifted
+        """
         self._precheck(shiftrate)
 
         rows = self.bed.shape[0]
@@ -303,7 +323,11 @@ class Bedshift(object):
 
     def _find_overlap(self, fp, reference=None):
         """
-        find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file.
+        Find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file.
+
+        :param str fp: path to file, or pandas DataFrame, for comparison
+        :param str reference: path to file, or pandas DataFrame, for reference
+        :return pd.DataFrame: a DataFrame of overlapping regions
         """
         if reference is None:
             reference_bed = self.original_bed.copy()
