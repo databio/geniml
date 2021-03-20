@@ -78,12 +78,14 @@ class Bedshift(object):
         :param bool requiresChromLens: check if the perturbation requires a chromosome lengths file
         :param bool isAdd: if True, do a special check for the add rate
         """
-        if isAdd and rate < 0:
-            _LOGGER.error("Rate must be between 0 and 1")
-            sys.exit(1)
-        elif rate < 0 or rate > 1:
-            _LOGGER.error("Rate must be between 0 and 1")
-            sys.exit(1)
+        if isAdd:
+            if rate < 0:
+                _LOGGER.error("Rate must be greater than 0")
+                sys.exit(1)
+        else:
+            if rate < 0 or rate > 1:
+                _LOGGER.error("Rate must be between 0 and 1")
+                sys.exit(1)
         if requiresChromLens:
             if len(self.chrom_lens) == 0:
                 _LOGGER.error("chrom.sizes file must be specified when shifting regions")
