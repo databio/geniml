@@ -4,13 +4,14 @@ import logging
 import os
 import sys
 import random
-import yaml
 import logmuse
 import pandas as pd
 import numpy as np
 import pyranges as pr
+
 from bedshift._version import __version__
 from bedshift import arguments
+from bedshift import BedshiftYAMLHandler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -391,9 +392,11 @@ class Bedshift(object):
         :param string bedshifter: Bedshift instance
         :return int: the number of total regions perturbed
         '''
+        if yaml:
+            return BedshiftYAMLHandler.BedshiftYAMLHandler(bedshifter, yaml).handle_yaml()
         n = 0
         if shiftfile:
-            n+= self.shift_from_file(shiftfile, shiftrate, shiftmean, shiftstdev)
+            n += self.shift_from_file(shiftfile, shiftrate, shiftmean, shiftstdev)
         else:
             n += self.shift(shiftrate, shiftmean, shiftstdev)
         if addfile:
@@ -405,9 +408,7 @@ class Bedshift(object):
         if dropfile:
             n += self.drop_from_file(dropfile, droprate)
         else:
-            n +=self.drop(droprate)
-        if yaml:
-            n += self.handle_yaml(bedshifter, yaml)
+            n += self.drop(droprate)
         return n
 
 
@@ -444,175 +445,6 @@ class Bedshift(object):
 
         df[3] = 0 # column indicating which modifications were made
         return df
-
-
-    def _print_sample_config(self):
-        """
-        bedshift_operations:
-          - add:
-            rate: 0.1
-            mean: 100
-            stdev: 20
-          - drop_from_file:
-            file: tests/test.bed
-            rate: 0.1
-            delimiter: \t
-          - shift_from_file:
-            file: bedshifted_test.bed
-            rate: 0.3
-            mean: 100
-            stdev: 200
-          - add_from_file:
-            file: tests/small_test.bed
-            rate: 0.2
-          - cut:
-            rate: 0.2
-          - drop:
-            rate: 0.30
-          - shift:
-            rate: 0.05
-            mean: 100
-            stdev: 200
-          - merge:
-            rate: 0.15
-        """
-        print(self._print_sample_config.__doc__)
-        print("No changes made.")
-
-    def _read_from_yaml(self, fp):
-        # Loads yaml config data
-        with open(fp, "r") as yaml_file:
-            config_data = yaml.load(yaml_file, Loader=yaml.FullLoader)
-        _LOGGER.info("Loaded configuration settings from {}".format(fp))
-        return config_data
-
-
-    def handle_yaml(self, bedshifter, yaml_fp):
-        """
-        Performs operations provided in the yaml config file in the order they were provided.
-
-        :param str bedshifter: the current instance of Bedshift
-        :param float yaml_fp: the path to the configuration file
-        :return int: the number of total regions perturbed
-        """
-        data = self._read_from_yaml(yaml_fp)
-        operations = [operation for operation in data["bedshift_operations"]]
-        num_changed = 0
-
-        for operation in operations:
-            ##### add #####
-            if set(['add', 'rate', 'mean', 'stdev']) == set(list(operation.keys())):
-                rate = operation['rate']
-                mean = operation['mean']
-                std = operation['stdev']
-                num_added = bedshifter.add(rate, mean, std)
-                num_changed += num_added
-
-            ##### add_from_file with no delimiter provided #####
-            elif set(['add_from_file', 'file', 'rate']) == set(list(operation.keys())):
-                fp = operation['file']
-                if os.path.isfile(fp):
-                    add_rate = operation['rate']
-                    num_added = bedshifter.add_from_file(fp, add_rate)
-                    num_changed += num_added
-                else:
-                    _LOGGER.error("File \'{}\' does not exist.".format(fp))
-                    sys.exit(1)
-
-            ##### add_from_file with delimiter provided #####
-            elif set(['add_from_file', 'file', 'rate', 'delimiter']) == set(list(operation.keys())):
-                fp = operation['file']
-                if os.path.isfile(fp):
-                    add_rate = operation['rate']
-                    delimiter = operation['delimiter']
-                    num_added = bedshifter.add_from_file(fp, add_rate, delimiter)
-                    num_changed += num_added
-                else:
-                    _LOGGER.error("File \'{}\' does not exist.".format(fp))
-                    sys.exit(1)
-
-            ##### drop #####
-            elif set(['drop', 'rate']) == set(list(operation.keys())):
-                rate = operation['rate']
-                num_dropped = bedshifter.drop(rate)
-                num_changed += num_dropped
-
-            ##### drop_from_file with no delimiter provided #####
-            elif set(['drop_from_file', 'file', 'rate']) == set(list(operation.keys())):
-                fp = operation['file']
-                if os.path.isfile(fp):
-                    drop_rate = operation['rate']
-                    num_dropped = bedshifter.drop_from_file(fp, drop_rate)
-                    num_changed += num_dropped
-                else:
-                    _LOGGER.error("File \'{}\' does not exist.".format(fp))
-                    sys.exit(1)
-
-            ##### drop_from_file with delimiter provided #####
-            elif set(['drop_from_file', 'file', 'rate', 'delimiter']) == set(list(operation.keys())):
-                fp = operation['file']
-                if os.path.isfile(fp):
-                    drop_rate = operation['rate']
-                    delimiter = operation['delimiter']
-                    num_dropped = bedshifter.drop_from_file(fp, drop_rate, delimiter)
-                    num_changed += num_dropped
-                else:
-                    _LOGGER.error("File \'{}\' does not exist.".format(fp))
-                    sys.exit(1)
-
-            ##### shift #####
-            elif set(['shift', 'rate', 'mean', 'stdev']) == set(list(operation.keys())):
-                rate = operation['rate']
-                mean = operation['mean']
-                std = operation['stdev']
-                num_shifted = bedshifter.shift(rate, mean, std)
-                num_changed += num_shifted
-
-            ##### shift_from_file #####
-            elif set(['shift_from_file', 'file', 'rate', 'mean', 'stdev']) == set(list(operation.keys())):
-                fp = operation['file']
-                if os.path.isfile(fp):
-                    rate = operation['rate']
-                    mean = operation['mean']
-                    std = operation['stdev']
-                    num_shifted = bedshifter.shift_from_file(fp, rate, mean, std)
-                    num_changed += num_shifted
-                else:
-                    _LOGGER.error("File \'{}\' does not exist.".format(fp))
-                    sys.exit(1)
-
-            ##### shift_from_file with delimiter provided #####
-            elif set(['shift_from_file', 'file', 'rate', 'mean', 'stdev', 'delimiter']) == set(list(operation.keys())):
-                fp = operation['file']
-                if os.path.isfile(fp):
-                    rate = operation['rate']
-                    mean = operation['mean']
-                    std = operation['stdev']
-                    delimiter = operation['delimiter']
-                    num_shifted = bedshifter.shift_from_file(fp, rate, mean, std, delimiter)
-                    num_changed += num_shifted
-                else:
-                    _LOGGER.error("File \'{}\' does not exist.".format(fp))
-                    sys.exit(1)
-
-            ##### cut #####
-            elif set(['cut', 'rate']) == set(list(operation.keys())):
-                rate = operation['rate']
-                num_cut = bedshifter.cut(rate)
-                num_changed += num_cut
-
-            ##### merge #####
-            elif set(['merge', 'rate']) == set(list(operation.keys())):
-                rate = operation['rate']
-                num_merged = bedshifter.merge(rate)
-                num_changed += num_merged
-
-            else:
-                _LOGGER.error("Invalid settings entered in the config file. Please refer to the example below.")
-                self._print_sample_config()
-                sys.exit(1)
-
-        return num_changed
 
 
 def main():
