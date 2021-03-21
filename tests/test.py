@@ -75,13 +75,13 @@ class TestBedshift(unittest.TestCase):
         added = self.bs.add(addrate=0.1, addmean=100, addstdev=20)
         f_drop_10 = self.bs.drop_from_file(fp="tests/test.bed", droprate=0.1)
         f_shift_30 = self.bs.shift_from_file(fp="tests/bedshifted_test.bed",
-                                            shiftrate=0.30,
+                                            shiftrate=0.50,
                                             shiftmean=100,
                                             shiftstdev=200)
         f_added_20 = self.bs.add_from_file(fp="tests/small_test.bed", addrate=0.2)
         cut = self.bs.cut(cutrate=0.2)
+        shifted = self.bs.shift(shiftrate=0.3, shiftmean=100, shiftstdev=200)
         dropped = self.bs.drop(droprate=0.3)
-        shifted = self.bs.shift(shiftrate=0.05, shiftmean=100, shiftstdev=200)
         merged = self.bs.merge(mergerate=0.15)
 
         total = added+f_drop_10+f_shift_30+f_added_20+cut+dropped+shifted+merged
@@ -111,7 +111,7 @@ class TestBedshift(unittest.TestCase):
         self.assertAlmostEqual(perturbed, 9250, places=-2)
 
     def test_to_bed(self):
-        self.bs.to_bed('py_output.bed')
+        self.bs.to_bed('tests/py_output.bed')
         self.assertTrue(os.path.exists('tests/py_output.bed'))
 
     def test_small_file(self):
