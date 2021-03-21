@@ -138,7 +138,7 @@ class Bedshift(object):
         :param str fp: the filepath to the other bedfile
         :return int: the number of regions added
         """
-        self._precheck(addrate, requiresChromLens=True, isAdd=True)
+        self._precheck(addrate, requiresChromLens=False, isAdd=True)
 
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
@@ -323,6 +323,31 @@ class Bedshift(object):
         return len(drop_rows)
 
 
+    def drop_from_file(self, fp, droprate, delimiter='\t'):
+        """
+        drop regions that overlap between the reference bedfile and the provided bedfile.
+
+        :param float droprate: the rate to drop regions
+        :param str fp: the filepath to the other bedfile containing regions to be dropped
+        :return int: the number of regions dropped
+        """
+        self._precheck(droprate)
+
+        rows = self.bed.shape[0]
+        num_drop = int(rows * droprate)
+        drop_bed = self.read_bed(fp, delimiter=delimiter)
+        drop_rows = drop_bed.shape[0]
+
+        if num_drop >= drop_rows:
+            _LOGGER.warning("Number of regions to be dropped ({}) is larger than the provided bedfile size ({}). Dropping {} regions.".format(num_drop, drop_rows, drop_rows))
+            num_drop = drop_rows
+        intersect_regions = self._find_overlap(fp)
+        rows2drop = random.sample(list(range(len(intersect_regions))), num_drop)
+
+        self.bed = self.bed.drop(intersect_regions.index[rows2drop]).reset_index(drop=True)
+        return num_drop
+
+
     def _find_overlap(self, fp, reference=None):
         """
         Find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file.
@@ -356,35 +381,6 @@ class Bedshift(object):
         intersection = intersection.drop(['modifications'], axis=1)
         intersection.columns = [0, 1, 2]
         return intersection
-
-
-    def drop_from_file(self, fp, droprate, delimiter='\t'):
-        """
-        drop regions that overlap between the reference bedfile and the provided bedfile.
-
-        :param float droprate: the rate to drop regions
-        :param str fp: the filepath to the other bedfile containing regions to be dropped
-        :return int: the number of regions dropped
-        """
-        if droprate < 0:
-            _LOGGER.error("Rate must be greater than or equal to 0")
-            sys.exit(1)
-        if droprate == 0:
-            return 0
-
-        rows = self.bed.shape[0]
-        num_drop = int(rows * droprate)
-        drop_bed = self.read_bed(fp, delimiter=delimiter)
-        drop_rows = drop_bed.shape[0]
-
-        if num_drop >= drop_rows:
-            _LOGGER.warning("Number of regions to be dropped ({}) is larger than the provided bedfile size ({}). Dropping {} regions.".format(num_drop, drop_rows, drop_rows))
-            num_drop = drop_rows
-        intersect_regions = self._find_overlap(fp)
-        rows2drop = random.sample(list(range(len(intersect_regions))), num_drop)
-
-        self.bed = self.bed.drop(intersect_regions.index[rows2drop]).reset_index(drop=True)
-        return num_drop
 
 
     def all_perturbations(self,
