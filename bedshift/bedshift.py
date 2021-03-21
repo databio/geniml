@@ -137,7 +137,7 @@ class Bedshift(object):
         self.original_regions = df.shape[0]
         self.bed = df.astype({1: 'int64', 2: 'int64', 3: 'int64'}) \
                             .sort_values([0, 1, 2]).reset_index(drop=True)
-        self.original_bed = self.bed.copy(deep=True)
+        self.original_bed = self.bed.copy()
 
 
     def _read_chromsizes(self, fp):
@@ -160,7 +160,7 @@ class Bedshift(object):
         """
         Reset the stored bedfile to the state before perturbations
         """
-        self.bed = self.original_bed.copy(deep=True)
+        self.bed = self.original_bed.copy()
 
 
     def _check_rate(self, rate):
@@ -423,16 +423,16 @@ class Bedshift(object):
         find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file.
         """
         if reference is None:
-            reference_bed = self.original_bed
+            reference_bed = self.original_bed.copy()
         else:
             if isinstance(reference, pd.DataFrame):
-                reference_bed = reference
+                reference_bed = reference.copy()
             elif isinstance(reference, str):
                 reference_bed = self.read_bed(reference)
             else:
                 raise Exception("unsupported input type: {}".format(type(reference)))
         if isinstance(fp, pd.DataFrame):
-            comparison_bed = fp
+            comparison_bed = fp.copy()
         elif isinstance(fp, str):
             comparison_bed = self.read_bed(fp)
         else:
@@ -445,7 +445,7 @@ class Bedshift(object):
         if len(intersection) == 0:
             raise Exception("no intersection found between {} and {}".format(reference_bed, comparison_bed))
         intersection = intersection.drop(['modifications'], axis=1)
-        intersection.columns = ['chrom', 'start', 'end']
+        intersection.columns = [0, 1, 2]
         return intersection
 
 
@@ -683,7 +683,7 @@ class Bedshift(object):
                 else:
                     print ("File \'{}\' does not exist.".format(fp))
                     sys.exit(1)
-            
+
             ##### shift #####
             elif set(['shift', 'rate', 'mean', 'stdev']) == set(list(operation.keys())):
                 rate = operation['rate']
@@ -740,7 +740,7 @@ class Bedshift(object):
                 print("Invalid settings entered in the config file. Please refer to the example below.")
                 self._print_sample_config()
                 sys.exit(1)
-            
+
         return num_changed
 
 
