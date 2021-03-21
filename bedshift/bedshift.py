@@ -555,9 +555,8 @@ class Bedshift(object):
             _LOGGER.error("file {} could not be read".format(bedfile_path))
             sys.exit(1)
 
-        # if there is 'chrom', 'start', 'stop' in the table, move them to header
+        # if there is a header line in the table, remove it
         if not str(df.iloc[0, 1]).isdigit():
-            df.columns = df.iloc[0]
             df = df[1:]
 
         df[3] = 0 # column indicating which modifications were made
@@ -704,7 +703,7 @@ class Bedshift(object):
                     num_changed += num_shifted
                     print("\t{} regions shifted from {}.".format(num_shifted, fp))
                 else:
-                    print ("File \'{}\' does not exist.".format(fp))
+                    print("File \'{}\' does not exist.".format(fp))
                     sys.exit(1)
 
             ##### shift_from_file with delimiter provided #####
