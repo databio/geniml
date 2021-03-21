@@ -110,22 +110,23 @@ class TestBedshift(unittest.TestCase):
 
 class TestBedshiftYAMLHandler(unittest.TestCase):
     def test_handle_yaml(self):
-        yamled = self.bs.handle_yaml(bedshifter=self.bs, yaml_fp="tests/bedshift_analysis.yaml")
-        self.bs.reset_bed()
+        bedshifter = bedshift.Bedshift('tests/test.bed', chrom_sizes="tests/hg38.chrom.sizes")
+        yamled = BedshiftYAMLHandler.BedshiftYAMLHandler(bedshifter=bedshifter, yaml_fp="tests/bedshift_analysis.yaml").handle_yaml()
+        bedshifter.reset_bed()
 
-        added = self.bs.add(addrate=0.1, addmean=100, addstdev=20)
-        f_drop_10 = self.bs.drop_from_file(fp="tests/test.bed", droprate=0.1)
-        f_shift_30 = self.bs.shift_from_file(fp="tests/bedshifted_test.bed",
+        added = bedshifter.add(addrate=0.1, addmean=100, addstdev=20)
+        f_drop_10 = bedshifter.drop_from_file(fp="tests/test.bed", droprate=0.1)
+        f_shift_30 = bedshifter.shift_from_file(fp="tests/bedshifted_test.bed",
                                             shiftrate=0.50,
                                             shiftmean=100,
                                             shiftstdev=200)
-        f_added_20 = self.bs.add_from_file(fp="tests/small_test.bed", addrate=0.2)
-        cut = self.bs.cut(cutrate=0.2)
-        shifted = self.bs.shift(shiftrate=0.3, shiftmean=100, shiftstdev=200)
-        dropped = self.bs.drop(droprate=0.3)
-        merged = self.bs.merge(mergerate=0.15)
+        f_added_20 = bedshifter.add_from_file(fp="tests/small_test.bed", addrate=0.2)
+        cut = bedshifter.cut(cutrate=0.2)
+        shifted = bedshifter.shift(shiftrate=0.3, shiftmean=100, shiftstdev=200)
+        dropped = bedshifter.drop(droprate=0.3)
+        merged = bedshifter.merge(mergerate=0.15)
 
         total = added+f_drop_10+f_shift_30+f_added_20+cut+dropped+shifted+merged
 
         self.assertAlmostEqual(yamled, total, places=-2)
-        self.bs.reset_bed()
+        bedshifter.reset_bed()
