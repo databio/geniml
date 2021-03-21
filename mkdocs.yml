@@ -12,10 +12,11 @@ nav:
     - Generate a Random BED File: generate_random.md
     - Bedshift All BED Files in Folder: bedshift_all.md
     - Evaluate Similarity Scores: evaluation_guide.md
+    - \"From File\ Features": from_file.md
   - Reference:
     - Python API: autodoc_build/bedshift.md
     - Changelog: changelog.md
-    
+
 plugins:
   - databio:
       autodoc_build: "docs/autodoc_build"

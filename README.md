@@ -8,7 +8,11 @@ Install from local repository: `pip install .`
 
 ## Command line
 
-Run with: `bedshift -l hg38.chrom.sizes -b BEDFILE`
+Run with:
+
+```
+bedshift -l hg38.chrom.sizes -b BEDFILE
+```
 
 See `bedshift -h` for parameters.
 
@@ -18,10 +22,10 @@ See `bedshift -h` for parameters.
 import bedshift
 
 bedshifter = bedshift.Bedshift('tests/test.bed', 'hg38.chrom.sizes')
-bedshifter.all_perturbations(addrate=0.3, addmean=320.0, addstdev=20.0, 
-							 shiftrate=0.3, shiftmean=-10.0, shiftstdev=120.0, 
-							 cutrate=0.1, 
-							 mergerate=0.11, 
+bedshifter.all_perturbations(addrate=0.3, addmean=320.0, addstdev=20.0,
+							 shiftrate=0.3, shiftmean=-10.0, shiftstdev=120.0,
+							 cutrate=0.1,
+							 mergerate=0.11,
 							 droprate=0.03)
 # can also run single operations: shift, add, cut, merge, drop
 
