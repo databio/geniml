@@ -8,6 +8,10 @@ class TestBedshift(unittest.TestCase):
     def setUp(self):
         self.bs = bedshift.Bedshift('tests/test.bed', chrom_sizes="tests/hg38.chrom.sizes")
 
+    def test_read_bed(self):
+        reader = bedshift.Bedshift('tests/header_test.bed')
+        self.assertTrue(list(reader.bed.columns), [0,1,2,3])
+
     def test_add(self):
         added = self.bs.add(0.1, 100, 20)
         self.assertEqual(added, 1000)
