@@ -288,19 +288,19 @@ class Bedshift(object):
         to_drop = []
         for row in merge_rows:
             drop_row, add_row = self._merge(row)
-            if add_row:
+            if drop_row is not None and add_row is not None:
                 to_add.append(add_row)
-            to_drop.extend(drop_row)
+                to_drop.extend(drop_row)
         self.bed = self.bed.drop(to_drop)
         self.bed = self.bed.append(to_add, ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
-        return len(merge_rows)
+        return len(to_drop)
 
 
     def _merge(self, row):
         # check if the regions being merged are on the same chromosome
         if row + 1 not in self.bed.index or self.bed.loc[row][0] != self.bed.loc[row+1][0]:
-            return [], None
+            return None, None
 
         chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
