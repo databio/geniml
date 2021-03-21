@@ -416,20 +416,25 @@ class Bedshift(object):
         if yaml:
             return BedshiftYAMLHandler.BedshiftYAMLHandler(bedshifter, yaml).handle_yaml()
         n = 0
-        if shiftfile:
-            n += self.shift_from_file(shiftfile, shiftrate, shiftmean, shiftstdev)
-        else:
-            n += self.shift(shiftrate, shiftmean, shiftstdev)
-        if addfile:
-            n += self.add_from_file(addfile, addrate)
-        else:
-            n += self.add(addrate, addmean, addstdev)
-        n += self.cut(cutrate)
-        n += self.merge(mergerate)
-        if dropfile:
-            n += self.drop_from_file(dropfile, droprate)
-        else:
-            n += self.drop(droprate)
+        if shiftrate > 0:
+            if shiftfile:
+                n += self.shift_from_file(shiftfile, shiftrate, shiftmean, shiftstdev)
+            else:
+                n += self.shift(shiftrate, shiftmean, shiftstdev)
+        if addrate > 0:
+            if addfile:
+                n += self.add_from_file(addfile, addrate)
+            else:
+                n += self.add(addrate, addmean, addstdev)
+        if cutrate > 0:
+            n += self.cut(cutrate)
+        if mergerate > 0:
+            n += self.merge(mergerate)
+        if droprate > 0:
+            if dropfile:
+                n += self.drop_from_file(dropfile, droprate)
+            else:
+                n += self.drop(droprate)
         return n
 
 
