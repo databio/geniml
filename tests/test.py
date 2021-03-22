@@ -53,7 +53,7 @@ class TestBedshift(unittest.TestCase):
 
     def test_merge(self):
         merged = self.bs.merge(0.2)
-        self.assertEqual(merged, 2000)
+        self.assertAlmostEqual(merged, 4000, places=-3)
         self.bs.reset_bed()
 
     def test_combo(self):
@@ -96,7 +96,7 @@ class TestBedshift(unittest.TestCase):
                             droprate=0.03)
         # merge sometimes merges more or less than expected because it depends
         # if the randomly chosen regions are adjacent
-        self.assertAlmostEqual(perturbed, 9250, places=-2)
+        self.assertAlmostEqual(perturbed, 9400, places=-3)
 
     def test_to_bed(self):
         self.bs.to_bed('tests/py_output.bed')
