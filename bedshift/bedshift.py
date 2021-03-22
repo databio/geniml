@@ -88,7 +88,7 @@ class Bedshift(object):
                 sys.exit(1)
         if requiresChromLens:
             if len(self.chrom_lens) == 0:
-                _LOGGER.error("chrom.sizes file must be specified when shifting regions")
+                _LOGGER.error("chrom.sizes file must be specified")
                 sys.exit(1)
 
 
@@ -143,9 +143,11 @@ class Bedshift(object):
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
         df = self.read_bed(fp, delimiter=delimiter)
-        if num_add > df.shape[0]:
-            num_add = df.shape[0]
-        add_rows = random.sample(list(range(df.shape[0])), num_add)
+        dflen = len(df)
+        if num_add > dflen:
+            _LOGGER.warning("Number of regions to be added ({}) is larger than the provided bedfile size ({}). Adding {} regions.".format(num_add, dflen, dflen))
+            num_add = dflen
+        add_rows = random.sample(list(range(dflen)), num_add)
         add_df = df.loc[add_rows].reset_index(drop=True)
         add_df[3] = pd.Series(['A'] * add_df.shape[0])
         self.bed = self.bed.append(add_df, ignore_index=True)
@@ -172,7 +174,7 @@ class Bedshift(object):
         invalid_shifted = 0
         for row in shift_rows:
             drop_row, new_region = self._shift(row, shiftmean, shiftstdev) # shifted rows display a 1
-            if drop_row is not None and new_region is not None:
+            if drop_row is not None and new_region:
                 num_shifted += 1
                 new_row_list.append(new_region)
                 to_drop.append(drop_row)
@@ -192,8 +194,6 @@ class Bedshift(object):
         chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
         end = self.bed.loc[row][2]
-        _LOGGER.debug("Chrom lengths: {}".format(str(self.chrom_lens)))
-        _LOGGER.debug("chrom: {}".format(str(chrom)))
         if start + theshift < 0 or end + theshift > self.chrom_lens[str(chrom)]:
             # check if the region is shifted out of chromosome length bounds
             return None, None
@@ -212,23 +212,19 @@ class Bedshift(object):
         :param str delimiter: the delimiter used in fp
         :return int: the number of regions shifted
         """
-        self._precheck(shiftrate)
+        self._precheck(shiftrate, requiresChromLens=True)
 
         rows = self.bed.shape[0]
         num_shift = int(rows * shiftrate)
-        shift_bed = self.read_bed(fp, delimiter=delimiter)
 
         intersect_regions = self._find_overlap(fp)
-        try:
-            rows2shift = random.sample(list(range(len(intersect_regions))), num_shift)
-            return self.shift(shiftrate, shiftmean, shiftstdev, rows2shift)
-        except ValueError:
-            bedname = os.path.basename(self.bedfile_path)
-            shift_file_name = os.path.basename(fp)
-            _LOGGER.error("The number of overlapping regions between "+
-                "{} and {} is {} but the shift ratio provided is trying to shift {} regions."\
-                .format(bedname, shift_file_name, len(intersect_regions), num_shift))
-            sys.exit(1)
+        interlen = len(intersect_regions)
+        if num_shift > interlen:
+            _LOGGER.warning("Number of regions to be shifted ({}) is larger than the provided bedfile size ({}). Shifting {} regions.".format(num_shift, interlen, interlen))
+            num_shift = interlen
+        rows2shift = random.sample(list(range(interlen)), num_shift)
+        return self.shift(shiftrate, shiftmean, shiftstdev, rows2shift)
+
 
     def cut(self, cutrate):
         """
@@ -287,20 +283,20 @@ class Bedshift(object):
         to_add = []
         to_drop = []
         for row in merge_rows:
-            drop_row, add_row = self._merge(row)
-            if add_row:
+            drop_rows, add_row = self._merge(row)
+            if drop_rows and add_row:
                 to_add.append(add_row)
-            to_drop.extend(drop_row)
+                to_drop.extend(drop_rows)
         self.bed = self.bed.drop(to_drop)
         self.bed = self.bed.append(to_add, ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
-        return len(merge_rows)
+        return len(to_drop)
 
 
     def _merge(self, row):
         # check if the regions being merged are on the same chromosome
         if row + 1 not in self.bed.index or self.bed.loc[row][0] != self.bed.loc[row+1][0]:
-            return [], None
+            return None, None
 
         chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
@@ -336,14 +332,13 @@ class Bedshift(object):
         rows = self.bed.shape[0]
         num_drop = int(rows * droprate)
         drop_bed = self.read_bed(fp, delimiter=delimiter)
-        drop_rows = drop_bed.shape[0]
 
-        if num_drop >= drop_rows:
-            _LOGGER.warning("Number of regions to be dropped ({}) is larger than the provided bedfile size ({}). Dropping {} regions.".format(num_drop, drop_rows, drop_rows))
-            num_drop = drop_rows
-        intersect_regions = self._find_overlap(fp)
-        rows2drop = random.sample(list(range(len(intersect_regions))), num_drop)
-
+        intersect_regions = self._find_overlap(drop_bed)
+        interlen = len(intersect_regions)
+        if num_drop > interlen:
+            _LOGGER.warning("Number of regions to be dropped ({}) is larger than the provided bedfile size ({}). Dropping {} regions.".format(num_drop, interlen, interlen))
+            num_drop = interlen
+        rows2drop = random.sample(list(range(interlen)), num_drop)
         self.bed = self.bed.drop(intersect_regions.index[rows2drop]).reset_index(drop=True)
         return num_drop
 
@@ -353,7 +348,7 @@ class Bedshift(object):
         Find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file.
 
         :param str fp: path to file, or pandas DataFrame, for comparison
-        :param str reference: path to file, or pandas DataFrame, for reference
+        :param str reference: path to file, or pandas DataFrame, for reference. If None, then defaults to the original BED file provided to the Bedshift constructor
         :return pd.DataFrame: a DataFrame of overlapping regions
         """
         if reference is None:
@@ -416,20 +411,25 @@ class Bedshift(object):
         if yaml:
             return BedshiftYAMLHandler.BedshiftYAMLHandler(bedshifter, yaml).handle_yaml()
         n = 0
-        if shiftfile:
-            n += self.shift_from_file(shiftfile, shiftrate, shiftmean, shiftstdev)
-        else:
-            n += self.shift(shiftrate, shiftmean, shiftstdev)
-        if addfile:
-            n += self.add_from_file(addfile, addrate)
-        else:
-            n += self.add(addrate, addmean, addstdev)
-        n += self.cut(cutrate)
-        n += self.merge(mergerate)
-        if dropfile:
-            n += self.drop_from_file(dropfile, droprate)
-        else:
-            n += self.drop(droprate)
+        if shiftrate > 0:
+            if shiftfile:
+                n += self.shift_from_file(shiftfile, shiftrate, shiftmean, shiftstdev)
+            else:
+                n += self.shift(shiftrate, shiftmean, shiftstdev)
+        if addrate > 0:
+            if addfile:
+                n += self.add_from_file(addfile, addrate)
+            else:
+                n += self.add(addrate, addmean, addstdev)
+        if cutrate > 0:
+            n += self.cut(cutrate)
+        if mergerate > 0:
+            n += self.merge(mergerate)
+        if droprate > 0:
+            if dropfile:
+                n += self.drop_from_file(dropfile, droprate)
+            else:
+                n += self.drop(droprate)
         return n
 
 
@@ -493,10 +493,6 @@ def main():
             args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
         except ModuleNotFoundError:
             _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
-            sys.exit(1)
-    else:
-        if args.addrate > 0 or args.shiftrate > 0:
-            _LOGGER.error("You must provide either chrom sizes or a refgenie genome.")
             sys.exit(1)
 
     msg = arguments.param_msg
