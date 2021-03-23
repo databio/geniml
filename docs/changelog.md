@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add --yaml-config option
 - Improve performance of perturbations
 - Add --dropfile, --addfile, and --shiftfile options
+- Add --add_valid option
 - Improved testing framework
 
 ## [1.0.0] - released May 20, 2020
