@@ -5,6 +5,8 @@ bedshifted*
 *.bed
 !tests/test.bed
 !tests/small_test.bed
+!tests/small_test2.bed
+!tests/from_file.bed
 !tests/header_test.bed
 examples/sh_output*
 examples/py_output*
