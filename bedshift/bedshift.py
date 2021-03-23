@@ -111,6 +111,8 @@ class Bedshift(object):
         :param float addrate: the rate to add regions
         :param float addmean: the mean length of added regions
         :param float addstdev: the standard deviation of the length of added regions
+        :param str valid_bed: the file with valid regions where new regions can be added
+        :param str delimiter: the delimiter used in valid_bed
         :return int: the number of regions added
         """
         self._precheck(addrate, requiresChromLens=True, isAdd=True)
@@ -407,30 +409,29 @@ class Bedshift(object):
                           mergerate=0.0,
                           droprate=0.0,
                           dropfile=None,
-                          yaml=None,
-                          bedshifter=None):
+                          yaml=None):
         '''
         Perform all five perturbations in the order of shift, add, cut, merge, drop.
 
         :param float addrate: the rate (as a proportion of the total number of regions) to add regions
         :param float addmean: the mean length of added regions
         :param float addstdev: the standard deviation of the length of added regions
-        :param string addfile: the file containing regions to be added
-        :param string valid_regions: the file containing regions where new regions can be added
+        :param str addfile: the file containing regions to be added
+        :param str valid_regions: the file containing regions where new regions can be added
         :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
         :param float shiftmean: the mean shift distance
         :param float shiftstdev: the standard deviation of the shift distance
-        :param float shiftfile: the file containing regions to be shifted
+        :param str shiftfile: the file containing regions to be shifted
         :param float cutrate: the rate to cut regions into two separate regions
         :param float mergerate: the rate to merge two regions into one
         :param float droprate: the rate to drop/remove regions
-        :param string dropfile: the file containing regions to be dropped
-        :param string yaml: the yaml_config filepath
-        :param string bedshifter: Bedshift instance
+        :param str dropfile: the file containing regions to be dropped
+        :param str yaml: the yaml_config filepath
+        :param bedshift.Bedshift bedshifter: Bedshift instance
         :return int: the number of total regions perturbed
         '''
         if yaml:
-            return BedshiftYAMLHandler.BedshiftYAMLHandler(bedshifter, yaml).handle_yaml()
+            return BedshiftYAMLHandler.BedshiftYAMLHandler(self, yaml).handle_yaml()
         n = 0
         if shiftrate > 0:
             if shiftfile:
@@ -559,8 +560,7 @@ def main():
                                          args.mergerate,
                                          args.droprate,
                                          args.dropfile,
-                                         args.yaml_config,
-                                         bedshifter)
+                                         args.yaml_config)
         _LOGGER.info("\t" + str(n) + " regions changed in total.\n")
         if args.repeat == 1:
             bedshifter.to_bed(outfile)
