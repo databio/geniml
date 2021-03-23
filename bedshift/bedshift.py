@@ -78,7 +78,8 @@ def build_argparser():
         "--addfile", type=str, help="Add regions from a bedfile")
 
     parser.add_argument(
-        "--valid_regions", type=str, help="valid regions in which regions can be randomly added")
+        "--valid-regions", type=str, dest='valid_regions',
+        help="valid regions in which regions can be randomly added")
 
     parser.add_argument(
         "-s", "--shiftrate", type=float, default=0.0,
@@ -112,7 +113,7 @@ def build_argparser():
         help="the number of times to repeat the operation")
 
     parser.add_argument(
-        "-y", "--yaml_config", type=str,
+        "-y", "--yaml-config", dest='yaml_config', type=str,
         help="run yaml configuration file")
 
     return parser

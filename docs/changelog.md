@@ -5,7 +5,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [1.1.0] - unreleased
 
 - Added ability to specify chrom sizes file, or refgenie genome.
-- Add --yaml_config option
+- Add --yaml-config option
 - Improve performance of perturbations
 - Add --dropfile, --addfile, and --shiftfile options
 - Improved testing framework
