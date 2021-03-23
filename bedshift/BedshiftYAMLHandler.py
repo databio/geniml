@@ -62,7 +62,7 @@ class BedshiftYAMLHandler(object):
 
     def handle_yaml(self):
         """
-        Performs operations provided in the yaml config file in the order they were provided.
+        Performs perturbations provided in the yaml config file in the order they were provided.
         """
         data = self._read_from_yaml(self.yaml_fp)
         operations = [operation for operation in data["bedshift_operations"]]
