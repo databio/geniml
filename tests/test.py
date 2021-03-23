@@ -2,6 +2,7 @@ import unittest
 import os
 
 from bedshift import bedshift
+from bedshift import BedshiftYAMLHandler
 
 
 class TestBedshift(unittest.TestCase):
@@ -12,10 +13,18 @@ class TestBedshift(unittest.TestCase):
         reader = bedshift.Bedshift('tests/header_test.bed')
         self.assertTrue(list(reader.bed.columns), [0,1,2,3])
 
+    def test_read_chrom_sizes(self):
+        self.bs._read_chromsizes("tests/hg19.chrom.sizes")
+        self.assertEqual(len(self.bs.chrom_lens), 93)
+
     def test_add(self):
         added = self.bs.add(0.1, 100, 20)
         self.assertEqual(added, 1000)
         self.bs.reset_bed()
+
+    def test_check_rate(self):
+        self.assertRaises(SystemExit, self.bs.shift, -0.1, 250, 250)
+        self.assertRaises(SystemExit, self.bs.cut, 1.5)
 
     def test_add_high_rate(self):
         added = self.bs.add(1.23, 500, 123)
@@ -44,7 +53,7 @@ class TestBedshift(unittest.TestCase):
 
     def test_merge(self):
         merged = self.bs.merge(0.2)
-        self.assertEqual(merged, 2000)
+        self.assertAlmostEqual(merged, 4000, places=-3)
         self.bs.reset_bed()
 
     def test_combo(self):
@@ -68,27 +77,6 @@ class TestBedshift(unittest.TestCase):
         self.assertEqual(dropped, 0)
         self.bs.reset_bed()
 
-    def test_handle_yaml(self):
-        yamled = self.bs.handle_yaml(bedshifter=self.bs, yaml_fp="tests/bedshift_analysis.yaml")
-        self.bs.reset_bed()
-
-        added = self.bs.add(addrate=0.1, addmean=100, addstdev=20)
-        f_drop_10 = self.bs.drop_from_file(fp="tests/test.bed", droprate=0.1)
-        f_shift_30 = self.bs.shift_from_file(fp="tests/bedshifted_test.bed",
-                                            shiftrate=0.50,
-                                            shiftmean=100,
-                                            shiftstdev=200)
-        f_added_20 = self.bs.add_from_file(fp="tests/small_test.bed", addrate=0.2)
-        cut = self.bs.cut(cutrate=0.2)
-        shifted = self.bs.shift(shiftrate=0.3, shiftmean=100, shiftstdev=200)
-        dropped = self.bs.drop(droprate=0.3)
-        merged = self.bs.merge(mergerate=0.15)
-
-        total = added+f_drop_10+f_shift_30+f_added_20+cut+dropped+shifted+merged
-
-        self.assertAlmostEqual(yamled, total, places=-2)
-        self.bs.reset_bed()
-
     def test_all_perturbations1(self):
         perturbed = self.bs.all_perturbations(
                             addrate=0.5, addmean=320.0, addstdev=20.0,
@@ -108,7 +96,7 @@ class TestBedshift(unittest.TestCase):
                             droprate=0.03)
         # merge sometimes merges more or less than expected because it depends
         # if the randomly chosen regions are adjacent
-        self.assertAlmostEqual(perturbed, 9250, places=-2)
+        self.assertAlmostEqual(perturbed, 9400, places=-3)
 
     def test_to_bed(self):
         self.bs.to_bed('tests/py_output.bed')
@@ -127,3 +115,26 @@ class TestBedshift(unittest.TestCase):
         added = bs_small.add(2.0, 100, 50)
         self.assertEqual(added, 4)
 
+
+class TestBedshiftYAMLHandler(unittest.TestCase):
+    def test_handle_yaml(self):
+        bedshifter = bedshift.Bedshift('tests/test.bed', chrom_sizes="tests/hg38.chrom.sizes")
+        yamled = BedshiftYAMLHandler.BedshiftYAMLHandler(bedshifter=bedshifter, yaml_fp="tests/bedshift_analysis.yaml").handle_yaml()
+        bedshifter.reset_bed()
+
+        added = bedshifter.add(addrate=0.1, addmean=100, addstdev=20)
+        f_drop_10 = bedshifter.drop_from_file(fp="tests/test.bed", droprate=0.1)
+        f_shift_30 = bedshifter.shift_from_file(fp="tests/bedshifted_test.bed",
+                                            shiftrate=0.50,
+                                            shiftmean=100,
+                                            shiftstdev=200)
+        f_added_20 = bedshifter.add_from_file(fp="tests/small_test.bed", addrate=0.2)
+        cut = bedshifter.cut(cutrate=0.2)
+        shifted = bedshifter.shift(shiftrate=0.3, shiftmean=100, shiftstdev=200)
+        dropped = bedshifter.drop(droprate=0.3)
+        merged = bedshifter.merge(mergerate=0.15)
+
+        total = added+f_drop_10+f_shift_30+f_added_20+cut+dropped+shifted+merged
+
+        self.assertAlmostEqual(yamled, total, places=-2)
+        bedshifter.reset_bed()
