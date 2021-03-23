@@ -167,7 +167,7 @@ class Bedshift(object):
             _LOGGER.warning("Number of regions to be added ({}) is larger than the provided bedfile size ({}). Adding {} regions.".format(num_add, dflen, dflen))
             num_add = dflen
         add_rows = random.sample(list(range(dflen)), num_add)
-        add_df = df.loc[add_rows].reset_index(drop=True)
+        add_df = df.reindex([add_rows]).reset_index(drop=True)
         add_df[3] = pd.Series(['A'] * add_df.shape[0])
         self.bed = self.bed.append(add_df, ignore_index=True)
         return num_add
