@@ -76,6 +76,9 @@ def build_argparser():
         help="Stdev shift")
 
     parser.add_argument(
+        "--shiftfile", type=str, help="Shift regions from a bedfile")
+
+    parser.add_argument(
         "-c", "--cutrate", type=float, default=0.0,
         help="Cut probability")
 
@@ -107,15 +110,16 @@ param_msg = """Params:
     shift rate: {shiftrate}
     shift mean distance: {shiftmean}
     shift stdev: {shiftstdev}
+    shift regions from file: {shiftfile}
   add:
     rate: {addrate}
     add mean length: {addmean}
     add stdev: {addstdev}
-    add file: {addfile}
+    add regions from file: {addfile}
     valid regions: {valid_regions}
   cut rate: {cutrate}
   drop rate: {droprate}
-  drop regions from file: {dropfile}
+    drop regions from file: {dropfile}
   merge rate: {mergerate}
   outputfile: {outputfile}
   repeat: {repeat}

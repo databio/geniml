@@ -142,5 +142,6 @@ class TestBedshiftYAMLHandler(unittest.TestCase):
 
         total = added+f_drop_10+f_shift_30+f_added_20+cut+dropped+shifted+merged
 
-        self.assertAlmostEqual(yamled, total, places=-2)
+        # yamled and total both should be around 16750, but can vary by over 100
+        self.assertAlmostEqual(yamled, total, places=-3)
         bedshifter.reset_bed()
