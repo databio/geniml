@@ -96,6 +96,7 @@ class Bedshift(object):
         """
         Utility function to pick a random chromosome
 
+        :param str n: the number of random chromosomes to pick
         :return str, float chrom_str, chrom_len: chromosome number and length
         """
         chrom_strs = random.choices(list(self.chrom_lens.keys()), weights=self.chrom_weights, k=n)
@@ -103,13 +104,15 @@ class Bedshift(object):
         return zip(chrom_strs, chrom_lens)
 
 
-    def add(self, addrate, addmean, addstdev):
+    def add(self, addrate, addmean, addstdev, valid_bed=None, delimiter='\t'):
         """
         Add regions
 
         :param float addrate: the rate to add regions
         :param float addmean: the mean length of added regions
         :param float addstdev: the standard deviation of the length of added regions
+        :param str valid_bed: the file with valid regions where new regions can be added
+        :param str delimiter: the delimiter used in valid_bed
         :return int: the number of regions added
         """
         self._precheck(addrate, requiresChromLens=True, isAdd=True)
@@ -117,15 +120,31 @@ class Bedshift(object):
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
         new_regions = {0: [], 1: [], 2: [], 3: []}
-        random_chroms = self.pick_random_chroms(num_add)
-        for chrom_str, chrom_len in random_chroms:
-            start = random.randint(1, chrom_len)
-            # ensure chromosome length is not exceeded
-            end = min(start + int(np.random.normal(addmean, addstdev)), chrom_len)
-            new_regions[0].append(chrom_str)
-            new_regions[1].append(start)
-            new_regions[2].append(end)
-            new_regions[3].append('A')
+        if valid_bed:
+            valid_regions = self.read_bed(valid_bed, delimiter)
+            valid_regions[3] = valid_regions[2] - valid_regions[1]
+            total_bp = valid_regions[3].sum()
+            valid_regions[4] = valid_regions[3].apply(lambda x: x / total_bp)
+            add_rows = random.choices(list(range(len(valid_regions))), weights=list(valid_regions[4]), k=num_add)
+            for row in add_rows:
+                data = valid_regions.loc[row]
+                chrom = data[0]
+                start = random.randint(data[1], data[2])
+                end = start + int(np.random.normal(addmean, addstdev))
+                new_regions[0].append(chrom)
+                new_regions[1].append(start)
+                new_regions[2].append(end)
+                new_regions[3].append('A')
+        else:
+            random_chroms = self.pick_random_chroms(num_add)
+            for chrom_str, chrom_len in random_chroms:
+                start = random.randint(1, chrom_len)
+                # ensure chromosome length is not exceeded
+                end = min(start + int(np.random.normal(addmean, addstdev)), chrom_len)
+                new_regions[0].append(chrom_str)
+                new_regions[1].append(start)
+                new_regions[2].append(end)
+                new_regions[3].append('A')
         self.bed = self.bed.append(pd.DataFrame(new_regions), ignore_index=True)
         return num_add
 
@@ -269,6 +288,7 @@ class Bedshift(object):
 
         return row, [{0: chrom, 1: start, 2: thecut, 3: 'C'}, {0: chrom, 1: thecut, 2: end, 3: 'C'}]
 
+
     def merge(self, mergerate):
         """
         Merge two regions into one new region
@@ -303,6 +323,7 @@ class Bedshift(object):
         end = self.bed.loc[row+1][2]
         return [row, row+1], {0: chrom, 1: start, 2: end, 3: 'M'}
 
+
     def drop(self, droprate):
         """
         Drop regions
@@ -317,6 +338,7 @@ class Bedshift(object):
         self.bed = self.bed.drop(drop_rows)
         self.bed = self.bed.reset_index(drop=True)
         return len(drop_rows)
+
 
 
     def drop_from_file(self, fp, droprate, delimiter='\t'):
@@ -380,36 +402,36 @@ class Bedshift(object):
 
     def all_perturbations(self,
                           addrate=0.0, addmean=320.0, addstdev=30.0,
-                          addfile=None,
+                          addfile=None, valid_regions=None,
                           shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0,
                           shiftfile=None,
                           cutrate=0.0,
                           mergerate=0.0,
                           droprate=0.0,
                           dropfile=None,
-                          yaml=None,
-                          bedshifter=None):
+                          yaml=None):
         '''
         Perform all five perturbations in the order of shift, add, cut, merge, drop.
 
         :param float addrate: the rate (as a proportion of the total number of regions) to add regions
         :param float addmean: the mean length of added regions
         :param float addstdev: the standard deviation of the length of added regions
-        :param float addfile: the file containing regions to be added
+        :param str addfile: the file containing regions to be added
+        :param str valid_regions: the file containing regions where new regions can be added
         :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
         :param float shiftmean: the mean shift distance
         :param float shiftstdev: the standard deviation of the shift distance
-        :param float shiftfile: the file containing regions to be shifted
+        :param str shiftfile: the file containing regions to be shifted
         :param float cutrate: the rate to cut regions into two separate regions
         :param float mergerate: the rate to merge two regions into one
         :param float droprate: the rate to drop/remove regions
-        :param float dropfile: the file containing regions to be dropped
-        :param string yaml: the yaml_config filepath
-        :param string bedshifter: Bedshift instance
+        :param str dropfile: the file containing regions to be dropped
+        :param str yaml: the yaml_config filepath
+        :param bedshift.Bedshift bedshifter: Bedshift instance
         :return int: the number of total regions perturbed
         '''
         if yaml:
-            return BedshiftYAMLHandler.BedshiftYAMLHandler(bedshifter, yaml).handle_yaml()
+            return BedshiftYAMLHandler.BedshiftYAMLHandler(self, yaml).handle_yaml()
         n = 0
         if shiftrate > 0:
             if shiftfile:
@@ -420,7 +442,7 @@ class Bedshift(object):
             if addfile:
                 n += self.add_from_file(addfile, addrate)
             else:
-                n += self.add(addrate, addmean, addstdev)
+                n += self.add(addrate, addmean, addstdev, valid_regions)
         if cutrate > 0:
             n += self.cut(cutrate)
         if mergerate > 0:
@@ -443,6 +465,7 @@ class Bedshift(object):
         self.bed.to_csv(outfile_name, sep='\t', header=False, index=False, float_format='%.0f')
         _LOGGER.info('The output bedfile located in {} has {} regions. The original bedfile had {} regions.' \
               .format(outfile_name, self.bed.shape[0], self.original_num_regions))
+
 
 
     def read_bed(self, bedfile_path, delimiter='\t'):
@@ -515,6 +538,7 @@ def main():
         addmean=args.addmean,
         addstdev=args.addstdev,
         addfile=args.addfile,
+        valid_regions=args.valid_regions,
         shiftrate=args.shiftrate,
         shiftmean=args.shiftmean,
         shiftstdev=args.shiftstdev,
@@ -529,15 +553,14 @@ def main():
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
     for i in range(args.repeat):
         n = bedshifter.all_perturbations(args.addrate, args.addmean, args.addstdev,
-                                         args.addfile,
+                                         args.addfile, args.valid_regions,
                                          args.shiftrate, args.shiftmean, args.shiftstdev,
                                          args.shiftfile,
                                          args.cutrate,
                                          args.mergerate,
                                          args.droprate,
                                          args.dropfile,
-                                         args.yaml_config,
-                                         bedshifter)
+                                         args.yaml_config)
         _LOGGER.info("\t" + str(n) + " regions changed in total.\n")
         if args.repeat == 1:
             bedshifter.to_bed(outfile)

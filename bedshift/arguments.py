@@ -2,7 +2,6 @@ import argparse
 from bedshift._version import __version__
 
 
-
 class _VersionInHelpParser(argparse.ArgumentParser):
     def format_help(self):
         """ Add version information to help text. """
@@ -61,6 +60,10 @@ def build_argparser():
         "--addfile", type=str, help="Add regions from a bedfile")
 
     parser.add_argument(
+        "--valid-regions", type=str, dest='valid_regions',
+        help="valid regions in which regions can be randomly added")
+
+    parser.add_argument(
         "-s", "--shiftrate", type=float, default=0.0,
         help="Shift probability")
 
@@ -95,10 +98,11 @@ def build_argparser():
         help="the number of times to repeat the operation")
 
     parser.add_argument(
-        "-y", "--yaml_config", type=str,
+        "-y", "--yaml-config", dest='yaml_config', type=str,
         help="run yaml configuration file")
 
     return parser
+
 
 param_msg = """Params:
   chrom.sizes file: {chromsizes}
@@ -106,15 +110,16 @@ param_msg = """Params:
     shift rate: {shiftrate}
     shift mean distance: {shiftmean}
     shift stdev: {shiftstdev}
-  shift regions from file: {shiftfile}
+    shift regions from file: {shiftfile}
   add:
     rate: {addrate}
     add mean length: {addmean}
     add stdev: {addstdev}
-    add file: {addfile}
+    add regions from file: {addfile}
+    valid regions: {valid_regions}
   cut rate: {cutrate}
   drop rate: {droprate}
-  drop regions from file: {dropfile}
+    drop regions from file: {dropfile}
   merge rate: {mergerate}
   outputfile: {outputfile}
   repeat: {repeat}

@@ -31,6 +31,12 @@ class TestBedshift(unittest.TestCase):
         self.assertEqual(added, 12300)
         self.bs.reset_bed()
 
+    def test_add_valid_regions(self):
+        added = self.bs.add(0.5, 2000, 1000, valid_bed='tests/small_test.bed', delimiter='\t')
+        self.assertEqual(added, 5000)
+        self.bs.to_bed('tests/add_valid_test.bed')
+        self.bs.reset_bed()
+
     def test_add_from_file(self):
         added = self.bs.add_from_file("tests/test.bed", 0.25)
         self.assertEqual(added, 2500)
@@ -136,5 +142,6 @@ class TestBedshiftYAMLHandler(unittest.TestCase):
 
         total = added+f_drop_10+f_shift_30+f_added_20+cut+dropped+shifted+merged
 
-        self.assertAlmostEqual(yamled, total, places=-2)
+        # yamled and total both should be around 16750, but can vary by over 100
+        self.assertAlmostEqual(yamled, total, places=-3)
         bedshifter.reset_bed()
