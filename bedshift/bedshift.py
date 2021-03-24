@@ -176,7 +176,7 @@ class Bedshift(object):
             )
             num_add = dflen
         add_rows = random.sample(list(range(dflen)), num_add)
-        add_df = df.reindex([add_rows]).reset_index(drop=True)
+        add_df = df.loc[add_rows].reset_index(drop=True)
         add_df[3] = pd.Series(["A"] * add_df.shape[0])
         self.bed = self.bed.append(add_df, ignore_index=True)
         return num_add
