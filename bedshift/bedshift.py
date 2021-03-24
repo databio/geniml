@@ -181,7 +181,8 @@ class Bedshift(object):
         self.bed = self.bed.append(add_df, ignore_index=True)
         return num_add
 
-    def shift(self, shiftrate, shiftmean, shiftstdev, shift_rows=None):
+
+    def shift(self, shiftrate, shiftmean, shiftstdev, shift_rows=[]):
         """
         Shift regions
 
@@ -193,16 +194,14 @@ class Bedshift(object):
         self._precheck(shiftrate, requiresChromLens=True)
 
         rows = self.bed.shape[0]
-        if shift_rows == None:
+        if len(shift_rows) == 0:
             shift_rows = random.sample(list(range(rows)), int(rows * shiftrate))
         new_row_list = []
         to_drop = []
         num_shifted = 0
         invalid_shifted = 0
         for row in shift_rows:
-            drop_row, new_region = self._shift(
-                row, shiftmean, shiftstdev
-            )  # shifted rows display a 1
+            drop_row, new_region = self._shift(row, shiftmean, shiftstdev) # shifted rows display a 1
             if drop_row is not None and new_region:
                 num_shifted += 1
                 new_row_list.append(new_region)
@@ -213,10 +212,9 @@ class Bedshift(object):
         self.bed = self.bed.append(new_row_list, ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
         if invalid_shifted > 0:
-            _LOGGER.warning(
-                f"{invalid_shifted} regions were prevented from being shifted outside of chromosome boundaries. Reported regions shifted will be less than expected."
-            )
+            _LOGGER.warning(f"{invalid_shifted} regions were prevented from being shifted outside of chromosome boundaries. Reported regions shifted will be less than expected.")
         return num_shifted
+
 
     def _shift(self, row, mean, stdev):
         theshift = int(np.random.normal(mean, stdev))
@@ -228,9 +226,10 @@ class Bedshift(object):
             # check if the region is shifted out of chromosome length bounds
             return None, None
 
-        return row, {0: chrom, 1: start + theshift, 2: end + theshift, 3: "S"}
+        return row, {0: chrom, 1: start + theshift, 2: end + theshift, 3: 'S'}
 
-    def shift_from_file(self, fp, shiftrate, shiftmean, shiftstdev, delimiter="\t"):
+
+    def shift_from_file(self, fp, shiftrate, shiftmean, shiftstdev, delimiter='\t'):
         """
         Shift regions that overlap the specified file's regions
 
@@ -247,16 +246,24 @@ class Bedshift(object):
         num_shift = int(rows * shiftrate)
 
         intersect_regions = self._find_overlap(fp)
-        interlen = len(intersect_regions)
+        rows2shift = intersect_regions.sample(frac=shiftrate)
+        indices2shift = []
+        for _, r in rows2shift.iterrows():
+            chrom = r[0]
+            start = r[1]
+            end = r[2]
+            index = (self.bed[(self.bed[0]  == chrom) & (self.bed[1] == start)].index.tolist())
+            
+            if len(index) > 0:
+                indices2shift.append(index[0])
+        
+        interlen = len(indices2shift)
         if num_shift > interlen:
-            _LOGGER.warning(
-                "Number of regions to be shifted ({}) is larger than the provided bedfile size ({}). Shifting {} regions.".format(
-                    num_shift, interlen, interlen
-                )
-            )
-            num_shift = interlen
-        rows2shift = random.sample(list(range(interlen)), num_shift)
-        return self.shift(shiftrate, shiftmean, shiftstdev, rows2shift)
+            _LOGGER.warning("Number of regions to be shifted ({}) is larger than the desired number of regions to be shifted: ({}). Shifting {} regions.".format(num_shift, interlen, interlen))
+            num_shift = len(indices2shift)
+
+        return self.shift(shiftrate, shiftmean, shiftstdev, indices2shift)
+
 
     def cut(self, cutrate):
         """
@@ -356,7 +363,8 @@ class Bedshift(object):
         self.bed = self.bed.reset_index(drop=True)
         return len(drop_rows)
 
-    def drop_from_file(self, fp, droprate, delimiter="\t"):
+
+    def drop_from_file(self, fp, droprate, delimiter='\t'):
         """
         drop regions that overlap between the reference bedfile and the provided bedfile.
 
@@ -371,19 +379,26 @@ class Bedshift(object):
         drop_bed = self.read_bed(fp, delimiter=delimiter)
 
         intersect_regions = self._find_overlap(drop_bed)
-        interlen = len(intersect_regions)
+        
+        rows2drop = intersect_regions.sample(frac=droprate)
+        indices2drop = []
+        for _, r in rows2drop.iterrows():
+            chrom = r[0]
+            start = r[1]
+            end = r[2]
+            index = (self.bed[(self.bed[0]  == chrom) & (self.bed[1] == start)].index.tolist())
+            
+            if len(index) > 0:
+                indices2drop.append(index[0])
+        
+        interlen = len(indices2drop)
         if num_drop > interlen:
-            _LOGGER.warning(
-                "Number of regions to be dropped ({}) is larger than the provided bedfile size ({}). Dropping {} regions.".format(
-                    num_drop, interlen, interlen
-                )
-            )
-            num_drop = interlen
-        rows2drop = random.sample(list(range(interlen)), num_drop)
-        self.bed = self.bed.drop(intersect_regions.index[rows2drop]).reset_index(
-            drop=True
-        )
+            _LOGGER.warning("Number of regions to be dropped ({}) is larger than the desired number of regions to be dropped: ({}). Dropping {} regions.".format(num_drop, interlen, interlen))
+            num_drop = len(indices2drop)
+
+        self.bed = self.bed.drop(indices2drop)
         return num_drop
+
 
     def _find_overlap(self, fp, reference=None):
         """
