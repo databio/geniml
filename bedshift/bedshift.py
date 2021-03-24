@@ -523,7 +523,7 @@ class Bedshift(object):
 
         # if there is a header line in the table, remove it
         if not str(df.iloc[0, 1]).isdigit():
-            df = df[1:]
+            df = df[1:].reset_index(drop=True)
 
         df[3] = "-"  # column indicating which modifications were made
         return df
