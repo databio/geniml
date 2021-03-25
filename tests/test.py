@@ -130,7 +130,7 @@ class TestBedshiftYAMLHandler(unittest.TestCase):
 
         added = bedshifter.add(addrate=0.1, addmean=100, addstdev=20)
         f_drop_10 = bedshifter.drop_from_file(fp="tests/test.bed", droprate=0.1)
-        f_shift_30 = bedshifter.shift_from_file(fp="tests/bedshifted_test.bed",
+        f_shift_30 = bedshifter.shift_from_file(fp="tests/test2.bed",
                                             shiftrate=0.50,
                                             shiftmean=100,
                                             shiftstdev=200)
