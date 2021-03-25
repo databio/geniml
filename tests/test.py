@@ -12,6 +12,7 @@ class TestBedshift(unittest.TestCase):
     def test_read_bed(self):
         reader = bedshift.Bedshift('tests/header_test.bed')
         self.assertTrue(list(reader.bed.columns), [0,1,2,3])
+        self.assertTrue(list(reader.bed.index), [0,1,2])
 
     def test_read_chrom_sizes(self):
         self.bs._read_chromsizes("tests/hg19.chrom.sizes")
