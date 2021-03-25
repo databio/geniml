@@ -589,7 +589,7 @@ def main():
     )
 
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
-    _LOGGER.info(f"Generating {args.repeat} repetitions...")
+    _LOGGER.info(f"Generating {args.repeat} repetitions... asdfasfd")
     for i in range(args.repeat):
         n = bedshifter.all_perturbations(
             args.addrate,
@@ -607,8 +607,7 @@ def main():
             args.dropfile,
             args.yaml_config,
         )
-
-        pct_finished = int(100 * (i+i) / args.repeat)
+        pct_finished = int((100 * (i+1)) / args.repeat)
         if int(pct_finished) in [5, 25, 50, 75, 100]:
             _LOGGER.info(f"{pct_finished}% finished")
 
