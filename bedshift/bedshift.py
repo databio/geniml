@@ -589,7 +589,7 @@ def main():
     )
 
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
-    _LOGGER.info(f"Generating {args.repeat} repetitions... asdfasfd")
+    _LOGGER.info(f"Generating {args.repeat} repetitions...")
     for i in range(args.repeat):
         n = bedshifter.all_perturbations(
             args.addrate,
