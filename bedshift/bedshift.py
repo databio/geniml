@@ -609,7 +609,7 @@ def main():
         )
 
         pct_finished = int(100 * (i+i) / args.repeat)
-        if int(pct_finished in [5, 25, 50, 75, 100]:
+        if int(pct_finished) in [5, 25, 50, 75, 100]:
             _LOGGER.info(f"{pct_finished}% finished")
 
         if args.repeat == 1:
