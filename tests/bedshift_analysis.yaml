@@ -8,7 +8,7 @@ bedshift_operations:
     rate: 0.1
     delimiter: \t
   - shift_from_file:
-    file: tests/bedshifted_test.bed
+    file: tests/test2.bed
     rate: 0.5
     mean: 100
     stdev: 200
