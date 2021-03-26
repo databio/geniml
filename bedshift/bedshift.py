@@ -589,6 +589,7 @@ def main():
     )
 
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
+    _LOGGER.info(f"Generating {args.repeat} repetitions...")
     for i in range(args.repeat):
         n = bedshifter.all_perturbations(
             args.addrate,
@@ -606,13 +607,20 @@ def main():
             args.dropfile,
             args.yaml_config,
         )
-        _LOGGER.info(
-            "REGION COUNT | original: {}\tnew: {}\tchanged: {}\t\noutput file: {}".format(
-                 bedshifter.original_num_regions, bedshifter.bed.shape[0], str(n), outfile
-            )
-        )
+        pct_finished = int((100 * (i + 1)) / args.repeat)
+        if int(pct_finished) in [5, 25, 50, 75, 100]:
+            _LOGGER.info(f"{pct_finished}% finished")
+
         if args.repeat == 1:
             bedshifter.to_bed(outfile)
+            _LOGGER.info(
+                "REGION COUNT | original: {}\tnew: {}\tchanged: {}\t\noutput file: {}".format(
+                    bedshifter.original_num_regions,
+                    bedshifter.bed.shape[0],
+                    str(n),
+                    outfile,
+                )
+            )
         else:
             modified_outfile = outfile.rsplit("/")
             modified_outfile[-1] = "rep" + str(i + 1) + "_" + modified_outfile[-1]
