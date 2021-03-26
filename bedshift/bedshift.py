@@ -494,11 +494,6 @@ class Bedshift(object):
         self.bed.to_csv(
             outfile_name, sep="\t", header=False, index=False, float_format="%.0f"
         )
-        _LOGGER.info(
-            "The output bedfile located in {} has {} regions. The original bedfile had {} regions.".format(
-                outfile_name, self.bed.shape[0], self.original_num_regions
-            )
-        )
 
     def read_bed(self, bedfile_path, delimiter="\t"):
         """
@@ -611,7 +606,11 @@ def main():
             args.dropfile,
             args.yaml_config,
         )
-        _LOGGER.info("\t" + str(n) + " regions changed in total.\n")
+        _LOGGER.info(
+            "REGION COUNT | original: {}\tnew: {}\tchanged: {}\t\noutput file: {}".format(
+                 bedshifter.original_num_regions, bedshifter.bed.shape[0], str(n), outfile
+            )
+        )
         if args.repeat == 1:
             bedshifter.to_bed(outfile)
         else:
