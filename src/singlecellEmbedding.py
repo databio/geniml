@@ -1,11 +1,12 @@
-
+import matplotlib
+import matplotlib.pyplot as plt
+import seaborn as sns
+# Ensure pyqt5 is upgraded (pip install --user --upgrade pyqt5
 from collections import Counter
 import csv
 from gensim.models import Word2Vec
 import gzip
 import io
-import matplotlib
-import matplotlib.pyplot as plt
 import multiprocessing as mp
 from numba import config, threading_layer
 import numpy as np
@@ -14,10 +15,14 @@ import pathlib
 import pandas as pd
 import re
 import scipy.io
-import seaborn as sns
 from six.moves import cPickle as pickle #for performance
+import sys
 import tempfile
 import umap
+from sklearn.preprocessing import normalize
+import vaex
+import logging
+from itertools import islice
 
 # set the threading layer before any parallel target compilation
 config.THREADING_LAYER = 'threadsafe'
@@ -64,8 +69,10 @@ class singlecellEmbedding(object):
         """
         Train word2vec algorithm
         """
+        # sg=0 Training algorithm: 1 for skip-gram; otherwise CBOW.
         model = Word2Vec(sentences=documents, window=window_size,
-                         size=dim, min_count=min_count, workers=nothreads)
+                         vector_size=dim, min_count=min_count,
+                         workers=nothreads, progress_per = 100000)
         return model
 
 
@@ -84,10 +91,9 @@ class singlecellEmbedding(object):
 
     # This function reduce the dimension using umap and plot 
     def UMAP_plot(self, data_X, y, title, nn, filename, umet,
-                  plottitle, output_folder):
+                  rasterize=False, log_file = None):
         np.random.seed(42)
-        dp = 300
-        # TODO: make points vector graphics too
+        # TODO: make low_memory a tool argument
         ump = umap.UMAP(a=None, angular_rp_forest=False, b=None,
                         force_approximation_algorithm=False, init='spectral',
                         learning_rate=1.0, local_connectivity=1.0,
@@ -101,21 +107,35 @@ class singlecellEmbedding(object):
                         target_n_neighbors=-1, target_weight=0.5,
                         transform_queue_size=4.0, transform_seed=42,
                         unique=False, verbose=False)
-        ump.fit(data_X) 
-        ump_data = pd.DataFrame(ump.transform(data_X)) 
-        print("Threading layer chosen: %s" % threading_layer())
+        if log_file:
+            with open(log_file, 'a') as log:
+                timestamp = print(datetime.datetime.now())
+                log.write(f'-- {timestamp} Fitting UMAP data --\n')
+        # Must `pip install --user --upgrade pynndescent` for large data
+        ump.fit(data_X)
+        ump_data = pd.DataFrame(ump.transform(data_X))
+        if log_file:
+            with open(log_file, 'a') as log:
+                timestamp = print(datetime.datetime.now())
+                log.write(f'{timestamp} Threading layer chosen: {threading_layer()}\n')
         ump_data = pd.DataFrame({'UMAP 1':ump_data[0],
                                 'UMAP 2':ump_data[1],
                                 title:y})
-        fig, ax = plt.subplots(figsize=(30,25))
+        ump_data.to_csv(filename, index=False)
+        if log_file:
+            with open(log_file, 'a') as log:
+                timestamp = print(datetime.datetime.now())
+                log.write(f'{timestamp} UMAP coordinates written to {filename}\n')
+        fig, ax = plt.subplots(figsize=(8,6.4))
+        plt.rc('font', size=11)
         plate =(sns.color_palette("husl", n_colors=len(set(y))))
-        sns.scatterplot(x="UMAP 1", y="UMAP 2", hue=title, s= 200,ax= ax,
-                        palette = plate, sizes=(100, 900),
+        sns.scatterplot(x="UMAP 1", y="UMAP 2", hue=title, s= 10,ax= ax,
+                        palette = plate, sizes=(10, 40),
                         data=ump_data, #.sort_values(by = title),
-                        rasterized=True)
+                        rasterized=rasterize)
         # TODO: only label a subset of the samples...
-        plt.legend(bbox_to_anchor=(1.04,1), loc="upper right", fontsize =  10,
-                   markerscale=3, edgecolor = 'black')
+        plt.legend(bbox_to_anchor=(1.1,1), loc="upper right", fontsize =  11,
+                   markerscale=2, edgecolor = 'black')
         return fig
 
 
@@ -123,6 +143,84 @@ class singlecellEmbedding(object):
         """Yield successive n-sized chunks."""
         for i in range(0, csr.shape[1], n):
             yield csr[:,i:i + n], barcodes[i:i + n]
+
+
+    def chunkitionary(self, a_dict, n):
+        """Yield successive n-sized chunks."""
+        it = iter(a_dict)
+        for i in range(0, len(a_dict), n):
+            yield {k:a_dict[k] for k in islice(it, n)}
+
+
+    def convertMM2doc(self, mtx_file):
+        documents = {}
+        with open(mtx_file) as src:
+            for line in src:
+                row, col, entry = line.strip().split()
+                if col not in documents:
+                    documents[str(col)] = []
+                val = sys.intern(row)
+                documents[col].append(val)
+        return documents
+
+
+    def chunkMMfile(self, mmfile, temp_dir):
+        # REQUIRES unix sorted -k2,2n
+        with gzip.open(mmfile, 'rb') as src:
+            row, col, entry = int, int, int
+            lineno = 0
+            sample = None
+            for line in src:
+                lineno += 1
+                if lineno <= 3:
+                    # Skip the mtx header lines
+                    pass
+                else:
+                    if not sample:
+                        # Open first file
+                        temp_file=tempfile.NamedTemporaryFile(dir=temp_dir.name, suffix='.mtx', delete=False)
+                        chunk = open(temp_file.name, mode='w')
+                    row, col, entry = line.decode('utf-8').strip().split()
+                    if (sample) and (col != sample):
+                        # Close the last file
+                        chunk.close()
+                        # Open a NEW file!
+                        temp_file=tempfile.NamedTemporaryFile(dir=temp_dir.name, suffix='.mtx', delete=False)
+                        chunk = open(temp_file.name, mode='w')
+                        # Write the first value of this new sample
+                        sample = col
+                        out_line = ' '.join([row, col, entry])
+                        _ = chunk.write(f'{out_line}\n')
+                    else:
+                        sample = col
+                        out_line = ' '.join([row, col, entry])
+                        _ = chunk.write(f'{out_line}\n')
+            chunk.close()
+
+
+    def chunkMMfile2doc(self, mmfile):
+        # REQUIRES unix sorted -k2,2n
+        documents = {}
+        with gzip.open(mmfile, 'rb') as src:
+            lineno = 0
+            sample = None
+            for line in src:
+                row, col, entry = line.decode('utf-8').strip().split()
+                if not sample:
+                    # set initial key
+                    documents[str(col)] = []
+                if (sample) and (col != sample):
+                    # set new key
+                    documents[str(col)] = []
+                    # Write the first value of this new sample
+                    sample = col
+                    val = sys.intern(row)
+                    documents[col].append(val)
+                else:
+                    sample = col
+                    val = sys.intern(row)
+                    documents[col].append(val)
+        return documents
 
 
     def convertMM2doc2FileMap(self, arg):
@@ -141,9 +239,30 @@ class singlecellEmbedding(object):
         documents = {}
 
 
+    def convertMM2doc2FileMapInterned(self, arg):
+        csr_slice, barcodes, temp_dir = arg
+        documents = {}
+        temp_file=tempfile.NamedTemporaryFile(dir=temp_dir.name, delete=False)
+        for i in range(0, csr_slice.shape[1]):
+            try:
+                if(barcodes[i] not in documents):
+                    documents[barcodes[i]] = []
+                values = (np.array(
+                    [x + 1 for x in csr_slice[:,i].nonzero()[0].
+                        tolist()],dtype=str).tolist())
+                interned = [sys.intern(val) for val in values]
+                documents[barcodes[i]].extend(interned) 
+            except IndexError:
+                #print("i: {}".format(i))  # DEBUG
+                pass
+        self.save_dict(documents, temp_file.name)
+        documents = {}
+
+
     def buildDoc(self, docs, temp_dir, init=True):
         for f in os.listdir(temp_dir.name):
-            d_file = os.path.join(os.path.dirname(os.path.abspath(temp_dir.name)), temp_dir.name, f)
+            d_file = os.path.join(os.path.dirname(
+                os.path.abspath(temp_dir.name)), temp_dir.name, f)
             #print("file: {}".format(d_file))  # DEBUG
             doc = self.load_dict(d_file)
             if init:
@@ -186,96 +305,251 @@ class singlecellEmbedding(object):
                 d1[key] = value
 
 
+    def buildDict(self, mtx, SIZE=100_000):
+        documents = {}
+        for i1, i2, chunk in mtx.evaluate_iterator(mtx[:,0], chunk_size=SIZE):
+            for x in chunk:
+                row, col, entry = x.as_py().split()
+                #print(f"{row}, {col}, {entry}")
+                if col not in documents:
+                    documents[str(col)] = []
+                val = sys.intern(row)
+                documents[col].append(val)
+        return documents
+
+
+    def replaceKeys(self, a_dict, new_keys):
+        for key in list(a_dict.keys()):
+            try:
+                new_key = new_keys[int(key)-1][0]
+                a_dict[new_key] = a_dict.pop(key)
+            except (KeyError, AssertionError) as err:
+                print(f"err: {err}")
+                pass
+
+
+    def replaceValues(self, a_dict, new_values):
+        for key in list(a_dict.keys()):
+            try:
+                int_list = list(map(int, a_dict[key]))
+                a_dict[key] = [sys.intern(new_values[i-1]) for i in int_list]
+            except:
+                e = sys.exc_info()[0]
+                print(f"Exception: {e}")
+                pass
+
+
 
 ################################################################################
-    def main(self, path_file, names_file, out_dir, title, nocells, noreads, 
-             docs_file = None, w2v_model = None, shuffle_repeat = 5, 
-             window_size = 100, dimension = 100,  min_count = 10, threads = 1,
-             umap_nneighbours = 100, umap_metric = 'euclidean'):
+    def main(self, path_file, names_file, coords_file, out_dir, nocells, noreads, 
+             title = "scembed", docs_file = None, w2v_model = None,
+             embed_file = None, shuffle_repeat = 5, window_size = 100,
+             dimension = 100, min_count = 10, threads = 1,
+             umap_nneighbours = 100, umap_metric = 'euclidean', 
+             rasterize=False, alt_method=False, v2_method=False,
+             interned=False, use_vaex=False, loglevel='DEBUG'):
         
         # Create pool *before* loading any data
         pool = mp.Pool(int(threads))
+        
+        log_file = os.path.join(out_dir, title + "_log.txt")
+        numeric_level = getattr(logging, loglevel.upper(), None)
+        if not isinstance(numeric_level, int):
+            raise ValueError(f"Invalid log level: {loglevel}")
+        logging.basicConfig(
+            filename=log_file, format='%(asctime)s %(message)s',
+            datefmt='%m/%d/%Y %I:%M:%S %p', encoding='utf-8',
+            level=numeric_level
+        )        
 
-        print('-- Loading data... --')
+        logging.info(f'loading data')
+
         # TODO: read the mm file in chunks? Or load and write chunks, then
         #       split chunks across processors
-        data = scipy.io.mmread(path_file)
-        print('-- MatrixMarket file loaded --')
-        data = data.tocsr()
-        data = data[data.getnnz(1)>int(noreads)][:,data.getnnz(0)>int(nocells)]
-        # TODO: test using the features file and whether that changes outcome and timing
-        # features_filename = os.path.join(pathlib.Path(path_file).parents[0],
-            # pathlib.Path(pathlib.Path(path_file).stem).stem + "_coords.tsv.gz")
-        # barcodes_filename = os.path.join(pathlib.Path(path_file).parents[0],
-            # pathlib.Path(pathlib.Path(path_file).stem).stem + "_names.tsv.gz")
-        # feature_chr = [row[0] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-        # feature_start = [row[1] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-        # feature_end = [row[2] for row in csv.reader(gzip.open(features_filename, mode="rt"), delimiter="\t")]
-        # features = [i + "_" + j + "_" + k for i, j, k in zip(feature_chr, feature_start, feature_end)] 
-        # try:
-            # features.remove('chr_start_end')
-        # except ValueError:
-            # pass
-        # features = pd.DataFrame(features, columns=['region'])
-        # print('-- features file loaded --')
-        if names_file.lower().endswith('.gz'):
-            barcodes = [row[0] for row in csv.reader(gzip.open(names_file, mode="rt"), delimiter="\t")]
-        else:
-            barcodes = [row[0] for row in csv.reader(gnames_file, delimiter="\t")]
-        print('-- Sample names file loaded --')
+        if alt_method:
+            if docs_file:
+                documents = self.load_dict(docs_file)
+            else:
+                # Requires a unix sorted input file (-k2,2n -k1,1n)
+                temp_dir = tempfile.TemporaryDirectory(dir=out_dir)
+                self.chunkMMfile(path_file, temp_dir)
+                logging.info(f'MTX file split on samples')
+                init = False
+                documents = {} 
+                for f in os.listdir(temp_dir.name):
+                    mtx_file = os.path.join(os.path.dirname(
+                            os.path.abspath(temp_dir.name)), temp_dir.name, f)
+                    if init:
+                        init = False
+                        documents = self.convertMM2doc(mtx_file)
+                    else:
+                        tmp = self.convertMM2doc(mtx_file)
+                        self.mergeDict( documents, tmp )
+                logging.info(f'len(documents.keys()): {len(documents.keys())}')
+                #swap doc keys with barcodes by index
+                if names_file.lower().endswith('.gz'):
+                    pd_barcodes = pd.read_csv(
+                        names_file, compression='gzip', header=None)
+                else:
+                    pd_barcodes = pd.read_csv(names_file,  header=None)
+                for key in list(documents.keys()):
+                    # TODO: use number of files in os.listdir as upper limit as well
+                    try:
+                        new_key = pd_barcodes.loc[int(key)-1,0]
+                    except KeyError:
+                        logging.info(f'old key: {key}')
+                        logging.info(f'len(pd_barcodes): {len(pd_barcodes.index)}')
+                        pass
+                    documents[new_key] = documents.pop(key)
+                docs_filename = os.path.join(out_dir, title + "_alt_documents.pkl")
+                self.save_dict(documents, docs_filename)
+                temp_dir.cleanup()
+                logging.info(f'Saved documents as {docs_filename}')
+        elif v2_method:
+            if docs_file:
+                documents = self.load_dict(docs_file)
+            else:
+                # Requires a unix sorted input file (-k2,2n -k1,1n)
+                documents = self.chunkMMfile2doc(path_file)
+                #swap doc keys with barcodes by index
+                if names_file.lower().endswith('.gz'):
+                    pd_barcodes = pd.read_csv(
+                        names_file, compression='gzip', header=None)
+                else:
+                    pd_barcodes = pd.read_csv(names_file,  header=None)
+                for key in list(documents.keys()):
+                    # TODO: use number of files in os.listdir as upper limit as well
+                    try:
+                        new_key = pd_barcodes.loc[int(key)-1,0]
+                    except KeyError:
+                        logging.info(f'old key: {key}')
+                        logging.info(f'len(pd_barcodes): {len(pd_barcodes.index)}')
+                        pass
+                    documents[new_key] = documents.pop(key)
+                docs_filename = os.path.join(out_dir, title + "_v2_documents.pkl")
+                self.save_dict(documents, docs_filename)
+                logging.info(f'Saved documents as {docs_filename}')
+        elif use_vaex:
+            if os.path.exists(path_file + ".hdf5"):
+                df = vaex.open(path_file + ".hdf5")
+            else:
+                # initialize
+                df = vaex.from_csv(path_file, sep="\t", convert=True,
+                                   chunk_size=5_000_000, copy_index=False,
+                                   header=[0,1,2])
 
-        if docs_file:
-            documents = load_dict(docs_file)
+            documents = self.buildDict(df)
+
+            if os.path.exists(names_file + ".hdf5"):
+                names = vaex.open(names_file + ".hdf5")
+            else:
+                # initialize
+                names = vaex.from_csv(names_file, sep="\t", convert=True,
+                                      chunk_size=5_000_000, copy_index=False,
+                                      header=None)
+
+            if os.path.exists(coords_file + ".hdf5"):
+                feats = vaex.open(coords_file + ".hdf5")
+            else:
+                # initialize
+                feats = vaex.from_csv(coords_file, sep="\t", convert=True,
+                                      chunk_size=5_000_000, copy_index=False)
+            
+            self.replaceKeys(documents, names)
+            regions = feats['chr'] + " " + feats['start'].astype(str) + " " + feats['end'].astype(str)
+            regions = regions.tolist()
+            self.replaceValues(documents, regions)
+
+            docs_filename = os.path.join(out_dir, title + "_vaex_documents.pkl")
+            self.save_dict(documents, docs_filename)
+            logging.info(f'Saved documents as {docs_filename}')
         else:
-            docs_filename = os.path.join(out_dir, title + "_documents.pkl")
-            documents = {}
-            #print("out_dir: {}".format(out_dir))  # DEBUG
-            temp_dir = tempfile.TemporaryDirectory(dir=out_dir) 
-            #print("temp_dir: {}".format(temp_dir.name))  # DEBUG
-            max_pos = data.shape[1]
-            n = int(max_pos/mp.cpu_count())
-            n = 1 if n < 1 else n # Don't allow value below 1
-            n = 100 if n > 100 else n  # TODO: shrink this based on file size...
-            args = ((chunk, names, temp_dir) for chunk, names in self.chunkify(data, barcodes, n))
-            pool.map_async(self.convertMM2doc2FileMap, args)
-            #clean up
-            pool.close()
-            pool.join()
-            #print("convertDocPool2File complete")  # DEBUG
-            documents = self.buildDoc(documents, temp_dir)
-            print('-- Documents created --')
-            temp_dir.cleanup()
+            if names_file.lower().endswith('.gz'):
+                barcodes = [row[0] for row in csv.reader(gzip.open(names_file, mode="rt"), delimiter="\t")]
+            else:
+                barcodes = [row[0] for row in csv.reader(names_file, delimiter="\t")]
+
+            logging.info(f'Sample names file loaded')
+
+            if docs_file:
+                documents = self.load_dict(docs_file)
+            else:
+                data = scipy.io.mmread(path_file)
+                data = data.tocsr()
+                # Scale input vectors individually to unit norm (vector length).
+                data = normalize(data, norm='l1', axis=1, copy=False)
+                logging.info(f'MatrixMarket file loaded')
+                data = data[data.getnnz(1)>int(noreads)][:,data.getnnz(0)>int(nocells)]
+                docs_filename = os.path.join(out_dir, title + "_documents.pkl")
+                documents = {}
+                temp_dir = tempfile.TemporaryDirectory(dir=out_dir)
+                max_pos = data.shape[1]
+                n = int(max_pos/mp.cpu_count())
+                n = 1 if n < 1 else n # Don't allow value below 1
+                n = 100 if n > 100 else n  # TODO: shrink this based on file size...
+                args = ((chunk, names, temp_dir) for chunk, names in self.chunkify(data, barcodes, n))
+                if interned:
+                    pool.map_async(self.convertMM2doc2FileMapInterned, args)
+                else:
+                    pool.map_async(self.convertMM2doc2FileMap, args)
+                #clean up
+                pool.close()
+                pool.join()
+                documents = self.buildDoc(documents, temp_dir)
+                logging.info(f'Documents created')
+                self.save_dict(documents, docs_filename)
+                temp_dir.cleanup()
+                data = None
 
         if not w2v_model:
             model_name = '_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}.model'.format(
                 str(nocells), str(noreads), str(dimension), str(window_size),
                 str(min_count), str(shuffle_repeat))
             model_filename = os.path.join(out_dir, title + model_name)
+            logging.info(f'Shuffling documents')
             shuffeled_documents = self.shuffling(documents,
                                                  int(shuffle_repeat))
+            logging.info(f'Constructing model')
             model = self.trainWord2Vec(shuffeled_documents,
                                        window_size = int(window_size),
                                        dim = int(dimension),
                                        min_count = int(min_count),
                                        nothreads = int(threads))
             model.save(model_filename)
-            print('-- Model created --')
+            logging.info(f'Model saved as: {model_filename}')
         else:
             model = Word2Vec.load(w2v_model)
 
-        print('Number of words in w2v model: ', len(model.wv.vocab))
-        embeddings = self.document_embedding_avg(documents, model)
+        logging.info(f'Number of words in w2v model: {len(model.wv.vocab)}')
+
+        if not embed_file:
+            embeddings = self.document_embedding_avg(documents, model)
+            embeddings_dictfile = os.path.join(
+                out_dir, title + "_embeddings.pkl")
+            self.save_dict(embeddings, embeddings_dictfile)
+            embeddings_csvfile = os.path.join(
+                out_dir, title + "_embeddings.csv")
+            (pd.DataFrame.from_dict(data=embeddings, orient='index').
+             to_csv(embeddings_csvfile, header=False))
+            logging.info(f'Embeddings file saved as {embeddings_csvfile}')
+        else:
+            embeddings = self.load_dict(embed_file)
+
         X = pd.DataFrame(embeddings).values
         y = list(embeddings.keys())
         y = self.label_preprocessing(y)
 
+        logging.info(f'Generating plot')
+        coordinates_csvfile = os.path.join(out_dir, title + "_xy_coords.csv")
         plot_name = '{}_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}_umap_nneighbours{}_umap-metric{}.svg'.format(
             title, str(nocells), str(noreads), str(dimension), str(window_size),
             str(min_count), str(shuffle_repeat), str(umap_nneighbours),
             str(umap_metric))
-        plot_filename = os.path.join(out_dir, plot_name)
+        plot_filename = os.path.join(out_dir, "figs", plot_name)
         fig = self.UMAP_plot(X.T, y, 'single-cell', int(umap_nneighbours),
-                             'Single-cell', umap_metric, 'RegionSet2vec', './')
-        print('-- Saving UMAP plot... --')                     
+                             coordinates_csvfile, umap_metric, rasterize,
+                             log_file)
+        logging.info(f'Saving UMAP plot')
         fig.savefig(plot_filename, format = 'svg')
-        print('-- Pipeline Complete! --') 
+        logging.info(f'Pipeline Complete!')
+
