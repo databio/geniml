@@ -622,10 +622,14 @@ def main():
                 )
             )
         else:
-            modified_outfile = outfile.rsplit("/")
-            modified_outfile[-1] = "rep" + str(i + 1) + "_" + modified_outfile[-1]
-            modified_outfile = "/".join(modified_outfile)
-            bedshifter.to_bed(modified_outfile)
+            basename = os.path.basename(outfile)
+            rep = str(i + 1)
+            modified_outfile_path = f"{basename}_rep_{rep}"
+
+            # modified_outfile = outfile.rsplit("/")
+            # modified_outfile[-1] = "rep" + str(i + 1) + "_" + modified_outfile[-1]
+            # modified_outfile = "/".join(modified_outfile)
+            bedshifter.to_bed(modified_outfile_path)
         bedshifter.reset_bed()
 
 
