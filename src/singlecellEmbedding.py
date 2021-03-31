@@ -21,11 +21,13 @@ import tempfile
 import umap
 from sklearn.preprocessing import normalize
 import vaex
-import logging
+import log
 from itertools import islice
 
 # set the threading layer before any parallel target compilation
 config.THREADING_LAYER = 'threadsafe'
+
+log = log.getLogger(__name__)
 
 class singlecellEmbedding(object):
 
@@ -71,8 +73,8 @@ class singlecellEmbedding(object):
         """
         # sg=0 Training algorithm: 1 for skip-gram; otherwise CBOW.
         model = Word2Vec(sentences=documents, window=window_size,
-                         vector_size=dim, min_count=min_count,
-                         workers=nothreads, progress_per = 100000)
+                         size=dim, min_count=min_count,
+                         workers=nothreads)
         return model
 
 
@@ -89,9 +91,9 @@ class singlecellEmbedding(object):
         return y_cell
 
 
-    # This function reduce the dimension using umap and plot 
+    # This function reduces the dimension using umap and plot 
     def UMAP_plot(self, data_X, y, title, nn, filename, umet,
-                  rasterize=False, log_file = None):
+                  rasterize=False):
         np.random.seed(42)
         # TODO: make low_memory a tool argument
         ump = umap.UMAP(a=None, angular_rp_forest=False, b=None,
@@ -107,25 +109,15 @@ class singlecellEmbedding(object):
                         target_n_neighbors=-1, target_weight=0.5,
                         transform_queue_size=4.0, transform_seed=42,
                         unique=False, verbose=False)
-        if log_file:
-            with open(log_file, 'a') as log:
-                timestamp = print(datetime.datetime.now())
-                log.write(f'-- {timestamp} Fitting UMAP data --\n')
+        log.info(f'-- {timestamp} Fitting UMAP data --\n')
         # Must `pip install --user --upgrade pynndescent` for large data
         ump.fit(data_X)
         ump_data = pd.DataFrame(ump.transform(data_X))
-        if log_file:
-            with open(log_file, 'a') as log:
-                timestamp = print(datetime.datetime.now())
-                log.write(f'{timestamp} Threading layer chosen: {threading_layer()}\n')
         ump_data = pd.DataFrame({'UMAP 1':ump_data[0],
                                 'UMAP 2':ump_data[1],
                                 title:y})
         ump_data.to_csv(filename, index=False)
-        if log_file:
-            with open(log_file, 'a') as log:
-                timestamp = print(datetime.datetime.now())
-                log.write(f'{timestamp} UMAP coordinates written to {filename}\n')
+        log.info(f'-- Saved UMAP data as {filename} --\n')
         fig, ax = plt.subplots(figsize=(8,6.4))
         plt.rc('font', size=11)
         plate =(sns.color_palette("husl", n_colors=len(set(y))))
@@ -350,19 +342,21 @@ class singlecellEmbedding(object):
              interned=False, use_vaex=False, loglevel='DEBUG'):
         
         # Create pool *before* loading any data
-        pool = mp.Pool(int(threads))
+        #pool = mp.Pool(int(threads))
         
         log_file = os.path.join(out_dir, title + "_log.txt")
-        numeric_level = getattr(logging, loglevel.upper(), None)
+        numeric_level = getattr(log, loglevel.upper(), None)
         if not isinstance(numeric_level, int):
             raise ValueError(f"Invalid log level: {loglevel}")
-        logging.basicConfig(
-            filename=log_file, format='%(asctime)s %(message)s',
+        log.basicConfig(
+            filename=log_file,
+            filemode='a',
+            format='%(asctime)s %(message)s',
             datefmt='%m/%d/%Y %I:%M:%S %p', encoding='utf-8',
             level=numeric_level
         )        
 
-        logging.info(f'loading data')
+        log.info(f'loading data')
 
         # TODO: read the mm file in chunks? Or load and write chunks, then
         #       split chunks across processors
@@ -373,7 +367,7 @@ class singlecellEmbedding(object):
                 # Requires a unix sorted input file (-k2,2n -k1,1n)
                 temp_dir = tempfile.TemporaryDirectory(dir=out_dir)
                 self.chunkMMfile(path_file, temp_dir)
-                logging.info(f'MTX file split on samples')
+                log.info(f'MTX file split on samples')
                 init = False
                 documents = {} 
                 for f in os.listdir(temp_dir.name):
@@ -385,7 +379,7 @@ class singlecellEmbedding(object):
                     else:
                         tmp = self.convertMM2doc(mtx_file)
                         self.mergeDict( documents, tmp )
-                logging.info(f'len(documents.keys()): {len(documents.keys())}')
+                log.info(f'len(documents.keys()): {len(documents.keys())}')
                 #swap doc keys with barcodes by index
                 if names_file.lower().endswith('.gz'):
                     pd_barcodes = pd.read_csv(
@@ -397,14 +391,14 @@ class singlecellEmbedding(object):
                     try:
                         new_key = pd_barcodes.loc[int(key)-1,0]
                     except KeyError:
-                        logging.info(f'old key: {key}')
-                        logging.info(f'len(pd_barcodes): {len(pd_barcodes.index)}')
+                        log.info(f'old key: {key}')
+                        log.info(f'len(pd_barcodes): {len(pd_barcodes.index)}')
                         pass
                     documents[new_key] = documents.pop(key)
                 docs_filename = os.path.join(out_dir, title + "_alt_documents.pkl")
                 self.save_dict(documents, docs_filename)
                 temp_dir.cleanup()
-                logging.info(f'Saved documents as {docs_filename}')
+                log.info(f'Saved documents as {docs_filename}')
         elif v2_method:
             if docs_file:
                 documents = self.load_dict(docs_file)
@@ -422,54 +416,57 @@ class singlecellEmbedding(object):
                     try:
                         new_key = pd_barcodes.loc[int(key)-1,0]
                     except KeyError:
-                        logging.info(f'old key: {key}')
-                        logging.info(f'len(pd_barcodes): {len(pd_barcodes.index)}')
+                        log.info(f'old key: {key}')
+                        log.info(f'len(pd_barcodes): {len(pd_barcodes.index)}')
                         pass
                     documents[new_key] = documents.pop(key)
                 docs_filename = os.path.join(out_dir, title + "_v2_documents.pkl")
                 self.save_dict(documents, docs_filename)
-                logging.info(f'Saved documents as {docs_filename}')
+                log.info(f'Saved documents as {docs_filename}')
         elif use_vaex:
-            if os.path.exists(path_file + ".hdf5"):
-                df = vaex.open(path_file + ".hdf5")
+            if docs_file:
+                documents = self.load_dict(docs_file)
             else:
-                # initialize
-                df = vaex.from_csv(path_file, sep="\t", convert=True,
-                                   chunk_size=5_000_000, copy_index=False,
-                                   header=[0,1,2])
+                if os.path.exists(path_file + ".hdf5"):
+                    df = vaex.open(path_file + ".hdf5")
+                else:
+                    # initialize
+                    df = vaex.from_csv(path_file, sep="\t", convert=True,
+                                       chunk_size=5_000_000, copy_index=False,
+                                       header=[0,1,2])
 
-            documents = self.buildDict(df)
+                documents = self.buildDict(df)
 
-            if os.path.exists(names_file + ".hdf5"):
-                names = vaex.open(names_file + ".hdf5")
-            else:
-                # initialize
-                names = vaex.from_csv(names_file, sep="\t", convert=True,
-                                      chunk_size=5_000_000, copy_index=False,
-                                      header=None)
+                if os.path.exists(names_file + ".hdf5"):
+                    names = vaex.open(names_file + ".hdf5")
+                else:
+                    # initialize
+                    names = vaex.from_csv(names_file, sep="\t", convert=True,
+                                          chunk_size=5_000_000, copy_index=False,
+                                          header=None)
 
-            if os.path.exists(coords_file + ".hdf5"):
-                feats = vaex.open(coords_file + ".hdf5")
-            else:
-                # initialize
-                feats = vaex.from_csv(coords_file, sep="\t", convert=True,
-                                      chunk_size=5_000_000, copy_index=False)
-            
-            self.replaceKeys(documents, names)
-            regions = feats['chr'] + " " + feats['start'].astype(str) + " " + feats['end'].astype(str)
-            regions = regions.tolist()
-            self.replaceValues(documents, regions)
+                if os.path.exists(coords_file + ".hdf5"):
+                    feats = vaex.open(coords_file + ".hdf5")
+                else:
+                    # initialize
+                    feats = vaex.from_csv(coords_file, sep="\t", convert=True,
+                                          chunk_size=5_000_000, copy_index=False)
+                
+                self.replaceKeys(documents, names)
+                regions = feats['chr'] + " " + feats['start'].astype(str) + " " + feats['end'].astype(str)
+                regions = regions.tolist()
+                self.replaceValues(documents, regions)
 
-            docs_filename = os.path.join(out_dir, title + "_vaex_documents.pkl")
-            self.save_dict(documents, docs_filename)
-            logging.info(f'Saved documents as {docs_filename}')
+                docs_filename = os.path.join(out_dir, title + "_vaex_documents.pkl")
+                self.save_dict(documents, docs_filename)
+                log.info(f'Saved documents as {docs_filename}')
         else:
             if names_file.lower().endswith('.gz'):
                 barcodes = [row[0] for row in csv.reader(gzip.open(names_file, mode="rt"), delimiter="\t")]
             else:
                 barcodes = [row[0] for row in csv.reader(names_file, delimiter="\t")]
 
-            logging.info(f'Sample names file loaded')
+            log.info(f'Sample names file loaded')
 
             if docs_file:
                 documents = self.load_dict(docs_file)
@@ -478,7 +475,7 @@ class singlecellEmbedding(object):
                 data = data.tocsr()
                 # Scale input vectors individually to unit norm (vector length).
                 data = normalize(data, norm='l1', axis=1, copy=False)
-                logging.info(f'MatrixMarket file loaded')
+                log.info(f'MatrixMarket file loaded')
                 data = data[data.getnnz(1)>int(noreads)][:,data.getnnz(0)>int(nocells)]
                 docs_filename = os.path.join(out_dir, title + "_documents.pkl")
                 documents = {}
@@ -496,7 +493,7 @@ class singlecellEmbedding(object):
                 pool.close()
                 pool.join()
                 documents = self.buildDoc(documents, temp_dir)
-                logging.info(f'Documents created')
+                log.info(f'Documents created')
                 self.save_dict(documents, docs_filename)
                 temp_dir.cleanup()
                 data = None
@@ -506,21 +503,21 @@ class singlecellEmbedding(object):
                 str(nocells), str(noreads), str(dimension), str(window_size),
                 str(min_count), str(shuffle_repeat))
             model_filename = os.path.join(out_dir, title + model_name)
-            logging.info(f'Shuffling documents')
+            log.info(f'Shuffling documents')
             shuffeled_documents = self.shuffling(documents,
                                                  int(shuffle_repeat))
-            logging.info(f'Constructing model')
+            log.info(f'Constructing model')
             model = self.trainWord2Vec(shuffeled_documents,
                                        window_size = int(window_size),
                                        dim = int(dimension),
                                        min_count = int(min_count),
                                        nothreads = int(threads))
             model.save(model_filename)
-            logging.info(f'Model saved as: {model_filename}')
+            log.info(f'Model saved as: {model_filename}')
         else:
             model = Word2Vec.load(w2v_model)
 
-        logging.info(f'Number of words in w2v model: {len(model.wv.vocab)}')
+        log.info(f'Number of words in w2v model: {len(model.wv.vocab)}')
 
         if not embed_file:
             embeddings = self.document_embedding_avg(documents, model)
@@ -531,7 +528,7 @@ class singlecellEmbedding(object):
                 out_dir, title + "_embeddings.csv")
             (pd.DataFrame.from_dict(data=embeddings, orient='index').
              to_csv(embeddings_csvfile, header=False))
-            logging.info(f'Embeddings file saved as {embeddings_csvfile}')
+            log.info(f'Embeddings file saved as {embeddings_csvfile}')
         else:
             embeddings = self.load_dict(embed_file)
 
@@ -539,7 +536,7 @@ class singlecellEmbedding(object):
         y = list(embeddings.keys())
         y = self.label_preprocessing(y)
 
-        logging.info(f'Generating plot')
+        log.info(f'Generating plot')
         coordinates_csvfile = os.path.join(out_dir, title + "_xy_coords.csv")
         plot_name = '{}_nocells{}_noreads{}_dim{}_win{}_mincount{}_shuffle{}_umap_nneighbours{}_umap-metric{}.svg'.format(
             title, str(nocells), str(noreads), str(dimension), str(window_size),
@@ -549,7 +546,7 @@ class singlecellEmbedding(object):
         fig = self.UMAP_plot(X.T, y, 'single-cell', int(umap_nneighbours),
                              coordinates_csvfile, umap_metric, rasterize,
                              log_file)
-        logging.info(f'Saving UMAP plot')
+        log.info(f'Saving UMAP plot')
         fig.savefig(plot_filename, format = 'svg')
-        logging.info(f'Pipeline Complete!')
+        log.info(f'Pipeline Complete!')
 

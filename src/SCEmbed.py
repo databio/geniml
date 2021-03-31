@@ -39,6 +39,11 @@ def parse_arguments():
                         help="Path to sample/barcodes names in a single "
                              "column tab-delimited format.")
 
+    parser.add_argument("-c", "--coords", default=None, type=str,
+                        required=False,
+                        help="Path to sample/barcodes coordinates in a "
+                             "chr, start, end tab-delimited format.")
+
     parser.add_argument("-o", "--output", default=None, type=str,
                         required=True,
                         help="Path to output directory to store results.")
@@ -138,6 +143,7 @@ except OSError as error:
 
 singlecellEmbeddingmodel.main(path_file=args.input,
                               names_file=args.names,
+                              coords_file=args.coords,
                               out_dir=args.output,
                               nocells=args.nocells,
                               noreads=args.noreads,
