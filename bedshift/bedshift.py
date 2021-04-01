@@ -584,9 +584,9 @@ def main():
         sys.exit(1)
 
     if args.outputfile:
-        outfile = args.outputfile
+        outfile_base = args.outputfile
     else:
-        outfile = "bedshifted_{}".format(os.path.basename(args.bedfile))
+        outfile_base = "bedshifted_{}".format(os.path.basename(args.bedfile))
 
     _LOGGER.info(
         msg.format(
@@ -605,7 +605,7 @@ def main():
             shiftfile=args.shiftfile,
             cutrate=args.cutrate,
             mergerate=args.mergerate,
-            outputfile=outfile,
+            outputfile=outfile_base,
             repeat=args.repeat,
             yaml_config=args.yaml_config,
         )
@@ -613,6 +613,9 @@ def main():
 
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
     _LOGGER.info(f"Generating {args.repeat} repetitions...")
+
+    pct_reports = [int(x*args.repeat/100) for x in [5, 25, 50, 75, 100]]
+
     for i in range(args.repeat):
         n = bedshifter.all_perturbations(
             args.addrate,
@@ -630,12 +633,8 @@ def main():
             args.dropfile,
             args.yaml_config,
         )
-        pct_finished = int((100 * (i + 1)) / args.repeat)
-        if int(pct_finished) in [5, 25, 50, 75, 100]:
-            _LOGGER.info(f"{pct_finished}% finished")
-
         if args.repeat == 1:
-            bedshifter.to_bed(outfile)
+            bedshifter.to_bed(outfile_base)
             _LOGGER.info(
                 "REGION COUNT | original: {}\tnew: {}\tchanged: {}\t\noutput file: {}".format(
                     bedshifter.original_num_regions,
@@ -645,17 +644,23 @@ def main():
                 )
             )
         else:
-            basename, ext = os.path.splitext(os.path.basename(outfile))
+            basename, ext = os.path.splitext(os.path.basename(outfile_base))
+            dirname = os.path.dirname(outfile_base)
             digits = int(math.log10(args.repeat)) + 1
 
             rep = str(i + 1).zfill(digits)
-            modified_outfile_path = f"{basename}_rep{rep}{ext}"
+            modified_outfile_path = os.path.join(dirname, f"{basename}_rep{rep}{ext}")
 
             # modified_outfile = outfile.rsplit("/")
             # modified_outfile[-1] = "rep" + str(i + 1) + "_" + modified_outfile[-1]
             # modified_outfile = "/".join(modified_outfile)
             bedshifter.to_bed(modified_outfile_path)
+            pct_finished = int((100 * (i + 1)) / args.repeat)
+            if i+1 in pct_reports:
+                _LOGGER.info(f"Rep {i+1}. Finished: {pct_finished}%. Output file: {modified_outfile_path}")
+
         bedshifter.reset_bed()
+
 
 
 if __name__ == "__main__":
