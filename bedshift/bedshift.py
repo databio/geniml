@@ -118,7 +118,10 @@ class Bedshift(object):
         :param str delimiter: the delimiter used in valid_bed
         :return int: the number of regions added
         """
-        self._precheck(addrate, requiresChromLens=True, isAdd=True)
+        if valid_bed:
+            self._precheck(addrate, requiresChromLens=False, isAdd=True)
+        else:
+            self._precheck(addrate, requiresChromLens=True, isAdd=True)
 
         rows = self.bed.shape[0]
         num_add = int(rows * addrate)
@@ -314,10 +317,13 @@ class Bedshift(object):
         new_segs = self.__shift(new_segs, 1, meanshift, stdevshift)
         """
 
-        return row, [
-            {0: chrom, 1: start, 2: thecut, 3: "C"},
-            {0: chrom, 1: thecut, 2: end, 3: "C"},
-        ]
+        return (
+            row,
+            [
+                {0: chrom, 1: start, 2: thecut, 3: "C"},
+                {0: chrom, 1: thecut, 2: end, 3: "C"},
+            ],
+        )
 
     def merge(self, mergerate):
         """
@@ -614,7 +620,7 @@ def main():
     bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
     _LOGGER.info(f"Generating {args.repeat} repetitions...")
 
-    pct_reports = [int(x*args.repeat/100) for x in [5, 25, 50, 75, 100]]
+    pct_reports = [int(x * args.repeat / 100) for x in [5, 25, 50, 75, 100]]
 
     for i in range(args.repeat):
         n = bedshifter.all_perturbations(
@@ -640,7 +646,7 @@ def main():
                     bedshifter.original_num_regions,
                     bedshifter.bed.shape[0],
                     str(n),
-                    outfile,
+                    outfile_base,
                 )
             )
         else:
@@ -650,17 +656,15 @@ def main():
 
             rep = str(i + 1).zfill(digits)
             modified_outfile_path = os.path.join(dirname, f"{basename}_rep{rep}{ext}")
-
-            # modified_outfile = outfile.rsplit("/")
-            # modified_outfile[-1] = "rep" + str(i + 1) + "_" + modified_outfile[-1]
-            # modified_outfile = "/".join(modified_outfile)
             bedshifter.to_bed(modified_outfile_path)
+
             pct_finished = int((100 * (i + 1)) / args.repeat)
-            if i+1 in pct_reports:
-                _LOGGER.info(f"Rep {i+1}. Finished: {pct_finished}%. Output file: {modified_outfile_path}")
+            if i + 1 in pct_reports:
+                _LOGGER.info(
+                    f"Rep {i+1}. Finished: {pct_finished}%. Output file: {modified_outfile_path}"
+                )
 
         bedshifter.reset_bed()
-
 
 
 if __name__ == "__main__":
