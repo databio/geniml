@@ -12,6 +12,7 @@ class TestBedshift(unittest.TestCase):
     def test_read_bed(self):
         reader = bedshift.Bedshift('tests/header_test.bed')
         self.assertTrue(list(reader.bed.columns), [0,1,2,3])
+        self.assertTrue(list(reader.bed.index), [0,1,2])
 
     def test_read_chrom_sizes(self):
         self.bs._read_chromsizes("tests/hg19.chrom.sizes")
@@ -130,7 +131,7 @@ class TestBedshiftYAMLHandler(unittest.TestCase):
 
         added = bedshifter.add(addrate=0.1, addmean=100, addstdev=20)
         f_drop_10 = bedshifter.drop_from_file(fp="tests/test.bed", droprate=0.1)
-        f_shift_30 = bedshifter.shift_from_file(fp="tests/bedshifted_test.bed",
+        f_shift_30 = bedshifter.shift_from_file(fp="tests/test2.bed",
                                             shiftrate=0.50,
                                             shiftmean=100,
                                             shiftstdev=200)

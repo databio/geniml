@@ -414,6 +414,7 @@ class Bedshift(object):
         self.bed = self.bed.drop(indices_of_overlap_regions)
         return num_drop
 
+
     def set_seed(self, seednum):
         try:
             seednum = int(seednum)
@@ -422,6 +423,7 @@ class Bedshift(object):
         except ValueError:
             _LOGGER.error("Seed should be an integer, not {}.".format(type(seednum)))
             sys.exit(1)
+
 
     def _find_overlap(self, fp, reference=None):
         """
@@ -526,6 +528,7 @@ class Bedshift(object):
                 n += self.drop(droprate)
 
         return n
+
 
     def to_bed(self, outfile_name):
         """

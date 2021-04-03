@@ -11,7 +11,7 @@ Install from local repository: `pip install .`
 Run with:
 
 ```
-bedshift -l hg38.chrom.sizes -b BEDFILE
+bedshift -l tests/hg38.chrom.sizes -b tests/test.bed
 ```
 
 See `bedshift -h` for parameters.
