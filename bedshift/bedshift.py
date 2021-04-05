@@ -414,6 +414,17 @@ class Bedshift(object):
         self.bed = self.bed.drop(indices_of_overlap_regions)
         return num_drop
 
+
+    def set_seed(self, seednum):
+        try:
+            seednum = int(seednum)
+            random.seed(seednum)
+            np.random.seed(seednum)
+        except ValueError:
+            _LOGGER.error("Seed should be an integer, not {}.".format(type(seednum)))
+            sys.exit(1)
+
+
     def _find_overlap(self, fp, reference=None):
         """
         Find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file.
@@ -468,6 +479,7 @@ class Bedshift(object):
         droprate=0.0,
         dropfile=None,
         yaml=None,
+        seed=None,
     ):
         """
         Perform all five perturbations in the order of shift, add, cut, merge, drop.
@@ -487,8 +499,11 @@ class Bedshift(object):
         :param str dropfile: the file containing regions to be dropped
         :param str yaml: the yaml_config filepath
         :param bedshift.Bedshift bedshifter: Bedshift instance
+        :param int seed: a seed for allowing reproducible perturbations
         :return int: the number of total regions perturbed
         """
+        if seed:
+            self.set_seed(seed)
         if yaml:
             return BedshiftYAMLHandler.BedshiftYAMLHandler(self, yaml).handle_yaml()
         n = 0
@@ -511,7 +526,9 @@ class Bedshift(object):
                 n += self.drop_from_file(dropfile, droprate)
             else:
                 n += self.drop(droprate)
+
         return n
+
 
     def to_bed(self, outfile_name):
         """
@@ -614,6 +631,7 @@ def main():
             outputfile=outfile_base,
             repeat=args.repeat,
             yaml_config=args.yaml_config,
+            seed=args.seed
         )
     )
 
@@ -638,6 +656,7 @@ def main():
             args.droprate,
             args.dropfile,
             args.yaml_config,
+            args.seed
         )
         if args.repeat == 1:
             bedshifter.to_bed(outfile_base)
