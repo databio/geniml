@@ -118,6 +118,12 @@ def build_argparser():
         help="run yaml configuration file",
     )
 
+    parser.add_argument(
+        "--seed",
+        default=None,
+        help="an integer-valued seed for allowing reproducible perturbations",
+        )
+
     return parser
 
 
@@ -141,4 +147,5 @@ param_msg = """Params:
   outputfile: {outputfile}
   repeat: {repeat}
   yaml_config: {yaml_config}
+  seed: {seed}
 """
