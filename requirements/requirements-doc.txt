@@ -1,3 +1,3 @@
-cython
+https://github.com/nsheff/sorted_nearest/archive/refs/heads/master.zip
 https://github.com/databio/mkdocs-databio/archive/master.zip
 https://github.com/databio/bedshift/archive/master.zip
