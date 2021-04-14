@@ -1,3 +1,4 @@
+Cython
 logmuse
 pandas
 numpy
