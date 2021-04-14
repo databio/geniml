@@ -1,4 +1,4 @@
 logmuse
 pandas
 numpy
-pyranges
+pyranges>=0.0.95
