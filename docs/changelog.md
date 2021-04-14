@@ -2,7 +2,13 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format.
 
-## [1.1.0] - released Apr 2, 2021
+
+## [1.1.1] - 2021-04-15
+
+- Updated documentation
+- Fixed dependencies packaging for building documentation
+
+## [1.1.0] - 2021-04-02
 
 - Added ability to specify chrom sizes file, or refgenie genome.
 - Add perturbation will create regions proportional to chromosome size
@@ -13,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improved testing framework
 - Improved logging messages
 
-## [1.0.0] - released May 20, 2020
+## [1.0.0] - 2020-05-20
 
 - Add, shift, drop, cut, and merge perturbations.
 - Basic documentation
