@@ -1,4 +1,6 @@
+Cython
 logmuse
 pandas
 numpy
 pyranges>=0.0.95
+sorted_nearest>=0.0.31
