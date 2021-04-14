@@ -4,7 +4,7 @@ site_url: http://code.databio.org/bedshift/
 repo_url: http://github.com/databio/bedshift
 theme: databio
 pypi_name: bedshift
-paper_link: http://10.1101/2020.11.11.378554v1
+paper_link: https://doi.org/10.1101/2020.11.11.378554
 
 nav:
   - Introduction:
