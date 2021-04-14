@@ -1,2 +1,3 @@
+cython
 https://github.com/databio/mkdocs-databio/archive/master.zip
 https://github.com/databio/bedshift/archive/master.zip
