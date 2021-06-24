@@ -51,8 +51,8 @@ def main():
     _LOGGER.info("Constructing document dictionary")
     documents = build_dict(df)
     replace_keys(documents, names)
-    regions = (feats['chr'] + " " + feats['start'].astype(str) +
-               " " + feats['end'].astype(str))
+    regions = (feats['0'] + " " + feats['1'].astype(str) +
+               " " + feats['2'].astype(str))
     regions = regions.tolist()
     replace_values(documents, regions)
 

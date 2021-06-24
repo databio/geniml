@@ -45,7 +45,7 @@ def build_argparser():
     parser.add_argument("--model", dest="model", default=None,
                         help="Path to Word2Vec model.",)
 
-    parser.add_argument("--embed", dest="embed", default=None,
+    parser.add_argument("--embed", dest="embed_file", default=None,
                         help="Path to document embeddings dictionary.",)
 
     parser.add_argument("--nothreads", dest="nothreads", default=1,
