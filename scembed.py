@@ -105,7 +105,7 @@ def UMAP_plot(data_X, y, title, nn, filename, umet,
                     target_n_neighbors=-1, target_weight=0.5,
                     transform_queue_size=4.0, transform_seed=42,
                     unique=False, verbose=False)
-    _LOGGER(f'-- Fitting UMAP data --')
+    _LOGGER.info(f'-- Fitting UMAP data --')
     # For UMAP,`pip install --user --upgrade pynndescent` for large data
     ump.fit(data_X)
     ump_data = pd.DataFrame(ump.transform(data_X))
@@ -113,7 +113,7 @@ def UMAP_plot(data_X, y, title, nn, filename, umet,
                             'UMAP 2':ump_data[1],
                             title:y})
     ump_data.to_csv(filename, index=False)
-    _LOGGER(f'-- Saved UMAP data as {filename} --')
+    _LOGGER.info(f'-- Saved UMAP data as {filename} --')
     fig, ax = plt.subplots(figsize=(8,6.4))
     plt.rc('font', size=11)
     plate =(sns.color_palette("husl", n_colors=len(set(y))))

@@ -1,7 +1,9 @@
 import logging
 import sys
 import os
-import logmuse 
+import logmuse
+from gensim.models import Word2Vec
+import pandas as pd
 
 from .argparser import build_argparser
 from ._version import __version__
@@ -44,21 +46,18 @@ def main():
         _LOGGER.info(f"Loaded {args.docs}")
     else:
         df = load_data(filename=args.input, header=[0,1,2])
-
-    names = load_data(filename=args.names)
-    feats = load_data(filename=args.coords)
-    
-    _LOGGER.info("Constructing document dictionary")
-    documents = build_dict(df)
-    replace_keys(documents, names)
-    regions = (feats['0'] + " " + feats['1'].astype(str) +
-               " " + feats['2'].astype(str))
-    regions = regions.tolist()
-    replace_values(documents, regions)
-
-    docs_filename = os.path.join(args.output, args.title + "_vaex_documents.pkl")
-    save_dict(documents, docs_filename)
-    _LOGGER.info(f'Saved documents as {docs_filename}')
+        _LOGGER.info("Constructing document dictionary")
+        documents = build_dict(df)
+        names = load_data(filename=args.names)
+        feats = load_data(filename=args.coords)
+        replace_keys(documents, names)
+        regions = (feats['0'] + " " + feats['1'].astype(str) + " " +
+                   feats['2'].astype(str))
+        regions = regions.tolist()
+        replace_values(documents, regions)
+        docs_filename = os.path.join(args.output, args.title + "_vaex_documents.pkl")
+        save_dict(documents, docs_filename)
+        _LOGGER.info(f'Saved documents as {docs_filename}')
 
     if args.model:
         model = Word2Vec.load(args.model)
