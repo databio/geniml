@@ -48,6 +48,10 @@ def build_argparser():
     parser.add_argument("--embed", dest="embed_file", default=None,
                         help="Path to document embeddings dictionary.",)
 
+    parser.add_argument("--label-delimiter", dest="label_delimiter",
+                        default="_",
+                        help="Delimiter used to split cell names.",)
+
     parser.add_argument("--nothreads", dest="nothreads", default=1,
                         help="Number of available processors for  "
                              "Word2Vec training.",)

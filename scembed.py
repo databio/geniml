@@ -62,9 +62,12 @@ def shuffling(documents, shuffle_repeat):
 
 
 def train_Word2Vec(documents, window_size = 100,
-                  dim = 100, min_count = 10, nothreads = 1):
+                   dim = 128, min_count = 10, nothreads = 1):
     """
     Train word2vec algorithm
+    
+    dim == size (set to a multiple of 4 ideally). In general, more data
+           means that you can go for a bigger size.
     """
     # sg=0 Training algorithm: 1 for skip-gram; otherwise CBOW.
     message = (
@@ -80,10 +83,10 @@ def train_Word2Vec(documents, window_size = 100,
 
 
 # preprocess the labels
-def label_preprocessing(y):
+def label_preprocessing(y, delim):
     y_cell = []
     for y1 in y:
-        y_cell.append(y1.split('_')[0])
+        y_cell.append(y1.split(delim)[0])
     return y_cell
 
 
@@ -122,8 +125,30 @@ def UMAP_plot(data_X, y, title, nn, filename, umet,
                     data=ump_data, #.sort_values(by = title),
                     rasterized=rasterize)
     # TODO: only label a subset of the samples...
-    plt.legend(bbox_to_anchor=(1.1,1), loc="upper right", fontsize =  11,
-               markerscale=2, edgecolor = 'black')
+    # bbox_to_anchor(xpos, ypos)
+    # See: https://stackoverflow.com/questions/30413789/matplotlib-automatic-legend-outside-plot
+    lgd = plt.legend(bbox_to_anchor=(1.01, 1), loc='upper left', fontsize =  11,
+                     markerscale=2, edgecolor = 'black')
+    plt.gcf().canvas.draw()
+    #Then define the transformation to go from pixel coordinates to Figure coordinates:
+    invFigure = plt.gcf().transFigure.inverted()
+    # Next, get the legend extents in pixels and convert to Figure coordinates.
+    # Pull out the farthest extent in the x direction since that is the canvas
+    # direction we need to adjust:
+    lgd_pos = lgd.get_window_extent()
+    lgd_coord = invFigure.transform(lgd_pos)
+    lgd_xmax = lgd_coord[1, 0]
+    # Do the same for the Axes:
+    ax_pos = plt.gca().get_window_extent()
+    ax_coord = invFigure.transform(ax_pos)
+    ax_xmax = ax_coord[1, 0]
+    # Finally, adjust the Figure canvas using tight_layout for the proportion
+    # of the Axes that must move over to allow room for the legend to fit 
+    # within the canvas:
+    shift = 1 - (lgd_xmax - ax_xmax)
+    plt.gcf().tight_layout(rect=(0, 0, shift, 1))
+    #plt.legend(bbox_to_anchor=(1.1,1), loc="upper right", fontsize =  11,
+    #           markerscale=2, edgecolor = 'black')
     return fig
 
 

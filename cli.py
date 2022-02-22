@@ -98,7 +98,7 @@ def main():
 
     x = pd.DataFrame(embeddings).values
     y = list(embeddings.keys())
-    y = label_preprocessing(y)
+    y = label_preprocessing(y, args.label_delimiter)
 
     _LOGGER.info(f'Generating plot.')
     coordinates_csvfile = os.path.join(
