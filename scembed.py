@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Dict, Iterable, List
 from six.moves import cPickle as pickle #for performance
 from gensim.models import Word2Vec
 from numba import config, threading_layer
@@ -14,6 +14,7 @@ from logging import getLogger
 import sys
 import umap
 import vaex
+from tqdm import tqdm
 
 import scanpy as sc
 
@@ -185,7 +186,9 @@ def build_dict(mtx, SIZE=100_000):
             row, col, entry = x.as_py().split()
             _LOGGER.debug(f"{row}, {col}, {entry}")
             if col not in documents:
+                # create a new cell key
                 documents[str(col)] = []
+            # append the value for that
             val = sys.intern(row)
             documents[col].append(val)
     return documents
@@ -204,10 +207,11 @@ def replace_keys(a_dict, new_keys):
 def replace_values(a_dict, new_values):
     for key in list(a_dict.keys()):
         try:
+            # convert to ints
             int_list = list(map(int, a_dict[key]))
             a_dict[key] = [sys.intern(new_values[i-1]) for i in int_list]
         except:
-            e = sys.exc_info()[0]
+            err = sys.exc_info()[0]
             _LOGGER.error(f"err: {err}")
             pass
 
@@ -231,3 +235,45 @@ def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
     :param str path_to_h5ad: the path to the h5ad file made with scanpy
     """
     return sc.read_h5ad(path_to_h5ad)
+
+def extract_region_list(region_df: pd.DataFrame) -> List[str]:
+    """
+    Parse the `var` attribute of the scanpy.AnnData object and
+    return a list of regions from the matrix
+
+    :param pandas.DataFrame region_df: the regions dataframe to parse
+    """
+    regions_parsed = []
+    for r in tqdm(region_df.iterrows()):
+        r_dict = r[1].to_dict()
+        regions_parsed.append(
+            " ".join([r_dict['chr'], str(r_dict['start']), str(r_dict['end'])])
+        )
+    return regions_parsed
+
+def extract_cell_list(cell_df: pd.DataFrame) -> List[str]:
+    """
+    Parses the `obs` attribute of the scanpy.AnnData object and
+    returns a list of the cell identifiers.
+
+    :param cell_df pandas.DataFrame: the cell dataframe to parse
+    """
+    cells_parsed = []
+    for c in tqdm(cell_df.iterrows()):
+        c_dict = c[1].to_dict()
+        cells_parsed.append(c_dict['cell_type'])
+
+def convert_anndata_to_documents(anndata: sc.AnnData) -> Dict[str, List[str]]:
+    """
+    Parses the scanpy.AnnData object to create the required "documents" object for
+    training the Word2Vec model.
+
+    :param scanpy.AnnData anndata: the AnnData object to parse.
+    """
+    regions = extract_region_list(anndata.var)
+    cells = extract_cell_list(anndata.obs)
+    sc_df = anndata.to_df()
+    _docs = {}
+    _LOGGER.info("Generating documents.")
+    for cell in sc_df.iterrows():
+        pass

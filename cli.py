@@ -52,24 +52,35 @@ def main():
 
         # builds a dictionary with a key for row (cell) as an index. ('0', '50', '1456', ... i)
         # corresponding to the i^th cell in the matrix
-        # it appends a list of values down the row for the entry in that matrix correspodning to that column
+        # it appends a list of regions for which that cell has data (only shows up in .mtx if not zero)
         # it might look something like:
         #  {
-        #    '0': [1, 0, 1, 0, 2, 0, 0, 0, ...],
-        #    '1': [0, 0, 2, 1, 2, 0, 0, 1, ...]
+        #    '0': [3, 5, 6, 20, 22, 34, ...],
+        #    '1': [7, 8, 9, 25, 26, 27, ...]
         #  }
-        # This basically creates a **bed file** represented as a list. And the j^th index in the
+        # This basically creates a **bed file** represented as a list. And each entry in the list
+        # is correponds to an index of all the region available
         # list corresponds to the j^th region in the universe or the consensus peak set.
         documents = build_dict(df)
 
         # load in the names of the cells and the feature annotations (regions)
         names = load_data(filename=args.names)
         feats = load_data(filename=args.coords)
+
+        # replaces the dictionary keys with the actual cell names
         replace_keys(documents, names)
+
+        # generate a list of regions ("chr start end")
         regions = (feats['0'] + " " + feats['1'].astype(str) + " " +
                    feats['2'].astype(str))
         regions = regions.tolist()
+
+        # replaces the values in the lists with the actual region name
         replace_values(documents, regions)
+
+        ## NATHAN L STUFF HERE:
+        documents = parse_anndata()
+
         docs_filename = os.path.join(args.output, args.title + "_vaex_documents.pkl")
         save_dict(documents, docs_filename)
         _LOGGER.info(f'Saved documents as {docs_filename}')
