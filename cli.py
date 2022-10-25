@@ -45,9 +45,24 @@ def main():
         documents = load_dict(args.docs)
         _LOGGER.info(f"Loaded {args.docs}")
     else:
+        # loads in the feature matrix (sprase and mostly 1's and 0's)
+        # The matrix gets read in with **regions** as rows, and **cells** as columns
         df = load_data(filename=args.input, header=[0,1,2])
         _LOGGER.info("Constructing document dictionary")
+
+        # builds a dictionary with a key for row (cell) as an index. ('0', '50', '1456', ... i)
+        # corresponding to the i^th cell in the matrix
+        # it appends a list of values down the row for the entry in that matrix correspodning to that column
+        # it might look something like:
+        #  {
+        #    '0': [1, 0, 1, 0, 2, 0, 0, 0, ...],
+        #    '1': [0, 0, 2, 1, 2, 0, 0, 1, ...]
+        #  }
+        # This basically creates a **bed file** represented as a list. And the j^th index in the
+        # list corresponds to the j^th region in the universe or the consensus peak set.
         documents = build_dict(df)
+
+        # load in the names of the cells and the feature annotations (regions)
         names = load_data(filename=args.names)
         feats = load_data(filename=args.coords)
         replace_keys(documents, names)

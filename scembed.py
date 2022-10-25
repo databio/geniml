@@ -1,3 +1,4 @@
+from typing import Iterable
 from six.moves import cPickle as pickle #for performance
 from gensim.models import Word2Vec
 from numba import config, threading_layer
@@ -13,6 +14,8 @@ from logging import getLogger
 import sys
 import umap
 import vaex
+
+import scanpy as sc
 
 from .const import *
 
@@ -61,13 +64,21 @@ def shuffling(documents, shuffle_repeat):
     return training_samples
 
 
-def train_Word2Vec(documents, window_size = 100,
-                   dim = 128, min_count = 10, nothreads = 1):
+def train_Word2Vec(
+    documents: Iterable[Iterable[str]], 
+    window_size: int = 100,
+    dim: int = 128, 
+    min_count: int = 10, 
+    nothreads: int = 1
+):
     """
-    Train word2vec algorithm
+    Train the Word2Vec algorithm on the region's
     
-    dim == size (set to a multiple of 4 ideally). In general, more data
-           means that you can go for a bigger size.
+    :param Iterable[Iterable[str]] documents: this is the list of lists of regions that are to be shuffled
+    :param int window_size: the context window size for the algorithm when training.
+    :param int dim: the embeddings vector dimensionality.
+    :param int min_count: Ignores all regions with total frequency lower than this.
+    :param int nothreads: number of threads to train with.
     """
     # sg=0 Training algorithm: 1 for skip-gram; otherwise CBOW.
     message = (
@@ -170,6 +181,7 @@ def build_dict(mtx, SIZE=100_000):
     documents = {}
     for i1, i2, chunk in mtx.evaluate_iterator(mtx[:,0], chunk_size=SIZE):
         for x in chunk:
+            # region, cell, value
             row, col, entry = x.as_py().split()
             _LOGGER.debug(f"{row}, {col}, {entry}")
             if col not in documents:
@@ -210,3 +222,12 @@ def load_data(filename, header=None, SIZE=5_000_000):
                              chunk_size=SIZE, copy_index=False,
                              header=header)
     return data
+
+def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
+    """
+    Load in the h5ad file that holds all of the information
+    for our single-cell data with scanpy.
+
+    :param str path_to_h5ad: the path to the h5ad file made with scanpy
+    """
+    return sc.read_h5ad(path_to_h5ad)
