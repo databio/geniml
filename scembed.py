@@ -263,6 +263,16 @@ def extract_cell_list(cell_df: pd.DataFrame) -> List[str]:
         c_dict = c[1].to_dict()
         cells_parsed.append(c_dict['cell_type'])
 
+def remove_zero_regions(cell_dict: Dict[str, int]) -> Dict[str, int]:
+    """
+    Removes any key-value pairs in a dictionary where the value (copy number)
+    is equal to zero (no signal). This is done using dictionary comprehension
+    as it is much faster.
+
+    :param cell_dict Dict[str, int]: the cell dictionary with region index keys and copy number values
+    """
+    return {k: v for k, v in cell_dict.items() if v > 0}
+
 def convert_anndata_to_documents(anndata: sc.AnnData) -> Dict[str, List[str]]:
     """
     Parses the scanpy.AnnData object to create the required "documents" object for
@@ -270,10 +280,19 @@ def convert_anndata_to_documents(anndata: sc.AnnData) -> Dict[str, List[str]]:
 
     :param scanpy.AnnData anndata: the AnnData object to parse.
     """
-    regions = extract_region_list(anndata.var)
-    cells = extract_cell_list(anndata.obs)
+    regions_parsed = extract_region_list(anndata.var)
+    cells_parsed = extract_cell_list(anndata.obs)
     sc_df = anndata.to_df()
     _docs = {}
     _LOGGER.info("Generating documents.")
-    for cell in sc_df.iterrows():
-        pass
+
+    for indx, row in tqdm(enumerate(sc_df.iterrows())):
+        row_dict = row[1].to_dict()
+        cell_label = cells_parsed[indx]
+        _docs[cell_label] = []
+        row_dict = remove_zero_regions(row_dict)
+        for region_indx in row_dict:
+            region_str = regions_parsed[int(region_indx)]
+            _docs[cell_label].append(region_str)
+    
+    return _docs
