@@ -22,12 +22,12 @@ def build_argparser():
                         help="Path to MarketMatrix format count matrix.",)
 
     parser.add_argument("-n", "--names", default=None, type=str,
-                        required=True,
+                        required=False,
                         help="Path to sample/barcodes names in a single "
                              "column tab-delimited format.",)
 
     parser.add_argument("-c", "--coords", default=None, type=str,
-                        required=True,
+                        required=False,
                         help="Path to sample/barcodes coordinates in a "
                              "chr, start, end tab-delimited format.",)
 
@@ -66,6 +66,9 @@ def build_argparser():
 
     parser.add_argument("--window-size", dest="window_size", default=100,
                         help="Word2Vec window size.",)
+
+    parser.add_argument("--epochs", dest="epochs", default=30,
+                        help="Number of epochs for training",)
 
     parser.add_argument("--dimension", dest="dimension", default=100,
                         help="Number of dimensions to train the word2vec "
