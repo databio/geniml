@@ -88,7 +88,7 @@ def train_Word2Vec(
     )
     _LOGGER.debug(message)
     model = Word2Vec(sentences=documents, window=window_size,
-                     vector_size=dim, min_count=min_count,
+                     size=dim, min_count=min_count,
                      workers=nothreads)
     return model
 
