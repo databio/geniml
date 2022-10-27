@@ -8,7 +8,7 @@ import pandas as pd
 from .argparser import build_argparser
 from ._version import __version__
 from .const import *
-from .scembed import embedding_avg, document_embedding_avg, shuffling, train_Word2Vec, label_preprocessing, UMAP_plot, save_dict, load_dict, build_dict, replace_keys, replace_values, load_data
+from .scembed import convert_anndata_to_documents, embedding_avg, document_embedding_avg, load_scanpy_data, shuffling, train_Word2Vec, label_preprocessing, UMAP_plot, save_dict, load_dict, build_dict, replace_keys, replace_values, load_data
 
 def main():
     """ MAIN """  
@@ -45,43 +45,13 @@ def main():
         documents = load_dict(args.docs)
         _LOGGER.info(f"Loaded {args.docs}")
     else:
-        # loads in the feature matrix (sprase and mostly 1's and 0's)
-        # The matrix gets read in with **regions** as rows, and **cells** as columns
-        df = load_data(filename=args.input, header=[0,1,2])
-        _LOGGER.info("Constructing document dictionary")
+        # load AnnData object
+        sc_data = load_scanpy_data(args.input)
 
-        # builds a dictionary with a key for row (cell) as an index. ('0', '50', '1456', ... i)
-        # corresponding to the i^th cell in the matrix
-        # it appends a list of regions for which that cell has data (only shows up in .mtx if not zero)
-        # it might look something like:
-        #  {
-        #    '0': [3, 5, 6, 20, 22, 34, ...],
-        #    '1': [7, 8, 9, 25, 26, 27, ...]
-        #  }
-        # This basically creates a **bed file** represented as a list. And each entry in the list
-        # is correponds to an index of all the region available
-        # list corresponds to the j^th region in the universe or the consensus peak set.
-        documents = build_dict(df)
+        # re-create documents dictionary
+        documents = convert_anndata_to_documents(sc_data)
 
-        # load in the names of the cells and the feature annotations (regions)
-        names = load_data(filename=args.names)
-        feats = load_data(filename=args.coords)
-
-        # replaces the dictionary keys with the actual cell names
-        replace_keys(documents, names)
-
-        # generate a list of regions ("chr start end")
-        regions = (feats['0'] + " " + feats['1'].astype(str) + " " +
-                   feats['2'].astype(str))
-        regions = regions.tolist()
-
-        # replaces the values in the lists with the actual region name
-        replace_values(documents, regions)
-
-        ## NATHAN L STUFF HERE:
-        documents = parse_anndata()
-
-        docs_filename = os.path.join(args.output, args.title + "_vaex_documents.pkl")
+        docs_filename = os.path.join(args.output, args.title + "_documents.pkl")
         save_dict(documents, docs_filename)
         _LOGGER.info(f'Saved documents as {docs_filename}')
 

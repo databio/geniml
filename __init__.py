@@ -19,4 +19,9 @@ __all__ = [
     "replace_keys",
     "replace_values",
     "load_data",
+    "load_scanpy_data",
+    "extract_region_list",
+    "extract_cell_list",
+    "remove_zero_regions",
+    "convert_anndata_to_documents"
 ]

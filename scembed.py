@@ -13,7 +13,6 @@ import os
 from logging import getLogger
 import sys
 import umap
-import vaex
 from tqdm import tqdm
 
 import scanpy as sc
@@ -215,18 +214,6 @@ def replace_values(a_dict, new_values):
             _LOGGER.error(f"err: {err}")
             pass
 
-
-def load_data(filename, header=None, SIZE=5_000_000):
-    _LOGGER.debug(f"Loading {filename}")
-    if os.path.exists(filename + ".hdf5"):
-        data = vaex.open(filename + ".hdf5")
-    else:
-        # initialize
-        data = vaex.from_csv(filename, sep="\t", convert=True,
-                             chunk_size=SIZE, copy_index=False,
-                             header=header)
-    return data
-
 def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
     """
     Load in the h5ad file that holds all of the information
@@ -261,7 +248,8 @@ def extract_cell_list(cell_df: pd.DataFrame) -> List[str]:
     cells_parsed = []
     for c in tqdm(cell_df.iterrows()):
         c_dict = c[1].to_dict()
-        cells_parsed.append(c_dict['cell_type'])
+        cells_parsed.append(c_dict['cell-annotation'])
+    return cells_parsed
 
 def remove_zero_regions(cell_dict: Dict[str, int]) -> Dict[str, int]:
     """
