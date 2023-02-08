@@ -1,0 +1,1 @@
+PKG_NAME="gitk"
