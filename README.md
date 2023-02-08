@@ -11,7 +11,7 @@ pip install --user --upgrade .
 
 This is a suite of related tools, divided into sub-modules which have have their own folder:
 
-- `gitk/hmm` - Building HMMs
+- [gitk/hmm](gitk/hmm) - Building HMMs
 - `gitk/assess` - Assess universe fit
 - `gitk/likelihood` - Calculate likelihood of universe
 
