@@ -14,8 +14,9 @@ This repo is divided into modules:
 
 Each module corresponds to a CLI command (*e.g* `gitk hmm` or `gitk likelihood`), with the corresponding code contained within a sub-folder named after the model. Inside each sub-folder is also:
 
-- a `cli.py` file that defines the command-line interface and provides an argparser.
-- a `README.md` file that describes how to use the code
+- `cli.py` - defines the command-line interface and provides a subparser for this module's CLI command.
+- `README.md` - describes how to use the code
+- `<module>.py`, and other `.py` files - functions that provide utility for this module.
 
 ## Install
 
@@ -35,4 +36,12 @@ gitk <module> ...
 
 Any variables, functions, or other code that is shared across modules should be placed in the parent module, which is held in the [gitk](gitk) folder.
 
+## Using from within Python
 
+All the functions should be written in a way that they can be used either through the CLI, or via an import, using `gitk.<module>.<function>`, like:
+
+```
+import gitk
+
+gitk.hmm.function()
+```
