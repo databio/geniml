@@ -24,9 +24,23 @@ Each module corresponds to a CLI command (*e.g* `gitk hmm` or `gitk likelihood`)
 pip install --user --upgrade .
 ```
 
-## Run
+## Using the tools
 
-You can run the modules then with
+The functionality should be written in a way that it provides utility as a Python library. Then, in addition, some subset of the utility can be provided by CLI-access.
+
+### From within Python
+
+All the functions should be written to be useful via import, calling with `gitk.<module>.<function>`. For example:
+
+```
+import gitk
+
+gitk.hmm.function()
+```
+
+### From the CLI
+
+For the modules where it makes sense, they should also be runnable on the CLI, like this:
 
 ```
 gitk <module> ...
@@ -36,12 +50,4 @@ gitk <module> ...
 
 Any variables, functions, or other code that is shared across modules should be placed in the parent module, which is held in the [gitk](gitk) folder.
 
-## Using from within Python
 
-All the functions should be written in a way that they can be used either through the CLI, or via an import, using `gitk.<module>.<function>`, like:
-
-```
-import gitk
-
-gitk.hmm.function()
-```
