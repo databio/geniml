@@ -17,7 +17,6 @@ Each module corresponds to a CLI command (*e.g* `gitk hmm` or `gitk likelihood`)
 - a `cli.py` file that defines the command-line interface and provides an argparser.
 - a `README.md` file that describes how to use the code
 
-
 ## Install
 
 ```
@@ -31,4 +30,9 @@ You can run the modules then with
 ```
 gitk <module> ...
 ```
+
+## Shared code
+
+Any variables, functions, or other code that is shared across modules should be placed in the parent module, which is held in the [gitk](gitk) folder.
+
 
