@@ -25,14 +25,14 @@ def distance(r, q):
 def asses(db, db_que, i, current_chrom, unused_db, pos_index, flexible):
     """
     Calculate distance from given peak to the closest region in universe
-    :param db: universe file
-    :param db_que: que of three last positions in universe
-    :param i: analysed position from the query
-    :param current_chrom: current analysed chromosome from query
-    :param unused_db: list of positions from universe that were not compared to query
-    :param pos_index: which indexes from universe region use to calculate distance
-    :param flexible: whether the universe if flexible
-    :return: peak distance to universe
+    :param file db: universe file
+    :param list db_que: que of three last positions in universe
+    :param int i: analysed position from the query
+    :param str current_chrom: current analysed chromosome from query
+    :param list unused_db: list of positions from universe that were not compared to query
+    :param list pos_index: which indexes from universe region use to calculate distance
+    :param bool flexible: whether the universe if flexible
+    :return int: peak distance to universe
     """
     if flexible:
         dist_to_db_que = [flexible_distance(j, i) for j in db_que]
@@ -67,7 +67,7 @@ def process_line(db, q_chrom, current_chrom, unused_db, db_que,
     :param list unused_db: list of positions from universe that were not compared to query
     :param list db_que: que of three last positions in universe
     :param list dist: list of all calculated distances
-    :param boolean waiting: whether iterating through file, without calculating
+    :param bool waiting: whether iterating through file, without calculating
      distance,  if present chromosome not present in universe
     :param start: analysed position from the query
     :param pos_index: which indexes from universe region use to calculate distance
@@ -84,6 +84,8 @@ def process_line(db, q_chrom, current_chrom, unused_db, db_que,
             while current_chrom == d_start_chrom:
                 # finish reading old chromosome in DB file
                 d = db.readline().strip("\n")
+                if d == "":
+                    break
                 d_start, d_start_chrom = process_db_line(d, pos_index)
             unused_db.append([d_start, d_start_chrom])
         current_chrom = q_chrom
@@ -106,6 +108,8 @@ def process_line(db, q_chrom, current_chrom, unused_db, db_que,
                 unused_db.append([d_start, d_start_chrom])
                 waiting = True
                 return waiting, current_chrom
+    if len(db_que) == 0:
+        waiting = True
     if not waiting:
         res = asses(db, db_que, start, current_chrom, unused_db,
                     pos_index, flexible)
@@ -121,7 +125,7 @@ def calc_distance(db_file, q_folder, q_file, flexible=False,
     :param str q_folder: path to folder containing query files
     :param str q_file: query file
     :param boolean flexible: whether the universe if flexible
-    :param boolean save_each: whether to save calculated distances for each file
+    :param bool save_each: whether to save calculated distances for each file
     :param str folder_out: output folder
     :param str pref: prefix used as the name of the folder
      containing calculated distance for each file
@@ -181,11 +185,11 @@ def run_distance(folder, file_list, universe, npool, flexible,
     :param str file_list: path to file containing list of query files
     :param str universe: path to universe file
     :param int npool: number of parallel processes
-    :param boolean flexible: whether the universe if flexible
-    :param boolean save_to_file: whether to save median of calculated distances for each file
+    :param bool flexible: whether the universe if flexible
+    :param bool save_to_file: whether to save median of calculated distances for each file
     :param str folder_out: output folder
     :param str pref: prefix used for saving
-    :param boolean save_each: whether to save calculated distances for each file
+    :param bool save_each: whether to save calculated distances for each file
     :return float; float: mean of median distances from starts in query to the nearest starts in universe;
     mean of median distances from ends in query to the nearest ends in universe
     """

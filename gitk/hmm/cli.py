@@ -24,9 +24,6 @@ def build_subparser(parser):
         help="if present saves maximum coverage for each peak",
         action='store_true')
     parser.add_argument(
-        "--use_npy",
-        action='store_true')
-    parser.add_argument(
         "--lambdas",
         type=str,
         help="lambdas matrix used to set emissions")

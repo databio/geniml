@@ -37,13 +37,13 @@ def relationship(region_d, region_q, only_in_d, only_in_q,
     :param list region_q: region from query
     :param int only_in_d: number of base pair only in universe
     :param int only_in_q: number of base pair only in query
-    :param boolean inside_d: whether there is still part of the region from universe to analyse
-    :param boolean inside_q: whether there is still part of the region from query to analyse
+    :param bool inside_d: whether there is still part of the region from universe to analyse
+    :param bool inside_q: whether there is still part of the region from query to analyse
     :param int overlap: size of overlap
     :param int start_d: start position of currently analysed universe region
     :param int start_q: start position of currently analysed query region
-    :param waiting_d: whether waiting for the query to finish chrom
-    :param waiting_q: whether waiting for the universe to finish chrom
+    :param bool waiting_d: whether waiting for the query to finish chrom
+    :param bool waiting_q: whether waiting for the universe to finish chrom
     """
     if waiting_q:
         only_in_d += region_d[1] - region_d[0]

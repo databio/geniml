@@ -99,7 +99,7 @@ def run_recovered(q_folder, file_list, db_file, npool,
     :param str file_list: path to file containing list of query files
     :param str db_file: path to universe file
     :param int npool: number of parallel processes
-    :param boolean save_to_file: whether to save median of calculated distances for each file
+    :param bool save_to_file: whether to save median of calculated distances for each file
     :param str folder_out: output folder
     :param str pref: prefix used for saving
     :return: mean of percent of strats covered by flexible universe;
