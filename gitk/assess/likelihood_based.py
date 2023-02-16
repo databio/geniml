@@ -68,7 +68,7 @@ def calc_likelihood_bed_all(universe, chroms, model_folder, name,
 
 
 def flexible_universe_likelihood(model_folder, universe,
-                                 start="starts", end="ends", core="core"):
+                                 start="start", end="end", core="core"):
     """
     Calculate likelihood of flexible universe based on core, start,
      end coverage model
@@ -92,7 +92,7 @@ def flexible_universe_likelihood(model_folder, universe,
 
 
 def simple_universe_likelihood(model_folder, universe,
-                               start="starts", end="ends", core="core"):
+                               start="start", end="end", core="core"):
     """
     Calculate likelihood of hard universe based on core, start,
     end coverage model

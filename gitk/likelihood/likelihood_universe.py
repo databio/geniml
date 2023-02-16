@@ -49,7 +49,11 @@ def get_uni(file, chrom, cut_off=None):
     :param int cut_off: base pairs with values grater of equal to cut-off can be included in universe
     :return: """
     file = pyBigWig.open(file)
-    track = file.values(chrom, 0, file.chroms(chrom), numpy=True)
+    if pyBigWig.numpy:
+        track = file.values(chrom, 0, file.chroms(chrom), numpy=True)
+    else:
+        track = file.values(chrom, 0, file.chroms(chrom))
+        track = np.array(track)
     track[np.isnan(track)] = 0
     track = track.astype(np.uint16)
     if cut_off is None:
@@ -97,7 +101,7 @@ def marge_filter(fout, inter_pos, chrom, merge_dist=100, size_flt=1000):
 
 
 @timer_func
-def main(file, merge, filter_size, fout,
+def main(file, fout, merge=0, filter_size=0,
          cut_off=None):
     """
     Creat cut-off universe based on coverage track
@@ -109,7 +113,7 @@ def main(file, merge, filter_size, fout,
     """
     if os.path.isfile(fout):
         raise Exception(f"File : {fout} exists")
-    bw_start = pyBigWig.open(file + ".bw")
+    bw_start = pyBigWig.open(file)
     chroms = bw_start.chroms()
     bw_start.close()
     chroms_key = list(chroms.keys())

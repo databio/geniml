@@ -157,6 +157,8 @@ def run_intersection(folder, file_list, universe, npool,
     mean of fractions of intersection of file and universe divided by file size
     """
     check_if_uni_sorted(universe)
+    if save_to_file:
+        os.makedirs(folder_out, exist_ok=True)
     os.mkdir("tmp")
     files = open(file_list).read().split("\n")[:-1]
     res = []

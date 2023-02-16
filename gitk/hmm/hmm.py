@@ -21,7 +21,7 @@ lambdas = [[3, 0.0001, 1],
            [0.05, 0.05, 2]]
 
 WINDOW_SIZE = 26
-FIX_UNIWIG = True
+FIX_UNIWIG = False
 
 
 def natural_chr_sort(a, b):
@@ -46,20 +46,24 @@ def natural_chr_sort(a, b):
 
 
 def norm(track, mode):
-    """ Normalize the coverage track depending on track type """
+    """ Normalize the coverage track depending on track type.
+    For each unique value in the track calculates the corresponding
+    quantile taking into account that values occur different number of times. """
     important_val = track[track != 0]
     important_val_unique, counts = np.unique(important_val,
                                              return_counts=True)
     uniq_dict = {i: j for i, j in zip(important_val_unique, counts)}
+    # how many times each value is present in the track
     important_val_unique_sort = np.sort(important_val_unique)
     if mode == "ends":
         n = 0.1
     if mode == "core":
         n = 0.065
-    bs = 1 / len(important_val)
-    val = {}
+    bs = 0  # what fraction of the distribution was used for normalization
+    val = {}  # for each unique value in track holds the corresponding quantile
     for i in important_val_unique_sort:
         move_val = (uniq_dict[i] / len(important_val)) / 2
+        # how far from last quantile is te next one
         val[i] = nbinom.ppf(bs + move_val, 1, n)
         bs = bs + move_val * 2
     track[track != 0] = [val[i] for i in important_val]
@@ -68,7 +72,11 @@ def norm(track, mode):
 def process_bigwig(file, seq, p, chrom, chrom_size,
                    normalize=False, mode=None, fix_uniwig=False):
     """ Preprocess bigWig file """
-    track = file.values(chrom, 0, chrom_size, numpy=True)
+    if pyBigWig.numpy:
+        track = file.values(chrom, 0, chrom_size, numpy=True)
+    else:
+        track = file.values(chrom, 0, chrom_size)
+        track = np.array(track)
     track[np.isnan(track)] = 0
     track = track.astype(np.uint16)
     if fix_uniwig and mode != "core":
@@ -199,7 +207,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
             save_start_e, save_end_s = res
             val = 0
             if save_max_cove:
-                val = coverage.stats(chrom, start_s, end_e + 1, type="max")
+                val = coverage.stats(chrom, int(start_s), int(end_e) + 1, type="max")
                 val = int(val[0])
             to_file.append(line.format(start_s, end_e + 1,
                                        'universe', val, '.',
@@ -211,7 +219,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
         save_start_e, save_end_s = res
         val = 0
         if save_max_cove:
-            val = coverage.stats(chrom, start_s, ind[-1] + 1, type="max")
+            val = coverage.stats(chrom, int(start_s), int(ind[-1]) + 1, type="max")
             val = int(val[0])
         to_file.append(line.format(start_s, ind[-1] + 1,
                                    'universe', val, '.',
@@ -262,6 +270,7 @@ def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
     chroms_key = sorted(chroms_key, key=cmp_to_key(natural_chr_sort))
     chroms = {i: chroms[i] for i in chroms_key}
     for C in chroms:
+        print(C)
         if chroms[C] > 0:
             pred, m = run_hmm(start, end, cove, C, normalize=normalize)
             hmm_pred_to_bed(

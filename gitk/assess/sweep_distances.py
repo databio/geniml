@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os
+from typing import List, Any
+
 import numpy as np
 import argparse
 from multiprocessing import Pool
@@ -80,6 +82,9 @@ def process_line(db, q_chrom, current_chrom, unused_db, db_que,
         # clean up the que
         if len(unused_db) == 0:
             d = db.readline().strip("\n")
+            if d == "":
+                waiting = True
+                return waiting, current_chrom
             d_start, d_start_chrom = process_db_line(d, pos_index)
             while current_chrom == d_start_chrom:
                 # finish reading old chromosome in DB file
@@ -173,6 +178,9 @@ def calc_distance(db_file, q_folder, q_file, flexible=False,
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
                 f.write(f"{i}\t{j}\n")
+    if not dist_start:
+        print(f"File {q_file} doesn't contain any chromosomes present in universe")
+        return q_file, None, None
     return q_file, np.median(dist_start), np.median(dist_end)
 
 
@@ -197,10 +205,12 @@ def run_distance(folder, file_list, universe, npool, flexible,
     os.mkdir("tmp")
     files = open(file_list).read().split("\n")[:-1]
     res = []
+    if folder_out:
+        os.makedirs(folder_out, exist_ok=True)
     if save_each:
         os.makedirs(os.path.join(folder_out, pref))
     if npool <= 1:
-        for i in files[:1]:
+        for i in files:
             r = calc_distance(universe, folder, i,
                               flexible, save_each,
                               folder_out, pref)
@@ -221,4 +231,4 @@ def run_distance(folder, file_list, universe, npool, flexible,
         res = np.array(res)
         res = res[:, 1:]
         res = res.astype('float')
-        return np.mean(res[:, 0]), np.mean(res[:, 1])
+        return np.nanmean(res[:, 0]), np.nanmean(res[:, 1])

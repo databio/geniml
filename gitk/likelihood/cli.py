@@ -9,10 +9,11 @@ def build_subparser_model(parser):
         '--coverage_folder',
         required=True,
         type=str)
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
         '--file_list',
         type=str)
-    parser.add_argument(
+    group.add_argument(
         '--file_no',
         type=int)
     parser.add_argument(
@@ -58,6 +59,7 @@ def build_subparser_universe(parser):
         type=int)
     parser.add_argument(
         '--fout',
+        required=True,
         type=str)
     parser.add_argument(
         '--coverage_file',
@@ -70,7 +72,7 @@ def build_subparser_universe(parser):
     return parser
 
 
-def build_mode_parser(parser):
+def build_subparser(parser):
     sp = parser.add_subparsers(dest="subcommand")
     msg_by_cmd = {
         "model": "Asses based on distance",

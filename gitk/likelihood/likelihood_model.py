@@ -28,7 +28,11 @@ def model(folderin, in_file, chrom, folderout, fout,
     in_file = os.path.join(folderin, in_file + ".bw")
     bw = pyBigWig.open(in_file)
     chrom_size = bw.chroms(chrom)
-    distr_cov = bw.values(chrom, start, chrom_size, numpy=True)
+    if pyBigWig.numpy:
+        distr_cov = bw.values(chrom, start, chrom_size, numpy=True)
+    else:
+        distr_cov = bw.values(chrom, start, chrom_size)
+        distr_cov = np.array(distr_cov)
     distr_cov[np.isnan(distr_cov)] = 0
     if WRONG_UNIWIG and ("cove" not in in_file):
         distr_cov = np.pad(distr_cov[WINDOW_SIZE:], (0, WINDOW_SIZE))

@@ -108,6 +108,8 @@ def run_recovered(q_folder, file_list, db_file, npool,
     mean of percent of regions with both ends covered by flexible universe
     """
     check_if_uni_sorted(db_file)
+    if folder_out:
+        os.makedirs(folder_out, exist_ok=True)
     os.mkdir("tmp")
     files = open(file_list).read().split("\n")[:-1]
     res = []

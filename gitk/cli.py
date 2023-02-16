@@ -8,6 +8,7 @@ from ubiquerg import VersionInHelpParser
 
 from .hmm.cli import build_subparser as hmm_subparser
 from .assess.cli import build_mode_parser as assess_subparser
+from .likelihood.cli import build_subparser as likelihood_subparser
 from ._version import __version__
 
 
@@ -42,6 +43,7 @@ def build_argparser():
 
     subparsers["hmm"] = hmm_subparser(subparsers["hmm"])
     subparsers["assess"] = assess_subparser(subparsers["assess"])
+    subparsers["lh"] = likelihood_subparser(subparsers["lh"])
 
     return parser
 
@@ -85,6 +87,7 @@ def main(test_args=None):
                           args.pref)
 
     if args.command == "lh":
+        _LOGGER.info(f"Subcommand: {args.subcommand}")
         if args.subcommand == "model":
             from .likelihood.likelihood_model import main
             main(args.model_folder, args.coverage_folder, args.coverage_starts,
@@ -94,7 +97,7 @@ def main(test_args=None):
 
         if args.subcommand == "universe":
             from .likelihood.likelihood_universe import main
-            main(args.model_folder, args.coverage_file, args.merge,
+            main(args.coverage_file, args.merge,
                  args.filter_size, args.fout, args.cut_off)
 
     if args.command == "hmm":
