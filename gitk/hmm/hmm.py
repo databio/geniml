@@ -3,6 +3,7 @@ import os
 from .models import PoissonModel
 import pyBigWig
 from scipy.stats import nbinom
+from functools import cmp_to_key
 
 from logging import getLogger
 from ..const import PKG_NAME
@@ -21,6 +22,27 @@ lambdas = [[3, 0.0001, 1],
 
 WINDOW_SIZE = 26
 FIX_UNIWIG = True
+
+
+def natural_chr_sort(a, b):
+    ac = a.replace("chr", "")
+    ac = ac.split("_")[0]
+    bc = b.replace("chr", "")
+    bc = bc.split("_")[0]
+    if bc.isnumeric() and ac.isnumeric() and bc != ac:
+        if int(bc) < int(ac):
+            return 1
+        elif int(bc) > int(ac):
+            return -1
+        else:
+            return 0
+    else:
+        if b < a:
+            return 1
+        elif a < b:
+            return -1
+        else:
+            return 0
 
 
 def norm(track, mode):
@@ -177,7 +199,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
             save_start_e, save_end_s = res
             val = 0
             if save_max_cove:
-                val = coverage.stats(chrom, start_s, ind[-1] + 1, type="max")
+                val = coverage.stats(chrom, start_s, end_e + 1, type="max")
                 val = int(val[0])
             to_file.append(line.format(start_s, end_e + 1,
                                        'universe', val, '.',
@@ -190,6 +212,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
         val = 0
         if save_max_cove:
             val = coverage.stats(chrom, start_s, ind[-1] + 1, type="max")
+            val = int(val[0])
         to_file.append(line.format(start_s, ind[-1] + 1,
                                    'universe', val, '.',
                                    save_start_e, save_end_s, '0,0,255'))
@@ -235,6 +258,9 @@ def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
     bw_start = pyBigWig.open(start + ".bw")
     chroms = bw_start.chroms()
     bw_start.close()
+    chroms_key = list(chroms.keys())
+    chroms_key = sorted(chroms_key, key=cmp_to_key(natural_chr_sort))
+    chroms = {i: chroms[i] for i in chroms_key}
     for C in chroms:
         if chroms[C] > 0:
             pred, m = run_hmm(start, end, cove, C, normalize=normalize)

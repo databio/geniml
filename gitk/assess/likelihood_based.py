@@ -4,7 +4,7 @@ from .utils import check_if_uni_sorted
 
 
 def calc_likelihood_bed_all(universe, chroms, model_folder, name,
-                            s_index, e_index=None):
+                            s_index, e_index=None, include_ends=False):
     """
     Calculate likelihood of universe for given type of model
     :param str  universe: path to universe file
@@ -49,11 +49,17 @@ def calc_likelihood_bed_all(universe, chroms, model_folder, name,
                         print(f"Chromosome {i[0]} missing from model")
                         missing_chrom = i[0]
                 if e_index is None:
-                    end = i[s_index] + 1
+                    end = i[s_index]
                 else:
                     end = i[e_index]
-                r1 = np.sum(prob_array[i[s_index]:end, 1])
-                r2 = np.sum(prob_array[empty_start:i[s_index], 0])
+                if include_ends:
+                    start = i[s_index]
+                    end = end + 1
+                else:
+                    start = i[s_index] - 1
+                    end = end
+                r1 = np.sum(prob_array[start:end, 1])
+                r2 = np.sum(prob_array[empty_start:start, 0])
                 res += r1
                 res += r2
                 empty_start = end
@@ -77,11 +83,11 @@ def flexible_universe_likelihood(model_folder, universe,
     model_files = os.listdir(model_folder)
     chroms = list(set([i.split("_")[0] for i in model_files]))
     s = calc_likelihood_bed_all(universe, chroms, model_folder, start,
-                                1, 6)
+                                1, 6, include_ends=True)
     e = calc_likelihood_bed_all(universe, chroms, model_folder, end,
-                                7, 2)
+                                7, 2, include_ends=True)
     c = calc_likelihood_bed_all(universe, chroms, model_folder, core,
-                                6, 7)
+                                6, 7, include_ends=False)
     return sum([s, e, c])
 
 
@@ -101,11 +107,11 @@ def simple_universe_likelihood(model_folder, universe,
     model_files = os.listdir(model_folder)
     chroms = list(set([i.split("_")[0] for i in model_files]))
     s = calc_likelihood_bed_all(universe, chroms, model_folder, start,
-                                1)
+                                1, include_ends=True)
     e = calc_likelihood_bed_all(universe, chroms, model_folder, end,
-                                2)
+                                2, include_ends=True)
     c = calc_likelihood_bed_all(universe, chroms, model_folder, core,
-                                1, 2)
+                                1, 2, include_ends=False)
     return sum([s, e, c])
 
 
@@ -121,5 +127,5 @@ def likelihood_only_core(model_folder, universe, core="core"):
     model_files = os.listdir(model_folder)
     chroms = list(set([i.split("_")[0] for i in model_files]))
     c = calc_likelihood_bed_all(universe, chroms, model_folder, core,
-                                1, 2)
+                                1, 2, include_ends=True)
     return c
