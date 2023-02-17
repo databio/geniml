@@ -4,6 +4,7 @@ from .models import PoissonModel
 import pyBigWig
 from scipy.stats import nbinom
 from functools import cmp_to_key
+from..utils import natural_chr_sort
 
 from logging import getLogger
 from ..const import PKG_NAME
@@ -24,25 +25,25 @@ WINDOW_SIZE = 26
 FIX_UNIWIG = False
 
 
-def natural_chr_sort(a, b):
-    ac = a.replace("chr", "")
-    ac = ac.split("_")[0]
-    bc = b.replace("chr", "")
-    bc = bc.split("_")[0]
-    if bc.isnumeric() and ac.isnumeric() and bc != ac:
-        if int(bc) < int(ac):
-            return 1
-        elif int(bc) > int(ac):
-            return -1
-        else:
-            return 0
-    else:
-        if b < a:
-            return 1
-        elif a < b:
-            return -1
-        else:
-            return 0
+# def natural_chr_sort(a, b):
+#     ac = a.replace("chr", "")
+#     ac = ac.split("_")[0]
+#     bc = b.replace("chr", "")
+#     bc = bc.split("_")[0]
+#     if bc.isnumeric() and ac.isnumeric() and bc != ac:
+#         if int(bc) < int(ac):
+#             return 1
+#         elif int(bc) > int(ac):
+#             return -1
+#         else:
+#             return 0
+#     else:
+#         if b < a:
+#             return 1
+#         elif a < b:
+#             return -1
+#         else:
+#             return 0
 
 
 def norm(track, mode):

@@ -97,8 +97,8 @@ def main(test_args=None):
 
         if args.subcommand == "universe":
             from .likelihood.likelihood_universe import main
-            main(args.coverage_file, args.merge,
-                 args.filter_size, args.fout, args.cut_off)
+            main(args.coverage_file, args.fout, args.merge,
+                 args.filter_size, args.cut_off)
 
     if args.command == "hmm":
         from .hmm.hmm import run_hmm_save_bed

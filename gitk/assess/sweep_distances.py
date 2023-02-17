@@ -9,6 +9,7 @@ import argparse
 from multiprocessing import Pool
 from .utils import process_db_line, chrom_cmp_bigger, \
     prep_data, check_if_uni_sorted
+from..utils import natural_chr_sort
 
 
 def flexible_distance(r, q):
@@ -98,7 +99,7 @@ def process_line(db, q_chrom, current_chrom, unused_db, db_que,
             waiting = False
             db_que.append(unused_db[-1][0])
             unused_db.clear()
-        elif chrom_cmp_bigger(unused_db[-1][1], current_chrom):
+        elif natural_chr_sort(unused_db[-1][1], current_chrom) == 1:
             # chrom present in file not in DB
             waiting = True
             return waiting, current_chrom
@@ -109,7 +110,7 @@ def process_line(db, q_chrom, current_chrom, unused_db, db_que,
             d_start, d_start_chrom = process_db_line(d, pos_index)
             if d_start_chrom == current_chrom:
                 db_que.append(d_start)
-            elif chrom_cmp_bigger(d_start_chrom, current_chrom):
+            elif natural_chr_sort(d_start_chrom, current_chrom) == 1:
                 unused_db.append([d_start, d_start_chrom])
                 waiting = True
                 return waiting, current_chrom

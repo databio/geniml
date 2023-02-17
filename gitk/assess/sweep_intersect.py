@@ -1,10 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .utils import process_line, prep_data, chrom_cmp, check_if_uni_sorted
+from .utils import process_line, prep_data, check_if_uni_sorted
 import os
 from multiprocessing import Pool
 import numpy as np
+from ..utils import natural_chr_sort
+
+
+def chrom_cmp(a, b):
+    """ Natural chromosome names comparison """
+    # com = natural_chr_sort(a, b)
+    # if com < 0:
+    #     return a, False, True
+    # if com == 0:
+    #     return a, False, False
+    # if com > 0:
+    #     return b, True, False
+    ac = a.replace("chr", "")
+    ac = ac.split("_")[0]
+    bc = b.replace("chr", "")
+    bc = bc.split("_")[0]
+    if bc.isnumeric() and ac.isnumeric() and bc != ac:
+        if int(bc) < int(ac):
+            return b, True, False
+        else:
+            return a, False, True
+    else:
+        if b < a:
+            return b, True, False
+        else:
+            return a, False, True
 
 
 def relationship_helper(region_a, region_b, only_in, overlap,

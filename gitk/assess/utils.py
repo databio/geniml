@@ -4,23 +4,6 @@ import shlex
 import os
 
 
-def chrom_cmp(a, b):
-    """ Natural chromosome names comparison """
-    ac = a.replace("chr", "")
-    ac = ac.split("_")[0]
-    bc = b.replace("chr", "")
-    bc = bc.split("_")[0]
-    if bc.isnumeric() and ac.isnumeric() and bc != ac:
-        if int(bc) < int(ac):
-            return b, True, False
-        else:
-            return a, False, True
-    else:
-        if b < a:
-            return b, True, False
-        else:
-            return a, False, True
-
 
 def prep_data(folder, file):
     """ File sort and merge """
@@ -57,7 +40,7 @@ def process_line(line):
     start = pos[0]
     return pos, start, chrom
 
-
+#%%
 def chrom_cmp_bigger(a, b):
     """ Natural check if chromosomes name is bigger """
     ac = a.replace("chr", "")
@@ -74,7 +57,7 @@ def chrom_cmp_bigger(a, b):
             return True
         else:
             return False
-
+#%%
 
 def process_db_line(dn, pos_index):
     """ Helper for reading in universe bed file line """
