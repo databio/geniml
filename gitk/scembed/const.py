@@ -1,7 +1,7 @@
 """ Constants for scembed """
 
-__author__ = ["Jason Smith", "Erfaneh Gharavi"]
-__email__ = "jasonsmith@virginia.edu"
+__author__ = ["Jason Smith", "Erfaneh Gharavi", "Nathan LeRoy"]
+__email__ = "nleroy@virginia.edu"
 
 LOGGING_LEVEL = "INFO"
 PKG_NAME = "scembed"

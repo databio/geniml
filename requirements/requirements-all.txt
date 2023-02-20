@@ -2,3 +2,10 @@ ubiquerg
 pyBigWig
 logmuse
 gensim
+numba
+seaborn
+matplotlib
+scanpy
+tqdm
+umap-learn
+pyyaml

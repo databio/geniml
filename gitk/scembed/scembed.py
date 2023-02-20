@@ -1,8 +1,10 @@
 from typing import Dict, Iterable, List
+
+# ignore import errors for six
+# see here: https://stackoverflow.com/questions/36213989/getting-six-and-six-moves-modules-to-autocomplete-in-pycharm
 from six.moves import cPickle as pickle  # for performance
 from gensim.models import Word2Vec
 from numba import config
-import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 
