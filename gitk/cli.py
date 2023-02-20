@@ -88,6 +88,7 @@ def main(test_args=None):
     if args.command == "scembed":
         from .scembed.scembed import main as scembed_main
 
+        _LOGGER.info("Running scembed")
         pass
         # scembed_main(test_args)
 
