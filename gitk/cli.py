@@ -1,3 +1,4 @@
+from typing import Dict
 import argparse
 import logmuse
 import os
@@ -8,7 +9,10 @@ from ubiquerg import VersionInHelpParser
 
 from .hmm.cli import build_subparser as hmm_subparser
 from .assess.cli import build_subparser as assess_subparser
+from .scembed.argparser import build_argparser as scembed_subparser
+
 from ._version import __version__
+
 
 def build_argparser():
     """
@@ -32,17 +36,21 @@ def build_argparser():
         "hmm": "Use an HMM to build a consensus peak set.",
         "lh": "Compute likelihood",
         "assess": "Assess a universe",
+        "scembed": "Embed single-cell data as region vectors",
     }
 
     sp = parser.add_subparsers(dest="command")
-    subparsers = {}
-    for k,v in msg_by_cmd.items():
+    subparsers: Dict[str, VersionInHelpParser] = {}
+    for k, v in msg_by_cmd.items():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
+    # build up subparsers for modules
     subparsers["hmm"] = hmm_subparser(subparsers["hmm"])
-    subparsers["assess"] = hmm_subparser(subparsers["assess"])
+    subparsers["assess"] = assess_subparser(subparsers["assess"])
+    subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
 
     return parser
+
 
 def main(test_args=None):
     parser = logmuse.add_logging_options(build_argparser())
@@ -67,6 +75,7 @@ def main(test_args=None):
 
     if args.command == "hmm":
         from .hmm.hmm import test_hmm
+
         test_hmm("testing")
 
         # run_hmm_save_bed(start=os.path.join(args.cov_folder, args.coverage_starts),
@@ -75,5 +84,11 @@ def main(test_args=None):
         #              out_file=args.out_file,
         #              normalize=args.normalize,
         #              save_max_cove=args.save_max_cove)
+
+    if args.command == "scembed":
+        from .scembed.scembed import main as scembed_main
+
+        pass
+        # scembed_main(test_args)
 
     return

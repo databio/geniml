@@ -1,2 +1,4 @@
 ubiquerg
 pyBigWig
+logmuse
+gensim

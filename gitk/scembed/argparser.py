@@ -4,17 +4,18 @@ from ._version import __version__
 from .const import *
 
 
-def build_argparser():
+def build_argparser(parser: VersionInHelpParser = None):
     """
     Parse command-line arguments passed to the pipeline.
     """
     # Argument Parsing
     ###########################################################################
-    parser = VersionInHelpParser(
-        prog=PKG_NAME,
-        version=__version__,
-        description="%(prog)s - embed single-cell data as region vectors",
-    )
+    if parser is None:
+        parser = VersionInHelpParser(
+            prog=PKG_NAME,
+            version=__version__,
+            description="%(prog)s - embed single-cell data as region vectors",
+        )
 
     # Pipeline-specific arguments
     parser.add_argument(
