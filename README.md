@@ -11,6 +11,7 @@ This repo is divided into modules:
 - [gitk/hmm](gitk/hmm) - Building HMMs
 - [gitk/assess](gitk/assess) - Assess universe fit
 - [gitk/likelihood](gitk/likelihood) - Calculate likelihood of universe
+- [gitk/scembed](gitk/scembed) - Compute single-cell clusters from a cell-feature matrix using Word2Vec
 
 Each module corresponds to a CLI command (*e.g* `gitk hmm` or `gitk likelihood`), with the corresponding code contained within a sub-folder named after the model. Inside each sub-folder is also:
 
