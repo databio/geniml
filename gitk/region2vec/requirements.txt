@@ -1,0 +1,10 @@
+gensim==3.8.3
+scikit-learn
+seaborn
+matplotlib
+pyyaml
+requests
+argparse
+tqdm
+pandas
+umap-learn
