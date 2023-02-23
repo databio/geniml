@@ -17,7 +17,7 @@ def build_subparser_model(parser):
         '--file_no',
         type=int)
     parser.add_argument(
-        '--model_folder',
+        '--cov_folder',
         required=True,
         type=str)
     parser.add_argument(

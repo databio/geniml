@@ -59,7 +59,7 @@ def norm(track, mode):
     if mode == "ends":
         n = 0.1
     if mode == "core":
-        n = 0.065
+        n = 0.65
     bs = 0  # what fraction of the distribution was used for normalization
     val = {}  # for each unique value in track holds the corresponding quantile
     for i in important_val_unique_sort:
@@ -271,7 +271,6 @@ def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
     chroms_key = sorted(chroms_key, key=cmp_to_key(natural_chr_sort))
     chroms = {i: chroms[i] for i in chroms_key}
     for C in chroms:
-        print(C)
         if chroms[C] > 0:
             pred, m = run_hmm(start, end, cove, C, normalize=normalize)
             hmm_pred_to_bed(

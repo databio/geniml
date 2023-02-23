@@ -19,28 +19,6 @@ def timer_func(func):
     return wrap_func
 
 
-# def natural_chr_sort(a, b):
-#     """ Compare chromosomes based on natural order"""
-#     ac = a.replace("chr", "")
-#     ac = ac.split("_")[0]
-#     bc = b.replace("chr", "")
-#     bc = bc.split("_")[0]
-#     if bc.isnumeric() and ac.isnumeric() and bc != ac:
-#         if int(bc) < int(ac):
-#             return 1
-#         elif int(bc) > int(ac):
-#             return -1
-#         else:
-#             return 0
-#     else:
-#         if b < a:
-#             return 1
-#         elif a < b:
-#             return -1
-#         else:
-#             return 0
-
-
 def get_uni(file, chrom, cut_off=None):
     """For each position check if coverage is bigger than cut-off;
     if cut-off not provided calculate value that gives
@@ -76,7 +54,7 @@ def save_simple(fout, inter_pos, chrom):
     with open(fout, "a") as f:
         for i in range(1, len(inter_pos_uni)):
             if inter_pos_uni[i] - inter_pos_uni[i - 1] != 1:
-                end = inter_pos_uni[i - 1][0]
+                end = inter_pos_uni[i - 1][0] + 1
                 f.write(f"{chrom}\t{start}\t{end}\n")
                 start = inter_pos_uni[i][0]
         end = inter_pos_uni[-1][0]
@@ -97,11 +75,13 @@ def marge_filter(fout, inter_pos, chrom, merge_dist=100, size_flt=1000):
     with open(fout, "a") as f:
         for i in range(1, len(inter_pos_uni)):
             if inter_pos_uni[i] - inter_pos_uni[i - 1] >= merge_dist:
-                end = inter_pos_uni[i - 1][0]
+                end = inter_pos_uni[i - 1][0] + 1
                 if end - start >= size_flt:
                     f.write(f"{chrom}\t{start}\t{end}\n")
                 start = inter_pos_uni[i][0]
-
+        end = inter_pos_uni[-1][0] + 1
+        if end - start >= size_flt:
+            f.write(f"{chrom}\t{start}\t{end}\n")
 
 @timer_func
 def main(file, fout, merge=0, filter_size=0,
@@ -123,9 +103,10 @@ def main(file, fout, merge=0, filter_size=0,
     chroms_key = sorted(chroms_key, key=cmp_to_key(natural_chr_sort))
     chroms = {i: chroms[i] for i in chroms_key}
     for chrom in chroms:
-        inter_pos = get_uni(file, chrom, cut_off)
-        if merge == 0 and filter_size == 0:
-            save_simple(fout, inter_pos, chrom)
-        else:
-            marge_filter(fout, inter_pos, chrom,
-                         merge, filter_size)
+        if chroms[chrom] > 0:
+            inter_pos = get_uni(file, chrom, cut_off)
+            if merge == 0 and filter_size == 0:
+                save_simple(fout, inter_pos, chrom)
+            else:
+                marge_filter(fout, inter_pos, chrom,
+                             merge, filter_size)
