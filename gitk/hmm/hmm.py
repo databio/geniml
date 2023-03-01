@@ -25,27 +25,6 @@ WINDOW_SIZE = 26
 FIX_UNIWIG = False
 
 
-# def natural_chr_sort(a, b):
-#     ac = a.replace("chr", "")
-#     ac = ac.split("_")[0]
-#     bc = b.replace("chr", "")
-#     bc = bc.split("_")[0]
-#     if bc.isnumeric() and ac.isnumeric() and bc != ac:
-#         if int(bc) < int(ac):
-#             return 1
-#         elif int(bc) > int(ac):
-#             return -1
-#         else:
-#             return 0
-#     else:
-#         if b < a:
-#             return 1
-#         elif a < b:
-#             return -1
-#         else:
-#             return 0
-
-
 def norm(track, mode):
     """ Normalize the coverage track depending on track type.
     For each unique value in the track calculates the corresponding
@@ -59,7 +38,7 @@ def norm(track, mode):
     if mode == "ends":
         n = 0.1
     if mode == "core":
-        n = 0.65
+        n = 0.085
     bs = 0  # what fraction of the distribution was used for normalization
     val = {}  # for each unique value in track holds the corresponding quantile
     for i in important_val_unique_sort:
@@ -270,6 +249,7 @@ def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
     chroms_key = list(chroms.keys())
     chroms_key = sorted(chroms_key, key=cmp_to_key(natural_chr_sort))
     chroms = {i: chroms[i] for i in chroms_key}
+    chroms = {"chr21": chroms["chr21"]}
     for C in chroms:
         if chroms[C] > 0:
             pred, m = run_hmm(start, end, cove, C, normalize=normalize)
