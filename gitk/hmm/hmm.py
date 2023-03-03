@@ -4,22 +4,28 @@ from .models import PoissonModel
 import pyBigWig
 from scipy.stats import nbinom
 from functools import cmp_to_key
-from..utils import natural_chr_sort
+from ..utils import natural_chr_sort
 
 from logging import getLogger
 from ..const import PKG_NAME
 
 _LOGGER = getLogger(PKG_NAME)
 
-transmat = [[1 - 1e-10, 0, 0, 1e-10],
+""" States legend
+0 -> start
+1 -> core
+2 -> end
+3 -> background"""
+
+transmat = [[1 - 1e-10, 1e-10, 0, 0],
             [0, 1 - 1e-6, 1e-6, 0],
-            [0.1, 0, 0.9, 0],
-            [0, 1e-6, 0, 1 - 1e-6]]
+            [0, 0, 1 - 1e-6, 1e-6],
+            [0.1, 0, 0, 0.9]]
 
 lambdas = [[3, 0.0001, 1],
+           [0.05, 0.05, 2],
            [0.0001, 3, 1],
-           [1e-4, 1e-4, 1e-3],
-           [0.05, 0.05, 2]]
+           [1e-4, 1e-4, 1e-3]]
 
 WINDOW_SIZE = 26
 FIX_UNIWIG = False
@@ -123,12 +129,12 @@ def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
     gap_start = 0
     looking_for_first = True
     for e in range(1, len(seq)):
-        if seq[e] - seq[e-1] == 1:
+        if seq[e] - seq[e - 1] == 1:
             gap_len += 1
         else:
             if gap_len >= gap_size:
                 starts.append(gap_start)
-                ends.append(seq[e-1])
+                ends.append(seq[e - 1])
                 looking_for_first = False
             elif looking_for_first:
                 starts.append(gap_start)
@@ -136,8 +142,8 @@ def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
                 looking_for_first = False
             gap_len = 1
             gap_start = seq[e]
-    starts_res = [i-area_size for i in ends]
-    end_res = [i+area_size for i in starts[1:]] + [size]
+    starts_res = [i - area_size for i in ends]
+    end_res = [i + area_size for i in starts[1:]] + [size]
     if not starts_res:
         starts_res = [0]
     return starts_res, end_res
@@ -156,8 +162,8 @@ def find_full(seq):
 
 def ana_region(region, start_s):
     """ Helper for saving HMM prediction into a file """
-    start_e = start_s + np.where(region == 3)[0][0]
-    end_s = start_s + np.where(region == 1)[0][0]
+    start_e = start_s + np.where(region == 1)[0][0]
+    end_s = start_s + np.where(region == 2)[0][0]
     return start_e, end_s
 
 
@@ -172,7 +178,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
     :param str cove_file: file with core coverage, require for
      saving maximum peak coverage
     """
-    ind = np.argwhere(states != 2)
+    ind = np.argwhere(states != 3)
     ind = ind.flatten()
     start_s = ind[0]
     to_file = []
@@ -193,7 +199,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
                                        'universe', val, '.',
                                        save_start_e, save_end_s, '0,0,255'))
             start_s = ind[i]
-    if states[ind[-1]] == 1:
+    if states[ind[-1]] == 3:
         region = states[start_s:ind[-1] + 1]
         res = ana_region(region, start_s)
         save_start_e, save_end_s = res
@@ -211,7 +217,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
 def split_predict(seq, empty_starts, empty_ends, model):
     """ Make model prediction only for regions containing
      nonzero positions  """
-    hmm_predictions = np.full(len(seq), 2, dtype=np.uint8)
+    hmm_predictions = np.full(len(seq), 3, dtype=np.uint8)
     for s, e in zip(empty_starts, empty_ends):
         res = model.predict(seq[s:e])
         hmm_predictions[s:e] = res
@@ -249,7 +255,6 @@ def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
     chroms_key = list(chroms.keys())
     chroms_key = sorted(chroms_key, key=cmp_to_key(natural_chr_sort))
     chroms = {i: chroms[i] for i in chroms_key}
-    chroms = {"chr21": chroms["chr21"]}
     for C in chroms:
         if chroms[C] > 0:
             pred, m = run_hmm(start, end, cove, C, normalize=normalize)
