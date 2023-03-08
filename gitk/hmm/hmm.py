@@ -80,7 +80,7 @@ def read_data(start, end, cove, chrom,
     :param str end: path to file with end coverage
     :param str cove: path to file with  core coverage
     :param str chrom: chromosome to analyse
-    :param boolean normalize: whether to normalize the coverage
+    :param bool normalize: whether to normalize the coverage
     :return: chromosome size, coverage matrix
     """
     start = pyBigWig.open(start + ".bw")
@@ -151,7 +151,6 @@ def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
 
 def find_full(seq):
     """ Look for nonzero positions in coverage matrix """
-    seq = np.where(seq > 0, 1, 0).astype(np.uint8)
     seq = np.sum(seq, axis=1, dtype=np.uint8)
     full_pos_no = np.sum(seq >= 1)
     if full_pos_no < len(seq) - full_pos_no:
@@ -173,7 +172,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
     :param array states: result of HMM prediction
     :param str chrom: which chromosome is being analysed
     :param str bedname: path to the output file
-    :param boolean save_max_cove: whether to save the maximum peak
+    :param bool save_max_cove: whether to save the maximum peak
      coverage to output file, can result in nonstandard bed file
     :param str cove_file: file with core coverage, require for
      saving maximum peak coverage
@@ -199,7 +198,7 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
                                        'universe', val, '.',
                                        save_start_e, save_end_s, '0,0,255'))
             start_s = ind[i]
-    if states[ind[-1]] == 3:
+    if states[ind[-1]] == 2:
         region = states[start_s:ind[-1] + 1]
         res = ana_region(region, start_s)
         save_start_e, save_end_s = res
@@ -243,8 +242,8 @@ def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
     :param str end: path to end coverage file
     :param str cove: path to core coverage file
     :param str out_file: path to the output file with universe
-    :param boolean normalize: whether to normalize file
-    :param boolean save_max_cove: whether to save the maximum
+    :param bool normalize: whether to normalize file
+    :param bool save_max_cove: whether to save the maximum
     peak coverage
     """
     if os.path.isfile(out_file):

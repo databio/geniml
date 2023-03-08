@@ -90,15 +90,19 @@ def main(test_args=None):
         _LOGGER.info(f"Subcommand: {args.subcommand}")
         if args.subcommand == "model":
             from .likelihood.likelihood_model import main
-            main(args.cov_folder, args.coverage_folder, args.coverage_starts,
-                 args.coverage_ends, args.coverage_body,
-                 args.model_starts, args.model_ends, args.model_body,
-                 args.file_list, args.file_no)
+            main(args.model_folder, args.coverage_folder, args.coverage_starts,
+                 args.coverage_ends, args.coverage_core,
+                 args.file_list, args.file_no,
+                 args.binomial, args.multinomial)
 
-        if args.subcommand == "universe":
+        if args.subcommand == "universe_hard":
             from .likelihood.likelihood_universe import main
             main(args.coverage_file, args.fout, args.merge,
                  args.filter_size, args.cut_off)
+
+        if args.subcommand == "universe_flexible":
+            from .likelihood.likelihood_universe_flexible import main
+            main(args.model_folder, args.output_file)
 
     if args.command == "hmm":
         from .hmm.hmm import run_hmm_save_bed

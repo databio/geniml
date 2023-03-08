@@ -83,7 +83,7 @@ def marge_filter(fout, inter_pos, chrom, merge_dist=100, size_flt=1000):
         if end - start >= size_flt:
             f.write(f"{chrom}\t{start}\t{end}\n")
 
-@timer_func
+
 def main(file, fout, merge=0, filter_size=0,
          cut_off=None):
     """
