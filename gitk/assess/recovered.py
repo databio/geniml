@@ -13,7 +13,7 @@ def process_region(start, start_region,
                    db,
                    b_index, e_index):
     """
-    For given position check if it is covered by universe
+    For given position check if it is covered by universe flexible region
     :param int start: position to analyse from query peak
     :param list start_region: last analysed region from universe
     :param str q_chrom: chromosome of query peak
@@ -33,7 +33,7 @@ def process_region(start, start_region,
         if dn == "":
             break
         start_region, start_region_chrom = process_db_line(dn, [b_index, e_index])
-    if start_region[0] <= start <= start_region[1] and q_chrom == start_region_chrom:
+    if start_region[0] <= start < start_region[1] and q_chrom == start_region_chrom:
         return True, start_region, start_region_chrom
     return False, start_region, start_region_chrom
 

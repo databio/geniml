@@ -3,19 +3,8 @@
 
 import numpy as np
 import os
-from time import time
+from ..utils import  timer_func
 import pyBigWig
-
-
-def timer_func(func):
-    def wrap_func(*args, **kwargs):
-        t1 = time()
-        result = func(*args, **kwargs)
-        t2 = time()
-        print(f'Function {func.__name__!r} executed in {(t2 - t1) / 60:.4f}min')
-        return result
-
-    return wrap_func
 
 
 WINDOW_SIZE = 25
@@ -24,7 +13,9 @@ WRONG_UNIWIG = False
 
 def model_binomial(folderin, in_file, chrom, folderout, fout,
                    file_no=None, start=0):
-    """"Creates likelihood model"""
+    """"Create binomial likelihood model
+    First column likelihood of background
+    Second column likelihood of coverage """
     in_file = os.path.join(folderin, in_file + ".bw")
     bw = pyBigWig.open(in_file)
     chrom_size = bw.chroms(chrom)
@@ -53,7 +44,7 @@ def model_binomial(folderin, in_file, chrom, folderout, fout,
 def make_models_binomial(chrom, folder_out, folder_in,
                          in_file_start, in_file_end, in_file_core,
                          file_no=None):
-    """"Makes model for each track
+    """"Make binomial model for each track
     :param str chrom: chromosome to process
     :param str folder_out: output folder
     :param str folder_in: folder with coverage files
@@ -71,7 +62,7 @@ def make_models_binomial(chrom, folder_out, folder_in,
 def make_models_multinomial(chrom, folder_out, folder_in,
                             in_file_start, in_file_end, in_file_core,
                             file_no=None):
-    """"Makes model for each track
+    """"Make multinomial model from tracks
     :param str chrom: chromosome to process
     :param str folder_out: output folder
     :param str folder_in: folder with coverage files
@@ -119,7 +110,7 @@ def main(model_folder, coverage_folder,
          file_list=None, file_no=None,
          binomial=False, multinomial=False):
     """
-    function for crating likelihood models for all chromosomes
+    Crate likelihood models for all chromosomes
     :param bool multinomial: whether to use multinomial model
     :param bool binomial: whether to use binomial model
     :param str model_folder: output folder

@@ -4,7 +4,6 @@ import shlex
 import os
 
 
-
 def prep_data(folder, file):
     """ File sort and merge """
     tmp_file = open(os.path.join("tmp", file + "_sorted"), "wb")
@@ -40,7 +39,7 @@ def process_line(line):
     start = pos[0]
     return pos, start, chrom
 
-#%%
+
 def chrom_cmp_bigger(a, b):
     """ Natural check if chromosomes name is bigger """
     ac = a.replace("chr", "")
@@ -57,7 +56,7 @@ def chrom_cmp_bigger(a, b):
             return True
         else:
             return False
-#%%
+
 
 def process_db_line(dn, pos_index):
     """ Helper for reading in universe bed file line """

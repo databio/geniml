@@ -6,17 +6,7 @@ import os
 from time import time
 from functools import cmp_to_key
 import pyBigWig
-from ..utils import natural_chr_sort
-
-
-def timer_func(func):
-    def wrap_func(*args, **kwargs):
-        t1 = time()
-        result = func(*args, **kwargs)
-        t2 = time()
-        print(f'Function {func.__name__!r} executed in {(t2-t1)/60:.4f}min')
-        return result
-    return wrap_func
+from ..utils import natural_chr_sort, timer_func
 
 
 def get_uni(file, chrom, cut_off=None):
@@ -57,7 +47,7 @@ def save_simple(fout, inter_pos, chrom):
                 end = inter_pos_uni[i - 1][0] + 1
                 f.write(f"{chrom}\t{start}\t{end}\n")
                 start = inter_pos_uni[i][0]
-        end = inter_pos_uni[-1][0]
+        end = inter_pos_uni[-1][0] + 1
         f.write(f"{chrom}\t{start}\t{end}\n")
 
 

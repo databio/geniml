@@ -66,21 +66,21 @@ def main(test_args=None):
     if args.command == "assess":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
         if args.subcommand == "distance":
-            from .assess.sweep_distances import run_distance
+            from .assess.distance import run_distance
             run_distance(args.raw_data_folder, args.file_list,
                          args.universe, args.npool, args.flexible,
                          args.save_to_file, args.folder_out,
                          args.pref, args.save_each)
 
         if args.subcommand == "intersection":
-            from .assess.sweep_intersect import run_intersection
+            from .assess.intersection import run_intersection
             run_intersection(args.raw_data_folder, args.file_list,
                              args.universe, args.npool,
                              args.save_to_file, args.folder_out,
                              args.pref)
 
         if args.subcommand == "recovered":
-            from .assess.sweep_recovered import run_recovered
+            from .assess.recovered import run_recovered
             run_recovered(args.raw_data_folder, args.file_list,
                           args.universe, args.npool,
                           args.save_to_file, args.folder_out,
@@ -89,19 +89,19 @@ def main(test_args=None):
     if args.command == "lh":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
         if args.subcommand == "model":
-            from .likelihood.likelihood_model import main
+            from .likelihood.model import main
             main(args.model_folder, args.coverage_folder, args.coverage_starts,
                  args.coverage_ends, args.coverage_core,
                  args.file_list, args.file_no,
                  args.binomial, args.multinomial)
 
         if args.subcommand == "universe_hard":
-            from .likelihood.likelihood_universe import main
+            from .likelihood.universe_hard import main
             main(args.coverage_file, args.fout, args.merge,
                  args.filter_size, args.cut_off)
 
         if args.subcommand == "universe_flexible":
-            from .likelihood.likelihood_universe_flexible import main
+            from .likelihood.universe_flexible import main
             main(args.model_folder, args.output_file)
 
     if args.command == "hmm":

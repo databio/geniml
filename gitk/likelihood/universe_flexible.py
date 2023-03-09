@@ -8,19 +8,20 @@ from ..utils import natural_chr_sort, timer_func
 from ..hmm.hmm import hmm_pred_to_bed, find_full_full_pos, find_full_empty_pos
 
 
-def dynamic_path_finding(mat):
+def process_part(mat):
+    """
+    Finding ML path through matrix using dynamic programing
+    :param array mat: fragment of likelihood model to be processed
+    :return array: ML path through matrix
+    """
     (N, M) = mat.shape
     for i in range(1, N):
         for j in range(M):
             mat[i, j] += max(mat[i - 1, j], mat[i - 1, j - 1])
-    return mat
-
-
-def get_path(mat):
     path = np.zeros(len(mat), dtype=np.int8)
     path[-1] = np.argmax(mat[-1])
-    for i in range(len(mat)-2, -1, -1):
-        prev_index = path[i+1]
+    for i in range(len(mat) - 2, -1, -1):
+        prev_index = path[i + 1]
         new_index = prev_index - (mat[i, prev_index - 1] > mat[i, prev_index])
         if new_index == -1:
             new_index = 3
@@ -28,13 +29,13 @@ def get_path(mat):
     return path
 
 
-def process_part(mat):
-    dynamic_path_finding(mat)
-    path = get_path(mat)
-    return path
-
-
 def make_ml_flexible_universe(folderin, chrom, fout):
+    """
+    Make ML flexible universe per chromosome
+    :param str folderin: input folder with likelihood models
+    :param str chrom: chromosome to be processed
+    :param str fout: output file with the universe
+    """
     model = np.load(os.path.join(folderin, chrom + ".npz"))
     model = model[model.files[0]]
     seq = np.where(np.sum(model[:, :3], axis=1) > -30, 1, 0).astype(np.uint8)
@@ -51,6 +52,11 @@ def make_ml_flexible_universe(folderin, chrom, fout):
 
 
 def main(folderin, fout):
+    """
+    Make ML flexible universe
+    :param str folderin: input folder with likelihood models
+    :param str fout: output file with the universe
+    """
     if os.path.isfile(fout):
         raise Exception(f"File : {fout} exists")
     chroms = os.listdir(folderin)
