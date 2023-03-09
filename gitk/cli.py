@@ -1,8 +1,5 @@
 from typing import Dict
-import argparse
 import logmuse
-import os
-import subprocess
 import sys
 
 from ubiquerg import VersionInHelpParser
@@ -93,3 +90,7 @@ def main(test_args=None):
         # scembed_main(test_args)
 
     return
+
+
+if __name__ == "__main__":
+    main()
