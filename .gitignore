@@ -163,5 +163,6 @@ gitk/__pycache__
 gitk/eval/__pycache__
 gitk/region2vec/__pycache__
 gitk/tokenization/__pycache__
+gitk/tokenization/bedtools
 # for testing
 test.*

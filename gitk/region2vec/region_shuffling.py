@@ -14,8 +14,6 @@ class BEDDataset:
         self.args = args
         self.meta_data = dict()
         self.file2idx = dict()
-        random.seed(0)
-        np.random.seed(0)
         with open(file_list, 'r') as f:        
             for idx,line in enumerate(f):
                 filename = line.strip()
@@ -26,55 +24,55 @@ class BEDDataset:
   
 
     def regions2sentences_sampling(self, src_path, dst_path):
-        for fname in self.links:
-            # print(fname,flush=True)
-            src_fname = os.path.join(src_path, fname)
-            sentence = []
-            probs = []
-            with open(src_fname, 'r') as f:
-                for line in f:
-                    elements = line.strip().split('\t')
-                    word = elements[0].strip()
-                    sentence.append(word)
-                    probs.append(float(elements[-2].strip()))
-            probs = np.array(probs)
-            probs = probs/probs.sum()
-            sentence = np.array(sentence)
-            
-            sampled_sentence = np.random.choice(sentence, len(probs), p=probs)
-            # sampled_sentence = list(set(sampled_sentence))
-            sampled_sentence = sampled_sentence.tolist()
-            str_sent = ' '.join(sampled_sentence)
-            dst_fname = os.path.join(dst_path,fname)
-            with open(dst_fname, 'w') as f:
-                f.write(str_sent)
-                f.write('\n')
+        with open(dst_fname, 'w') as fout:
+            for fname in self.links:
+                src_fname = os.path.join(src_path, fname)
+                sentence = []
+                probs = []
+                with open(src_fname, 'r') as f:
+                    for line in f:
+                        elements = line.strip().split('\t')
+                        word = elements[0].strip()
+                        sentence.append(word)
+                        probs.append(float(elements[-2].strip()))
+                probs = np.array(probs)
+                probs = probs/probs.sum()
+                sentence = np.array(sentence)
+                
+                sampled_sentence = np.random.choice(sentence, len(probs), p=probs)
+                # sampled_sentence = list(set(sampled_sentence))
+                sampled_sentence = sampled_sentence.tolist()
+                str_sent = ' '.join(sampled_sentence)
+                
+                fout.write(str_sent)
+                fout.write('\n')
 
     def regions2sentences(self, src_path, dst_path):
-        for fname in self.links:
-            src_fname = os.path.join(src_path, fname)
-            sentence = []
-            with open(src_fname, 'r') as f:
-                for line in f:
-                    elements = line.strip().split('\t')[0:3]
-                    chr_name = elements[0].strip()
-                    start = elements[1].strip()
-                    end = elements[2].strip()
-                    word = chr_name+':'+start+'-'+end
-                    sentence.append(word)
-            random.shuffle(sentence) #shuffle the regions in the sentence
-            str_sent = ' '.join(sentence)
-            dst_fname = os.path.join(dst_path,fname)
-            with open(dst_fname, 'w') as f:
-                f.write(str_sent)
-                f.write('\n')
+        with open(dst_path, 'w') as f_out:
+            for fname in self.links:
+                src_fname = os.path.join(src_path, fname)
+                sentence = []
+                with open(src_fname, 'r') as f:
+                    for line in f:
+                        elements = line.strip().split('\t')[0:3]
+                        chr_name = elements[0].strip()
+                        start = elements[1].strip()
+                        end = elements[2].strip()
+                        word = chr_name+':'+start+'-'+end
+                        sentence.append(word)
+                random.shuffle(sentence) #shuffle the regions in the sentence
+                str_sent = ' '.join(sentence)
+                f_out.write(str_sent)
+                f_out.write('\n')
 
 def main(args):
     
     DATA_FOLDER = os.path.join(args.save_dir, 'shuffled_datasets')
+    os.makedirs(DATA_FOLDER, exist_ok=True)
     src_path = args.tokenization_folder
     worker_id = args.worker_id
     random.seed(worker_id)
+    np.random.seed(worker_id)
     dataset = BEDDataset(args, args.file_list)
     pool = args.pool
     utils.log('[{}] Creating shuffled datasets in \033[93m{}\033[00m (at most {} datasets coexist)'.format(worker_id,DATA_FOLDER, pool))
@@ -85,36 +83,39 @@ def main(args):
         name_creating = os.path.join(DATA_FOLDER, f'pool{worker_id}-{i}creating')
         name = os.path.join(DATA_FOLDER, f'pool{worker_id}-{i}')
         if os.path.exists(name_using):
-            print('Folder exists')
+            print('File exists')
             return
         if os.path.exists(name_used):
-            print('Folder exists')
+            print('File exists')
             return
         if os.path.exists(name):
-            print('Folder exists')
+            print('File exists')
             return
         if os.path.exists(name_creating):
-            print('Folder exists')
+            print('File exists')
             return
-        os.makedirs(name_used)
+        # create an empty file
+        with open(name_used, 'w') as f:
+            pass
 
     num_created = 0
     while True:
         if num_created == args.number:
             break
         #determine whether to create a new dataset
-        folders = glob.glob(os.path.join(DATA_FOLDER, f'pool{worker_id}*used'))
-        if len(folders) == 0:
+        files = glob.glob(os.path.join(DATA_FOLDER, f'pool{worker_id}*used'))
+        if len(files) == 0:
             time.sleep(1) #wait for 10 seconds
             # print('Waiting for the data to be consumed',end="\r")
         else:
             #delete the used dataset and generate a new dataset in the same foler
-            folder = folders[random.randint(0,len(folders)-1)]
-            fname = folder.split('/')[-1][:-4]
+            sel_file = files[random.randint(0,len(files)-1)]
+            fname = sel_file.split('/')[-1][:-4]
             # print('[',datetime.datetime.now(),']','Find used dataset {}'.format(fname))
-            os.system('rm -rf {}'.format(folder)) #delete the dataset
-            os.makedirs(os.path.join(DATA_FOLDER, fname+'creating'))
+            os.system('rm -f {}'.format(sel_file)) #delete the dataset
             dpath = os.path.join(DATA_FOLDER, fname+'creating')
+            with open(dpath, 'w') as f:
+                pass
             if args.tokenization_mode == 'hard':
                 dataset.regions2sentences(src_path, dpath)
             else:

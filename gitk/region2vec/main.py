@@ -39,6 +39,7 @@ def region2vec( token_folder,  # path to the folder of tokenized files
         files = file_list
     os.makedirs(save_dir, exist_ok=True)
     file_list_path = os.path.join(save_dir, 'file_list.txt')
+    utils.set_log_path(save_dir)
     with open(file_list_path,'w') as f:
         for file in files:
             f.write(file)
@@ -46,7 +47,8 @@ def region2vec( token_folder,  # path to the folder of tokenized files
     
     training_processes = []
     num_sent_processes = min(int(np.ceil(num_processes / 2)), 4)
-    nworkers = min(np.ceil(num_shufflings / 20), num_sent_processes) # every worker needs to generate at least 20 shuffled datasets
+    nworkers = min(num_shufflings, num_sent_processes)
+    utils.log('num_sent_processes: {}'.format(nworkers))
     if nworkers <= 1:
         sent_gen_args = Namespace(
                         tokenization_folder=token_folder,
@@ -62,6 +64,7 @@ def region2vec( token_folder,  # path to the folder of tokenized files
         training_processes.append(p)
     else:
         num_arrs = [num_shufflings // nworkers] * (nworkers-1)
+        
         num_arrs.append(num_shufflings - np.array(num_arrs).sum())
         sent_gen_args_arr = []
         for n in range(nworkers):
@@ -80,7 +83,7 @@ def region2vec( token_folder,  # path to the folder of tokenized files
             p.start()
             training_processes.append(p)
         
-    num_region2vec_processes = min(num_processes - num_sent_processes, 1)
+    num_region2vec_processes = max(num_processes - nworkers, 1)
     region2vec_args = Namespace(
                     num_shuffle=num_shufflings,
                     embed_dim=embedding_dim,

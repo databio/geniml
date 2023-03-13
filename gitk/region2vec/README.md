@@ -22,10 +22,11 @@ dst_folder = '/path/to/tokenized_files'
 universe_file = '/path/to/universe_file'
 
 # must run tokenization first
-hard_tokenization(src_folder, dst_folder, universe_file, 1e-9)
+status = hard_tokenization(src_folder, dst_folder, universe_file, 1e-9)
 
-save_dir = '/path/to/training/results'
-region2vec(dst_folder, save_dir, num_shufflings=1000)
+if status: # if hard_tokenization is successful, then run region2vec training
+    save_dir = '/path/to/training/results'
+    region2vec(dst_folder, save_dir, num_shufflings=1000)
 
 ```
 For customized settings, please go and check the parameters used in `main.py`. 

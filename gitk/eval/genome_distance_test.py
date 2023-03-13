@@ -17,7 +17,7 @@ from matplotlib.patches import Patch
 def load_genomic_embeddings(model_path, embed_type='region2vec'):
     if embed_type == 'region2vec':
         model = Word2Vec.load(model_path)
-        regions_r2v = model.wv.index2word
+        regions_r2v = model.wv.index_to_key
         embed_rep = model.wv.vectors
         return embed_rep, regions_r2v
     elif embed_type == 'base':

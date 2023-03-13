@@ -31,7 +31,7 @@ def hard_tokenization_main(src_folder, dst_folder, universe_file, fraction=1e-9,
     file_count = len(files)
     if file_count == 0:
         print('No files in {}'.format(src_folder))
-        return
+        return 0
         
     os.makedirs(dst_folder,exist_ok=True)
     if file_list is None: # use all bed files in data_folder
@@ -51,10 +51,10 @@ def hard_tokenization_main(src_folder, dst_folder, universe_file, fraction=1e-9,
         number = len(not_covered)
     if number == 0 and len(existing_set) == len(all_set):
         print('Skip tokenization. Using the existing tokenization files')
-        return
+        return 1
     elif len(existing_set) > 0:
         print('Folder {} exists with incomplete tokenized files. Please empty/delete the folder first'.format(dst_folder))
-        return
+        return 0
 
     with open(file_list_path,'w') as f:
         for file in file_list:
@@ -62,7 +62,9 @@ def hard_tokenization_main(src_folder, dst_folder, universe_file, fraction=1e-9,
             f.write('\n')
 
     # Download bedtools for tokenization
-    bedtools_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'bedtools','bedtools')
+    bedtools_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),'bedtools')
+    os.makedirs(bedtools_folder, exist_ok=True)
+    bedtools_path = os.path.join(bedtools_folder, 'bedtools')
     if not os.path.isfile(bedtools_path):
         # Download bedtools 
         bedtool_url = 'https://github.com/arq5x/bedtools2/releases/download/v2.30.0/bedtools.static.binary'
@@ -120,3 +122,4 @@ def hard_tokenization_main(src_folder, dst_folder, universe_file, fraction=1e-9,
     print('Tokenization complete {}/{} bed files'.format(len(os.listdir(dst_folder)),file_count))
     elapsed_time = timer.t() - start_time
     print('[Tokenization] {}/{}'.format(utils.time_str(elapsed_time), utils.time_str(timer.t())))
+    return 1

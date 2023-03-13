@@ -5,26 +5,18 @@ import datetime
 import argparse
 import pickle
 from gensim.models import Word2Vec
+from gensim.models.word2vec import LineSentence
 from gitk.region2vec import utils
 import logging
 import random
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.ERROR)
-
-class RegionSentences:
-    def __init__(self, dirname):
-        self.dirname = dirname
- 
-    def __iter__(self):
-        for fname in os.listdir(self.dirname):
-            for line in open(os.path.join(self.dirname, fname)):
-                yield line.split()
 
 def find_dataset(data_folder):
     train_pattern = os.path.join(data_folder,'pool*[0-9]')
     while True:
         dsets = glob.glob(train_pattern)
         if len(dsets) == 0:
-            # print('No available dataset, waiting for generation...',end='\r')
+            print('No available dataset, waiting for generation...',end='\r')
             time.sleep(1)
         else:
             return dsets[random.randint(0,len(dsets)-1)]
@@ -52,7 +44,10 @@ def main(args):
         msg_model += 'negative sampling with {} negative samples\033[00m'.format(args.neg_samples)
     if not os.path.exists(args.resume):
         vocab_update = False
-        model = Word2Vec(size=args.embed_dim, alpha=args.init_lr, window=args.context_len, min_count=args.min_count,
+        # model = Word2Vec(size=args.embed_dim, alpha=args.init_lr, window=args.context_len, min_count=args.min_count,
+        #                 seed=args.seed, workers=args.nworkers, sg=train_alg, negative=args.neg_samples, hs=hs)
+        #lasest
+        model = Word2Vec(vector_size=args.embed_dim, alpha=args.init_lr, window=args.context_len, min_count=args.min_count,
                         seed=args.seed, workers=args.nworkers, sg=train_alg, negative=args.neg_samples, hs=hs)
         utils.log(msg_model)
     else:
@@ -74,9 +69,9 @@ def main(args):
     utils.log('[{}] Start training'.format(datetime.datetime.now().strftime("%x-%X")))
     utils.log('[{}] Building vocabulary'.format(datetime.datetime.now().strftime("%x-%X")))
     dset = find_dataset(data_folder)
-    sentences = RegionSentences(dset) # create sentence iterator
+    sentences = LineSentence(dset) # create sentence iterator
     model.build_vocab(sentences, update=vocab_update)  # prepare the model vocabulary
-    utils.log('[{}]\033[93m Vocabulary size is {}\033[00m'.format(datetime.datetime.now().strftime("%x-%X"),len(model.wv.index2word)))
+    utils.log('[{}]\033[93m Vocabulary size is {}\033[00m'.format(datetime.datetime.now().strftime("%x-%X"),len(model.wv.index_to_key)))
     build_vocab_time = run_timer.t()
     min_loss = 1.0e100
 
@@ -87,8 +82,8 @@ def main(args):
         dset = find_dataset(data_folder)
         dname = dset.split('/')[-1]
         dst_name = os.path.join(data_folder, dname+'using')
-        os.rename(dset, dst_name) #change to folder name to pool%dusing
-        sentences = RegionSentences(dst_name) # create sentence iterator
+        os.rename(dset, dst_name) #change to file name to pool%dusing
+        sentences = LineSentence(dst_name) # create sentence iterator
         if args.update_vocab == 'every':
             model.build_vocab(sentences, update=True)  # prepare the model vocabulary
         model.train(sentences, total_examples=model.corpus_count, epochs=1,compute_loss=True,start_alpha=lr_scheduler.lr,end_alpha=lr_scheduler.lr)
@@ -108,7 +103,7 @@ def main(args):
         msg += 'loss {:>12.4f} lr {:>5.4f} vocab_size {:>12d} ({}/{})'.format(
                             loss, 
                             lr_scheduler.lr,
-                            len(model.wv.index2word),
+                            len(model.wv.index_to_key),
                             utils.time_str(epoch_timer.t()), 
                             utils.time_str(est_time)
                         )
