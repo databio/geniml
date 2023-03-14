@@ -6,23 +6,58 @@ def build_subparser(parser):
     """
 
     parser.add_argument(
-        "--out_file", type=str, help="path to result file", required=True
-    )
+        '--raw_data_folder',
+        type=str,
+        required=True)
     parser.add_argument(
-        "--cov_folder", type=str, help="path to coverage folder", required=True
-    )
-    parser.add_argument("--normalize", action="store_true")
+        '--file_list',
+        type=str,
+        required=True)
     parser.add_argument(
-        "--save_max_cove",
-        help="if present saves maximum coverage for each peak",
-        action="store_true",
-    )
-    parser.add_argument("--use_npy", action="store_true")
+        '--universe',
+        type=str,
+        required=True)
     parser.add_argument(
-        "--lambdas", type=str, help="lambdas matrix used to set emissions"
-    )
-    parser.add_argument("--coverage_body", default="all_core", type=str)
-    parser.add_argument("--coverage_starts", default="all_start", type=str)
-    parser.add_argument("--coverage_ends", default="all_end", type=str)
+        '--npool',
+        default=4,
+        type=int)
+    parser.add_argument(
+        "--save_to_file",
+        action='store_true')
+    parser.add_argument(
+        '--folder_out',
+        type=str)
+    parser.add_argument(
+        '--pref',
+        type=str)
+
+    return parser
+
+
+def build_subparser_distance(parser):
+    parser = build_subparser(parser)
+    parser.add_argument(
+        '--flexible',
+        action='store_true')
+    parser.add_argument(
+        '--save_each',
+        action='store_true')
+
+    return parser
+
+
+def build_mode_parser(parser):
+    sp = parser.add_subparsers(dest="subcommand")
+    msg_by_cmd = {
+        "distance": "Asses based on distance",
+        "intersection": "Asses based on coverage",
+        "recovered": "Asses based on percent of recovered starts, ends",
+    }
+    subparsers = {}
+    for k, v in msg_by_cmd.items():
+        subparsers[k] = sp.add_parser(k, description=v, help=v)
+    subparsers["distance"] = build_subparser_distance(subparsers["distance"])
+    subparsers["intersection"] = build_subparser(subparsers["intersection"])
+    subparsers["recovered"] = build_subparser(subparsers["recovered"])
 
     return parser
