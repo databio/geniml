@@ -47,6 +47,12 @@ This is implemented within each module folder with:
 - `gitk/<module>/cli.py` - defines the command-line interface and provides a subparser for this module's CLI command.
 
 
+## Adding a new module
+
+1. Put your module in a subfolder
+2. Make sure to include a `__init__.py` so it's importable.
+3. Add it to list of packages in `setup.py` 
+
 ## Shared code
 
 Any variables, functions, or other code that is shared across modules should be placed in the parent module, which is held in the [gitk](gitk) folder.
