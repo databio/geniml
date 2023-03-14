@@ -5,11 +5,13 @@ import os
 
 from ubiquerg import VersionInHelpParser
 
-from .hmm.cli import build_subparser as hmm_subparser
 from .assess.cli import build_mode_parser as assess_subparser
+from .eval.cli import build_subparser as eval_subparser
+from .hmm.cli import build_subparser as hmm_subparser
+from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
 
-from .likelihood.cli import build_subparser as likelihood_subparser
+
 from ._version import __version__
 
 
