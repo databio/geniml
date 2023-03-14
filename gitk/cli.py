@@ -1,6 +1,7 @@
 from typing import Dict
 import logmuse
 import sys
+import os
 
 from ubiquerg import VersionInHelpParser
 
