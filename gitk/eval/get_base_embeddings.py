@@ -6,8 +6,8 @@ import argparse
 import time
 import multiprocessing as mp
 import glob
-from sklearn.decomposition import PCA
-import umap
+
+
 
 class BaseEmbeddings:
     def __init__(embeddings, vocab):
@@ -37,11 +37,13 @@ def get_bin_embeddings(universe_file, tokenized_files):
 
 
 def get_pca_embeddings(bin_embed_obj, dim, kwargs={}):
+    from sklearn.decomposition import PCA
     embeds = PCA(n_components=dim, **kwargs).fit_transform(bin_embed_obj.embeddings)
     pca_embed_obj = BaseEmbeddings(embeds, bin_embed_obj.vocab)
     return pca_embed_obj
 
 def get_umap_embeddings(bin_embed_obj, dim, kwargs={}):
+    import umap
     embeds = umap.UMAP(n_components=dim, **kwargs).fit_transform(bin_embed_obj.embeddings)
     umap_embed_obj = BaseEmbeddings(embeds, bin_embed_obj.vocab)
     return umap_embed_obj
