@@ -1,11 +1,11 @@
-ubiquerg
-pyBigWig
-logmuse
 gensim
-numba
-seaborn
+logmuse
 matplotlib
+numba
+pyBigWig
+pyyaml
 scanpy
+seaborn
 tqdm
 umap-learn
-pyyaml
+ubiquerg
