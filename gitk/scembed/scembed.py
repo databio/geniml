@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import os
 from logging import getLogger
-import umap
+
 from tqdm import tqdm
 
 import scanpy as sc
@@ -123,6 +123,7 @@ def label_preprocessing(y: List[str], delim: str) -> List[str]:
 
 # This function reduces the dimension using umap and plot
 def UMAP_plot(data_X, y, title, nn, filename, umet, rasterize=False):
+    import umap
     np.random.seed(42)
     # TODO: make low_memory a tool argument
     ump = umap.UMAP(

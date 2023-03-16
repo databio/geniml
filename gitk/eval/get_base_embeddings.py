@@ -8,7 +8,6 @@ import multiprocessing as mp
 import glob
 
 
-
 class BaseEmbeddings:
     def __init__(embeddings, vocab):
         self.embeddings = embeddings
