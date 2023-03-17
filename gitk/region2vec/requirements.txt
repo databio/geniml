@@ -1,5 +1,5 @@
 gensim
-scikit-learn
+scikit - learn
 seaborn
 matplotlib
 pyyaml
@@ -7,4 +7,4 @@ requests
 argparse
 tqdm
 pandas
-umap-learn
+umap - learn

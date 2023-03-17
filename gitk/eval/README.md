@@ -4,11 +4,11 @@
 Evaluate how well genomic region embeddings preserve the structure (relative closeness) of genomic regions on the genome.
 
 ```
-from gitk.eval.genome_distance_test import *
+from gitk.eval.genome_distance import *
 import numpy as np
 
 model_path = '/path/to/a/region2vec/model/'
-boundaries = np.linspace(1e3, 1e8, 5) # four bins
+boundaries = np.linspace(0, 1e8, 5) # four bins
 result = genome_distance_test(model_path, 'region2vec', boundaries, num_samples=1000, seed=0)
 
 avgGD = result['AvgGD']
@@ -46,7 +46,7 @@ gdt_box_plot(slope_list, approx_err_list, row_labels, filename='gdt_result.png')
 Evaluate how significant genomic region embeddings preserve their neighboring regions on the genome against random embeddings.
 
 ```
-from gitk.eval.neighborhood_preserving_test import *
+from gitk.eval.neighborhood_preserving import *
 model_path = '/path/to/a/region2vec/model/'
 embed_type = 'region2vec'
 K = 50
