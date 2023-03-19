@@ -1,19 +1,13 @@
-from typing import Dict, Iterable, List
+import scanpy as sc
+import pandas as pd
 
-# ignore import errors for six
-# see here: https://stackoverflow.com/questions/36213989/getting-six-and-six-moves-modules-to-autocomplete-in-pycharm
-from six.moves import cPickle as pickle  # for performance
+from typing import Dict, Iterable, List
+from concurrent.futures import ThreadPoolExecutor
+from random import shuffle
 from gensim.models import Word2Vec
 from numba import config
-
-import numpy as np
-import pandas as pd
-import os
 from logging import getLogger
-
 from tqdm import tqdm
-
-import scanpy as sc
 
 from .const import *
 
@@ -24,22 +18,37 @@ config.THREADING_LAYER = "threadsafe"
 
 # shuffle the document to generate data for word2vec
 def shuffle_documents(
-    documents: Dict[str, List[str]], shuffle_repeat: int
+    documents: List[List[str]],
+    n_shuffles: int,
+    threads: int = 1,
 ) -> List[List[str]]:
     """
     Shuffle around the genomic regions for each cell to generate a "context".
 
-    :param Dict[str, List[str]] documents: the document dictionary to shuffle.
-    :param int shuffle_repeat: The number of shuffles to conduct.
+    :param List[List[str]] documents: the document list to shuffle.
+    :param int n_shuffles: The number of shuffles to conduct.
+    :param int threads: The number of threads to use for shuffling.
     """
-    _LOGGER.debug(f"Shuffling documents {shuffle_repeat} times.")
-    common_text = list(documents.values())
-    training_samples = []
-    training_samples.extend(common_text)
-    for _ in range(shuffle_repeat):
-        [(np.random.shuffle(l)) for l in common_text]
-        training_samples.extend(common_text)
-    return training_samples
+
+    def shuffle_list(l: List[str], n: int) -> List[str]:
+        for _ in range(n):
+            shuffle(l)
+        return l
+
+    _LOGGER.debug(f"Shuffling documents {n_shuffles} times.")
+    shuffled_documents = documents.copy()
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        shuffled_documents = list(
+            tqdm(
+                executor.map(
+                    shuffle_list,
+                    shuffled_documents,
+                    [n_shuffles] * len(documents)
+                ),
+                total=len(documents),
+            )
+        )
+    return shuffled_documents
 
 
 def train(
@@ -75,46 +84,6 @@ def train(
     return model
 
 
-# preprocess the labels
-def label_preprocessing(y: List[str], delim: str) -> List[str]:
-    """
-    Split the list of cell annotations on the delimiter.
-
-    :param str y: List of cell annotations/names
-    :param str delim: delimiter to split on
-    """
-    y_cell = []
-    for y1 in y:
-        y_cell.append(y1.split(delim)[0])
-    return y_cell
-
-def save_dict(di_: dict, filename_: str):
-    """
-    Using pickle, save the document dictionary to disk.
-
-    :param dict di_: dictionary to save
-    :param str filename_: the file to save to
-    """
-    with open(filename_, "wb") as f:
-        pickle.dump(di_, f)
-
-
-def load_dict(filename_: str) -> dict:
-    """
-    Load the document dictionary saved to disk.
-
-    :param str filename_: the file to load with pickle.
-    """
-    with open(filename_, "rb") as f:
-        try:
-            ret_di = pickle.load(f)
-            return ret_di
-        except EOFError:
-            _LOGGER.error(
-                "Size (In bytes) of '%s':" % filename_, os.path.getsize(filename_)
-            )
-
-
 def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
     """
     Load in the h5ad file that holds all of the information
@@ -132,27 +101,14 @@ def extract_region_list(region_df: pd.DataFrame) -> List[str]:
 
     :param pandas.DataFrame region_df: the regions dataframe to parse
     """
+    _LOGGER.info("Extracting region list from matrix.")
     regions_parsed = []
-    for r in tqdm(region_df.iterrows()):
+    for r in tqdm(region_df.iterrows(), total=region_df.shape[0]):
         r_dict = r[1].to_dict()
         regions_parsed.append(
             " ".join([r_dict["chr"], str(r_dict["start"]), str(r_dict["end"])])
         )
     return regions_parsed
-
-
-def extract_cell_list(cell_df: pd.DataFrame) -> List[str]:
-    """
-    Parses the `obs` attribute of the scanpy.AnnData object and
-    returns a list of the cell identifiers.
-
-    :param cell_df pandas.DataFrame: the cell dataframe to parse
-    """
-    cells_parsed = []
-    for c in tqdm(cell_df.iterrows()):
-        c_dict = c[1].to_dict()
-        cells_parsed.append(c_dict["cell-annotation"])
-    return cells_parsed
 
 
 def remove_zero_regions(cell_dict: Dict[str, int]) -> Dict[str, int]:
@@ -166,26 +122,25 @@ def remove_zero_regions(cell_dict: Dict[str, int]) -> Dict[str, int]:
     return {k: v for k, v in cell_dict.items() if v > 0}
 
 
-def convert_anndata_to_documents(anndata: sc.AnnData) -> Dict[str, List[str]]:
+def convert_anndata_to_documents(anndata: sc.AnnData) -> List[List[str]]:
     """
     Parses the scanpy.AnnData object to create the required "documents" object for
-    training the Word2Vec model.
+    training the Word2Vec model. Each row (or cell) is treated as a "document". That
+    is, each region is a "word", and the total collection of regions is the "document".
 
     :param scanpy.AnnData anndata: the AnnData object to parse.
     """
     regions_parsed = extract_region_list(anndata.var)
-    cells_parsed = extract_cell_list(anndata.obs)
     sc_df = anndata.to_df()
-    _docs = {}
+    docs = []
     _LOGGER.info("Generating documents.")
 
-    for indx, row in tqdm(enumerate(sc_df.iterrows())):
+    for row in tqdm(sc_df.iterrows(), total=sc_df.shape[0]):
         row_dict = row[1].to_dict()
-        cell_label = cells_parsed[indx]
-        _docs[cell_label] = []
         row_dict = remove_zero_regions(row_dict)
+        new_doc = []
         for region_indx in row_dict:
             region_str = regions_parsed[int(region_indx)]
-            _docs[cell_label].append(region_str)
-
-    return _docs
+            new_doc.append(region_str)
+        docs.append(new_doc)
+    return docs

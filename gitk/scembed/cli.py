@@ -2,7 +2,6 @@ import sys
 import os
 import logmuse
 from gensim.models import Word2Vec
-import pandas as pd
 
 from .argparser import build_argparser
 from ._version import __version__
@@ -12,9 +11,6 @@ from .scembed import (
     load_scanpy_data,
     shuffle_documents,
     train,
-    label_preprocessing,
-    save_dict,
-    load_dict,
 )
 
 
@@ -49,19 +45,11 @@ def main():
 
     _LOGGER.info("Loading data")
 
-    if args.docs:
-        documents = load_dict(args.docs)
-        _LOGGER.info(f"Loaded {args.docs}")
-    else:
-        # load AnnData object
-        sc_data = load_scanpy_data(args.input)
+    # load AnnData object
+    sc_data = load_scanpy_data(args.input)
 
-        # re-create documents dictionary from AnnData Object
-        documents = convert_anndata_to_documents(sc_data)
-
-        docs_filename = os.path.join(args.output, args.title + "_documents.pkl")
-        save_dict(documents, docs_filename)
-        _LOGGER.info(f"Saved documents as {docs_filename}")
+    # re-create documents dictionary from AnnData Object
+    documents = convert_anndata_to_documents(sc_data)
 
     if args.model:
         model = Word2Vec.load(args.model)
