@@ -1,54 +1,67 @@
-import os
-import yaml
-import gensim
-from csv import Sniffer
+from enum import Enum
+from logging import getLogger
 
-delim_sniffer = Sniffer()
+from .const import *
+
+_LOGGER = getLogger(PKG_NAME)
 
 
-def write_model_to_PEP(model_path: str, out_path: str):
+class ScheduleType(Enum):
+    """Learning rate schedule types"""
+
+    LINEAR = "linear"
+    EXPONENTIAL = "exponential"
+
+
+class LearningRateScheduler:
     """
-    Convert a gensim `.model` file to a PEP that is readable by RegionSet2Vec.
+    Simple class to track learning rates of the training procedure
 
-    :param str model_path: Path to the gensim `.model` file
-    :param str out_path: Path to write out the new model
+    Based off of: https://machinelearningmastery.com/using-learning-rate-schedules-deep-learning-models-python-keras/
     """
 
-    if not os.path.exists(out_path):
-        os.mkdir(out_path)
+    def __init__(
+        self,
+        init_lr: float = DEFAULT_INIT_LR,
+        min_lr: float = DEFAULT_MIN_LR,
+        type: ScheduleType = ScheduleType.EXPONENTIAL,
+        decay: float = None,
+        n_epochs: int = None,
+    ):
+        self.init_lr = init_lr
+        self.min_lr = min_lr
+        self.type = type
+        self.n_epochs = n_epochs
 
-    model = gensim.models.Word2Vec.load(model_path)
-    _meta = {}
-    _meta["pep_version"] = "2.0.0"
-    _meta["epochs"] = model.epochs
-    _meta["embedding_dimensions"] = model.vector_size
-    model_file = os.path.join(out_path, "model.yml")
+        # init the current lr and iteration
+        self._current_lr = init_lr
+        self._iter = 1
 
-    with open(model_file, "w+") as fh:
-        yaml.dump(_meta, fh)
+        # init decay rate
+        if decay is None:
+            _LOGGER.warning(
+                "No decay rate provided. Calculating decay rate from init_lr and n_epochs."
+            )
+            self.decay = init_lr / n_epochs
 
-    for region in model.wv.vocab:
-        region_vector = model.wv.get_vector(region)
+    def _update_linear(self, epoch: int):
+        lr = self.init_lr - (self.decay * epoch)
+        return max(lr, self.min_lr)
 
-    embedding_file = os.path.join(out_path, "embeddings.csv")
+    def _update_exponential(self, epoch: int):
+        lr = self.get_lr() * 1 / (1 + (self.decay * epoch))
+        return max(lr, self.min_lr)
 
-    with open(embedding_file, "w+") as fh:
-        header = [
-            "sample_name",
-            "chr",
-            "start",
-            "end",
-            *[f"dim{i+1}" for i in range(model.vector_size)],
-        ]
-        fh.write(",".join(header) + "\n")
-        for i, region in enumerate(model.wv.vocab):
-            # assume first represents all
-            if i == 0:
-                delim = delim_sniffer.sniff(region).delimiter
-            region_vector = [str(v) for v in model.wv.get_vector(region).tolist()]
-            sample_name = f"r{i}"
-            chr, start, end = region.split(delim)
+    def update(self):
+        # update the learning rate according to the type
+        if self.type == ScheduleType.LINEAR:
+            self._current_lr = self._update_linear(self._iter)
+            self._iter += 1
+        elif self.type == ScheduleType.EXPONENTIAL:
+            self._current_lr = self._update_exponential(self._iter)
+            self._iter += 1
+        else:
+            raise ValueError(f"Unknown schedule type: {self.type}")
 
-            values = [sample_name, chr, start, end, *region_vector]
-
-            fh.write(",".join(values) + "\n")
+    def get_lr(self):
+        return self._current_lr

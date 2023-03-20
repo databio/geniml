@@ -11,6 +11,7 @@ from logging import getLogger
 from tqdm import tqdm
 
 from .const import *
+from .utils import LearningRateScheduler, ScheduleType
 
 _LOGGER = getLogger(PKG_NAME)
 
@@ -72,15 +73,12 @@ class Region2Vec(Word2Vec):
     def __init__(
         self,
         data: sc.AnnData,
-        epochs: int = 10,
         window_size: int = DEFAULT_WINDOW_SIZE,
         vector_size: int = DEFAULT_EMBEDDING_SIZE,
         min_count: int = 10,
         threads: int = 1,
         seed: int = 42,
         n_shuffles: int = DEAFULT_N_SHUFFLES,
-        lr: float = DEFAULT_INIT_LR,
-        min_lr: float = 0.0001,
         callbacks: List[CallbackAny2Vec] = [],
     ):
         # convert the data to the
@@ -91,18 +89,22 @@ class Region2Vec(Word2Vec):
 
         # instantiate the Word2Vec model
         super().__init__(
-            epochs=epochs,
             window=window_size,
             vector_size=vector_size,
             min_count=min_count,
             workers=threads,
             seed=seed,
-            alpha=lr,
-            min_alpha=min_lr,
             callbacks=callbacks,
         )
 
-    def train(self, epochs: Union[int, None] = None, report_loss: bool = True):
+    def train(
+        self,
+        epochs: Union[int, None] = None,
+        report_loss: bool = True,
+        lr: float = DEFAULT_INIT_LR,
+        min_lr: float = DEFAULT_MIN_LR,
+        lr_schedule: ScheduleType = ScheduleType.EXPONENTIAL,
+    ):
         """
         Train the model. This is done in two steps: First, we shuffle the documents.
         Second, we train the model.
@@ -110,23 +112,37 @@ class Region2Vec(Word2Vec):
         if report_loss:
             self.callbacks.append(ReportLossCallback())
 
-        # shuffle the documents
-        _LOGGER.info(f"Shuffling documents using {self.n_shuffles} shuffles.")
-        shuffled_documents = shuffle_documents(
-            self.region_sets, self.n_shuffles, self.workers
+        lr_scheduler = LearningRateScheduler(
+            init_lr=lr, min_lr=min_lr, schedule=lr_schedule
         )
 
         # train the model using these shuffled documents
-        _LOGGER.info("Building vocab and training model.")
-        super().build_vocab(shuffled_documents)
-        super().train(
-            shuffled_documents,
-            total_examples=len(shuffled_documents),
-            epochs=epochs
-            or self.epochs,  # use the epochs passed in or the epochs set in the constructor
-            callbacks=self.callbacks,
-            compute_loss=report_loss,
-        )
+        _LOGGER.info("Training starting.")
+
+        for shuffle_num in range(self.n_shuffles):
+            # update current values
+            current_lr = lr_scheduler.get_lr()
+            current_loss = self.get_latest_training_loss()
+
+            # update user
+            _LOGGER.info(
+                f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}"
+            )
+            _LOGGER.info("Shuffling documents.")
+
+            # shuffle regions
+            self.region_sets = shuffle_documents(self.region_sets, 10)
+
+            # train
+            super().build_vocab(self.region_sets, update=True)
+            super().train(
+                self.region_sets,
+                total_examples=len(self.region_sets),
+                epochs=epochs or 1,  # use the epochs passed in or just one
+                callbacks=self.callbacks,
+                compute_loss=report_loss,
+                start_alpha=current_lr,
+            )
 
 
 def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
