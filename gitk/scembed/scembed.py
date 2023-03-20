@@ -1,10 +1,11 @@
 import scanpy as sc
 import pandas as pd
 
-from typing import Dict, Iterable, List
+from typing import Dict, List
 from concurrent.futures import ThreadPoolExecutor
 from random import shuffle
 from gensim.models import Word2Vec
+from gensim.models.callbacks import CallbackAny2Vec
 from numba import config
 from logging import getLogger
 from tqdm import tqdm
@@ -20,7 +21,7 @@ config.THREADING_LAYER = "threadsafe"
 def shuffle_documents(
     documents: List[List[str]],
     n_shuffles: int,
-    threads: int = 1,
+    threads: int = None,
 ) -> List[List[str]]:
     """
     Shuffle around the genomic regions for each cell to generate a "context".
@@ -41,47 +42,84 @@ def shuffle_documents(
         shuffled_documents = list(
             tqdm(
                 executor.map(
-                    shuffle_list,
-                    shuffled_documents,
-                    [n_shuffles] * len(documents)
+                    shuffle_list, shuffled_documents, [n_shuffles] * len(documents)
                 ),
                 total=len(documents),
             )
         )
     return shuffled_documents
 
-
-def train(
-    documents: Iterable[Iterable[str]],
-    window_size: int = 100,
-    dim: int = 128,
-    min_count: int = 10,
-    nothreads: int = 1,
-) -> Word2Vec:
+class ReportLossCallback(CallbackAny2Vec):
     """
-    Train the Word2Vec algorithm on the region's
-
-    :param Iterable[Iterable[str]] documents: this is the list of lists of regions that are to be shuffled
-    :param int window_size: the context window size for the algorithm when training.
-    :param int dim: the embeddings vector dimensionality.
-    :param int min_count: Ignores all regions with total frequency lower than this.
-    :param int nothreads: number of threads to train with.
+    Callback to report loss after each epoch.
     """
-    # sg=0 Training algorithm: 1 for skip-gram; otherwise CBOW.
-    message = (
-        f"Training Word2Vec embeddings with {window_size} window size, "
-        f"at {dim} dimensions, with a minimum 'word' count of "
-        f"{min_count} and using {nothreads} threads."
-    )
-    _LOGGER.debug(message)
-    model = Word2Vec(
-        sentences=documents,
-        window=window_size,
-        size=dim,
-        min_count=min_count,
-        workers=nothreads,
-    )
-    return model
+    def __init__(self):
+        self.epoch = 0
+
+    def on_epoch_end(self, model: Word2Vec):
+        loss = model.get_latest_training_loss()
+        _LOGGER.info(f"Epoch {self.epoch} complete. Loss: {loss}")
+        self.epoch += 1
+
+class Region2Vec(Word2Vec):
+    """
+    Region2Vec model that extends the Word2Vec model from gensim.
+    """
+    def __init__(
+        self,
+        data: sc.AnnData,
+        epochs: int = 10,
+        window_size: int = 100,
+        vector_size: int = 128,
+        min_count: int = 10,
+        threads: int = 1,
+        seed: int = 42,
+        n_shuffles: int = 10,
+        lr: float = None,
+        min_lr: float = None,
+        callbacks: List[CallbackAny2Vec] = [],
+    ):
+        # convert the data to the
+        _LOGGER.info("Converting data to documents.")
+        self.region_sets = convert_anndata_to_documents(data)
+        self.n_shuffles = n_shuffles
+        self.callbacks = callbacks
+
+        # instantiate the Word2Vec model
+        super().__init__(
+            epochs=epochs,
+            window=window_size,
+            vector_size=vector_size,
+            min_count=min_count,
+            workers=threads,
+            seed=seed,
+            alpha=lr,
+            min_alpha=min_lr,
+            callbacks=callbacks
+        )
+
+    def train(self, report_loss: bool = True):
+        """
+        Train the model. This is done in two steps: First, we shuffle the documents.
+        Second, we train the model.
+        """
+        if report_loss:
+            self.callbacks.append(ReportLossCallback())
+
+        # shuffle the documents
+        _LOGGER.info(f"Shuffling documents using {self.n_shuffles} shuffles.")
+        shuffled_documents = shuffle_documents(
+            self.region_sets, self.n_shuffles, self.workers
+        )
+
+        # train the model using these shuffled documents
+        _LOGGER.info("Building vocab and training model.")
+        super().build_vocab(shuffled_documents)
+        super().train(
+            shuffled_documents,
+            total_examples=len(shuffled_documents),
+            epochs=self.epochs,
+        )
 
 
 def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
