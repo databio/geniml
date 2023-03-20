@@ -9,7 +9,7 @@ from ..utils import natural_chr_sort
 
 
 def chrom_cmp(a, b):
-    """ Natural chromosome names comparison """
+    """Natural chromosome names comparison"""
     # com = natural_chr_sort(a, b)
     # if com < 0:
     #     return a, False, True
@@ -33,10 +33,9 @@ def chrom_cmp(a, b):
             return a, False, True
 
 
-def relationship_helper(region_a, region_b, only_in, overlap,
-                        start_a, start_b):
-    """ For two region calculate their overlap; for earlier region
-     calculate how many base pair only in it"""
+def relationship_helper(region_a, region_b, only_in, overlap, start_a, start_b):
+    """For two region calculate their overlap; for earlier region
+    calculate how many base pair only in it"""
     if region_b[0] <= region_a[1]:
         only_in += region_b[0] - region_a[0]
         if region_b[1] <= region_a[1]:
@@ -54,9 +53,19 @@ def relationship_helper(region_a, region_b, only_in, overlap,
     return only_in, inside_a, inside_b, overlap, start_a, start_b
 
 
-def relationship(region_d, region_q, only_in_d, only_in_q,
-                 inside_d, inside_q, overlap, start_d, start_q,
-                 waiting_d, waiting_q):
+def relationship(
+    region_d,
+    region_q,
+    only_in_d,
+    only_in_q,
+    inside_d,
+    inside_q,
+    overlap,
+    start_d,
+    start_q,
+    waiting_d,
+    waiting_q,
+):
     """
     Check mutual position and calculate intersection and difference of two regions
     :param list region_d: region from universe
@@ -81,20 +90,19 @@ def relationship(region_d, region_q, only_in_d, only_in_q,
         inside_q, inside_d = False, True
     else:
         if region_d[0] <= region_q[0]:
-            res = relationship_helper(region_d, region_q,
-                                      only_in_d, overlap, start_d,
-                                      start_q)
+            res = relationship_helper(
+                region_d, region_q, only_in_d, overlap, start_d, start_q
+            )
             (only_in_d, inside_d, inside_q, overlap, start_d, start_q) = res
         if region_d[0] > region_q[0]:
-            res = relationship_helper(region_q, region_d,
-                                      only_in_q, overlap, start_q,
-                                      start_d)
+            res = relationship_helper(
+                region_q, region_d, only_in_q, overlap, start_q, start_d
+            )
             (only_in_q, inside_q, inside_d, overlap, start_q, start_d) = res
     return only_in_d, only_in_q, inside_d, inside_q, overlap, start_d, start_q
 
 
-def read_in_new_line(region, start, chrom, inside, waiting, lines,
-                     cchrom, not_e):
+def read_in_new_line(region, start, chrom, inside, waiting, lines, cchrom, not_e):
     if not inside:
         if not waiting:
             line = lines.readline().strip("\n")
@@ -136,18 +144,27 @@ def calc_stats(db, folder, query):
     else:
         c_chrom, waiting_d, waiting_q = chrom_cmp(chrom_d, chrom_q)
     while not_end_d or not_end_q:
-        res = relationship([start_d, pos_d[1]],
-                           [start_q, pos_q[1]],
-                           only_in_d, only_in_q,
-                           inside_d, inside_q, overlap,
-                           start_d, start_q, waiting_d,
-                           waiting_q)
+        res = relationship(
+            [start_d, pos_d[1]],
+            [start_q, pos_q[1]],
+            only_in_d,
+            only_in_q,
+            inside_d,
+            inside_q,
+            overlap,
+            start_d,
+            start_q,
+            waiting_d,
+            waiting_q,
+        )
         (only_in_d, only_in_q, inside_d, inside_q, overlap, start_d, start_q) = res
-        new_d = read_in_new_line(pos_d, start_d, chrom_d, inside_d, waiting_d,
-                                 lines_db, c_chrom, not_end_d)
+        new_d = read_in_new_line(
+            pos_d, start_d, chrom_d, inside_d, waiting_d, lines_db, c_chrom, not_end_d
+        )
         (pos_d, start_d, chrom_d, waiting_d, not_end_d) = new_d
-        new_q = read_in_new_line(pos_q, start_q, chrom_q, inside_q, waiting_q,
-                                 lines_q, c_chrom, not_end_q)
+        new_q = read_in_new_line(
+            pos_q, start_q, chrom_q, inside_q, waiting_q, lines_q, c_chrom, not_end_q
+        )
         (pos_q, start_q, chrom_q, waiting_q, not_end_q) = new_q
         if waiting_d or waiting_q:
             if not not_end_q:
@@ -168,8 +185,9 @@ def calc_stats(db, folder, query):
     return [query, only_in_d, only_in_q, overlap]
 
 
-def run_intersection(folder, file_list, universe, npool,
-                     save_to_file=False, folder_out=None, pref=None):
+def run_intersection(
+    folder, file_list, universe, npool, save_to_file=False, folder_out=None, pref=None
+):
     """
     Calculate the base pair intersection of universe and group of files
     :param str folder: path to folder containing query files
@@ -206,6 +224,8 @@ def run_intersection(folder, file_list, universe, npool,
     else:
         res = np.array(res)
         res = res[:, 1:]
-        res = res.astype('float')
-        return np.mean(res[:, 2] / (res[:, 2] + res[:, 0])), \
-            np.mean(res[:, 2] / (res[:, 2] + res[:, 1]))
+        res = res.astype("float")
+        recall = res[:, 2] / (res[:, 2] + res[:, 1])
+        precision = res[:, 2] / (res[:, 2] + res[:, 0])
+        F_10 = (1 + 10**2) * (precision * recall) / ((10**2 * precision) + recall)
+        return np.median(F_10)

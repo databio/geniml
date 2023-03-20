@@ -185,7 +185,7 @@ def calc_distance(db_file, q_folder, q_file, flexible=False,
     return q_file, np.median(dist_start), np.median(dist_end)
 
 
-def run_distance(folder, file_list, universe, npool, flexible,
+def run_distance(folder, file_list, universe, npool, flexible=False,
                  save_to_file=False, folder_out=None, pref=None,
                  save_each=False):
     """
@@ -232,4 +232,4 @@ def run_distance(folder, file_list, universe, npool, flexible,
         res = np.array(res)
         res = res[:, 1:]
         res = res.astype('float')
-        return np.nanmean(res[:, 0]), np.nanmean(res[:, 1])
+        return np.mean([np.nanmedian(res[:, 0]), np.nanmedian(res[:, 1])])
