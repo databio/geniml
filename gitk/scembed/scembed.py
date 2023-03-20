@@ -1,7 +1,7 @@
 import scanpy as sc
 import pandas as pd
 
-from typing import Dict, List
+from typing import Dict, List, Union
 from concurrent.futures import ThreadPoolExecutor
 from random import shuffle
 from gensim.models import Word2Vec
@@ -49,10 +49,12 @@ def shuffle_documents(
         )
     return shuffled_documents
 
+
 class ReportLossCallback(CallbackAny2Vec):
     """
     Callback to report loss after each epoch.
     """
+
     def __init__(self):
         self.epoch = 0
 
@@ -61,22 +63,24 @@ class ReportLossCallback(CallbackAny2Vec):
         _LOGGER.info(f"Epoch {self.epoch} complete. Loss: {loss}")
         self.epoch += 1
 
+
 class Region2Vec(Word2Vec):
     """
     Region2Vec model that extends the Word2Vec model from gensim.
     """
+
     def __init__(
         self,
         data: sc.AnnData,
         epochs: int = 10,
-        window_size: int = 100,
-        vector_size: int = 128,
+        window_size: int = DEFAULT_WINDOW_SIZE,
+        vector_size: int = DEFAULT_EMBEDDING_SIZE,
         min_count: int = 10,
         threads: int = 1,
         seed: int = 42,
-        n_shuffles: int = 10,
-        lr: float = None,
-        min_lr: float = None,
+        n_shuffles: int = DEAFULT_N_SHUFFLES,
+        lr: float = DEFAULT_INIT_LR,
+        min_lr: float = 0.0001,
         callbacks: List[CallbackAny2Vec] = [],
     ):
         # convert the data to the
@@ -95,10 +99,10 @@ class Region2Vec(Word2Vec):
             seed=seed,
             alpha=lr,
             min_alpha=min_lr,
-            callbacks=callbacks
+            callbacks=callbacks,
         )
 
-    def train(self, report_loss: bool = True):
+    def train(self, epochs: Union[int, None] = None, report_loss: bool = True):
         """
         Train the model. This is done in two steps: First, we shuffle the documents.
         Second, we train the model.
@@ -118,7 +122,10 @@ class Region2Vec(Word2Vec):
         super().train(
             shuffled_documents,
             total_examples=len(shuffled_documents),
-            epochs=self.epochs,
+            epochs=epochs
+            or self.epochs,  # use the epochs passed in or the epochs set in the constructor
+            callbacks=self.callbacks,
+            compute_loss=report_loss,
         )
 
 
