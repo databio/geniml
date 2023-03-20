@@ -6,15 +6,29 @@ import os
 from functools import cmp_to_key
 from ..utils import natural_chr_sort, timer_func
 from ..hmm.hmm import hmm_pred_to_bed, find_full_full_pos, find_full_empty_pos
+from numba import njit
 
 
-def process_part(mat):
+@njit
+def process_part(model):
     """
     Finding ML path through matrix using dynamic programing
     :param array mat: fragment of likelihood model to be processed
     :return array: ML path through matrix
     """
+    mat = np.zeros((len(model), 4))
     (N, M) = mat.shape
+    background = [0, 2, 4]
+    for i in range(N):
+        for k in background:
+            mat[i, 3] += model[i, k]
+        for j in range(M - 1):
+            back = background[:]
+            back.remove(2 * j)
+            mat[i, j] = model[i, 2 * j + 1]
+            for k in back:
+                mat[i, j] += model[i, k]
+
     for i in range(1, N):
         for j in range(M):
             mat[i, j] += max(mat[i - 1, j], mat[i - 1, j - 1])
@@ -36,9 +50,14 @@ def make_ml_flexible_universe(folderin, chrom, fout):
     :param str chrom: chromosome to be processed
     :param str fout: output file with the universe
     """
-    model = np.load(os.path.join(folderin, chrom + ".npz"))
-    model = model[model.files[0]]
-    seq = np.where(np.sum(model[:, :3], axis=1) > -30, 1, 0).astype(np.uint8)
+    model_s = np.load(os.path.join(folderin, chrom + "_start.npz"))
+    model_s = model_s[model_s.files[0]]
+    model_c = np.load(os.path.join(folderin, chrom + "_core.npz"))
+    model_c = model_c[model_c.files[0]]
+    model_e = np.load(os.path.join(folderin, chrom + "_end.npz"))
+    model_e = model_e[model_e.files[0]]
+    model = np.hstack((model_s, model_c, model_e))
+    seq = np.where(np.sum(model[:, [1, 3, 5]], axis=1) > -30, 1, 0).astype(np.uint8)
     full_pos_no = np.sum(seq)
     if full_pos_no < len(seq) - full_pos_no:
         full_start, full_end = find_full_full_pos(seq)
@@ -51,6 +70,7 @@ def make_ml_flexible_universe(folderin, chrom, fout):
     hmm_pred_to_bed(path, chrom, fout)
 
 
+@timer_func
 def main(folderin, fout):
     """
     Make ML flexible universe
@@ -60,7 +80,8 @@ def main(folderin, fout):
     if os.path.isfile(fout):
         raise Exception(f"File : {fout} exists")
     chroms = os.listdir(folderin)
-    chroms = [i.split(".")[0] for i in chroms]
+    chroms = [i.split("_")[0] for i in chroms]
+    chroms = list(set(chroms))
     chroms = sorted(chroms, key=cmp_to_key(natural_chr_sort))
     for C in chroms:
         make_ml_flexible_universe(folderin, C, fout)

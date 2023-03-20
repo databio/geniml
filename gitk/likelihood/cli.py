@@ -16,13 +16,6 @@ def build_subparser_model(parser):
     group.add_argument(
         '--file_no',
         type=int)
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        '--binomial',
-        action='store_true')
-    group.add_argument(
-        '--multinomial',
-        action='store_true')
     parser.add_argument(
         '--coverage_folder',
         required=True,
@@ -33,11 +26,11 @@ def build_subparser_model(parser):
         type=str)
     parser.add_argument(
         '--coverage_starts',
-        default='all_end',
+        default='all_start',
         type=str)
     parser.add_argument(
         '--coverage_ends',
-        default='all_start',
+        default='all_end',
         type=str)
 
     return parser
