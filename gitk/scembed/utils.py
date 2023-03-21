@@ -1,3 +1,4 @@
+from typing import Union
 from enum import Enum
 from logging import getLogger
 
@@ -24,14 +25,21 @@ class LearningRateScheduler:
         self,
         init_lr: float = DEFAULT_INIT_LR,
         min_lr: float = DEFAULT_MIN_LR,
-        type: ScheduleType = ScheduleType.EXPONENTIAL,
+        type: Union[str, ScheduleType] = ScheduleType.EXPONENTIAL,
         decay: float = None,
         n_epochs: int = None,
     ):
         self.init_lr = init_lr
         self.min_lr = min_lr
-        self.type = type
         self.n_epochs = n_epochs
+
+        # convert type to learning rate if necessary
+        if isinstance(type, str):
+            try:
+                self.type = ScheduleType[type.upper()]
+            except KeyError:
+                raise ValueError(f"Unknown schedule type: {type}. Must be one of ['linear', 'exponential'].")
+
 
         # init the current lr and iteration
         self._current_lr = init_lr
@@ -43,13 +51,15 @@ class LearningRateScheduler:
                 "No decay rate provided. Calculating decay rate from init_lr and n_epochs."
             )
             self.decay = init_lr / n_epochs
+        else:
+            self.decay = decay
 
     def _update_linear(self, epoch: int):
         lr = self.init_lr - (self.decay * epoch)
         return max(lr, self.min_lr)
 
     def _update_exponential(self, epoch: int):
-        lr = self.get_lr() * 1 / (1 + (self.decay * epoch))
+        lr = self.get_lr() * (1 / (1 + self.decay * epoch))
         return max(lr, self.min_lr)
 
     def update(self):
