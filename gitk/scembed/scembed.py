@@ -103,7 +103,7 @@ class Region2Vec(Word2Vec):
         report_loss: bool = True,
         lr: float = DEFAULT_INIT_LR,
         min_lr: float = DEFAULT_MIN_LR,
-        lr_schedule: ScheduleType = ScheduleType.EXPONENTIAL,
+        lr_schedule: Union[str, ScheduleType] = "linear",
     ):
         """
         Train the model. This is done in two steps: First, we shuffle the documents.
@@ -113,7 +113,7 @@ class Region2Vec(Word2Vec):
             self.callbacks.append(ReportLossCallback())
 
         lr_scheduler = LearningRateScheduler(
-            init_lr=lr, min_lr=min_lr, schedule=lr_schedule
+            init_lr=lr, min_lr=min_lr, schedule=lr_schedule, epochs=self.n_shuffles
         )
 
         # train the model using these shuffled documents
@@ -133,7 +133,7 @@ class Region2Vec(Word2Vec):
             # shuffle regions
             self.region_sets = shuffle_documents(self.region_sets, 10)
 
-            # train
+            # update vocab and train
             super().build_vocab(self.region_sets, update=True)
             super().train(
                 self.region_sets,

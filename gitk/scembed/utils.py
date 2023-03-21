@@ -38,8 +38,9 @@ class LearningRateScheduler:
             try:
                 self.type = ScheduleType[type.upper()]
             except KeyError:
-                raise ValueError(f"Unknown schedule type: {type}. Must be one of ['linear', 'exponential'].")
-
+                raise ValueError(
+                    f"Unknown schedule type: {type}. Must be one of ['linear', 'exponential']."
+                )
 
         # init the current lr and iteration
         self._current_lr = init_lr
