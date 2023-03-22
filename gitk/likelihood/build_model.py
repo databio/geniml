@@ -16,7 +16,7 @@ def model_binomial(folder_in, in_file, chrom, file_out, file_no=None, start=0):
     """ "Create binomial likelihood model
     First column likelihood of background
     Second column likelihood of coverage"""
-    in_file = os.path.join(folder_in, in_file + ".bw")
+    in_file = os.path.join(folder_in, in_file)
     bw = pyBigWig.open(in_file)
     chrom_size = bw.chroms(chrom)
     if pyBigWig.numpy:
@@ -97,16 +97,16 @@ class ModelLH:
                 chroms = files.getnames()
                 self.chromosomes_list = list(set([i.split("_")[0] for i in chroms]))
 
-    def make(self, coverage_folder, coverage_start, coverage_end, coverage_core, file_no):
+    def make(self, coverage_folder, coverage_prefix, file_no):
         tar_arch = tarfile.open(self.folder, "w")
         temp_dir = tempfile.TemporaryDirectory()
-        bw_start = pyBigWig.open(os.path.join(coverage_folder, coverage_start + ".bw"))
+        bw_start = pyBigWig.open(os.path.join(coverage_folder, f"{coverage_prefix}_start.bw"))
         chroms = bw_start.chroms()
         bw_start.close()
         self.chromosomes_list = [i for i in chroms if chroms[i] != 0]
         for c in self.chromosomes_list:
             chrom_model = ChromosomeModel(temp_dir.name, c)
-            chrom_model.make_model(coverage_folder, coverage_start, coverage_end, coverage_core, file_no)
+            chrom_model.make_model(coverage_folder, f"{coverage_prefix}_start.bw", f"{coverage_prefix}_core.bw", f"{coverage_prefix}_end.bw", file_no)
             for f in chrom_model.files:
                 tar_arch.add(os.path.join(temp_dir.name, chrom_model.files[f]), arcname=chrom_model.files[f])
                 os.remove(os.path.join(temp_dir.name, chrom_model.files[f]))
@@ -128,9 +128,7 @@ class ModelLH:
 def main(
     model_folder,
     coverage_folder,
-    coverage_start,
-    coverage_core,
-    coverage_end,
+    coverage_prefix,
     file_no=None,
 ):
     """
@@ -143,4 +141,4 @@ def main(
     :param int file_no: number of files used for making coverage tracks
     """
     model = ModelLH(model_folder)
-    model.make(coverage_folder, coverage_start, coverage_end, coverage_core, file_no)
+    model.make(coverage_folder, coverage_prefix, file_no)

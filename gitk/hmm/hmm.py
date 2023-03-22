@@ -242,9 +242,7 @@ def run_hmm(start, core, end, chrom, normalize=False):
 def run_hmm_save_bed(
     coverage_folder,
     out_file,
-    start="all_start",
-    core="all_core",
-    end="all_end",
+    prefix="all",
     normalize=False,
     save_max_cove=False,
 ):
@@ -261,9 +259,9 @@ def run_hmm_save_bed(
     """
     if os.path.isfile(out_file):
         raise Exception(f"File : {out_file} exists")
-    start = os.path.join(coverage_folder, start)
-    core = os.path.join(coverage_folder, core)
-    end = os.path.join(coverage_folder, end)
+    start = os.path.join(coverage_folder, f"{prefix}_start")
+    core = os.path.join(coverage_folder, f"{prefix}_core")
+    end = os.path.join(coverage_folder, f"{prefix}_end")
     bw_start = pyBigWig.open(start + ".bw")
     chroms = bw_start.chroms()
     bw_start.close()

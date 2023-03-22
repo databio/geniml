@@ -17,16 +17,8 @@ def build_subparser_model(parser):
         required=True,
         type=str)
     parser.add_argument(
-        '--coverage_core',
-        default='all_core',
-        type=str)
-    parser.add_argument(
-        '--coverage_starts',
-        default='all_start',
-        type=str)
-    parser.add_argument(
-        '--coverage_ends',
-        default='all_end',
+        '--coverage_prefix',
+        default='all',
         type=str)
 
     return parser

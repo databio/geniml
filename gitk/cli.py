@@ -116,7 +116,7 @@ def main(test_args=None):
         if args.subcommand == "build_model":
             from .likelihood.build_model import main
 
-            main(args.model_folder, args.coverage_folder, args.coverage_starts, args.coverage_core, args.coverage_ends,
+            main(args.model_folder, args.coverage_folder, args.coverage_prefix,
                  args.file_no)
 
         if args.subcommand == "universe_hard":
@@ -141,9 +141,7 @@ def main(test_args=None):
         run_hmm_save_bed(
             coverage_folder=args.cov_folder,
             out_file=args.out_file,
-            start=args.coverage_starts,
-            end=args.coverage_ends,
-            core=args.coverage_body,
+            prefix=args.coverage_prefix,
             normalize=args.normalize,
             save_max_cove=args.save_max_cove,
         )
