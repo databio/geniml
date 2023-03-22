@@ -2,11 +2,15 @@ from subprocess import Popen, PIPE
 import subprocess
 import shlex
 import os
+import tempfile
 
 
-def prep_data(folder, file):
-    """ File sort and merge """
-    tmp_file = open(os.path.join("tmp", file + "_sorted"), "wb")
+def help(f):
+    f.write(b"Welcome to geeksforgeeks")
+
+
+def prep_data(folder, file, tmp_file):
+    """File sort and merge"""
     fin = os.path.join(folder, file)
     stdin_1 = None
     if ".gz" in file:
@@ -21,10 +25,11 @@ def prep_data(folder, file):
     p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
     output = p2.communicate()[0]
     tmp_file.write(output)
+    tmp_file.seek(0)
 
 
 def check_if_uni_sorted(universe):
-    """ Check if regions in file are sorted """
+    """Check if regions in file are sorted"""
     command0 = f"sort -k1,1V -k2,2n -c {universe}"
     output = subprocess.run(shlex.split(command0))
     if output.returncode:
@@ -32,7 +37,7 @@ def check_if_uni_sorted(universe):
 
 
 def process_line(line):
-    """ Helper for reading in bed file line"""
+    """Helper for reading in bed file line"""
     line = line.split("\t")[:3]
     chrom = line[0]
     pos = [int(i) for i in line[1:]]
@@ -41,7 +46,7 @@ def process_line(line):
 
 
 def chrom_cmp_bigger(a, b):
-    """ Natural check if chromosomes name is bigger """
+    """Natural check if chromosomes name is bigger"""
     ac = a.replace("chr", "")
     ac = ac.split("_")[0]
     bc = b.replace("chr", "")
@@ -59,7 +64,7 @@ def chrom_cmp_bigger(a, b):
 
 
 def process_db_line(dn, pos_index):
-    """ Helper for reading in universe bed file line """
+    """Helper for reading in universe bed file line"""
     dn = dn.split("\t")
     region_chrom = dn[0]
     return [int(dn[p]) for p in pos_index], region_chrom
