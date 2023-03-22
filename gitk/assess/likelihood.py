@@ -1,11 +1,11 @@
 import numpy as np
 import os
 from .utils import check_if_uni_sorted
-from ..likelihood.build_model import ChromosomeModel
+from ..likelihood.build_model import ModelLH
 
 
 
-def calc_likelihood_hard(universe, chroms, model_folder, name,
+def calc_likelihood_hard(universe, chroms, model_lh, name,
                          s_index, e_index=None):
     """
     Calculate likelihood of universe for given type of model
@@ -37,12 +37,13 @@ def calc_likelihood_hard(universe, chroms, model_folder, name,
             else:
                 if i[0] != curent_chrom:
                     if i[0] in chroms:
+                        model_lh.clear_chrom(curent_chrom)
                         if e != 1:
                             res += np.sum(prob_array[empty_start:, 0])
+
                         curent_chrom = i[0]
-                        chrom_model = ChromosomeModel(model_folder, curent_chrom)
-                        chrom_model.read_track(name)
-                        prob_array = chrom_model.models[name]
+                        model_lh.read_chrom_track(curent_chrom, name)
+                        prob_array = model_lh.chromosomes_models[curent_chrom].models[name]
                         empty_start = 0
                     else:
                         print(f"Chromosome {i[0]} missing from model")
@@ -70,13 +71,13 @@ def hard_universe_likelihood(model_folder, universe):
     :return float: likelihood
     """
     check_if_uni_sorted(universe)
-    model_files = os.listdir(model_folder)
-    chroms = list(set([i.split("_")[0] for i in model_files]))
-    s = calc_likelihood_hard(universe, chroms, model_folder, "start",
+    model_lh = ModelLH(model_folder)
+    chroms = model_lh.chromosomes_list
+    s = calc_likelihood_hard(universe, chroms, model_lh, "start",
                              1)
-    e = calc_likelihood_hard(universe, chroms, model_folder, "end",
+    e = calc_likelihood_hard(universe, chroms, model_lh, "end",
                              2)
-    c = calc_likelihood_hard(universe, chroms, model_folder, "core",
+    c = calc_likelihood_hard(universe, chroms, model_lh, "core",
                              1, 2)
     return sum([s, e, c])
 
@@ -90,8 +91,8 @@ def likelihood_only_core(model_folder, universe, core="core"):
     :return float: likelihood
     """
     check_if_uni_sorted(universe)
-    model_files = os.listdir(model_folder)
-    chroms = list(set([i.split("_")[0] for i in model_files]))
+    model_lh = ModelLH(model_folder)
+    chroms = model_lh.chromosomes_list
     c = calc_likelihood_hard(universe, chroms, model_folder, core,
                              1, 2)
     return c
@@ -140,8 +141,8 @@ def likelihood_flexible_universe(model_folder, universe,
     empty_start = 0
     res = 0
     check_if_uni_sorted(universe)
-    model_files = os.listdir(model_folder)
-    chroms = list(set([i.split("_")[0] for i in model_files]))
+    model_lh = ModelLH(model_folder)
+    chroms = model_lh.chromosomes_list
     if save_peak_input:
         output = []
     e = 0  # number of processed chromosomes
@@ -155,6 +156,7 @@ def likelihood_flexible_universe(model_folder, universe,
             else:
                 if i[0] != curent_chrom:
                     if i[0] in chroms:
+                        model_lh.clear_chrom(curent_chrom)
                         if e != 0:
                             # if we read any chromosomes add to result background
                             # likelihood of part of the genome after the last region
@@ -162,11 +164,10 @@ def likelihood_flexible_universe(model_folder, universe,
                                                          model_start, model_core, model_end)
                         curent_chrom = i[0]
                         e += 1
-                        chrom_model = ChromosomeModel(model_folder, curent_chrom)
-                        chrom_model.read()
-                        model_start = chrom_model.models["start"]
-                        model_core = chrom_model.models["core"]
-                        model_end = chrom_model.models["end"]
+                        model_lh.read_chrom(curent_chrom)
+                        model_start = model_lh.chromosomes_models[curent_chrom].models["start"]
+                        model_core = model_lh.chromosomes_models[curent_chrom].models["core"]
+                        model_end = model_lh.chromosomes_models[curent_chrom].models["end"]
 
                     else:
                         print(f"Chromosome {i[0]} missing from model")

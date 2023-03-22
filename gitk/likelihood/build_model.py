@@ -5,6 +5,8 @@ import numpy as np
 import os
 from ..utils import timer_func
 import pyBigWig
+import tarfile
+import tempfile
 
 WINDOW_SIZE = 25
 WRONG_UNIWIG = False
@@ -45,13 +47,13 @@ class ChromosomeModel:
     def __init__(self, folder, chrom):
         self.folder = folder
         self.chromosome = chrom
-        self.start_file = os.path.join(folder, f"{self.chromosome}_start")
-        self.core_file = os.path.join(folder, f"{self.chromosome}_core")
-        self.end_file = os.path.join(folder, f"{self.chromosome}_end")
+        self.start_file = f"{self.chromosome}_start"
+        self.core_file = f"{self.chromosome}_core"
+        self.end_file = f"{self.chromosome}_end"
         self.files = {
-            "start": self.start_file+ ".npz",
-            "core": self.core_file+ ".npz",
-            "end": self.end_file+ ".npz",
+            "start": self.start_file + ".npz",
+            "core": self.core_file + ".npz",
+            "end": self.end_file + ".npz",
         }
         self.models = {}
 
@@ -59,27 +61,68 @@ class ChromosomeModel:
         self, coverage_folder, coverage_start, coverage_end, coverage_core, file_no
     ):
         model_binomial(
-            coverage_folder, coverage_start, self.chromosome, self.start_file, file_no
+            coverage_folder, coverage_start, self.chromosome, os.path.join(self.folder, self.start_file), file_no
         )
         model_binomial(
-            coverage_folder, coverage_core, self.chromosome, self.core_file, file_no
+            coverage_folder, coverage_core, self.chromosome, os.path.join(self.folder, self.core_file), file_no
         )
         model_binomial(
-            coverage_folder, coverage_end, self.chromosome, self.end_file, file_no
+            coverage_folder, coverage_end, self.chromosome, os.path.join(self.folder, self.end_file), file_no
         )
 
     def read(self):
-        values = np.load(self.files["start"])
-        self.models["start"] = values[values.files[0]]
-        values = np.load(self.files["core"])
-        self.models["core"] = values[values.files[0]]
-        values = np.load(self.files["end"])
-        self.models["end"] = values[values.files[0]]
+        model_folder = tarfile.open(self.folder,"r")
+        for f in self.files:
+            file = model_folder.extractfile(self.files[f])
+            values = np.load(file)
+            self.models[f] = values[values.files[0]]
+        model_folder.close()
 
     def read_track(self, track):
-        values = np.load(self.files[track])
+        model_folder = tarfile.open(self.folder, "r")
+        file = model_folder.extractfile(self.files[track])
+        values = np.load(file)
         self.models[track] = values[values.files[0]]
+        model_folder.close()
 
+
+class ModelLH:
+    def __init__(self, folder):
+        self.folder = folder
+        self.chromosomes_list = []
+        self.chromosomes_models = {}
+        if os.path.exists(self.folder):
+            if tarfile.is_tarfile(self.folder):
+                files = tarfile.open(self.folder, "r")
+                chroms = files.getnames()
+                self.chromosomes_list = list(set([i.split("_")[0] for i in chroms]))
+
+    def make(self, coverage_folder, coverage_start, coverage_end, coverage_core, file_no):
+        tar_arch = tarfile.open(self.folder, "w")
+        temp_dir = tempfile.TemporaryDirectory()
+        bw_start = pyBigWig.open(os.path.join(coverage_folder, coverage_start + ".bw"))
+        chroms = bw_start.chroms()
+        bw_start.close()
+        self.chromosomes_list = [i for i in chroms if chroms[i] != 0]
+        for c in self.chromosomes_list:
+            chrom_model = ChromosomeModel(temp_dir.name, c)
+            chrom_model.make_model(coverage_folder, coverage_start, coverage_end, coverage_core, file_no)
+            for f in chrom_model.files:
+                tar_arch.add(os.path.join(temp_dir.name, chrom_model.files[f]), arcname=chrom_model.files[f])
+                os.remove(os.path.join(temp_dir.name, chrom_model.files[f]))
+        temp_dir.cleanup()
+        tar_arch.close()
+
+    def read_chrom(self, chrom):
+        self.chromosomes_models[chrom] = ChromosomeModel(self.folder, chrom)
+        self.chromosomes_models[chrom].read()
+
+    def read_chrom_track(self, chrom, track):
+        self.chromosomes_models[chrom] = ChromosomeModel(self.folder, chrom)
+        self.chromosomes_models[chrom].read_track(track)
+
+    def clear_chrom(self, chrom):
+        self.chromosomes_models[chrom] = None
 
 @timer_func
 def main(
@@ -99,13 +142,5 @@ def main(
     :param str coverage_core: file with coverage of core without extension
     :param int file_no: number of files used for making coverage tracks
     """
-    os.makedirs(model_folder)
-    bw_start = pyBigWig.open(os.path.join(coverage_folder, coverage_start + ".bw"))
-    chroms = bw_start.chroms()
-    bw_start.close()
-    for c in chroms:
-        if chroms[c] != 0:
-            chr_model = ChromosomeModel(model_folder, c)
-            chr_model.make_model(
-                coverage_folder, coverage_start, coverage_end, coverage_core, file_no
-            )
+    model = ModelLH(model_folder)
+    model.make(coverage_folder, coverage_start, coverage_end, coverage_core, file_no)
