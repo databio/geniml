@@ -6,6 +6,7 @@ import os
 from multiprocessing import Pool
 import numpy as np
 from ..utils import natural_chr_sort
+import tempfile
 
 
 def chrom_cmp(a, b):
@@ -105,7 +106,10 @@ def relationship(
 def read_in_new_line(region, start, chrom, inside, waiting, lines, cchrom, not_e):
     if not inside:
         if not waiting:
-            line = lines.readline().strip("\n")
+            line = lines.readline()
+            if type(line) is bytes:
+                line = line.decode("utf-8")
+            line = line.strip("\n")
             if line != "":
                 region, start, chrom = process_line(line)
                 if chrom != cchrom:
@@ -128,16 +132,16 @@ def calc_stats(db, folder, query):
     inside_d, inside_q = False, False  # inside a region
     not_end_d, not_end_q = True, True  # if there are regions to process
     waiting_d, waiting_q = False, False  # if waiting for the other file to finish chrom
-    prep_data(folder, query)
-    if os.stat(os.path.join("tmp", query + "_sorted")).st_size == 0:
+    lines_q = tempfile.NamedTemporaryFile()
+    prep_data(folder, query, lines_q)
+    if os.stat(lines_q.name).st_size == 0:
         print(f"Empty file {query}")
-        os.remove(os.path.join("tmp", query + "_sorted"))
+        lines_q.close()
         return [query, only_in_d, only_in_q, overlap]
-    lines_q = open(os.path.join("tmp", query + "_sorted"), "r")
     lines_db = open(db)
     new_d = lines_db.readline().strip("\n")
     pos_d, start_d, chrom_d = process_line(new_d)
-    new_q = lines_q.readline().strip("\n")
+    new_q = lines_q.readline().decode("utf-8").strip("\n")
     pos_q, start_q, chrom_q = process_line(new_q)
     if chrom_d == chrom_q:
         c_chrom = chrom_d
@@ -181,7 +185,7 @@ def calc_stats(db, folder, query):
 
     only_in_d += pos_d[1] - start_d
     only_in_q += pos_q[1] - start_q
-    os.remove(os.path.join("tmp", query + "_sorted"))
+    lines_q.close()
     return [query, only_in_d, only_in_q, overlap]
 
 
@@ -203,7 +207,7 @@ def run_intersection(
     check_if_uni_sorted(universe)
     if save_to_file:
         os.makedirs(folder_out, exist_ok=True)
-    os.mkdir("tmp")
+    # os.mkdir("tmp")
     files = open(file_list).read().split("\n")[:-1]
     res = []
     if npool <= 1:
@@ -214,7 +218,7 @@ def run_intersection(
         with Pool(npool) as p:
             args = [(universe, folder, f) for f in files]
             res = p.starmap(calc_stats, args)
-    os.rmdir("tmp")
+    # os.rmdir("tmp")
     if save_to_file:
         fout = os.path.join(folder_out, pref + "_data.tsv")
         with open(fout, "w") as o:
