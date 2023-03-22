@@ -113,18 +113,11 @@ def main(test_args=None):
 
     if args.command == "lh":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
-        if args.subcommand == "model":
-            from .likelihood.model import main
+        if args.subcommand == "build_model":
+            from .likelihood.build_model import main
 
-            main(
-                args.model_folder,
-                args.coverage_folder,
-                args.coverage_starts,
-                args.coverage_ends,
-                args.coverage_core,
-                args.file_list,
-                args.file_no,
-            )
+            main(args.model_folder, args.coverage_folder, args.coverage_starts, args.coverage_core, args.coverage_ends,
+                 args.file_no)
 
         if args.subcommand == "universe_hard":
             from .likelihood.universe_hard import main

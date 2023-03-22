@@ -8,7 +8,7 @@
 
 
 ```
-gitk lh model --model_folder tests/consesnus/lh_model \
+gitk lh build_model --model_folder tests/consesnus/lh_model \
               --file_list tests/consesnus/file_list.txt \
               --coverage_folder tests/consesnus/coverage/
 ```

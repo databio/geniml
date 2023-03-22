@@ -9,11 +9,7 @@ def build_subparser_model(parser):
         '--model_folder',
         required=True,
         type=str)
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        '--file_list',
-        type=str)
-    group.add_argument(
+    parser.add_argument(
         '--file_no',
         type=int)
     parser.add_argument(
@@ -76,14 +72,14 @@ def build_subparser_universe_flexible(parser):
 def build_subparser(parser):
     sp = parser.add_subparsers(dest="subcommand")
     msg_by_cmd = {
-        "model": "Asses based on distance",
+        "build_model": "Asses based on distance",
         "universe_hard": "Making cut-off universe",
         "universe_flexible": "Making ML flexible universe",
     }
     subparsers = {}
     for k, v in msg_by_cmd.items():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
-    subparsers["model"] = build_subparser_model(subparsers["model"])
+    subparsers["build_model"] = build_subparser_model(subparsers["build_model"])
     subparsers["universe_hard"] = build_subparser_universe_hard(subparsers["universe_hard"])
     subparsers["universe_flexible"] = build_subparser_universe_flexible(subparsers["universe_flexible"])
 

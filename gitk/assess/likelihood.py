@@ -1,11 +1,8 @@
 import numpy as np
 import os
 from .utils import check_if_uni_sorted
+from ..likelihood.build_model import ChromosomeModel
 
-
-def read_model(file):
-    model = np.load(file)
-    return model[model.files[0]]
 
 
 def calc_likelihood_hard(universe, chroms, model_folder, name,
@@ -43,9 +40,9 @@ def calc_likelihood_hard(universe, chroms, model_folder, name,
                         if e != 1:
                             res += np.sum(prob_array[empty_start:, 0])
                         curent_chrom = i[0]
-                        model_file = os.path.join(model_folder,
-                                                  f"{curent_chrom}_{name}.npz")
-                        prob_array = read_model(model_file)
+                        chrom_model = ChromosomeModel(model_folder, curent_chrom)
+                        chrom_model.read_track(name)
+                        prob_array = chrom_model.models[name]
                         empty_start = 0
                     else:
                         print(f"Chromosome {i[0]} missing from model")
@@ -64,26 +61,22 @@ def calc_likelihood_hard(universe, chroms, model_folder, name,
     return res
 
 
-def hard_universe_likelihood(model_folder, universe,
-                             start="start", end="end", core="core"):
+def hard_universe_likelihood(model_folder, universe):
     """
     Calculate likelihood of hard universe based on core, start,
     end coverage model
     :param str model_folder: path to folder containing model
     :param str universe: path to universe
-    :param str start: model of starts file name
-    :param str end: model of end file name
-    :param str core: model of core file name
     :return float: likelihood
     """
     check_if_uni_sorted(universe)
     model_files = os.listdir(model_folder)
     chroms = list(set([i.split("_")[0] for i in model_files]))
-    s = calc_likelihood_hard(universe, chroms, model_folder, start,
+    s = calc_likelihood_hard(universe, chroms, model_folder, "start",
                              1)
-    e = calc_likelihood_hard(universe, chroms, model_folder, end,
+    e = calc_likelihood_hard(universe, chroms, model_folder, "end",
                              2)
-    c = calc_likelihood_hard(universe, chroms, model_folder, core,
+    c = calc_likelihood_hard(universe, chroms, model_folder, "core",
                              1, 2)
     return sum([s, e, c])
 
@@ -102,62 +95,6 @@ def likelihood_only_core(model_folder, universe, core="core"):
     c = calc_likelihood_hard(universe, chroms, model_folder, core,
                              1, 2)
     return c
-
-
-def likelihood_multinomial(model_folder, universe, flex=False):
-    curent_chrom = ""
-    missing_chrom = ""
-    empty_start = 0
-    res = 0
-    check_if_uni_sorted(universe)
-    model_files = os.listdir(model_folder)
-    chroms = list(set([i.split(".")[0] for i in model_files]))
-    e = 0  # number of processed chromosomes
-    with open(universe) as uni:
-        for i in uni:
-            i = i.split("\t")
-            peak_start, peak_end = int(i[1]), int(i[2])
-            if flex:
-                peak_start_end = int(i[6])
-                peak_end_start = int(i[7])
-            else:
-                peak_start_end = peak_start + 1
-                peak_end_start = peak_end - 1
-            if i[0] == missing_chrom:
-                pass
-            else:
-                if i[0] != curent_chrom:
-                    if i[0] in chroms:
-                        if e != 0:
-                            # if we read any chromosomes add to result background
-                            # likelihood of part of the genome after the last region
-                            res += np.sum(model[empty_start:, 3])
-                        curent_chrom = i[0]
-                        e += 1
-                        model = read_model(os.path.join(model_folder,
-                                                        f"{curent_chrom}.npz"))
-
-                    else:
-                        print(f"Chromosome {i[0]} missing from model")
-                        missing_chrom = i[0]
-            res += np.sum(model[empty_start:peak_start, 3])
-            res += np.sum(model[peak_start_end:peak_end_start, 1])
-            if not flex:
-                res += np.sum(model[peak_start:peak_start_end, 0])
-                res += np.sum(model[peak_end_start:peak_end, 2])
-            if flex:
-                e_w = 1 / (peak_start_end - peak_start)  # weights for processed model
-                c_w = np.linspace(start=e_w, stop=1, num=(peak_start_end - peak_start))
-                res += e_w * np.sum(model[peak_start:peak_start_end, 0])
-                res += np.sum(c_w * model[peak_start:peak_start_end, 1])
-                e_w = 1 / (peak_end - peak_end_start)  # weights for processed model
-                c_w = np.linspace(start=e_w, stop=1, num=(peak_end - peak_end_start))
-                c_w = c_w[::-1]
-                res += e_w * np.sum(model[peak_end_start:peak_end, 0])
-                res += np.sum(c_w * model[peak_end_start:peak_end, 1])
-            empty_start = peak_end
-        res += np.sum(model[empty_start:, 3])
-    return res
 
 
 def background_likelihood(start, end, model_start, model_cove, model_end):
@@ -197,7 +134,6 @@ def flexible_peak_likelihood(startS, startE, endS, endE,
 
 
 def likelihood_flexible_universe(model_folder, universe,
-                                 start="start", end="end", core="core",
                                  save_peak_input=False):
     curent_chrom = ""
     missing_chrom = ""
@@ -226,12 +162,11 @@ def likelihood_flexible_universe(model_folder, universe,
                                                          model_start, model_core, model_end)
                         curent_chrom = i[0]
                         e += 1
-                        model_start = read_model(os.path.join(model_folder,
-                                                              f"{curent_chrom}_{start}.npz"))
-                        model_core = read_model(os.path.join(model_folder,
-                                                             f"{curent_chrom}_{core}.npz"))
-                        model_end = read_model(os.path.join(model_folder,
-                                                            f"{curent_chrom}_{end}.npz"))
+                        chrom_model = ChromosomeModel(model_folder, curent_chrom)
+                        chrom_model.read()
+                        model_start = chrom_model.models["start"]
+                        model_core = chrom_model.models["core"]
+                        model_end = chrom_model.models["end"]
 
                     else:
                         print(f"Chromosome {i[0]} missing from model")
