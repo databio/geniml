@@ -154,7 +154,7 @@ def ana_region(region, start_s):
     return start_e, end_s
 
 
-def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None):
+def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None):
     """
     Save HMM prediction into a file
     :param array states: result of HMM prediction
@@ -242,9 +242,7 @@ def run_hmm(start, core, end, chrom, normalize=False):
 def run_hmm_save_bed(
     coverage_folder,
     out_file,
-    start="all_start",
-    core="all_core",
-    end="all_end",
+    prefix="all",
     normalize=False,
     save_max_cove=False,
 ):
@@ -261,9 +259,9 @@ def run_hmm_save_bed(
     """
     if os.path.isfile(out_file):
         raise Exception(f"File : {out_file} exists")
-    start = os.path.join(coverage_folder, start)
-    core = os.path.join(coverage_folder, core)
-    end = os.path.join(coverage_folder, end)
+    start = os.path.join(coverage_folder, f"{prefix}_start")
+    core = os.path.join(coverage_folder, f"{prefix}_core")
+    end = os.path.join(coverage_folder, f"{prefix}_end")
     bw_start = pyBigWig.open(start + ".bw")
     chroms = bw_start.chroms()
     bw_start.close()
@@ -273,7 +271,7 @@ def run_hmm_save_bed(
     for C in chroms:
         if chroms[C] > 0:
             pred, m = run_hmm(start, core, end, C, normalize=normalize)
-            hmm_pred_to_bed(
+            predictions_to_bed(
                 pred, C, out_file, save_max_cove=save_max_cove, cove_file=core + ".bw"
             )
 

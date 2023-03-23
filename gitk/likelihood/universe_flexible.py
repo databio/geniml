@@ -5,7 +5,8 @@ import numpy as np
 import os
 from functools import cmp_to_key
 from ..utils import natural_chr_sort, timer_func
-from ..hmm.hmm import hmm_pred_to_bed, find_full_full_pos, find_full_empty_pos
+from ..hmm.hmm import predictions_to_bed, find_full_full_pos, find_full_empty_pos
+from .build_model import ModelLH
 from numba import njit
 
 
@@ -43,20 +44,17 @@ def process_part(model):
     return path
 
 
-def make_ml_flexible_universe(folderin, chrom, fout):
+def make_ml_flexible_universe(model_lh, chrom, fout):
     """
     Make ML flexible universe per chromosome
     :param str folderin: input folder with likelihood models
     :param str chrom: chromosome to be processed
     :param str fout: output file with the universe
     """
-    model_s = np.load(os.path.join(folderin, chrom + "_start.npz"))
-    model_s = model_s[model_s.files[0]]
-    model_c = np.load(os.path.join(folderin, chrom + "_core.npz"))
-    model_c = model_c[model_c.files[0]]
-    model_e = np.load(os.path.join(folderin, chrom + "_end.npz"))
-    model_e = model_e[model_e.files[0]]
-    model = np.hstack((model_s, model_c, model_e))
+    model_lh.read_chrom(chrom)
+    chrom_model = model_lh.chromosomes_models[chrom]
+    model = np.hstack((chrom_model.models["start"], chrom_model.models["core"], chrom_model.models["end"]))
+    model_lh.clear_chrom(chrom)
     seq = np.where(np.sum(model[:, [1, 3, 5]], axis=1) > -30, 1, 0).astype(np.uint8)
     full_pos_no = np.sum(seq)
     if full_pos_no < len(seq) - full_pos_no:
@@ -67,7 +65,7 @@ def make_ml_flexible_universe(folderin, chrom, fout):
     for s, e in zip(full_start, full_end):
         res = process_part(model[s:e])
         path[s:e] = res
-    hmm_pred_to_bed(path, chrom, fout)
+    predictions_to_bed(path, chrom, fout)
 
 
 @timer_func
@@ -79,9 +77,7 @@ def main(folderin, fout):
     """
     if os.path.isfile(fout):
         raise Exception(f"File : {fout} exists")
-    chroms = os.listdir(folderin)
-    chroms = [i.split("_")[0] for i in chroms]
-    chroms = list(set(chroms))
-    chroms = sorted(chroms, key=cmp_to_key(natural_chr_sort))
+    lh_model = ModelLH(folderin)
+    chroms = sorted(lh_model.chromosomes_list, key=cmp_to_key(natural_chr_sort))
     for C in chroms:
-        make_ml_flexible_universe(folderin, C, fout)
+        make_ml_flexible_universe(lh_model, C, fout)
