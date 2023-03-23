@@ -16,7 +16,7 @@ def get_uni(file, chrom, cut_off=None):
     :param str file: coverage file
     :param str chrom: chromosome to analyse
     :param int cut_off: base pairs with values grater of equal to cut-off can be included in universe
-    :return: """
+    :return:"""
     file = pyBigWig.open(file)
     if pyBigWig.numpy:
         track = file.values(chrom, 0, file.chroms(chrom), numpy=True)
@@ -26,7 +26,7 @@ def get_uni(file, chrom, cut_off=None):
     track[np.isnan(track)] = 0
     track = track.astype(np.uint16)
     if cut_off is None:
-        cut_off = np.sum(track)/len(track)
+        cut_off = np.sum(track) / len(track)
     inter_pos = track >= cut_off
     file.close()
     return inter_pos
@@ -74,8 +74,7 @@ def marge_filter(fout, inter_pos, chrom, merge_dist=100, size_flt=1000):
             f.write(f"{chrom}\t{start}\t{end}\n")
 
 
-def main(file, fout, merge=0, filter_size=0,
-         cut_off=None):
+def main(file, fout, merge=0, filter_size=0, cut_off=None):
     """
     Creat cut-off universe based on coverage track
     :param str file: path to coverage file without extension
@@ -98,5 +97,4 @@ def main(file, fout, merge=0, filter_size=0,
             if merge == 0 and filter_size == 0:
                 save_simple(fout, inter_pos, chrom)
             else:
-                marge_filter(fout, inter_pos, chrom,
-                             merge, filter_size)
+                marge_filter(fout, inter_pos, chrom, merge, filter_size)

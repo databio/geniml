@@ -53,7 +53,13 @@ def make_ml_flexible_universe(model_lh, chrom, fout):
     """
     model_lh.read_chrom(chrom)
     chrom_model = model_lh.chromosomes_models[chrom]
-    model = np.hstack((chrom_model.models["start"], chrom_model.models["core"], chrom_model.models["end"]))
+    model = np.hstack(
+        (
+            chrom_model.models["start"],
+            chrom_model.models["core"],
+            chrom_model.models["end"],
+        )
+    )
     model_lh.clear_chrom(chrom)
     seq = np.where(np.sum(model[:, [1, 3, 5]], axis=1) > -30, 1, 0).astype(np.uint8)
     full_pos_no = np.sum(seq)

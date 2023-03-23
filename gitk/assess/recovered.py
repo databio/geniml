@@ -2,16 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import os
-from .utils import chrom_cmp_bigger, process_db_line,\
-    prep_data, check_if_uni_sorted
+from .utils import chrom_cmp_bigger, process_db_line, prep_data, check_if_uni_sorted
 import numpy as np
 from multiprocessing import Pool
 
 
-def process_region(start, start_region,
-                   q_chrom, start_region_chrom,
-                   db,
-                   b_index, e_index):
+def process_region(
+    start, start_region, q_chrom, start_region_chrom, db, b_index, e_index
+):
     """
     For given position check if it is covered by universe flexible region
     :param int start: position to analyse from query peak
@@ -69,13 +67,13 @@ def calc_no_retrieve(db_file, q_folder, q_file):
         start = int(i[1])
         end = int(i[2])
         q_chrom = i[0]
-        start_out = process_region(start, start_region,
-                                   q_chrom, start_region_chrom,
-                                   db_start, 1, 6)
+        start_out = process_region(
+            start, start_region, q_chrom, start_region_chrom, db_start, 1, 6
+        )
         (found_start, start_region, start_region_chrom) = start_out
-        end_out = process_region(end, end_region,
-                                 q_chrom, end_region_chrom,
-                                 db_end, 7, 2)
+        end_out = process_region(
+            end, end_region, q_chrom, end_region_chrom, db_end, 7, 2
+        )
         (found_end, end_region, end_region_chrom) = end_out
         if found_start:
             res_start += 1
@@ -86,13 +84,23 @@ def calc_no_retrieve(db_file, q_folder, q_file):
         if found_start and found_end:
             res_and += 1
     os.remove(os.path.join("tmp", q_file + "_sorted"))
-    return q_file, q_len, res_start, res_start / q_len * 100, \
-        res_end, res_end / q_len * 100, res_or, res_or / q_len * 100, \
-        res_and, res_and / q_len * 100
+    return (
+        q_file,
+        q_len,
+        res_start,
+        res_start / q_len * 100,
+        res_end,
+        res_end / q_len * 100,
+        res_or,
+        res_or / q_len * 100,
+        res_and,
+        res_and / q_len * 100,
+    )
 
 
-def run_recovered(q_folder, file_list, db_file, npool,
-                  save_to_file=False, folder_out=None, pref=None):
+def run_recovered(
+    q_folder, file_list, db_file, npool, save_to_file=False, folder_out=None, pref=None
+):
     """
     Calculate percent of strats and ends covered by flexible universe for set of files
     :param str q_folder: path to folder containing query files
@@ -125,13 +133,19 @@ def run_recovered(q_folder, file_list, db_file, npool,
     if save_to_file:
         fout = os.path.join(folder_out, pref + "_data.tsv")
         with open(fout, "w") as o:
-            header = ["file", "peak_no", "peak_start_percent",
-                      "peak_end_percent", "peak_or_percent", "peak_and_percent"]
+            header = [
+                "file",
+                "peak_no",
+                "peak_start_percent",
+                "peak_end_percent",
+                "peak_or_percent",
+                "peak_and_percent",
+            ]
             o.write("\t".join(header) + "\n")
             for r in res:
                 o.write(f"{r[0]}\t{r[1]}\t{r[3]}\t{r[5]}\t{r[7]}\t{r[9]}\n")
     else:
         res = np.array(res)
         res = res[:, [1, 3, 5, 7, 9]]
-        res = res.astype('float')
+        res = res.astype("float")
         return np.mean(res, axis=0)
