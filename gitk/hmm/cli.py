@@ -15,14 +15,11 @@ def build_subparser(parser):
     parser.add_argument(
         "--save_max_cove",
         help="if present saves maximum coverage for each peak",
-        action='store_true')
+        action="store_true",
+    )
     parser.add_argument(
-        "--lambdas",
-        type=str,
-        help="lambdas matrix used to set emissions")
-    parser.add_argument(
-        '--coverage_prefix',
-        default='all',
-        type=str)
+        "--lambdas", type=str, help="lambdas matrix used to set emissions"
+    )
+    parser.add_argument("--coverage_prefix", default="all", type=str)
 
     return parser
