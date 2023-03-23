@@ -179,6 +179,9 @@ def calc_distance(db_file, q_folder, q_file, flexible=False,
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
                 f.write(f"{i}\t{j}\n")
+    with open(os.path.join(folder_out, pref, q_file+"_h"), "w") as f:
+            for i, j in zip(dist_start, dist_end):
+                f.write(f"{q_file}\t{np.median(dist_start)}\t{np.median(dist_end)}\n")
     if not dist_start:
         print(f"File {q_file} doesn't contain any chromosomes present in universe")
         return q_file, None, None
