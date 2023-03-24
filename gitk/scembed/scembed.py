@@ -18,6 +18,7 @@ _LOGGER = getLogger(PKG_NAME)
 # set the threading layer before any parallel target compilation
 config.THREADING_LAYER = "threadsafe"
 
+
 # shuffle the document to generate data for word2vec
 def shuffle_documents(
     documents: List[List[str]],
