@@ -17,27 +17,22 @@ _LOGGER = getLogger(PKG_NAME)
 2 -> end
 3 -> background"""
 
-transmat = [[1 - 1e-10, 1e-10, 0, 0],
-            [0, 1 - 1e-6, 1e-6, 0],
-            [0, 0, 1 - 1e-6, 1e-6],
-            [0.1, 0, 0, 0.9]]
+transmat = [
+    [1 - 1e-10, 1e-10, 0, 0],
+    [0, 1 - 1e-6, 1e-6, 0],
+    [0, 0, 1 - 1e-6, 1e-6],
+    [0.1, 0, 0, 0.9],
+]
 
-lambdas = [[3, 0.0001, 1],
-           [0.05, 0.05, 2],
-           [0.0001, 3, 1],
-           [1e-4, 1e-4, 1e-3]]
-
-WINDOW_SIZE = 26
-FIX_UNIWIG = False
+lambdas = [[3, 1, 0.0001], [0.05, 2, 0.05], [0.0001, 1, 3], [1e-4, 1e-3, 1e-4]]
 
 
 def norm(track, mode):
-    """ Normalize the coverage track depending on track type.
+    """Normalize the coverage track depending on track type.
     For each unique value in the track calculates the corresponding
-    quantile taking into account that values occur different number of times. """
+    quantile taking into account that values occur different number of times."""
     important_val = track[track != 0]
-    important_val_unique, counts = np.unique(important_val,
-                                             return_counts=True)
+    important_val_unique, counts = np.unique(important_val, return_counts=True)
     uniq_dict = {i: j for i, j in zip(important_val_unique, counts)}
     # how many times each value is present in the track
     important_val_unique_sort = np.sort(important_val_unique)
@@ -55,9 +50,8 @@ def norm(track, mode):
     track[track != 0] = [val[i] for i in important_val]
 
 
-def process_bigwig(file, seq, p, chrom, chrom_size,
-                   normalize=False, mode=None, fix_uniwig=False):
-    """ Preprocess bigWig file """
+def process_bigwig(file, seq, p, chrom, chrom_size, normalize=False, mode=None):
+    """Preprocess bigWig file"""
     if pyBigWig.numpy:
         track = file.values(chrom, 0, chrom_size, numpy=True)
     else:
@@ -65,20 +59,17 @@ def process_bigwig(file, seq, p, chrom, chrom_size,
         track = np.array(track)
     track[np.isnan(track)] = 0
     track = track.astype(np.uint16)
-    if fix_uniwig and mode != "core":
-        track = np.pad(track[WINDOW_SIZE:], (0, WINDOW_SIZE))
     if normalize:
         norm(track, mode)
     seq[:, p] = track
 
 
-def read_data(start, end, cove, chrom,
-              normalize=False):
+def read_data(start, core, end, chrom, normalize=False):
     """
     Read in and preprocess data
     :param str start: path to file with start coverage
     :param str end: path to file with end coverage
-    :param str cove: path to file with  core coverage
+    :param str core: path to file with  core coverage
     :param str chrom: chromosome to analyse
     :param bool normalize: whether to normalize the coverage
     :return: chromosome size, coverage matrix
@@ -87,30 +78,27 @@ def read_data(start, end, cove, chrom,
     chroms = start.chroms()
     chrom_size = chroms[chrom]
     seq = np.zeros((chrom_size, 3), dtype=np.uint16)
-    process_bigwig(start, seq, 0, chrom, chrom_size,
-                   normalize, mode="ends", fix_uniwig=FIX_UNIWIG)
+    process_bigwig(start, seq, 0, chrom, chrom_size, normalize, mode="ends")
     start.close()
+    core = pyBigWig.open(core + ".bw")
+    process_bigwig(core, seq, 1, chrom, chrom_size, normalize, mode="core")
+    core.close()
     end = pyBigWig.open(end + ".bw")
-    process_bigwig(end, seq, 1, chrom, chrom_size,
-                   normalize, mode="ends", fix_uniwig=FIX_UNIWIG)
+    process_bigwig(end, seq, 2, chrom, chrom_size, normalize, mode="ends")
     end.close()
-    cove = pyBigWig.open(cove + ".bw")
-    process_bigwig(cove, seq, 2, chrom, chrom_size,
-                   normalize, mode="core")
-    cove.close()
     return chrom_size, seq
 
 
 def find_full_full_pos(seq, gap_size=1000, area_size=500):
-    """ Look for nonzero positions in coverage matrix,
-     when most of the positions are zero """
+    """Look for nonzero positions in coverage matrix,
+    when most of the positions are zero"""
     size = len(seq)
     seq = np.argwhere(seq >= 1).flatten()
     starts, ends = [], []
     if seq[0] > gap_size:
         starts.append(int(seq[0] - area_size))
     else:
-        starts.append(1)
+        starts.append(0)
     for e in range(1, len(seq)):
         if seq[e] - seq[e - 1] > gap_size:
             ends.append(int(seq[e - 1] + area_size))
@@ -120,8 +108,8 @@ def find_full_full_pos(seq, gap_size=1000, area_size=500):
 
 
 def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
-    """ Look for nonzero positions in coverage matrix,
-     when most of the positions are nonzero """
+    """Look for nonzero positions in coverage matrix,
+    when most of the positions are nonzero"""
     size = len(seq)
     seq = np.argwhere(seq == 0).flatten()
     starts, ends = [], []
@@ -142,7 +130,7 @@ def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
                 looking_for_first = False
             gap_len = 1
             gap_start = seq[e]
-    starts_res = [i - area_size for i in ends]
+    starts_res = [max(0, i - area_size) for i in ends]
     end_res = [i + area_size for i in starts[1:]] + [size]
     if not starts_res:
         starts_res = [0]
@@ -150,7 +138,7 @@ def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
 
 
 def find_full(seq):
-    """ Look for nonzero positions in coverage matrix """
+    """Look for nonzero positions in coverage matrix"""
     seq = np.sum(seq, axis=1, dtype=np.uint8)
     full_pos_no = np.sum(seq >= 1)
     if full_pos_no < len(seq) - full_pos_no:
@@ -160,13 +148,13 @@ def find_full(seq):
 
 
 def ana_region(region, start_s):
-    """ Helper for saving HMM prediction into a file """
+    """Helper for saving HMM prediction into a file"""
     start_e = start_s + np.where(region == 1)[0][0]
     end_s = start_s + np.where(region == 2)[0][0]
     return start_e, end_s
 
 
-def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None):
+def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None):
     """
     Save HMM prediction into a file
     :param array states: result of HMM prediction
@@ -187,35 +175,53 @@ def hmm_pred_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None)
     for i in range(1, len(ind)):
         if ind[i] - ind[i - 1] != 1:
             end_e = ind[i - 1]
-            region = states[start_s:end_e + 1]
+            region = states[start_s : end_e + 1]
             res = ana_region(region, start_s)
             save_start_e, save_end_s = res
             val = 0
             if save_max_cove:
                 val = coverage.stats(chrom, int(start_s), int(end_e) + 1, type="max")
                 val = int(val[0])
-            to_file.append(line.format(start_s, end_e + 1,
-                                       'universe', val, '.',
-                                       save_start_e, save_end_s, '0,0,255'))
+            to_file.append(
+                line.format(
+                    start_s,
+                    end_e + 1,
+                    "universe",
+                    val,
+                    ".",
+                    save_start_e,
+                    save_end_s,
+                    "0,0,255",
+                )
+            )
             start_s = ind[i]
     if states[ind[-1]] == 2:
-        region = states[start_s:ind[-1] + 1]
+        region = states[start_s : ind[-1] + 1]
         res = ana_region(region, start_s)
         save_start_e, save_end_s = res
         val = 0
         if save_max_cove:
             val = coverage.stats(chrom, int(start_s), int(ind[-1]) + 1, type="max")
             val = int(val[0])
-        to_file.append(line.format(start_s, ind[-1] + 1,
-                                   'universe', val, '.',
-                                   save_start_e, save_end_s, '0,0,255'))
+        to_file.append(
+            line.format(
+                start_s,
+                ind[-1] + 1,
+                "universe",
+                val,
+                ".",
+                save_start_e,
+                save_end_s,
+                "0,0,255",
+            )
+        )
     with open(bedname, "a") as f:
         f.writelines(to_file)
 
 
 def split_predict(seq, empty_starts, empty_ends, model):
-    """ Make model prediction only for regions containing
-     nonzero positions  """
+    """Make model prediction only for regions containing
+    nonzero positions"""
     hmm_predictions = np.full(len(seq), 3, dtype=np.uint8)
     for s, e in zip(empty_starts, empty_ends):
         res = model.predict(seq[s:e])
@@ -223,11 +229,9 @@ def split_predict(seq, empty_starts, empty_ends, model):
     return hmm_predictions
 
 
-def run_hmm(start, end, cove, chrom, normalize=False):
-    """ Make HMM prediction for given chromosome """
-    chrom_size, seq = read_data(start, end, cove,
-                                chrom,
-                                normalize=normalize)
+def run_hmm(start, core, end, chrom, normalize=False):
+    """Make HMM prediction for given chromosome"""
+    chrom_size, seq = read_data(start, core, end, chrom, normalize=normalize)
     empty_starts, empty_ends = find_full(seq)
     model = PoissonModel(transmat, lambdas, save_matrix=False)
     model = model.make()
@@ -235,12 +239,19 @@ def run_hmm(start, end, cove, chrom, normalize=False):
     return hmm_predictions, model
 
 
-def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
+def run_hmm_save_bed(
+    coverage_folder,
+    out_file,
+    prefix="all",
+    normalize=False,
+    save_max_cove=False,
+):
     """
     Create HMM based univers from coverage
-    :param str start: path to start coverage file
-    :param str end: path to end coverage file
-    :param str cove: path to core coverage file
+    :param coverage_folder: path to folder with coverage files
+    :param str start: start coverage file name
+    :param str end: end coverage file name
+    :param str core: core coverage file name
     :param str out_file: path to the output file with universe
     :param bool normalize: whether to normalize file
     :param bool save_max_cove: whether to save the maximum
@@ -248,6 +259,9 @@ def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
     """
     if os.path.isfile(out_file):
         raise Exception(f"File : {out_file} exists")
+    start = os.path.join(coverage_folder, f"{prefix}_start")
+    core = os.path.join(coverage_folder, f"{prefix}_core")
+    end = os.path.join(coverage_folder, f"{prefix}_end")
     bw_start = pyBigWig.open(start + ".bw")
     chroms = bw_start.chroms()
     bw_start.close()
@@ -256,9 +270,9 @@ def run_hmm_save_bed(start, end, cove, out_file, normalize, save_max_cove):
     chroms = {i: chroms[i] for i in chroms_key}
     for C in chroms:
         if chroms[C] > 0:
-            pred, m = run_hmm(start, end, cove, C, normalize=normalize)
-            hmm_pred_to_bed(
-                pred, C, out_file, save_max_cove=save_max_cove, cove_file=cove + ".bw"
+            pred, m = run_hmm(start, core, end, C, normalize=normalize)
+            predictions_to_bed(
+                pred, C, out_file, save_max_cove=save_max_cove, cove_file=core + ".bw"
             )
 
 

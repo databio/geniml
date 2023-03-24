@@ -9,5 +9,10 @@ This module will use an HMM to create a flexible segment universe, given an inpu
 Where can you find a very small example dataset?
 
 ```
-gitk hmm ...
+gitk hmm --out_file tests/consesnus/universe/hmm_norm.bed --cov_folder tests/consesnus/coverage/
+```
+
+
+```
+gitk hmm --out_file tests/consesnus/universe/hmm_norm.bed --cov_folder tests/consesnus/coverage/ --normalize
 ```
