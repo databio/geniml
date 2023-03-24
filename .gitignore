@@ -166,3 +166,5 @@ gitk/tokenization/__pycache__
 gitk/tokenization/bedtools
 # for testing
 test.*
+
+**/*.ipynb_checkpoints/
