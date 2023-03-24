@@ -7,13 +7,13 @@ from typing import List, Any
 import numpy as np
 import argparse
 from multiprocessing import Pool
-from .utils import process_db_line, chrom_cmp_bigger, \
-    prep_data, check_if_uni_sorted
-from..utils import natural_chr_sort
+from .utils import process_db_line, chrom_cmp_bigger, prep_data, check_if_uni_sorted
+from ..utils import natural_chr_sort
+import tempfile
 
 
 def flexible_distance(r, q):
-    """ Calculate region distance for univers """
+    """Calculate region distance for univers"""
     if r[0] <= q <= r[1]:
         return 0
     else:
@@ -21,7 +21,7 @@ def flexible_distance(r, q):
 
 
 def distance(r, q):
-    """ Calculate distance for hard universe"""
+    """Calculate distance for hard universe"""
     return abs(r[0] - q)
 
 
@@ -60,8 +60,18 @@ def asses(db, db_que, i, current_chrom, unused_db, pos_index, flexible):
     return dist_to_db_que[min_pos]
 
 
-def process_line(db, q_chrom, current_chrom, unused_db, db_que,
-                 dist, waiting, start, pos_index, flexible):
+def process_line(
+    db,
+    q_chrom,
+    current_chrom,
+    unused_db,
+    db_que,
+    dist,
+    waiting,
+    start,
+    pos_index,
+    flexible,
+):
     """
     Calculate distance from new peak to universe
     :param file db: universe file
@@ -117,14 +127,20 @@ def process_line(db, q_chrom, current_chrom, unused_db, db_que,
     if len(db_que) == 0:
         waiting = True
     if not waiting:
-        res = asses(db, db_que, start, current_chrom, unused_db,
-                    pos_index, flexible)
+        res = asses(db, db_que, start, current_chrom, unused_db, pos_index, flexible)
         dist.append(res)
     return waiting, current_chrom
 
 
-def calc_distance(db_file, q_folder, q_file, flexible=False,
-                  save_each=False, folder_out=None, pref=None):
+def calc_distance(
+    db_file,
+    q_folder,
+    q_file,
+    flexible=False,
+    save_each=False,
+    folder_out=None,
+    pref=None,
+):
     """
     For given file calculate distance to the nearst region from universe
     :param str db_file: path to universe
@@ -138,8 +154,8 @@ def calc_distance(db_file, q_folder, q_file, flexible=False,
     :return str, int, int: file name; median od distance of starts to
      starts in universe; median od distance of ends to ends in universe
     """
-    prep_data(q_folder, q_file)
-    q = open(os.path.join("tmp", q_file + "_sorted"), "r")
+    q = tempfile.NamedTemporaryFile()
+    prep_data(q_folder, q_file, q)
     db_start = open(db_file)
     db_que_start = []
     current_chrom_start = "chr0"
@@ -158,23 +174,37 @@ def calc_distance(db_file, q_folder, q_file, flexible=False,
         pos_start = [1, 6]
         pos_end = [7, 2]
     for i in q:
-        i = i.split("\t")
+        i = i.decode("utf-8").split("\t")
         start = int(i[1])
         end = int(i[2])
         q_chrom = i[0]
-        res_start = process_line(db_start, q_chrom, current_chrom_start,
-                                 unused_db_start,
-                                 db_que_start,
-                                 dist_start, waiting_start, start,
-                                 pos_start, flexible)
+        res_start = process_line(
+            db_start,
+            q_chrom,
+            current_chrom_start,
+            unused_db_start,
+            db_que_start,
+            dist_start,
+            waiting_start,
+            start,
+            pos_start,
+            flexible,
+        )
         (waiting_start, current_chrom_start) = res_start
-        res_end = process_line(db_end, q_chrom, current_chrom_end,
-                               unused_db_end,
-                               db_que_end,
-                               dist_end, waiting_end, end,
-                               pos_end, flexible)
+        res_end = process_line(
+            db_end,
+            q_chrom,
+            current_chrom_end,
+            unused_db_end,
+            db_que_end,
+            dist_end,
+            waiting_end,
+            end,
+            pos_end,
+            flexible,
+        )
         (waiting_end, current_chrom_end) = res_end
-    os.remove(os.path.join("tmp", q_file + "_sorted"))
+    tmp_file.close()
     if save_each:
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
@@ -185,9 +215,17 @@ def calc_distance(db_file, q_folder, q_file, flexible=False,
     return q_file, np.median(dist_start), np.median(dist_end)
 
 
-def run_distance(folder, file_list, universe, npool, flexible,
-                 save_to_file=False, folder_out=None, pref=None,
-                 save_each=False):
+def run_distance(
+    folder,
+    file_list,
+    universe,
+    npool,
+    flexible=False,
+    save_to_file=False,
+    folder_out=None,
+    pref=None,
+    save_each=False,
+):
     """
     For group of files calculate distance to the nearest region in universe
     :param str folder: path to folder containing query files
@@ -203,7 +241,6 @@ def run_distance(folder, file_list, universe, npool, flexible,
     mean of median distances from ends in query to the nearest ends in universe
     """
     check_if_uni_sorted(universe)
-    os.mkdir("tmp")
     files = open(file_list).read().split("\n")[:-1]
     res = []
     if folder_out:
@@ -212,16 +249,17 @@ def run_distance(folder, file_list, universe, npool, flexible,
         os.makedirs(os.path.join(folder_out, pref))
     if npool <= 1:
         for i in files:
-            r = calc_distance(universe, folder, i,
-                              flexible, save_each,
-                              folder_out, pref)
+            r = calc_distance(
+                universe, folder, i, flexible, save_each, folder_out, pref
+            )
             res.append(r)
     else:
         with Pool(npool) as p:
-            args = [(universe, folder, f, flexible,
-                     save_each, folder_out, pref) for f in files]
+            args = [
+                (universe, folder, f, flexible, save_each, folder_out, pref)
+                for f in files
+            ]
             res = p.starmap(calc_distance, args)
-    os.rmdir("tmp")
     if save_to_file:
         fout = os.path.join(folder_out, pref + "_data.tsv")
         with open(fout, "w") as o:
@@ -231,5 +269,5 @@ def run_distance(folder, file_list, universe, npool, flexible,
     else:
         res = np.array(res)
         res = res[:, 1:]
-        res = res.astype('float')
-        return np.nanmean(res[:, 0]), np.nanmean(res[:, 1])
+        res = res.astype("float")
+        return np.mean([np.nanmedian(res[:, 0]), np.nanmedian(res[:, 1])])

@@ -11,9 +11,7 @@ from .hmm.cli import build_subparser as hmm_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
 
-
 from ._version import __version__
-
 
 
 def build_argparser():
@@ -43,7 +41,7 @@ def build_argparser():
 
     sp = parser.add_subparsers(dest="command")
     subparsers: Dict[str, VersionInHelpParser] = {}
-    for k,  v in msg_by_cmd.items():
+    for k, v in msg_by_cmd.items():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
     # build up subparsers for modules
@@ -74,51 +72,83 @@ def main(test_args=None):
         _LOGGER.info(f"Subcommand: {args.subcommand}")
         if args.subcommand == "distance":
             from .assess.distance import run_distance
-            run_distance(args.raw_data_folder, args.file_list,
-                         args.universe, args.npool, args.flexible,
-                         args.save_to_file, args.folder_out,
-                         args.pref, args.save_each)
+
+            run_distance(
+                args.raw_data_folder,
+                args.file_list,
+                args.universe,
+                args.npool,
+                args.flexible,
+                args.save_to_file,
+                args.folder_out,
+                args.pref,
+                args.save_each,
+            )
 
         if args.subcommand == "intersection":
             from .assess.intersection import run_intersection
-            run_intersection(args.raw_data_folder, args.file_list,
-                             args.universe, args.npool,
-                             args.save_to_file, args.folder_out,
-                             args.pref)
+
+            run_intersection(
+                args.raw_data_folder,
+                args.file_list,
+                args.universe,
+                args.npool,
+                args.save_to_file,
+                args.folder_out,
+                args.pref,
+            )
 
         if args.subcommand == "recovered":
             from .assess.recovered import run_recovered
-            run_recovered(args.raw_data_folder, args.file_list,
-                          args.universe, args.npool,
-                          args.save_to_file, args.folder_out,
-                          args.pref)
+
+            run_recovered(
+                args.raw_data_folder,
+                args.file_list,
+                args.universe,
+                args.npool,
+                args.save_to_file,
+                args.folder_out,
+                args.pref,
+            )
 
     if args.command == "lh":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
-        if args.subcommand == "model":
-            from .likelihood.model import main
-            main(args.model_folder, args.coverage_folder, args.coverage_starts,
-                 args.coverage_ends, args.coverage_core,
-                 args.file_list, args.file_no,
-                 args.binomial, args.multinomial)
+        if args.subcommand == "build_model":
+            from .likelihood.build_model import main
+
+            main(
+                args.model_folder,
+                args.coverage_folder,
+                args.coverage_prefix,
+                args.file_no,
+            )
 
         if args.subcommand == "universe_hard":
             from .likelihood.universe_hard import main
-            main(args.coverage_file, args.fout, args.merge,
-                 args.filter_size, args.cut_off)
+
+            main(
+                args.coverage_file,
+                args.fout,
+                args.merge,
+                args.filter_size,
+                args.cut_off,
+            )
 
         if args.subcommand == "universe_flexible":
             from .likelihood.universe_flexible import main
+
             main(args.model_folder, args.output_file)
 
     if args.command == "hmm":
         from .hmm.hmm import run_hmm_save_bed
-        run_hmm_save_bed(start=os.path.join(args.cov_folder, args.coverage_starts),
-                         end=os.path.join(args.cov_folder, args.coverage_ends),
-                         cove=os.path.join(args.cov_folder, args.coverage_body),
-                         out_file=args.out_file,
-                         normalize=args.normalize,
-                         save_max_cove=args.save_max_cove)
+
+        run_hmm_save_bed(
+            coverage_folder=args.cov_folder,
+            out_file=args.out_file,
+            prefix=args.coverage_prefix,
+            normalize=args.normalize,
+            save_max_cove=args.save_max_cove,
+        )
 
     if args.command == "scembed":
         from .scembed.scembed import main as scembed_main
@@ -128,7 +158,6 @@ def main(test_args=None):
         # scembed_main(test_args)
 
     return
-
 
 
 if __name__ == "__main__":
