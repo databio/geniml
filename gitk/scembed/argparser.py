@@ -80,13 +80,6 @@ def build_argparser(parser: VersionInHelpParser = None):
     )
 
     parser.add_argument(
-        "--embed",
-        dest="embed_file",
-        default=None,
-        help="Path to document embeddings dictionary.",
-    )
-
-    parser.add_argument(
         "--label-delimiter",
         dest="label_delimiter",
         default="_",
@@ -150,28 +143,5 @@ def build_argparser(parser: VersionInHelpParser = None):
         default=5,
         help="Number of times to shuffle the document to "
         "generate date for Word2Vec.",
-    )
-
-    parser.add_argument(
-        "--umap-nneighbors",
-        dest="umap_nneighbours",
-        default=100,
-        help="Number of neighbors for UMAP plot.",
-    )
-
-    parser.add_argument(
-        "--umap-metric",
-        dest="umap_metric",
-        default="euclidean",
-        help="UMAP distance metric.",
-    )
-
-    parser.add_argument(
-        "--rasterize",
-        dest="rasterize",
-        default=False,
-        action="store_true",
-        help="Rasterize the UMAP scatter plot to reduce "
-        "space and plot generation time.",
     )
     return parser
