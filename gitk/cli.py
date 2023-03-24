@@ -116,8 +116,12 @@ def main(test_args=None):
         if args.subcommand == "build_model":
             from .likelihood.build_model import main
 
-            main(args.model_folder, args.coverage_folder, args.coverage_prefix,
-                 args.file_no)
+            main(
+                args.model_folder,
+                args.coverage_folder,
+                args.coverage_prefix,
+                args.file_no,
+            )
 
         if args.subcommand == "universe_hard":
             from .likelihood.universe_hard import main
