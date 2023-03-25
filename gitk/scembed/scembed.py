@@ -1,5 +1,6 @@
 import scanpy as sc
 import pandas as pd
+import numpy as np
 
 from typing import Dict, List, Union
 from concurrent.futures import ThreadPoolExecutor
@@ -82,11 +83,18 @@ class Region2Vec(Word2Vec):
         n_shuffles: int = DEAFULT_N_SHUFFLES,
         callbacks: List[CallbackAny2Vec] = [],
     ):
-        # convert the data to the
+        # convert the data to a list of documents
         _LOGGER.info("Converting data to documents.")
+        self.data = data
         self.region_sets = convert_anndata_to_documents(data)
         self.n_shuffles = n_shuffles
         self.callbacks = callbacks
+
+        # save anything in the `obs` attribute of the AnnData object
+        # this lets users save any metadata they want
+        # which can get mapped back to the embeddings
+        self.obs = data.obs
+        self.trained = False
 
         # instantiate the Word2Vec model
         super().__init__(
@@ -110,6 +118,7 @@ class Region2Vec(Word2Vec):
         Train the model. This is done in two steps: First, we shuffle the documents.
         Second, we train the model.
         """
+        self.trained = True
         if report_loss:
             self.callbacks.append(ReportLossCallback())
 
@@ -144,6 +153,39 @@ class Region2Vec(Word2Vec):
                 compute_loss=report_loss,
                 start_alpha=current_lr,
             )
+    
+    def get_embedding(self, region: str) -> np.ndarray:
+        """
+        Get the embedding for a given region.
+
+        :param str region: the region to get the embedding for
+        """
+        return self.wv[region]
+
+    def get_embeddings(self, regions: List[str]) -> np.ndarray:
+        """
+        Get the embeddings for a list of regions.
+
+        :param List[str] regions: the regions to get the embeddings for
+        """
+        return np.array([self.get_embedding(r) for r in regions])
+    
+    def cell_embeddings(self) -> sc.AnnData:
+        """
+        Get the cell embeddings for the original AnnData passed in.
+        """
+        if not self.trained:
+            raise ValueError("Model has not been trained yet.")
+
+        # get the embeddings for each cell
+        cell_embeddings = []
+        for cell in tqdm(self.region_sets, total=len(self.region_sets)):
+            cell_embedding = np.mean([self.get_embedding(r) for r in cell], axis=0)
+            cell_embeddings.append(cell_embedding)
+        
+        # attach embeddings to the AnnData object
+        self.data.obs['embedding'] = cell_embeddings
+        return self.data
 
 
 def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
