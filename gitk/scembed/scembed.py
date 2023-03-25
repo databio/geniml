@@ -153,7 +153,7 @@ class Region2Vec(Word2Vec):
                 compute_loss=report_loss,
                 start_alpha=current_lr,
             )
-    
+
     def get_embedding(self, region: str) -> np.ndarray:
         """
         Get the embedding for a given region.
@@ -169,7 +169,7 @@ class Region2Vec(Word2Vec):
         :param List[str] regions: the regions to get the embeddings for
         """
         return np.array([self.get_embedding(r) for r in regions])
-    
+
     def cell_embeddings(self) -> sc.AnnData:
         """
         Get the cell embeddings for the original AnnData passed in.
@@ -182,9 +182,9 @@ class Region2Vec(Word2Vec):
         for cell in tqdm(self.region_sets, total=len(self.region_sets)):
             cell_embedding = np.mean([self.get_embedding(r) for r in cell], axis=0)
             cell_embeddings.append(cell_embedding)
-        
+
         # attach embeddings to the AnnData object
-        self.data.obs['embedding'] = cell_embeddings
+        self.data.obs["embedding"] = cell_embeddings
         return self.data
 
 
