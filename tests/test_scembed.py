@@ -1,4 +1,5 @@
 import pytest
+from itertools import chain
 import scanpy as sc
 from gitk import scembed
 
@@ -35,10 +36,24 @@ def test_remove_zero_regions(pbmc_data: sc.AnnData):
 
 
 def test_document_creation(pbmc_data: sc.AnnData):
+    # convert pbmc_data to df and drop any columns (regions with all 0 signal)
+    pbmc_df = pbmc_data.to_df()
+    pbmc_df_dropped = pbmc_df.loc[:, (pbmc_df != 0).any(axis=0)]
+
+    # convert to docs
     docs = scembed.convert_anndata_to_documents(pbmc_data)
+
+    # ensure all cells converted
     assert len(docs) == pbmc_data.shape[0]
+
+    # ensure all regions represented
+    all_regions = set(list(chain(*docs)))
+    assert len(all_regions) == pbmc_df_dropped.shape[1]
+
+    # ensure all regions are strings and contain no spaces
     for doc in docs:
         assert all([isinstance(r, str) for r in doc])
+        assert all([" " not in r for r in doc])
 
 
 def test_document_shuffle():
@@ -50,3 +65,13 @@ def test_document_shuffle():
         # by pure random chance, the following COULD fail, so we'll just comment it out
         # assert doc != docs[0]
         # assert doc != docs[1]
+
+def test_model_creation(pbmc_data: sc.AnnData):
+    model = scembed.Region2Vec(pbmc_data)
+    assert model
+
+def test_model_training(pbmc_data: sc.AnnData):
+    model = scembed.Region2Vec(pbmc_data)
+    model.train(epochs=3)
+    assert model.trained
+    assert isinstance(model.region2vec, dict)

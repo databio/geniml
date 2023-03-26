@@ -249,6 +249,8 @@ def convert_anndata_to_documents(anndata: sc.AnnData) -> List[List[str]]:
         new_doc = []
         for region_indx in row_dict:
             region_str = regions_parsed[int(region_indx)]
+            # replace spaces with underscores
+            region_str = region_str.replace(" ", "_")
             new_doc.append(region_str)
         docs.append(new_doc)
     return docs
