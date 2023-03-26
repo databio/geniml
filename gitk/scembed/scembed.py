@@ -80,14 +80,12 @@ class Region2Vec(Word2Vec):
         min_count: int = 10,
         threads: int = 1,
         seed: int = 42,
-        n_shuffles: int = DEAFULT_N_SHUFFLES,
         callbacks: List[CallbackAny2Vec] = [],
     ):
         # convert the data to a list of documents
         _LOGGER.info("Converting data to documents.")
         self.data = data
         self.region_sets = convert_anndata_to_documents(data)
-        self.n_shuffles = n_shuffles
         self.callbacks = callbacks
 
         # save anything in the `obs` attribute of the AnnData object
@@ -108,7 +106,9 @@ class Region2Vec(Word2Vec):
 
     def train(
         self,
-        epochs: Union[int, None] = None,
+        epochs: int = DEFAULT_EPOCHS, # training cycles
+        n_shuffles: int = DEAFULT_N_SHUFFLES, # not the number of traiing cycles, actual shufle num
+        gensim_epochs: Union[int, None] = DEFAULT_GENSIM_EPOCHS,
         report_loss: bool = True,
         lr: float = DEFAULT_INIT_LR,
         min_lr: float = DEFAULT_MIN_LR,
@@ -123,13 +123,13 @@ class Region2Vec(Word2Vec):
             self.callbacks.append(ReportLossCallback())
 
         lr_scheduler = LearningRateScheduler(
-            init_lr=lr, min_lr=min_lr, schedule=lr_schedule, epochs=self.n_shuffles
+            init_lr=lr, min_lr=min_lr, type=lr_schedule, n_epochs=epochs
         )
 
         # train the model using these shuffled documents
         _LOGGER.info("Training starting.")
 
-        for shuffle_num in range(self.n_shuffles):
+        for shuffle_num in range(epochs):
             # update current values
             current_lr = lr_scheduler.get_lr()
             current_loss = self.get_latest_training_loss()
@@ -141,18 +141,22 @@ class Region2Vec(Word2Vec):
             _LOGGER.info("Shuffling documents.")
 
             # shuffle regions
-            self.region_sets = shuffle_documents(self.region_sets, 10)
+            self.region_sets = shuffle_documents(self.region_sets, n_shuffles=n_shuffles)
 
             # update vocab and train
-            super().build_vocab(self.region_sets, update=True)
+            super().build_vocab(self.region_sets, update=True if shuffle_num > 0 else False)
             super().train(
                 self.region_sets,
                 total_examples=len(self.region_sets),
-                epochs=epochs or 1,  # use the epochs passed in or just one
+                epochs=gensim_epochs or 1,  # use the epochs passed in or just one
                 callbacks=self.callbacks,
                 compute_loss=report_loss,
                 start_alpha=current_lr,
             )
+        
+        # once training is complete, create a region to vector mapping
+        regions = list(self.wv.key_to_index.keys())
+        self.region2vec = {word: self.wv[word] for word in regions}
 
     def get_embedding(self, region: str) -> np.ndarray:
         """
