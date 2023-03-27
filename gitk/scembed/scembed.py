@@ -83,6 +83,15 @@ class Region2Vec(Word2Vec):
         seed: int = 42,
         callbacks: List[CallbackAny2Vec] = [],
     ):
+        """
+        :param sc.AnnData data: The AnnData object containing the data to train on.
+        :param int window_size: The size of the window to use for training.
+        :param int vector_size: The size of the embedding vectors.
+        :param int min_count: The minimum number of times a region must appear to be included in the model.
+        :param int threads: The number of threads to use for training.
+        :param int seed: The random seed to use for training.
+        :param List[CallbackAny2Vec] callbacks: A list of callbacks to use for training.
+        """
         # convert the data to a list of documents
         _LOGGER.info("Converting data to documents.")
         self.data = data
@@ -125,6 +134,14 @@ class Region2Vec(Word2Vec):
         """
         Train the model. This is done in two steps: First, we shuffle the documents.
         Second, we train the model.
+
+        :param int epochs: The number of epochs to train for (note: this is the number of times regions are shuffled, then fed to the model for training).
+        :param int n_shuffles: The number of times to shuffle the regions within each document.
+        :param int gensim_epochs: The number of epochs to train for within each shuffle (or main epoch).
+        :param bool report_loss: Whether or not to report the loss after each epoch.
+        :param float lr: The initial learning rate.
+        :param float min_lr: The minimum learning rate.
+        :param Union[str, ScheduleType] lr_schedule: The learning rate schedule to use.
         """
         self.trained = True
         if report_loss:
