@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 
 from typing import Dict, List, Union
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from random import shuffle
 from gensim.models import Word2Vec
@@ -86,6 +87,13 @@ class Region2Vec(Word2Vec):
         _LOGGER.info("Converting data to documents.")
         self.data = data
         self.region_sets = convert_anndata_to_documents(data)
+
+        # remove any regions that dont satisfy the min count
+        _LOGGER.info("Removing regions that don't satisfy min count.")
+        self.region_sets = remove_regions_below_min_count(
+            self.region_sets, min_count
+        )
+
         self.callbacks = callbacks
 
         # save anything in the `obs` attribute of the AnnData object
@@ -153,6 +161,9 @@ class Region2Vec(Word2Vec):
                 compute_loss=report_loss,
                 start_alpha=current_lr,
             )
+
+            # update learning rates
+            lr_scheduler.update()
         
         # once training is complete, create a region to vector mapping
         regions = list(self.wv.key_to_index.keys())
@@ -190,6 +201,27 @@ class Region2Vec(Word2Vec):
         # attach embeddings to the AnnData object
         self.data.obs["embedding"] = cell_embeddings
         return self.data
+
+def remove_regions_below_min_count(
+        region_sets: List[List[str]], min_count: int
+) -> List[List[str]]:
+    """
+    Remove regions that don't satisfy the min count.
+
+    :param List[List[str]] region_sets: the region sets to remove regions from
+    :param int min_count: the min count to use
+    """
+    # get the counts for each region
+    region_counts = Counter()
+    for region_set in region_sets:
+        region_counts.update(region_set)
+
+    # remove any regions that dont satisfy the min count
+    region_sets = [
+        [r for r in region_set if region_counts[r] >= min_count]
+        for region_set in region_sets
+    ]
+    return region_sets
 
 
 def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
