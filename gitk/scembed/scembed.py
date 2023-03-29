@@ -192,7 +192,10 @@ class Region2Vec(Word2Vec):
 
         :param str region: the region to get the embedding for
         """
-        return self.wv[region]
+        try:
+            return self.wv[region]
+        except KeyError:
+            raise ValueError(f"Region {region} not found in model.")
 
     def get_embeddings(self, regions: List[str]) -> np.ndarray:
         """
@@ -201,6 +204,17 @@ class Region2Vec(Word2Vec):
         :param List[str] regions: the regions to get the embeddings for
         """
         return np.array([self.get_embedding(r) for r in regions])
+
+    def region_embeddings(self) -> Dict[str, np.ndarray]:
+        """
+        Get the embeddings for each region in the original AnnData passed in.
+        """
+        if not self.trained:
+            raise ValueError("Model has not been trained yet.")
+
+        # return the key-value dict from the internal model
+        # each key is a region and each value is the embedding
+        return self.region2vec
 
     def cell_embeddings(self) -> sc.AnnData:
         """
