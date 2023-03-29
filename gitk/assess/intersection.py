@@ -10,28 +10,12 @@ import tempfile
 
 
 def chrom_cmp(a, b):
-    """Natural chromosome names comparison"""
-    # com = natural_chr_sort(a, b)
-    # if com < 0:
-    #     return a, False, True
-    # if com == 0:
-    #     return a, False, False
-    # if com > 0:
-    #     return b, True, False
-    ac = a.replace("chr", "")
-    ac = ac.split("_")[0]
-    bc = b.replace("chr", "")
-    bc = bc.split("_")[0]
-    if bc.isnumeric() and ac.isnumeric() and bc != ac:
-        if int(bc) < int(ac):
-            return b, True, False
-        else:
-            return a, False, True
+    """Return smaller chromosome name"""
+    c = natural_chr_sort(a, b)
+    if c > 0:
+        return b, True, False
     else:
-        if b < a:
-            return b, True, False
-        else:
-            return a, False, True
+        return a, False, True
 
 
 def relationship_helper(region_a, region_b, only_in, overlap, start_a, start_b):
@@ -68,7 +52,7 @@ def relationship(
     waiting_q,
 ):
     """
-    Check mutual position and calculate intersection and difference of two regions
+    Check mutual position of two regions and calculate intersection and difference of two regions
     :param list region_d: region from universe
     :param list region_q: region from query
     :param int only_in_d: number of base pair only in universe
@@ -104,6 +88,9 @@ def relationship(
 
 
 def read_in_new_line(region, start, chrom, inside, waiting, lines, cchrom, not_e):
+    """
+    Read in a new line from query or universe file
+    """
     if not inside:
         if not waiting:
             line = lines.readline()
@@ -124,7 +111,7 @@ def calc_stats(db, folder, query):
     """
     Difference and overlap of two files on base pair level
     :param str db: path to universe file
-    :param str folder: path to folder with query file
+    :param str folder: path to name with query file
     :param str query: query file name
     :return str; int; int; int: file name; bp only in universe; bp only in query; overlap in bp
     """
@@ -194,12 +181,12 @@ def run_intersection(
 ):
     """
     Calculate the base pair intersection of universe and group of files
-    :param str folder: path to folder containing query files
+    :param str folder: path to name containing query files
     :param str file_list: path to file containing list of query files
     :param str universe: path to universe file
     :param int npool: number of parallel processes
     :param str save_to_file: whether to save median of calculated distances for each file
-    :param str folder_out: output folder
+    :param str folder_out: output name
     :param str pref: prefix used for saving
     :return float; float: mean of fractions of intersection of file and universe divided by universe size;
     mean of fractions of intersection of file and universe divided by file size
@@ -207,7 +194,6 @@ def run_intersection(
     check_if_uni_sorted(universe)
     if save_to_file:
         os.makedirs(folder_out, exist_ok=True)
-    # os.mkdir("tmp")
     files = open(file_list).read().split("\n")[:-1]
     res = []
     if npool <= 1:
@@ -218,7 +204,6 @@ def run_intersection(
         with Pool(npool) as p:
             args = [(universe, folder, f) for f in files]
             res = p.starmap(calc_stats, args)
-    # os.rmdir("tmp")
     if save_to_file:
         fout = os.path.join(folder_out, pref + "_data.tsv")
         with open(fout, "w") as o:

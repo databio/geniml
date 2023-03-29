@@ -30,10 +30,10 @@ def main(args):
     save_dir = args.save_dir
     data_folder = os.path.join(
         save_dir, "shuffled_datasets"
-    )  # shuffled datasets are stored in the shuffled_datasets folder
+    )  # shuffled datasets are stored in the shuffled_datasets name
     model_dir = os.path.join(
         save_dir, "models"
-    )  # model snapshots are stored in the models folder
+    )  # model snapshots are stored in the models name
     os.makedirs(save_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
     utils.set_log_path(save_dir)  # specify the path to the log file

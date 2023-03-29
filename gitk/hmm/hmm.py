@@ -90,8 +90,11 @@ def read_data(start, core, end, chrom, normalize=False):
 
 
 def find_full_full_pos(seq, gap_size=1000, area_size=500):
-    """Look for nonzero positions in coverage matrix,
-    when most of the positions are zero"""
+    """Look for nonzero positions in coverage matrix, when most of the positions are zero
+    :param seq: vector with information about non-zero positions
+    :param gap_size: size of minium gap between non-zero positions that are separated
+    :param area_size: size of the area around non-zero positions to be included in the result
+    :return: list of starts of non-zero regions and list of ends of non-zero regions"""
     size = len(seq)
     seq = np.argwhere(seq >= 1).flatten()
     starts, ends = [], []
@@ -108,8 +111,11 @@ def find_full_full_pos(seq, gap_size=1000, area_size=500):
 
 
 def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
-    """Look for nonzero positions in coverage matrix,
-    when most of the positions are nonzero"""
+    """Look for nonzero positions in coverage matrix, when most of the positions are nonzero
+    :param seq: vector with information about non-zero positions
+    :param gap_size: size of minium gap between non-zero positions that are separated
+    :param area_size: size of the area around non-zero positions to be included in the result
+    :return: list of starts of non-zero regions and list of ends of non-zero regions"""
     size = len(seq)
     seq = np.argwhere(seq == 0).flatten()
     starts, ends = [], []
@@ -160,10 +166,8 @@ def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=No
     :param array states: result of HMM prediction
     :param str chrom: which chromosome is being analysed
     :param str bedname: path to the output file
-    :param bool save_max_cove: whether to save the maximum peak
-     coverage to output file, can result in nonstandard bed file
-    :param str cove_file: file with core coverage, require for
-     saving maximum peak coverage
+    :param bool save_max_cove: whether to save the maximum peak coverage to output file, can result in nonstandard bed file
+    :param str cove_file: file with core coverage, require for saving maximum peak coverage
     """
     ind = np.argwhere(states != 3)
     ind = ind.flatten()
@@ -248,14 +252,11 @@ def run_hmm_save_bed(
 ):
     """
     Create HMM based univers from coverage
-    :param coverage_folder: path to folder with coverage files
-    :param str start: start coverage file name
-    :param str end: end coverage file name
-    :param str core: core coverage file name
+    :param coverage_folder: path to name with coverage files
+    :param str prefix: prefix of coverage files
     :param str out_file: path to the output file with universe
     :param bool normalize: whether to normalize file
-    :param bool save_max_cove: whether to save the maximum
-    peak coverage
+    :param bool save_max_cove: whether to save the maximum peak coverage
     """
     if os.path.isfile(out_file):
         raise Exception(f"File : {out_file} exists")

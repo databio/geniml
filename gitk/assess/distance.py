@@ -2,18 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import os
-from typing import List, Any
-
 import numpy as np
-import argparse
 from multiprocessing import Pool
-from .utils import process_db_line, chrom_cmp_bigger, prep_data, check_if_uni_sorted
+from .utils import process_db_line, prep_data, check_if_uni_sorted
 from ..utils import natural_chr_sort
 import tempfile
 
 
 def flexible_distance(r, q):
-    """Calculate region distance for univers"""
+    """Calculate distance between region and flexible region from flexible universe
+    param [int, int] r: region from flexible universe
+    param int q: analysed region
+    return int: distance
+    """
     if r[0] <= q <= r[1]:
         return 0
     else:
@@ -21,7 +22,11 @@ def flexible_distance(r, q):
 
 
 def distance(r, q):
-    """Calculate distance for hard universe"""
+    """Calculate distance between region and region from hard universe
+    param [int] r: region from hard universe
+    param int q: analysed region
+    return int: distance
+    """
     return abs(r[0] - q)
 
 
@@ -29,11 +34,11 @@ def asses(db, db_que, i, current_chrom, unused_db, pos_index, flexible):
     """
     Calculate distance from given peak to the closest region in universe
     :param file db: universe file
-    :param list db_que: que of three last positions in universe
+    :param list db_que: que of last three positions in universe
     :param int i: analysed position from the query
     :param str current_chrom: current analysed chromosome from query
     :param list unused_db: list of positions from universe that were not compared to query
-    :param list pos_index: which indexes from universe region use to calculate distance
+    :param list pos_index: which indexes from universe BED file line should be used in analysis
     :param bool flexible: whether the universe if flexible
     :return int: peak distance to universe
     """
@@ -75,7 +80,7 @@ def process_line(
     """
     Calculate distance from new peak to universe
     :param file db: universe file
-    :param str q_chrom: on which chromosome id the new peak
+    :param str q_chrom: new peak chromosome
     :param str current_chrom: chromosome that was analysed so far
     :param list unused_db: list of positions from universe that were not compared to query
     :param list db_que: que of three last positions in universe
@@ -142,14 +147,14 @@ def calc_distance(
     pref=None,
 ):
     """
-    For given file calculate distance to the nearst region from universe
+    For given file calculate distances to the nearst region from universe
     :param str db_file: path to universe
-    :param str q_folder: path to folder containing query files
+    :param str q_folder: path to name containing query files
     :param str q_file: query file
     :param boolean flexible: whether the universe if flexible
     :param bool save_each: whether to save calculated distances for each file
-    :param str folder_out: output folder
-    :param str pref: prefix used as the name of the folder
+    :param str folder_out: output name
+    :param str pref: prefix used as the name of the name
      containing calculated distance for each file
     :return str, int, int: file name; median od distance of starts to
      starts in universe; median od distance of ends to ends in universe
@@ -204,7 +209,7 @@ def calc_distance(
             flexible,
         )
         (waiting_end, current_chrom_end) = res_end
-    tmp_file.close()
+    q.close()
     if save_each:
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
@@ -227,14 +232,14 @@ def run_distance(
     save_each=False,
 ):
     """
-    For group of files calculate distance to the nearest region in universe
-    :param str folder: path to folder containing query files
+    For group of files calculate distances to the nearest region in universe
+    :param str folder: path to name containing query files
     :param str file_list: path to file containing list of query files
     :param str universe: path to universe file
     :param int npool: number of parallel processes
     :param bool flexible: whether the universe if flexible
     :param bool save_to_file: whether to save median of calculated distances for each file
-    :param str folder_out: output folder
+    :param str folder_out: output name
     :param str pref: prefix used for saving
     :param bool save_each: whether to save calculated distances for each file
     :return float; float: mean of median distances from starts in query to the nearest starts in universe;

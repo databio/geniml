@@ -1,5 +1,4 @@
 import numpy as np
-import os
 from .utils import check_if_uni_sorted
 from ..likelihood.build_model import ModelLH
 
@@ -10,7 +9,7 @@ def calc_likelihood_hard(universe, chroms, model_lh, name, s_index, e_index=None
     To be used with binomial model
     :param str  universe: path to universe file
     :param list chroms: list of chromosomes present in likelihood model
-    :param str model_folder: path to folder with model
+    :param ModelLH model_lh: likelihood model
     :param str name: suffix of model file name, which contains information
      about model type
     :param int s_index: from which position in univers line take assess region
@@ -62,16 +61,16 @@ def calc_likelihood_hard(universe, chroms, model_lh, name, s_index, e_index=None
     return res
 
 
-def hard_universe_likelihood(model_folder, universe):
+def hard_universe_likelihood(model, universe):
     """
     Calculate likelihood of hard universe based on core, start,
     end coverage model
-    :param str model_folder: path to folder containing model
+    :param str model: path to file containing model
     :param str universe: path to universe
     :return float: likelihood
     """
     check_if_uni_sorted(universe)
-    model_lh = ModelLH(model_folder)
+    model_lh = ModelLH(model)
     chroms = model_lh.chromosomes_list
     s = calc_likelihood_hard(universe, chroms, model_lh, "start", 1)
     e = calc_likelihood_hard(universe, chroms, model_lh, "end", 2)
@@ -79,22 +78,25 @@ def hard_universe_likelihood(model_folder, universe):
     return sum([s, e, c])
 
 
-def likelihood_only_core(model_folder, universe, core="core"):
+def likelihood_only_core(model_file, universe, core="core"):
     """
-    Calculate likelihood of universe based on core coverage model
-    :param str model_folder: path to folder containing model
+    Calculate likelihood of universe based only on core coverage model
+    :param str model_file: path to name containing model
     :param str universe: path to universe
     :param str core: model file name
     :return float: likelihood
     """
     check_if_uni_sorted(universe)
-    model_lh = ModelLH(model_folder)
+    model_lh = ModelLH(model_file)
     chroms = model_lh.chromosomes_list
-    c = calc_likelihood_hard(universe, chroms, model_folder, core, 1, 2)
+    c = calc_likelihood_hard(universe, chroms, model_lh, core, 1, 2)
     return c
 
 
 def background_likelihood(start, end, model_start, model_cove, model_end):
+    """
+    Calculate likelihood of background for given region
+    """
     res = np.sum(model_start[start:end, 0])
     res += np.sum(model_cove[start:end, 0])
     res += np.sum(model_end[start:end, 0])
@@ -102,6 +104,16 @@ def background_likelihood(start, end, model_start, model_cove, model_end):
 
 
 def weigh_livelihood(start, end, model_process, model_cove, model_out, reverse):
+    """
+    Calculate weighted likelihood of flexible part of the region
+    :param int start: start of the region
+    :param int end: end of the region
+    :param array model_process: model for analysed type of flexible region
+    :param array model_cove: model for coverage
+    :param array model_out: model for flexible region that is not being analysed
+    :param bool reverse: if model_process corespondents to end we have to reverse the weighs
+    :return float: likelihood of flexible part of the region
+    """
     e_w = 1 / (end - start)  # weights for processed model
     c_w = np.linspace(
         start=e_w, stop=1, num=(end - start)
@@ -117,26 +129,36 @@ def weigh_livelihood(start, end, model_process, model_cove, model_out, reverse):
 
 
 def flexible_peak_likelihood(
-    startS, startE, endS, endE, model_start, model_cove, model_end
+    start_s, start_e, end_s, end_e, model_start, model_cove, model_end
 ):
+    """
+    Likelihood of flexible peak
+    """
     # core part of the peak
-    res = np.sum(model_cove[startE:endS, 1])
-    res += np.sum(model_start[startE:endS, 0])
-    res += np.sum(model_end[startE:endS, 0])
+    res = np.sum(model_cove[start_e:end_s, 1])
+    res += np.sum(model_start[start_e:end_s, 0])
+    res += np.sum(model_end[start_e:end_s, 0])
     # start part of the peak
-    res += weigh_livelihood(startS, startE, model_start, model_cove, model_end, False)
+    res += weigh_livelihood(start_s, start_e, model_start, model_cove, model_end, False)
     # end part of the peak
-    res += weigh_livelihood(endS, endE, model_end, model_cove, model_start, True)
+    res += weigh_livelihood(end_s, end_e, model_end, model_cove, model_start, True)
     return res
 
 
-def likelihood_flexible_universe(model_folder, universe, save_peak_input=False):
+def likelihood_flexible_universe(model_file, universe, save_peak_input=False):
+    """
+    Liklihood of given universe under the model
+    param str model_folder: path to file with lh model
+    param str universe: path to universe
+    param bool save_peak_input: whether to save universe with each peak lh
+    return float: lh of the flexible universe
+    """
     curent_chrom = ""
     missing_chrom = ""
     empty_start = 0
     res = 0
     check_if_uni_sorted(universe)
-    model_lh = ModelLH(model_folder)
+    model_lh = ModelLH(model_file)
     chroms = model_lh.chromosomes_list
     if save_peak_input:
         output = []
