@@ -140,6 +140,7 @@ def calc_distance(
     save_each=False,
     folder_out=None,
     pref=None,
+    e=0,
 ):
     """
     For given file calculate distance to the nearst region from universe
@@ -204,14 +205,13 @@ def calc_distance(
             flexible,
         )
         (waiting_end, current_chrom_end) = res_end
-    tmp_file.close()
-    if save_each:
+    q.close()
+    if save_each and e < 10:
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
                 f.write(f"{i}\t{j}\n")
     with open(os.path.join(folder_out, pref, q_file+"_h"), "w") as f:
-            for i, j in zip(dist_start, dist_end):
-                f.write(f"{q_file}\t{np.median(dist_start)}\t{np.median(dist_end)}\n")
+        f.write(f"{q_file}\t{np.median(dist_start)}\t{np.median(dist_end)}\n")
     if not dist_start:
         print(f"File {q_file} doesn't contain any chromosomes present in universe")
         return q_file, None, None
@@ -248,19 +248,27 @@ def run_distance(
     res = []
     if folder_out:
         os.makedirs(folder_out, exist_ok=True)
+    if os.path.exists(os.path.join(folder_out, pref)):
+        done_files = os.listdir(os.path.join(folder_out, pref))
+        done_files = [i for i in done_files if "_h" in i]
+        print(len(done_files))
+        done_files = [i.strip("_h") for i in done_files]
+        for i in done_files:
+            files.remove(i)
+    print(len(files))
     if save_each:
-        os.makedirs(os.path.join(folder_out, pref))
+        os.makedirs(os.path.join(folder_out, pref), exist_ok=True)
     if npool <= 1:
-        for i in files:
+        for e, i in enumerate(files):
             r = calc_distance(
-                universe, folder, i, flexible, save_each, folder_out, pref
+                universe, folder, i, flexible, save_each, folder_out, pref, e
             )
             res.append(r)
     else:
         with Pool(npool) as p:
             args = [
-                (universe, folder, f, flexible, save_each, folder_out, pref)
-                for f in files
+                (universe, folder, f, flexible, save_each, folder_out, pref, e)
+                for e, f in enumerate(files)
             ]
             res = p.starmap(calc_distance, args)
     if save_to_file:
