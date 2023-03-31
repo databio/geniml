@@ -3,7 +3,6 @@
 
 import numpy as np
 import os
-from time import time
 from functools import cmp_to_key
 import pyBigWig
 from ..utils import natural_chr_sort, timer_func

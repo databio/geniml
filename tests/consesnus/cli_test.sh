@@ -1,10 +1,12 @@
 #!/bin/bash
 
+#pip install --user --upgrade .
+
 rm -r tests/consesnus/results
 mkdir tests/consesnus/results
 
 # make lh model
-gitk lh build_model --model_folder tests/consesnus/results/lh_model.tar \
+gitk lh build_model --model_file tests/consesnus/results/lh_model.tar \
               --file_no 4 \
               --coverage_folder tests/consesnus/coverage/
 
@@ -24,7 +26,7 @@ gitk lh universe_hard --coverage_file tests/consesnus/coverage/all_core.bw  \
                        --fout tests/consesnus/results/universe/cut_off_c1_m100_f300.bed
 # make ML flexible universe
 
-gitk lh universe_flexible --model_folder tests/consesnus/results/lh_model.tar \
+gitk lh universe_flexible --model_file tests/consesnus/results/lh_model.tar \
                           --output_file tests/consesnus/results/universe/ML_flexible.bed
 
 # make HMM universe

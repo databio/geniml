@@ -50,7 +50,7 @@ class PoissonModel(Model):
         """
 
         :param lambdas_matrix: Lambda values for emission probabilities
-        :param out_folder: folder to which save parameter matrix
+        :param out_folder: name to which save parameter matrix
         """
         Model.__init__(
             self,
@@ -98,7 +98,7 @@ class GaussianModel(Model):
 
         :param means_matrix: mean values for emission probabilities
         :param covars_matrix: covariance values for emission probabilities
-        :param out_folder: folder to which save parameter matrix
+        :param out_folder: name to which save parameter matrix
         """
         Model.__init__(
             self,
@@ -150,7 +150,7 @@ class NBModel(Model):
 
         :param failures_matrix: number of failures for emission probabilities
         :param prob_matrix: success probability for emission probabilities
-        :param out_folder: folder to which save parameter matrix
+        :param out_folder: name to which save parameter matrix
         """
         Model.__init__(
             self,
@@ -199,7 +199,7 @@ class BetaModel(Model):
 
         :param alfa_matrix: alfa values for emission probabilities
         :param beta_matrix: beta values for emission probabilities
-        :param out_folder: folder to which save parameter matrix
+        :param out_folder: name to which save parameter matrix
         """
         Model.__init__(
             self,

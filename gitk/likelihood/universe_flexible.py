@@ -47,7 +47,7 @@ def process_part(model):
 def make_ml_flexible_universe(model_lh, chrom, fout):
     """
     Make ML flexible universe per chromosome
-    :param str folderin: input folder with likelihood models
+    :param ModelLH model_lh: lh model
     :param str chrom: chromosome to be processed
     :param str fout: output file with the universe
     """
@@ -74,16 +74,15 @@ def make_ml_flexible_universe(model_lh, chrom, fout):
     predictions_to_bed(path, chrom, fout)
 
 
-@timer_func
-def main(folderin, fout):
+def main(folder_in, file_out):
     """
     Make ML flexible universe
-    :param str folderin: input folder with likelihood models
-    :param str fout: output file with the universe
+    :param str folder_in: input name with likelihood models
+    :param str file_out: output file with the universe
     """
-    if os.path.isfile(fout):
-        raise Exception(f"File : {fout} exists")
-    lh_model = ModelLH(folderin)
+    if os.path.isfile(file_out):
+        raise Exception(f"File : {file_out} exists")
+    lh_model = ModelLH(folder_in)
     chroms = sorted(lh_model.chromosomes_list, key=cmp_to_key(natural_chr_sort))
     for C in chroms:
-        make_ml_flexible_universe(lh_model, C, fout)
+        make_ml_flexible_universe(lh_model, C, file_out)

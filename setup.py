@@ -24,7 +24,14 @@ with open("README.md") as f:
 
 setup(
     name=PACKAGE_NAME,
-    packages=[PACKAGE_NAME, "gitk.assess", "gitk.eval", "gitk.hmm", "gitk.likelihood", "gitk.scembed"],
+    packages=[
+        PACKAGE_NAME,
+        "gitk.assess",
+        "gitk.eval",
+        "gitk.hmm",
+        "gitk.likelihood",
+        "gitk.scembed",
+    ],
     version=version,
     long_description=long_description,
     long_description_content_type="text/markdown",

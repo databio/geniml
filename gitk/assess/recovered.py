@@ -40,7 +40,7 @@ def calc_no_retrieve(db_file, q_folder, q_file):
     """
     Calculate percent of strats and ends covered by flexible universe for given file
     :param str db_file: path to universe file
-    :param str q_folder: path to folder containing query files
+    :param str q_folder: path to name containing query files
     :param str q_file: file name
     :return: file name; number of peaks in file; number of peaks with start covered by universe;
     percent of peaks with start covered by universe; number of peaks with end covered by universe;
@@ -103,12 +103,12 @@ def run_recovered(
 ):
     """
     Calculate percent of strats and ends covered by flexible universe for set of files
-    :param str q_folder: path to folder containing query files
+    :param str q_folder: path to name containing query files
     :param str file_list: path to file containing list of query files
     :param str db_file: path to universe file
     :param int npool: number of parallel processes
     :param bool save_to_file: whether to save median of calculated distances for each file
-    :param str folder_out: output folder
+    :param str folder_out: output name
     :param str pref: prefix used for saving
     :return: mean of percent of strats covered by flexible universe;
     mean of percent of ends covered by flexible universe;
