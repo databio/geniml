@@ -57,6 +57,15 @@ def build_subparser_universe_flexible(parser):
     parser.add_argument(
         "--model_file", help="path to lh model file", required=True, type=str
     )
+    parser.add_argument(
+        "--coverage_prefix",
+        help="prefixed used for making coverage files",
+        default="all",
+        type=str,
+    )
+    parser.add_argument(
+        "--cov_folder", type=str, help="path to coverage folder", required=True
+    )
 
     return parser
 

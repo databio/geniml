@@ -137,7 +137,9 @@ def main(test_args=None):
         if args.subcommand == "universe_flexible":
             from .likelihood.universe_flexible import main
 
-            main(args.model_file, args.output_file)
+            main(
+                args.model_file, args.cov_folder, args.coverage_prefix, args.output_file
+            )
 
     if args.command == "hmm":
         from .hmm.hmm import run_hmm_save_bed
