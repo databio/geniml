@@ -233,6 +233,29 @@ class Region2Vec(Word2Vec):
         self.data.obs["embedding"] = cell_embeddings
         return self.data
 
+    def embeddings_to_csv(self, output_path: str):
+        """
+        Save the embeddings to a CSV file.
+
+        :param str output_path: the path to save the embeddings to
+        """
+        embeddings = self.cell_embeddings()
+        embeddings_df = embeddings.obs
+
+        # split the embeddings for each barcode into each dimension and save them
+        parsed_rows = []
+        for row in list(embeddings_df.iterrows()):
+            row_dict = row[1].to_dict()
+            new_row_dict = {
+                f"embedding_dim_{i}": row_dict["embedding"][i] for i in range(100)
+            }
+            if "id" in row_dict:
+                new_row_dict["id"] = row_dict["id"]
+            parsed_rows.append(new_row_dict)
+
+        parsed_df = pd.DataFrame(parsed_rows)
+        parsed_df.to_csv(output_path, index=False)
+
 def remove_regions_below_min_count(
         region_sets: List[List[str]], min_count: int
 ) -> List[List[str]]:
