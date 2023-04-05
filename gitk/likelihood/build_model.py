@@ -27,16 +27,6 @@ def model_binomial(folder_in, in_file, chrom, file_out, file_no=None, start=0):
             np.log10((file_no - i) / (no_possible - no_cov) + 1e-10),
             np.log10((i / no_cov) + 1e-10),
         ]
-
-    # no_ncov = np.subtract(no_possible, no_cov)  # number of spots uncovered
-    # distr_ncov = np.subtract(
-    #     file_no, distr_cov
-    # )  # for each position in how many files is empty
-    # cov = distr_cov / no_cov
-    # ncov = distr_ncov / no_ncov
-    # p_cov = np.log10(cov + 1e-10)
-    # p_ncov = np.log10(ncov + 1e-10)
-    # prob_array = np.vstack((p_ncov, p_cov)).T
     header = f"{chrom}_{chrom_size}"
     r = {header: prob_array}
     np.savez_compressed(file_out, **r)

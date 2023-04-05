@@ -1,9 +1,20 @@
 import numpy as np
+import os
 from .utils import check_if_uni_sorted
+from ..utils import read_chromosome_from_bw
 from ..likelihood.build_model import ModelLH
 
 
-def calc_likelihood_hard(universe, chroms, model_lh, name, s_index, e_index=None):
+def calc_likelihood_hard(
+    universe,
+    chroms,
+    model_lh,
+    coverage_folder,
+    coverage_prefix,
+    name,
+    s_index,
+    e_index=None,
+):
     """
     Calculate likelihood of universe for given type of model
     To be used with binomial model
@@ -23,7 +34,7 @@ def calc_likelihood_hard(universe, chroms, model_lh, name, s_index, e_index=None
     empty_start = 0
     res = 0
     e = 0
-    prob_array = None
+    prob_array, cove_array = None, None
     with open(universe) as uni:
         for i in uni:
             e += 1
@@ -36,13 +47,19 @@ def calc_likelihood_hard(universe, chroms, model_lh, name, s_index, e_index=None
                     if i[0] in chroms:
                         model_lh.clear_chrom(curent_chrom)
                         if e != 1:
-                            res += np.sum(prob_array[empty_start:, 0])
+                            res += np.sum(prob_array[cove_array[empty_start:], 0])
 
                         curent_chrom = i[0]
                         model_lh.read_chrom_track(curent_chrom, name)
                         prob_array = model_lh.chromosomes_models[curent_chrom].models[
                             name
                         ]
+                        (cove_array, _) = read_chromosome_from_bw(
+                            os.path.join(
+                                coverage_folder, f"{coverage_prefix}_{name}.bw"
+                            ),
+                            curent_chrom,
+                        )
                         empty_start = 0
                     else:
                         print(f"Chromosome {i[0]} missing from model")
@@ -52,8 +69,8 @@ def calc_likelihood_hard(universe, chroms, model_lh, name, s_index, e_index=None
                     end = i[s_index] + 1
                 else:
                     end = i[e_index]
-                r1 = np.sum(prob_array[start:end, 1])
-                r2 = np.sum(prob_array[empty_start:start, 0])
+                r1 = np.sum(prob_array[cove_array[start:end].tolist(), 1])
+                r2 = np.sum(prob_array[cove_array[empty_start:start].tolist(), 0])
                 res += r1
                 res += r2
                 empty_start = end
@@ -61,7 +78,7 @@ def calc_likelihood_hard(universe, chroms, model_lh, name, s_index, e_index=None
     return res
 
 
-def hard_universe_likelihood(model, universe):
+def hard_universe_likelihood(model, universe, coverage_folder, coverage_prefix):
     """
     Calculate likelihood of hard universe based on core, start,
     end coverage model
@@ -72,9 +89,15 @@ def hard_universe_likelihood(model, universe):
     check_if_uni_sorted(universe)
     model_lh = ModelLH(model)
     chroms = model_lh.chromosomes_list
-    s = calc_likelihood_hard(universe, chroms, model_lh, "start", 1)
-    e = calc_likelihood_hard(universe, chroms, model_lh, "end", 2)
-    c = calc_likelihood_hard(universe, chroms, model_lh, "core", 1, 2)
+    s = calc_likelihood_hard(
+        universe, chroms, model_lh, coverage_folder, coverage_prefix, "start", 1
+    )
+    e = calc_likelihood_hard(
+        universe, chroms, model_lh, coverage_folder, coverage_prefix, "end", 2
+    )
+    c = calc_likelihood_hard(
+        universe, chroms, model_lh, coverage_folder, coverage_prefix, "core", 1, 2
+    )
     return sum([s, e, c])
 
 
