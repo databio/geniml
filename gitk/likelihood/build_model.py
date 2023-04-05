@@ -17,7 +17,8 @@ def model_binomial(folder_in, in_file, chrom, file_out, file_no=None, start=0):
     first column - likelihood of background
     second column - likelihood of coverage"""
     in_file = os.path.join(folder_in, in_file)
-    distr_cov, chrom_size = read_chromosome_from_bw(in_file, chrom)
+    distr_cov = read_chromosome_from_bw(in_file, chrom)
+    chrom_size = len(distr_cov)
     no_possible = file_no * len(distr_cov)  # number of possible spots covered
     no_cov = np.sum(distr_cov)  # number of spots covered
     cov_uniq = np.unique(distr_cov).astype(np.uint16)

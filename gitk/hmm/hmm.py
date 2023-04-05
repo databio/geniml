@@ -166,7 +166,8 @@ def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=No
     :param array states: result of HMM prediction
     :param str chrom: which chromosome is being analysed
     :param str bedname: path to the output file
-    :param bool save_max_cove: whether to save the maximum peak coverage to output file, can result in nonstandard bed file
+    :param bool save_max_cove: whether to save the maximum peak coverage to output
+     file, can result in nonstandard bed file
     :param str cove_file: file with core coverage, require for saving maximum peak coverage
     """
     ind = np.argwhere(states != 3)

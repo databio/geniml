@@ -43,4 +43,4 @@ def read_chromosome_from_bw(file, chrom):
     else:
         cove = bw.values(chrom, 0, chrom_size)
         cove = np.array(cove)
-    return cove.astype(np.uint16), chrom_size
+    return cove.astype(np.uint16)

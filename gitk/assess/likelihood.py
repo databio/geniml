@@ -5,6 +5,15 @@ from ..utils import read_chromosome_from_bw
 from ..likelihood.build_model import ModelLH
 
 
+class LHMC:
+    def __init__(self, model, cove):
+        self.model = model
+        self.cove = cove
+
+    def __getitem__(self, sliced):
+        return self.model[self.cove[sliced[0]], sliced[1]]
+
+
 def calc_likelihood_hard(
     universe,
     chroms,
@@ -54,7 +63,7 @@ def calc_likelihood_hard(
                         prob_array = model_lh.chromosomes_models[curent_chrom].models[
                             name
                         ]
-                        (cove_array, _) = read_chromosome_from_bw(
+                        cove_array = read_chromosome_from_bw(
                             os.path.join(
                                 coverage_folder, f"{coverage_prefix}_{name}.bw"
                             ),
@@ -168,7 +177,26 @@ def flexible_peak_likelihood(
     return res
 
 
-def likelihood_flexible_universe(model_file, universe, save_peak_input=False):
+def read_coverage(cove_folder, cove_prefix, curent_chrom):
+    cove_start = read_chromosome_from_bw(
+        os.path.join(cove_folder, f"{cove_prefix}_start.bw"),
+        curent_chrom,
+    )
+    cove_core = read_chromosome_from_bw(
+        os.path.join(cove_folder, f"{cove_prefix}_core.bw"),
+        curent_chrom,
+    )
+    cove_end = read_chromosome_from_bw(
+        os.path.join(cove_folder, f"{cove_prefix}_end.bw"),
+        curent_chrom,
+    )
+    cove = {"start": cove_start, "core": cove_core, "end": cove_end}
+    return cove
+
+
+def likelihood_flexible_universe(
+    model_file, universe, cove_folder, cove_prefix, save_peak_input=False
+):
     """
     Liklihood of given universe under the model
     param str model_folder: path to file with lh model
@@ -202,50 +230,57 @@ def likelihood_flexible_universe(model_file, universe, save_peak_input=False):
                             # likelihood of part of the genome after the last region
                             res += background_likelihood(
                                 empty_start,
-                                len(model_start),
-                                model_start,
-                                model_core,
-                                model_end,
+                                chr_size,
+                                prob_start,
+                                prob_core,
+                                prob_end,
                             )
                         curent_chrom = i[0]
                         e += 1
                         model_lh.read_chrom(curent_chrom)
-                        model_start = model_lh.chromosomes_models[curent_chrom].models[
-                            "start"
-                        ]
-                        model_core = model_lh.chromosomes_models[curent_chrom].models[
-                            "core"
-                        ]
-                        model_end = model_lh.chromosomes_models[curent_chrom].models[
-                            "end"
-                        ]
+                        models_current = model_lh.chromosomes_models[
+                            curent_chrom
+                        ].models
+                        cove_current = read_coverage(
+                            cove_folder, cove_prefix, curent_chrom
+                        )
+                        chr_size = len(cove_current["start"])
+                        prob_start = LHMC(
+                            models_current["start"], cove_current["start"]
+                        )
+                        prob_core = LHMC(models_current["core"], cove_current["core"])
+                        prob_end = LHMC(models_current["end"], cove_current["end"])
 
                     else:
                         print(f"Chromosome {i[0]} missing from model")
                         missing_chrom = i[0]
             res += background_likelihood(
-                empty_start, peak_start_s, model_start, model_core, model_end
+                empty_start,
+                peak_start_s,
+                prob_start,
+                prob_core,
+                prob_end,
             )
             peak_likelihood = flexible_peak_likelihood(
                 peak_start_s,
                 peak_start_e,
                 peak_end_s,
                 peak_end_e,
-                model_start,
-                model_core,
-                model_end,
+                prob_start,
+                prob_core,
+                prob_end,
             )
             res += peak_likelihood
             if save_peak_input:
                 backgroung = background_likelihood(
-                    peak_start_s, peak_end_e, model_start, model_core, model_end
+                    peak_start_s, peak_end_e, prob_start, prob_core, prob_end
                 )
                 contribution = peak_likelihood - backgroung
                 output.append("{}\t{}\n".format(line.strip("\n"), contribution))
             empty_start = peak_end_e
 
         res += background_likelihood(
-            empty_start, len(model_start), model_start, model_core, model_end
+            empty_start, chr_size, prob_start, prob_core, prob_end
         )
         if save_peak_input:
             print("saving")
