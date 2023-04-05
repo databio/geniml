@@ -69,12 +69,12 @@ def calc_likelihood_hard(
                     end = i[s_index] + 1
                 else:
                     end = i[e_index]
-                r1 = np.sum(prob_array[cove_array[start:end].tolist(), 1])
-                r2 = np.sum(prob_array[cove_array[empty_start:start].tolist(), 0])
+                r1 = np.sum(prob_array[cove_array[start:end], 1])
+                r2 = np.sum(prob_array[cove_array[empty_start:start], 0])
                 res += r1
                 res += r2
                 empty_start = end
-    res += np.sum(prob_array[empty_start:, 0])
+    res += np.sum(prob_array[cove_array[empty_start:], 0])
     return res
 
 
