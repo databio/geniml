@@ -57,7 +57,7 @@ def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, fout):
     :param str fout: output file with the universe
     """
     model_lh.read_chrom(chrom)
-    chrom_model = model_lh.chromosomes_models[chrom]
+    chrom_model = model_lh[chrom]
     start = read_chromosome_from_bw(
         os.path.join(cove_folder, f"{cove_prefix}_start.bw"), chrom
     )
@@ -76,9 +76,9 @@ def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, fout):
     for s, e in zip(full_start, full_end):
         res = process_part(
             cove[s:e],
-            chrom_model.models["start"],
-            chrom_model.models["core"],
-            chrom_model.models["end"],
+            chrom_model["start"],
+            chrom_model["core"],
+            chrom_model["end"],
         )
         path[s:e] = res
     predictions_to_bed(path, chrom, fout)

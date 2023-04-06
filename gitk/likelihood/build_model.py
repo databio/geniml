@@ -51,6 +51,9 @@ class ChromosomeModel:
         }
         self.models = {}
 
+    def __getitem__(self, item):
+        return self.models[item]
+
     def make_model(self, coverage_folder, coverage_prefix, file_no):
         """
         Make a lh model of given chromosome from coverage files
@@ -116,6 +119,9 @@ class ModelLH:
                 files = tarfile.open(self.name, "r")
                 chroms = files.getnames()
                 self.chromosomes_list = list(set([i.split("_")[0] for i in chroms]))
+
+    def __getitem__(self, item):
+        return self.chromosomes_models[item]
 
     def make(self, coverage_folder, coverage_prefix, file_no, forece=False):
         """

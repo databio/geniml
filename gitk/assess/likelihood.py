@@ -60,15 +60,14 @@ def calc_likelihood_hard(
 
                         curent_chrom = i[0]
                         model_lh.read_chrom_track(curent_chrom, name)
-                        prob_array = model_lh.chromosomes_models[curent_chrom].models[
-                            name
-                        ]
+                        prob_model = model_lh[curent_chrom]
                         cove_array = read_chromosome_from_bw(
                             os.path.join(
                                 coverage_folder, f"{coverage_prefix}_{name}.bw"
                             ),
                             curent_chrom,
                         )
+                        prob_array = LHMC(prob_model[name], cove_array)
                         empty_start = 0
                     else:
                         print(f"Chromosome {i[0]} missing from model")
@@ -78,12 +77,12 @@ def calc_likelihood_hard(
                     end = i[s_index] + 1
                 else:
                     end = i[e_index]
-                r1 = np.sum(prob_array[cove_array[start:end], 1])
-                r2 = np.sum(prob_array[cove_array[empty_start:start], 0])
+                r1 = np.sum(prob_array[start:end, 1])
+                r2 = np.sum(prob_array[empty_start:start, 0])
                 res += r1
                 res += r2
                 empty_start = end
-    res += np.sum(prob_array[cove_array[empty_start:], 0])
+    res += np.sum(prob_array[empty_start:, 0])
     return res
 
 
@@ -238,9 +237,7 @@ def likelihood_flexible_universe(
                         curent_chrom = i[0]
                         e += 1
                         model_lh.read_chrom(curent_chrom)
-                        models_current = model_lh.chromosomes_models[
-                            curent_chrom
-                        ].models
+                        models_current = model_lh[curent_chrom]
                         cove_current = read_coverage(
                             cove_folder, cove_prefix, curent_chrom
                         )
