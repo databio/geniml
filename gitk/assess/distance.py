@@ -215,8 +215,6 @@ def calc_distance(
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
                 f.write(f"{i}\t{j}\n")
-    with open(os.path.join(folder_out, pref, q_file+"_h"), "w") as f:
-        f.write(f"{q_file}\t{np.median(dist_start)}\t{np.median(dist_end)}\n")
     if not dist_start:
         print(f"File {q_file} doesn't contain any chromosomes present in universe")
         return q_file, None, None
@@ -253,14 +251,6 @@ def run_distance(
     res = []
     if folder_out:
         os.makedirs(folder_out, exist_ok=True)
-    if os.path.exists(os.path.join(folder_out, pref)):
-        done_files = os.listdir(os.path.join(folder_out, pref))
-        done_files = [i for i in done_files if "_h" in i]
-        print(len(done_files))
-        done_files = [i.strip("_h") for i in done_files]
-        for i in done_files:
-            files.remove(i)
-    print(len(files))
     if save_each:
         os.makedirs(os.path.join(folder_out, pref), exist_ok=True)
     if npool <= 1:
