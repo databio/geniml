@@ -137,38 +137,22 @@ def process_line(
     return waiting, current_chrom
 
 
-def calc_distance(
-    db_file,
-    q_folder,
+def calc_distance_main(
+    q,
+    db_start,
+    db_end,
     q_file,
-    flexible=False,
-    save_each=False,
-    folder_out=None,
-    pref=None,
-    e=0,
+    flexible,
+    save_each,
+    folder_out,
+    pref,
+    e,
 ):
-    """
-    For given file calculate distances to the nearst region from universe
-    :param str db_file: path to universe
-    :param str q_folder: path to name containing query files
-    :param str q_file: query file
-    :param boolean flexible: whether the universe if flexible
-    :param bool save_each: whether to save calculated distances for each file
-    :param str folder_out: output name
-    :param str pref: prefix used as the name of the name
-     containing calculated distance for each file
-    :return str, int, int: file name; median od distance of starts to
-     starts in universe; median od distance of ends to ends in universe
-    """
-    q = tempfile.NamedTemporaryFile()
-    prep_data(q_folder, q_file, q)
-    db_start = open(db_file)
     db_que_start = []
     current_chrom_start = "chr0"
     dist_start = []
     unused_db_start = []
     waiting_start = False
-    db_end = open(db_file)
     db_que_end = []
     current_chrom_end = "chr0"
     dist_end = []
@@ -180,7 +164,7 @@ def calc_distance(
         pos_start = [1, 6]
         pos_end = [7, 2]
     for i in q:
-        i = i.decode("utf-8").split("\t")
+        i = i.split("\t")
         start = int(i[1])
         end = int(i[2])
         q_chrom = i[0]
@@ -219,6 +203,88 @@ def calc_distance(
         print(f"File {q_file} doesn't contain any chromosomes present in universe")
         return q_file, None, None
     return q_file, np.median(dist_start), np.median(dist_end)
+
+
+def calc_distance(
+    db_file,
+    q_folder,
+    q_file,
+    flexible=False,
+    save_each=False,
+    folder_out=None,
+    pref=None,
+    e=0,
+):
+    """
+    For given file calculate distances to the nearst region from universe
+    :param str db_file: path to universe
+    :param str q_folder: path to folder containing query files
+    :param str q_file: query file
+    :param boolean flexible: whether the universe if flexible
+    :param bool save_each: whether to save calculated distances for each file
+    :param str folder_out: output name
+    :param str pref: prefix used as the name of the name
+     containing calculated distance for each file
+    :return str, int, int: file name; median od distance of starts to
+     starts in universe; median od distance of ends to ends in universe
+    """
+    q = tempfile.NamedTemporaryFile()
+    prep_data(q_folder, q_file, q)
+    db_start = open(db_file)
+    db_end = open(db_file)
+    return calc_distance_main(
+        q,
+        db_start,
+        db_end,
+        q_file,
+        flexible,
+        save_each,
+        folder_out,
+        pref,
+        e,
+    )
+
+
+def calc_distance_uni(
+    db_file_start,
+    db_file_end,
+    q_folder,
+    q_file,
+    flexible=False,
+    save_each=False,
+    folder_out=None,
+    pref=None,
+    e=0,
+):
+    """
+    For given file calculate distances to the nearst region from universe
+    :param str db_file_start: path to combined peaks sorted by starts
+    :param str db_file_end: path to combined peaks sorted by ends
+    :param str q_folder: path to folder with universe
+    :param str q_file: universe
+    :param boolean flexible: whether the universe if flexible
+    :param bool save_each: whether to save calculated distances for each file
+    :param str folder_out: output name
+    :param str pref: prefix used as the name of the name
+     containing calculated distance for each file
+    :return str, int, int: file name; median od distance of starts to
+     starts in universe; median od distance of ends to ends in universe
+    """
+    q = os.path.join(q_folder, q_file)
+    q = open(q)
+    db_start = open(db_file_start)
+    db_end = open(db_file_end)
+    return calc_distance_main(
+        q,
+        db_start,
+        db_end,
+        q_file,
+        flexible,
+        save_each,
+        folder_out,
+        pref,
+        e,
+    )
 
 
 def run_distance(
