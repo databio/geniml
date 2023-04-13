@@ -147,6 +147,7 @@ def calc_distance_main(
     folder_out,
     pref,
     e,
+    file_bytes=True,
 ):
     db_que_start = []
     current_chrom_start = "chr0"
@@ -164,6 +165,8 @@ def calc_distance_main(
         pos_start = [1, 6]
         pos_end = [7, 2]
     for i in q:
+        if file_bytes:
+            i = i.decode("utf-8")
         i = i.split("\t")
         start = int(i[1])
         end = int(i[2])
