@@ -287,6 +287,7 @@ def calc_distance_uni(
         folder_out,
         pref,
         e,
+        file_bytes=False,
     )
 
 
