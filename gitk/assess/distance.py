@@ -80,17 +80,17 @@ def process_line(
     """
     Calculate distance from new peak to universe
     :param file db: universe file
-    :param str q_chrom: new peak chromosome
+    :param str q_chrom: new peak's chromosome
     :param str current_chrom: chromosome that was analysed so far
     :param list unused_db: list of positions from universe that were not compared to query
     :param list db_que: que of three last positions in universe
     :param list dist: list of all calculated distances
     :param bool waiting: whether iterating through file, without calculating
      distance,  if present chromosome not present in universe
-    :param start: analysed position from the query
-    :param pos_index: which indexes from universe region use to calculate distance
-    :param flexible: whether the universe if flexible
-    :return: if iterating through chromosome not present in universe; current chromosome in query
+    :param int start: analysed position from the query
+    :param list pos_index: which indexes from universe region use to calculate distance
+    :param bool flexible: whether the universe if flexible
+    :return bool, str: if iterating through chromosome not present in universe; current chromosome in query
     """
     if q_chrom != current_chrom:
         # change chromosome
@@ -146,7 +146,6 @@ def calc_distance_main(
     save_each,
     folder_out,
     pref,
-    e,
     file_bytes=True,
 ):
     db_que_start = []
@@ -198,7 +197,7 @@ def calc_distance_main(
         )
         (waiting_end, current_chrom_end) = res_end
     q.close()
-    if save_each and e < 10:
+    if save_each:
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
                 f.write(f"{i}\t{j}\n")
@@ -216,7 +215,6 @@ def calc_distance(
     save_each=False,
     folder_out=None,
     pref=None,
-    e=0,
 ):
     """
     For given file calculate distances to the nearst region from universe
@@ -244,7 +242,6 @@ def calc_distance(
         save_each,
         folder_out,
         pref,
-        e,
     )
 
 
@@ -257,12 +254,11 @@ def calc_distance_uni(
     save_each=False,
     folder_out=None,
     pref=None,
-    e=0,
 ):
     """
-    For given file calculate distances to the nearst region from universe
-    :param str db_file_start: path to combined peaks sorted by starts
-    :param str db_file_end: path to combined peaks sorted by ends
+    For given universe calculate distances to the nearst region from combined collection
+    :param str db_file_start: path to combined peaks sorted by starts, with removed duplicated start
+    :param str db_file_end: path to combined peaks sorted by ends, with removed duplicated start
     :param str q_folder: path to folder with universe
     :param str q_file: universe
     :param boolean flexible: whether the universe if flexible
@@ -286,7 +282,6 @@ def calc_distance_uni(
         save_each,
         folder_out,
         pref,
-        e,
         file_bytes=False,
     )
 
@@ -295,7 +290,7 @@ def run_distance(
     folder,
     file_list,
     universe,
-    npool,
+    no_workers,
     flexible=False,
     save_to_file=False,
     folder_out=None,
@@ -307,7 +302,7 @@ def run_distance(
     :param str folder: path to name containing query files
     :param str file_list: path to file containing list of query files
     :param str universe: path to universe file
-    :param int npool: number of parallel processes
+    :param int no_workers: number of parallel processes
     :param bool flexible: whether the universe if flexible
     :param bool save_to_file: whether to save median of calculated distances for each file
     :param str folder_out: output name
@@ -323,22 +318,22 @@ def run_distance(
         os.makedirs(folder_out, exist_ok=True)
     if save_each:
         os.makedirs(os.path.join(folder_out, pref), exist_ok=True)
-    if npool <= 1:
-        for e, i in enumerate(files):
+    if no_workers <= 1:
+        for i in files:
             r = calc_distance(
-                universe, folder, i, flexible, save_each, folder_out, pref, e
+                universe, folder, i, flexible, save_each, folder_out, pref
             )
             res.append(r)
     else:
-        with Pool(npool) as p:
+        with Pool(no_workers) as p:
             args = [
-                (universe, folder, f, flexible, save_each, folder_out, pref, e)
-                for e, f in enumerate(files)
+                (universe, folder, f, flexible, save_each, folder_out, pref)
+                for f in files
             ]
             res = p.starmap(calc_distance, args)
     if save_to_file:
-        fout = os.path.join(folder_out, pref + "_data.tsv")
-        with open(fout, "w") as o:
+        file_out = os.path.join(folder_out, pref + "_data.tsv")
+        with open(file_out, "w") as o:
             o.write("file\tmedian_dist_start\tmedian_dist_end\n")
             for r in res:
                 o.write(f"{r[0]}\t{r[1]}\t{r[2]}\n")

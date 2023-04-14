@@ -5,8 +5,13 @@ from ..utils import read_chromosome_from_bw
 from ..likelihood.build_model import ModelLH
 
 
-class LHMC:
+class LhModel:
     def __init__(self, model, cove):
+        """
+        Object with combined information about lh model and coverage
+        :param ndarray model: lh model array
+        :param ndarray cove: coverage array
+        """
         self.model = model
         self.cove = cove
 
@@ -28,8 +33,10 @@ def calc_likelihood_hard(
     Calculate likelihood of universe for given type of model
     To be used with binomial model
     :param str  universe: path to universe file
-    :param list chroms: list of chromosomes present in likelihood model
+    :param list chroms: list of chromosomes present in model
     :param ModelLH model_lh: likelihood model
+    :param coverage_prefix: prefix used in uniwig for creating coverage
+    :param coverage_folder: path to a folder with genome coverage by tracks
     :param str name: suffix of model file name, which contains information
      about model type
     :param int s_index: from which position in univers line take assess region
@@ -38,7 +45,7 @@ def calc_likelihood_hard(
      end position
     :return float: likelihood of univers for given model
     """
-    curent_chrom = ""
+    current_chrom = ""
     missing_chrom = ""
     empty_start = 0
     res = 0
@@ -52,22 +59,22 @@ def calc_likelihood_hard(
             if i[0] == missing_chrom:
                 pass
             else:
-                if i[0] != curent_chrom:
+                if i[0] != current_chrom:
                     if i[0] in chroms:
-                        model_lh.clear_chrom(curent_chrom)
+                        model_lh.clear_chrom(current_chrom)
                         if e != 1:
                             res += np.sum(prob_array[cove_array[empty_start:], 0])
 
-                        curent_chrom = i[0]
-                        model_lh.read_chrom_track(curent_chrom, name)
-                        prob_model = model_lh[curent_chrom]
+                        current_chrom = i[0]
+                        model_lh.read_chrom_track(current_chrom, name)
+                        prob_model = model_lh[current_chrom]
                         cove_array = read_chromosome_from_bw(
                             os.path.join(
                                 coverage_folder, f"{coverage_prefix}_{name}.bw"
                             ),
-                            curent_chrom,
+                            current_chrom,
                         )
-                        prob_array = LHMC(prob_model[name], cove_array)
+                        prob_array = LhModel(prob_model[name], cove_array)
                         empty_start = 0
                     else:
                         print(f"Chromosome {i[0]} missing from model")
@@ -92,6 +99,8 @@ def hard_universe_likelihood(model, universe, coverage_folder, coverage_prefix):
     end coverage model
     :param str model: path to file containing model
     :param str universe: path to universe
+    :param coverage_prefix: prefix used in uniwig for creating coverage
+    :param coverage_folder: path to a folder with genome coverage by tracks
     :return float: likelihood
     """
     check_if_uni_sorted(universe)
@@ -109,18 +118,21 @@ def hard_universe_likelihood(model, universe, coverage_folder, coverage_prefix):
     return sum([s, e, c])
 
 
-def likelihood_only_core(model_file, universe, core="core"):
+def likelihood_only_core(model_file, universe, coverage_folder, coverage_prefix):
     """
     Calculate likelihood of universe based only on core coverage model
     :param str model_file: path to name containing model
     :param str universe: path to universe
-    :param str core: model file name
+    :param coverage_prefix: prefix used in uniwig for creating coverage
+    :param coverage_folder: path to a folder with genome coverage by tracks
     :return float: likelihood
     """
     check_if_uni_sorted(universe)
     model_lh = ModelLH(model_file)
     chroms = model_lh.chromosomes_list
-    c = calc_likelihood_hard(universe, chroms, model_lh, core, 1, 2)
+    c = calc_likelihood_hard(
+        universe, chroms, model_lh, coverage_folder, coverage_prefix, "core", 1, 2
+    )
     return c
 
 
@@ -176,18 +188,18 @@ def flexible_peak_likelihood(
     return res
 
 
-def read_coverage(cove_folder, cove_prefix, curent_chrom):
+def read_coverage(cove_folder, cove_prefix, current_chrom):
     cove_start = read_chromosome_from_bw(
         os.path.join(cove_folder, f"{cove_prefix}_start.bw"),
-        curent_chrom,
+        current_chrom,
     )
     cove_core = read_chromosome_from_bw(
         os.path.join(cove_folder, f"{cove_prefix}_core.bw"),
-        curent_chrom,
+        current_chrom,
     )
     cove_end = read_chromosome_from_bw(
         os.path.join(cove_folder, f"{cove_prefix}_end.bw"),
-        curent_chrom,
+        current_chrom,
     )
     cove = {"start": cove_start, "core": cove_core, "end": cove_end}
     return cove
@@ -197,21 +209,22 @@ def likelihood_flexible_universe(
     model_file, universe, cove_folder, cove_prefix, save_peak_input=False
 ):
     """
-    Liklihood of given universe under the model
-    param str model_folder: path to file with lh model
-    param str universe: path to universe
-    param bool save_peak_input: whether to save universe with each peak lh
-    return float: lh of the flexible universe
+    Likelihood of given universe under the model
+    :param str model_file: path to file with lh model
+    :param str universe: path to universe
+    :param cove_folder: path to a folder with genome coverage by tracks
+    :param cove_prefix: prefix used in uniwig for creating coverage
+    :param bool save_peak_input: whether to save universe with each peak lh
+    :return float: lh of the flexible universe
     """
-    curent_chrom = ""
+    current_chrom = ""
     missing_chrom = ""
     empty_start = 0
     res = 0
     check_if_uni_sorted(universe)
     model_lh = ModelLH(model_file)
     chroms = model_lh.chromosomes_list
-    if save_peak_input:
-        output = []
+    output = []
     e = 0  # number of processed chromosomes
     with open(universe) as uni:
         for line in uni:
@@ -221,9 +234,9 @@ def likelihood_flexible_universe(
             if i[0] == missing_chrom:
                 pass
             else:
-                if i[0] != curent_chrom:
+                if i[0] != current_chrom:
                     if i[0] in chroms:
-                        model_lh.clear_chrom(curent_chrom)
+                        model_lh.clear_chrom(current_chrom)
                         if e != 0:
                             # if we read any chromosomes add to result background
                             # likelihood of part of the genome after the last region
@@ -234,19 +247,21 @@ def likelihood_flexible_universe(
                                 prob_core,
                                 prob_end,
                             )
-                        curent_chrom = i[0]
+                        current_chrom = i[0]
                         e += 1
-                        model_lh.read_chrom(curent_chrom)
-                        models_current = model_lh[curent_chrom]
+                        model_lh.read_chrom(current_chrom)
+                        models_current = model_lh[current_chrom]
                         cove_current = read_coverage(
-                            cove_folder, cove_prefix, curent_chrom
+                            cove_folder, cove_prefix, current_chrom
                         )
                         chr_size = len(cove_current["start"])
-                        prob_start = LHMC(
+                        prob_start = LhModel(
                             models_current["start"], cove_current["start"]
                         )
-                        prob_core = LHMC(models_current["core"], cove_current["core"])
-                        prob_end = LHMC(models_current["end"], cove_current["end"])
+                        prob_core = LhModel(
+                            models_current["core"], cove_current["core"]
+                        )
+                        prob_end = LhModel(models_current["end"], cove_current["end"])
 
                     else:
                         print(f"Chromosome {i[0]} missing from model")
@@ -269,10 +284,10 @@ def likelihood_flexible_universe(
             )
             res += peak_likelihood
             if save_peak_input:
-                backgroung = background_likelihood(
+                background = background_likelihood(
                     peak_start_s, peak_end_e, prob_start, prob_core, prob_end
                 )
-                contribution = peak_likelihood - backgroung
+                contribution = peak_likelihood - background
                 output.append("{}\t{}\n".format(line.strip("\n"), contribution))
             empty_start = peak_end_e
 

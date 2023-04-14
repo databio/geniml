@@ -12,7 +12,7 @@ WINDOW_SIZE = 25
 WRONG_UNIWIG = False
 
 
-def model_binomial(folder_in, in_file, chrom, file_out, file_no=None, start=0):
+def model_binomial(folder_in, in_file, chrom, file_out, file_no=None):
     """Create binomial likelihood model
     first column - likelihood of background
     second column - likelihood of coverage"""
@@ -36,8 +36,8 @@ def model_binomial(folder_in, in_file, chrom, file_out, file_no=None, start=0):
 class ChromosomeModel:
     def __init__(self, folder, chrom):
         """
-        :param folder: file with the model
-        :param chrom: of which chromosome is the model
+        :param str folder: file with the model
+        :param str chrom: of which chromosome is the model
         """
         self.folder = folder
         self.chromosome = chrom
@@ -123,15 +123,16 @@ class ModelLH:
     def __getitem__(self, item):
         return self.chromosomes_models[item]
 
-    def make(self, coverage_folder, coverage_prefix, file_no, forece=False):
+    def make(self, coverage_folder, coverage_prefix, file_no, force=False):
         """
         Make lh model for all chromosomes
-        :param coverage_folder: folder with coverage files
-        :param coverage_prefix: prefixed used for making coverage files
-        :param file_no: number of file from which model is being made
+        :param str coverage_folder: folder with coverage files
+        :param str coverage_prefix: prefixed used for making coverage files
+        :param int file_no: number of file from which model is being made
+        :param bool force: if overwrite an existing model
         """
         if os.path.exists(self.name):
-            if not forece:
+            if not force:
                 print(
                     "Model already exists. If you want to overwrite it use force argument"
                 )

@@ -16,7 +16,7 @@ def build_subparser(parser):
     )
     parser.add_argument("--universe", help="universe file", type=str, required=True)
     parser.add_argument(
-        "--npool", help="number of core that should be used", default=4, type=int
+        "--no_workers", help="number of core that should be used", default=4, type=int
     )
     parser.add_argument(
         "--save_to_file",

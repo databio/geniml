@@ -5,7 +5,7 @@ import numpy as np
 import os
 from functools import cmp_to_key
 from ..utils import natural_chr_sort, timer_func, read_chromosome_from_bw
-from ..hmm.hmm import predictions_to_bed, find_full_full_pos, find_full
+from ..hmm.hmm import predictions_to_bed, find_full
 from .build_model import ModelLH
 from numba import njit
 
@@ -19,8 +19,11 @@ def process_part(
 ):
     """
     Finding ML path through matrix using dynamic programing
-    :param array mat: fragment of likelihood model to be processed
-    :return array: ML path through matrix
+    :param ndarray cove: coverage tracks
+    :param ndarray model_start: lh model for starts
+    :param ndarray model_core: lh model for core
+    :param ndarray model_end: lh model for ends
+    :return ndarray: ML path through matrix
     """
     mat = np.zeros((len(cove), 4))
     (N, M) = mat.shape
@@ -49,12 +52,14 @@ def process_part(
     return path
 
 
-def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, fout):
+def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_out):
     """
     Make ML flexible universe per chromosome
     :param ModelLH model_lh: lh model
+    :param str cove_folder: path to a folder with genome coverage by tracks
+    :param str cove_prefix: prefix used in uniwig for creating coverage
     :param str chrom: chromosome to be processed
-    :param str fout: output file with the universe
+    :param str file_out: output file with the universe
     """
     model_lh.read_chrom(chrom)
     chrom_model = model_lh[chrom]
@@ -81,7 +86,7 @@ def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, fout):
             chrom_model["end"],
         )
         path[s:e] = res
-    predictions_to_bed(path, chrom, fout)
+    predictions_to_bed(path, chrom, file_out)
 
 
 def main(folder_in, cove_folder, cove_prefix, file_out):
@@ -89,6 +94,8 @@ def main(folder_in, cove_folder, cove_prefix, file_out):
     Make ML flexible universe
     :param str folder_in: input name with likelihood models
     :param str file_out: output file with the universe
+    :param str cove_folder: path to a folder with genome coverage by tracks
+    :param str cove_prefix: prefix used in uniwig for creating coverage
     """
     if os.path.isfile(file_out):
         raise Exception(f"File : {file_out} exists")
