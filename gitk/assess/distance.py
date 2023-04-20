@@ -11,9 +11,9 @@ import tempfile
 
 def flexible_distance(r, q):
     """Calculate distance between region and flexible region from flexible universe
-    param [int, int] r: region from flexible universe
-    param int q: analysed region
-    return int: distance
+    :param [int, int] r: region from flexible universe
+    :param int q: analysed region
+    :return int: distance
     """
     if r[0] <= q <= r[1]:
         return 0
@@ -23,14 +23,14 @@ def flexible_distance(r, q):
 
 def distance(r, q):
     """Calculate distance between region and region from hard universe
-    param [int] r: region from hard universe
-    param int q: analysed region
-    return int: distance
+    :param [int] r: region from hard universe
+    :param int q: analysed region
+    :return int: distance
     """
     return abs(r[0] - q)
 
 
-def asses(db, db_que, i, current_chrom, unused_db, pos_index, flexible):
+def asses(db, db_que, i, current_chrom, unused_db, pos_index, flexible, uni_to_file):
     """
     Calculate distance from given peak to the closest region in universe
     :param file db: universe file
@@ -43,7 +43,10 @@ def asses(db, db_que, i, current_chrom, unused_db, pos_index, flexible):
     :return int: peak distance to universe
     """
     if flexible:
-        dist_to_db_que = [flexible_distance(j, i) for j in db_que]
+        if uni_to_file:
+            dist_to_db_que = [flexible_distance(i, j[0]) for j in db_que]
+        else:
+            dist_to_db_que = [flexible_distance(j, i) for j in db_que]
     else:
         dist_to_db_que = [distance(j, i) for j in db_que]
     min_pos = np.argmin(dist_to_db_que)
@@ -58,7 +61,10 @@ def asses(db, db_que, i, current_chrom, unused_db, pos_index, flexible):
         db_que[:-1] = db_que[1:]
         db_que[-1] = pos
         if flexible:
-            dist_to_db_que = [flexible_distance(j, i) for j in db_que]
+            if uni_to_file:
+                dist_to_db_que = [flexible_distance(i, j[0]) for j in db_que]
+            else:
+                dist_to_db_que = [flexible_distance(j, i) for j in db_que]
         else:
             dist_to_db_que = [distance(j, i) for j in db_que]
         min_pos = np.argmin(dist_to_db_que)
@@ -76,6 +82,7 @@ def process_line(
     start,
     pos_index,
     flexible,
+    uni_to_file,
 ):
     """
     Calculate distance from new peak to universe
@@ -132,7 +139,16 @@ def process_line(
     if len(db_que) == 0:
         waiting = True
     if not waiting:
-        res = asses(db, db_que, start, current_chrom, unused_db, pos_index, flexible)
+        res = asses(
+            db,
+            db_que,
+            start,
+            current_chrom,
+            unused_db,
+            pos_index,
+            flexible,
+            uni_to_file,
+        )
         dist.append(res)
     return waiting, current_chrom
 
@@ -146,7 +162,7 @@ def calc_distance_main(
     save_each,
     folder_out,
     pref,
-    file_bytes=True,
+    uni_to_file=False,
 ):
     db_que_start = []
     current_chrom_start = "chr0"
@@ -160,15 +176,19 @@ def calc_distance_main(
     waiting_end = False
     pos_start = [1]
     pos_end = [2]
-    if flexible:
+    if flexible and not uni_to_file:
         pos_start = [1, 6]
         pos_end = [7, 2]
     for i in q:
-        if file_bytes:
+        if not uni_to_file:
             i = i.decode("utf-8")
         i = i.split("\t")
-        start = int(i[1])
-        end = int(i[2])
+        if uni_to_file and flexible:
+            start = [int(i[1]), int(i[6])]
+            end = [int(i[7]), int(i[2])]
+        else:
+            start = int(i[1])
+            end = int(i[2])
         q_chrom = i[0]
         res_start = process_line(
             db_start,
@@ -181,6 +201,7 @@ def calc_distance_main(
             start,
             pos_start,
             flexible,
+            uni_to_file,
         )
         (waiting_start, current_chrom_start) = res_start
         res_end = process_line(
@@ -194,6 +215,7 @@ def calc_distance_main(
             end,
             pos_end,
             flexible,
+            uni_to_file,
         )
         (waiting_end, current_chrom_end) = res_end
     q.close()
@@ -282,7 +304,7 @@ def calc_distance_uni(
         save_each,
         folder_out,
         pref,
-        file_bytes=False,
+        uni_to_file=True,
     )
 
 
