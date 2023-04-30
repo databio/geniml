@@ -1,7 +1,11 @@
 import pytest
-from itertools import chain
 import scanpy as sc
+import logging
+from itertools import chain
 from gitk import scembed
+
+# set to DEBUG to see more info
+logging.basicConfig(level=logging.INFO)
 
 
 @pytest.fixture
@@ -66,12 +70,16 @@ def test_document_shuffle():
         # assert doc != docs[0]
         # assert doc != docs[1]
 
+
 def test_model_creation(pbmc_data: sc.AnnData):
-    model = scembed.Region2Vec(pbmc_data)
+    model = scembed.SCEmbed(pbmc_data)
     assert model
 
+
 def test_model_training(pbmc_data: sc.AnnData):
-    model = scembed.Region2Vec(pbmc_data)
+    # remove gensim logging
+    logging.getLogger("gensim").setLevel(logging.ERROR)
+    model = scembed.SCEmbed(pbmc_data)
     model.train(epochs=3)
     assert model.trained
     assert isinstance(model.region2vec, dict)

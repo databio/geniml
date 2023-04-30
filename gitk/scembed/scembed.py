@@ -15,6 +15,7 @@ from tqdm import tqdm
 from .const import *
 from .utils import LearningRateScheduler, ScheduleType
 
+_GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(PKG_NAME)
 
 # set the threading layer before any parallel target compilation
@@ -68,7 +69,7 @@ class ReportLossCallback(CallbackAny2Vec):
         self.epoch += 1
 
 
-class Region2Vec(Word2Vec):
+class SCEmbed(Word2Vec):
     """
     Region2Vec model that extends the Word2Vec model from gensim.
     """
@@ -99,9 +100,7 @@ class Region2Vec(Word2Vec):
 
         # remove any regions that dont satisfy the min count
         _LOGGER.info("Removing regions that don't satisfy min count.")
-        self.region_sets = remove_regions_below_min_count(
-            self.region_sets, min_count
-        )
+        self.region_sets = remove_regions_below_min_count(self.region_sets, min_count)
 
         self.callbacks = callbacks
 
@@ -123,8 +122,8 @@ class Region2Vec(Word2Vec):
 
     def train(
         self,
-        epochs: int = DEFAULT_EPOCHS, # training cycles
-        n_shuffles: int = DEAFULT_N_SHUFFLES, # not the number of traiing cycles, actual shufle num
+        epochs: int = DEFAULT_EPOCHS,  # training cycles
+        n_shuffles: int = DEAFULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
         gensim_epochs: Union[int, None] = DEFAULT_GENSIM_EPOCHS,
         report_loss: bool = True,
         lr: float = DEFAULT_INIT_LR,
@@ -166,10 +165,14 @@ class Region2Vec(Word2Vec):
             _LOGGER.info("Shuffling documents.")
 
             # shuffle regions
-            self.region_sets = shuffle_documents(self.region_sets, n_shuffles=n_shuffles)
+            self.region_sets = shuffle_documents(
+                self.region_sets, n_shuffles=n_shuffles
+            )
 
             # update vocab and train
-            super().build_vocab(self.region_sets, update=True if shuffle_num > 0 else False)
+            super().build_vocab(
+                self.region_sets, update=True if shuffle_num > 0 else False
+            )
             super().train(
                 self.region_sets,
                 total_examples=len(self.region_sets),
@@ -181,7 +184,7 @@ class Region2Vec(Word2Vec):
 
             # update learning rates
             lr_scheduler.update()
-        
+
         # once training is complete, create a region to vector mapping
         regions = list(self.wv.key_to_index.keys())
         self.region2vec = {word: self.wv[word] for word in regions}
@@ -256,8 +259,9 @@ class Region2Vec(Word2Vec):
         parsed_df = pd.DataFrame(parsed_rows)
         parsed_df.to_csv(output_path, index=False)
 
+
 def remove_regions_below_min_count(
-        region_sets: List[List[str]], min_count: int
+    region_sets: List[List[str]], min_count: int
 ) -> List[List[str]]:
     """
     Remove regions that don't satisfy the min count.
