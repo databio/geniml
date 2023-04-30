@@ -12,6 +12,7 @@ from numba import config
 from logging import getLogger
 from tqdm import tqdm
 
+from .exceptions import *
 from .const import *
 from .utils import LearningRateScheduler, ScheduleType
 
@@ -93,6 +94,20 @@ class SCEmbed(Word2Vec):
         :param int seed: The random seed to use for training.
         :param List[CallbackAny2Vec] callbacks: A list of callbacks to use for training.
         """
+        # check data, is AnnData?
+        if not isinstance(data, sc.AnnData):
+            raise TypeError(f"Data must be of type AnnData, not {type(data).__name__}")
+
+        # check data, has .var attrivutes (chr, start, end)
+        if (
+            not hasattr(data.var, "chr")
+            or not hasattr(data.var, "start")
+            or not hasattr(data.var, "end")
+        ):
+            raise ScembedException(
+                "Data must have `chr`, `start`, and `end` attributes in the `.var` slot."
+            )
+
         # convert the data to a list of documents
         _LOGGER.info("Converting data to documents.")
         self.data = data

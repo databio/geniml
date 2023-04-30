@@ -15,7 +15,7 @@ from gitk.scembed import SCEmbed
 ```
 
 ## Usage
-`scEmbed` is simple to use. Import your `AnnData` object and pass it to `SCEmbed`. Note: your `AnnData` object **must** have a `.var` attribute with three columns: `chrom`, `start`, and `end`. These columns should be the chromosome, start position, and end position of each genomic region, respectively. `scEmbed` will automatically import these and use them for training.
+`scEmbed` is simple to use. Import your `AnnData` object and pass it to `SCEmbed`. Note: your `AnnData` object **must** have a `.var` attribute with three columns: `chr`, `start`, and `end`. These columns should be the chromosome, start position, and end position of each genomic region, respectively. `scEmbed` will automatically import these and use them for training.
 
 ```python
 import scanpy as sc
