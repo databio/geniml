@@ -7,7 +7,7 @@ import datetime
 import argparse
 import os
 from gitk.region2vec import utils
-
+import pickle
 
 class BEDDataset:
     def __init__(self, args, file_list):
@@ -64,6 +64,27 @@ class BEDDataset:
                 str_sent = " ".join(sentence)
                 f_out.write(str_sent)
                 f_out.write("\n")
+                
+                
+class MatrixDataset:
+    def __init__(self, matrix):
+        self.mat = [[] for i in range(len(matrix))]
+        for i in range(len(matrix)):
+            for j in range(len(matrix[i])):
+                if matrix[i][j] != 0:
+                    self.mat[i].append(j)
+    
+    def regions2sentences(self, dst_path):
+        with open(dst_path, "w") as f_out:
+            for i in range(len(self.mat)):
+                sentence = []
+                for j in range(len(self.mat[i])):
+                    sentence.append(self.mat[i][j])
+                if len(sentence) > 0:
+                    random.shuffle(sentence)  # shuffle the regions in the sentence
+                    str_sent = " ".join(sentence)
+                    f_out.write(str_sent)
+                    f_out.write("\n")
 
 
 def main(args):
@@ -73,7 +94,12 @@ def main(args):
     worker_id = args.worker_id
     random.seed(worker_id)
     np.random.seed(worker_id)
-    dataset = BEDDataset(args, args.file_list)
+    if args.data_type == 'files':
+        dataset = BEDDataset(args, args.file_list)
+    else:
+        with open(args.mat_path, 'rb') as f:
+            matrix = pickle.load(f)
+        dataset = MatrixDataset(matrix)
     pool = args.pool
     utils.log(
         "[{}] Creating shuffled datasets in \033[93m{}\033[00m (at most {} datasets coexist)".format(
