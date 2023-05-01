@@ -4,43 +4,32 @@
 Evaluate how well genomic region embeddings preserve the structure (relative closeness) of genomic regions on the genome.
 
 ```
-from gitk.eval.genome_distance import *
+from gitk.eval.edct import *
 import numpy as np
 
 model_path = '/path/to/a/region2vec/model/'
-boundaries = np.linspace(0, 1e8, 5) # four bins
-result = genome_distance_test(model_path, 'region2vec', boundaries, num_samples=1000, seed=0)
-
-avgGD = result['AvgGD']
-avgED = result['AvgED']
-gdt_plot_fitted(avgGD, avgED, 'result.png')
+gds = get_gds(model_path, 'region2vec', num_samples=10000, seed=42)
+print('Genome distance scaling parameter: ', gds)
 
 
 # process a batch of two models
 model_path1 = '/path/to/the/region2vec/model1/' 
 model_path2 = '/path/to/the/region2vec/model2/' 
 batch = [(model_path1, 'region2vec'), (model_path2, 'base')] # (model_path, embed_type)
-result_list = genome_distance_test_batch(batch, boundaries, num_samples=1000, seed=0)
+gds_arr = get_gds_batch(batch, num_samples=1000, seed=42)
 
-slope1 = result_list[0]['Slope']
-error1 = result_list[0]['AvgED']
-AvgGD1 = result_list[0]['AvgGD']
-AvgED1 = result_list[0]['AvgED']
-model_path1 = result_list[0]['Path']
+model_path1 = gds_arr[0][0]
+gds1 = gds_arr[0][1]
 
-slope2 = result_list[1]['Slope']
-error2 = result_list[1]['Error']
-AvgGD2 = result_list[1]['AvgGD']
-AvgED2 = result_list[1]['AvgED']
-model_path2 = result_list[1]['Path']
+model_path2 = gds_arr[1][0]
+gds2 = gds_arr[1][1]
 
 # Run the genome distance test 20 times for the two models
 row_labels = ['model1-region2vec', 'model2-base']
-slope_list, approx_err_list = gdt_eval(batch, boundaries, num_runs=20, num_samples=1000, save_folder=None)
+slope_list, approx_err_list = gds_eval(batch, boundaries, num_runs=20, num_samples=1000, save_folder=None)
 
 # plot the genome distance test figure
 gdt_box_plot(slope_list, approx_err_list, row_labels, filename='gdt_result.png')
-```
 
 ## Neighborhood Preserving Test
 Evaluate how significant genomic region embeddings preserve their neighboring regions on the genome against random embeddings.
