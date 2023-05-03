@@ -43,7 +43,11 @@ def build_subparser_distance(parser):
         help="if save distance for each peak in each file ",
         action="store_true",
     )
-
+    parser.add_argument(
+        "--universe_to_file",
+        help="if calculate distance from universe to file",
+        action="store_true",
+    )
     return parser
 
 

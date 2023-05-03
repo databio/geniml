@@ -225,11 +225,12 @@ def calc_distance_main(
                 f.write(f"{i}\t{j}\n")
     if not dist_start:
         print(f"File {q_file} doesn't contain any chromosomes present in universe")
-        return q_file, None, None
-    return q_file, np.median(dist_start), np.median(dist_end)
+        return q_file, None
+    dist = dist_start + dist_end
+    return q_file, np.median(dist)
 
 
-def calc_distance(
+def calc_distance_file(
     db_file,
     q_folder,
     q_file,
@@ -268,8 +269,7 @@ def calc_distance(
 
 
 def calc_distance_uni(
-    db_file_start,
-    db_file_end,
+    universe,
     q_folder,
     q_file,
     flexible=False,
@@ -291,12 +291,13 @@ def calc_distance_uni(
     :return str, int, int: file name; median od distance of starts to
      starts in universe; median od distance of ends to ends in universe
     """
-    q = os.path.join(q_folder, q_file)
-    q = open(q)
-    db_start = open(db_file_start)
-    db_end = open(db_file_end)
+    q = tempfile.NamedTemporaryFile()
+    prep_data(q_folder, q_file, q)
+    db_start = open(q.name)
+    db_end = open(q.name)
+    uni = open(universe)
     return calc_distance_main(
-        q,
+        uni,
         db_start,
         db_end,
         q_file,
@@ -318,6 +319,7 @@ def run_distance(
     folder_out=None,
     pref=None,
     save_each=False,
+    uni_to_file=False,
 ):
     """
     For group of files calculate distances to the nearest region in universe
@@ -340,9 +342,13 @@ def run_distance(
         os.makedirs(folder_out, exist_ok=True)
     if save_each:
         os.makedirs(os.path.join(folder_out, pref), exist_ok=True)
+    if uni_to_file:
+        dist_function = calc_distance_uni
+    else:
+        dist_function = calc_distance_file
     if no_workers <= 1:
         for i in files:
-            r = calc_distance(
+            r = dist_function(
                 universe, folder, i, flexible, save_each, folder_out, pref
             )
             res.append(r)
@@ -352,15 +358,15 @@ def run_distance(
                 (universe, folder, f, flexible, save_each, folder_out, pref)
                 for f in files
             ]
-            res = p.starmap(calc_distance, args)
+            res = p.starmap(dist_function, args)
     if save_to_file:
         file_out = os.path.join(folder_out, pref + "_data.tsv")
         with open(file_out, "w") as o:
-            o.write("file\tmedian_dist_start\tmedian_dist_end\n")
+            o.write("file\tmedian_dist\n")
             for r in res:
-                o.write(f"{r[0]}\t{r[1]}\t{r[2]}\n")
+                o.write(f"{r[0]}\t{r[1]}\n")
     else:
         res = np.array(res)
-        res = res[:, 1:]
+        res = res[:, 1]
         res = res.astype("float")
-        return np.mean([np.nanmedian(res[:, 0]), np.nanmedian(res[:, 1])])
+        return np.mean(res)

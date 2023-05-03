@@ -83,25 +83,13 @@ def main(test_args=None):
                 args.folder_out,
                 args.pref,
                 args.save_each,
+                args.universe_to_file,
             )
 
         if args.subcommand == "intersection":
             from .assess.intersection import run_intersection
 
             run_intersection(
-                args.raw_data_folder,
-                args.file_list,
-                args.universe,
-                args.npool,
-                args.save_to_file,
-                args.folder_out,
-                args.pref,
-            )
-
-        if args.subcommand == "recovered":
-            from .assess.recovered import run_recovered
-
-            run_recovered(
                 args.raw_data_folder,
                 args.file_list,
                 args.universe,
