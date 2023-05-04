@@ -12,9 +12,9 @@ def build_subparser(parser):
         "--cov_folder", type=str, help="path to coverage folder", required=True
     )
     parser.add_argument(
-        "--normalize",
-        help="if normalize coverage before using HMM",
-        action="store_true",
+        "--not_normalize",
+        help="if not to normalize coverage signal before using HMM",
+        action="store_false",
     )
     parser.add_argument(
         "--save_max_cove",

@@ -115,11 +115,7 @@ def main(test_args=None):
             from .likelihood.universe_hard import main
 
             main(
-                args.coverage_file,
-                args.fout,
-                args.merge,
-                args.filter_size,
-                args.cut_off,
+                args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff
             )
 
         if args.subcommand == "universe_flexible":
@@ -136,7 +132,7 @@ def main(test_args=None):
             coverage_folder=args.cov_folder,
             out_file=args.out_file,
             prefix=args.coverage_prefix,
-            normalize=args.normalize,
+            normalize=args.not_normalize,
             save_max_cove=args.save_max_cove,
         )
 

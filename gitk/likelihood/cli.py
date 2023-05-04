@@ -44,7 +44,7 @@ def build_subparser_universe_hard(parser):
         "--coverage_file", help="path to core coverage file", required=True, type=str
     )
     parser.add_argument(
-        "--cut_off", help="cut-off value used for making universe", type=int
+        "--cutoff", help="cutoff value used for making universe", type=int
     )
 
     return parser

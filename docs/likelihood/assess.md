@@ -1,9 +1,9 @@
 # How to assess universe fit to collection of files?
-Given a universe it is immportant to assess it fit to collection of data. 
+Given a universe it is important to assess it fit to collection of data. 
 We will use here universes produced [eriler](consensus-peaks.md).
 
 
-## Intersection assessment
+## Base pair - level  overlap measure
 First test checks how much of our file is present in the universe and how much 
 additional information is present in the univers. We can check that with:
 
@@ -33,14 +33,15 @@ Similarly, we can do it in python:
 ```
 from gitk.assess.intersection import run_intersection
 
-F_10 = run_intersection("test/data/raw",
+F_10 = run_intersection("test/consesnus/raw/",
                         "tests/consesnus/file_list.txt",
                         "tests/consenus/universe/universe.bed",
                         no_workers=1)
 ```
-where we can directly return F10 score of the universe. 
+where we can directly return F10 score of the universe if we don't specify that we want to save metrics to the file. 
 
-## Distance distribution assessment
+## Region boundary distance measure
+Next, we can calculate the distance between region in file and the nearest region in the universe:
 ```
  gitk assess distance --raw_data_folder tests/consesnus/raw/\
                       --file_list tests/consesnus/file_list.txt \
@@ -59,7 +60,7 @@ Where:
 - ``--file_list``, takes the path to file with list of files
 - ``--universe``, takes the path to file with the assessed universe
 - ``--save_to_file``,  is a flag that specifies whether to out put table with each row 
-containing file name, median distance to start, median distance to end
+containing file name, median of the distances 
 - ``--folder_out``, takes the path to folder in which put the output file
 - ``--pref``, takes a prefix of output file name
 - ``--no_workers``, takes the number of workers that should be used
@@ -68,17 +69,29 @@ distance to the closest peak in the universe
 - ``--flexible``, is a flag that specifies whether we should treat the univers as 
 a flexible one
 
-Similarly, we can do it in python:
+We can also calculate the distance between region in the universe and the nearest region in file. We use for that with the same command as before with additional flag ```--universe_to_file```.
+
+
+Both presented distance measures can be done using python, which will result in matrix where first column is file names and the second one is median of distances. 
 
 ```
 from gitk.assess.distance import run_distance
 
-d_median = run_distance("test/data/raw",
-                  "test/data/file_list.txt",
-                  "test/results/universe/ML_hard.bed",
+d_median = run_distance("tests/consesnus/raw",
+                  "tests/consesnus/file_list.txt",
+                  "tests/consesnus/universe/universe.bed",
                   npool=2)
 ```
-where we can directly return average of median of distances to start and ends. 
+Additionally, we can directly calculate the closeness score using:
+
+```
+from gitk.assess.distance import get_closeness_score
+
+closeness_score = get_closeness_score("tests/consesnus/raw",
+                                      "tests/consesnus/file_list.txt",
+                                      "tests/consesnus/universe/universe.bed",
+                                      no_workers=2)
+```
 
 ## Universe likelihood
 

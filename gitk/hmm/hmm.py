@@ -50,7 +50,7 @@ def norm(track, mode):
     track[track != 0] = [val[i] for i in important_val]
 
 
-def process_bigwig(file, seq, p, chrom, chrom_size, normalize=False, mode=None):
+def process_bigwig(file, seq, p, chrom, chrom_size, normalize=True, mode=None):
     """Preprocess bigWig file"""
     if pyBigWig.numpy:
         track = file.values(chrom, 0, chrom_size, numpy=True)
@@ -64,7 +64,7 @@ def process_bigwig(file, seq, p, chrom, chrom_size, normalize=False, mode=None):
     seq[:, p] = track
 
 
-def read_data(start, core, end, chrom, normalize=False):
+def read_data(start, core, end, chrom, normalize=True):
     """
     Read in and preprocess data
     :param str start: path to file with start coverage
@@ -236,7 +236,7 @@ def split_predict(seq, empty_starts, empty_ends, model):
     return hmm_predictions
 
 
-def run_hmm(start, core, end, chrom, normalize=False):
+def run_hmm(start, core, end, chrom, normalize=True):
     """Make HMM prediction for given chromosome"""
     chrom_size, seq = read_data(start, core, end, chrom, normalize=normalize)
     empty_starts, empty_ends = find_full(seq)
@@ -250,7 +250,7 @@ def run_hmm_save_bed(
     coverage_folder,
     out_file,
     prefix="all",
-    normalize=False,
+    normalize=True,
     save_max_cove=False,
 ):
     """
