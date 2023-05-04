@@ -223,4 +223,4 @@ def run_intersection(
         recall = res[:, 2] / (res[:, 2] + res[:, 1])
         precision = res[:, 2] / (res[:, 2] + res[:, 0])
         f_10 = (1 + 10**2) * (precision * recall) / ((10**2 * precision) + recall)
-        return np.median(f_10)
+        return np.mean(f_10)

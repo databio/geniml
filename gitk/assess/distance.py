@@ -97,6 +97,7 @@ def process_line(
     :param int start: analysed position from the query
     :param list pos_index: which indexes from universe region use to calculate distance
     :param bool flexible: whether the universe if flexible
+    :param bool uni_to_file: whether to calculate distance from universe to file
     :return bool, str: if iterating through chromosome not present in universe; current chromosome in query
     """
     if q_chrom != current_chrom:
@@ -164,6 +165,9 @@ def calc_distance_main(
     pref,
     uni_to_file=False,
 ):
+    """
+    Maine function for calculating distance between regions in file q to regions in database
+    """
     db_que_start = []
     current_chrom_start = "chr0"
     dist_start = []
@@ -279,10 +283,9 @@ def calc_distance_uni(
 ):
     """
     For given universe calculate distances to the nearst region from combined collection
-    :param str db_file_start: path to combined peaks sorted by starts, with removed duplicated start
-    :param str db_file_end: path to combined peaks sorted by ends, with removed duplicated start
-    :param str q_folder: path to folder with universe
-    :param str q_file: universe
+    :param str universe: path to universe
+    :param str q_folder: path to folder containing query files
+    :param str q_file: query file
     :param boolean flexible: whether the universe if flexible
     :param bool save_each: whether to save calculated distances for each file
     :param str folder_out: output name
@@ -332,6 +335,7 @@ def run_distance(
     :param str folder_out: output name
     :param str pref: prefix used for saving
     :param bool save_each: whether to save calculated distances for each file
+    :param uni_to_file: whether to calculate distance from universe to file
     :return float; float: mean of median distances from starts in query to the nearest starts in universe;
     mean of median distances from ends in query to the nearest ends in universe
     """
@@ -367,6 +371,27 @@ def run_distance(
                 o.write(f"{r[0]}\t{r[1]}\n")
     else:
         res = np.array(res)
-        res = res[:, 1]
-        res = res.astype("float")
-        return np.mean(res)
+        return res
+
+
+def get_closeness_score(folder, file_list, universe, no_workers, flexible=False):
+    file_to_uni = run_distance(
+        folder,
+        file_list,
+        universe,
+        no_workers,
+        flexible=flexible,
+        uni_to_file=False,
+    )
+
+    uni_to_file = run_distance(
+        folder,
+        file_list,
+        universe,
+        no_workers,
+        flexible=flexible,
+        uni_to_file=True,
+    )
+    me = (file_to_uni[:, 1].astype("float") + uni_to_file[:, 1].astype("float")) / 2
+    cs = 11 / (me + 10) / 1.1
+    return np.mean(cs)
