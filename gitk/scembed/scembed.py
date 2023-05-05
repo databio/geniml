@@ -349,6 +349,7 @@ def convert_anndata_to_documents(
     """
     if use_defaults:
         regions_parsed = [f"r{i}" for i in range(anndata.var.shape[0])]
+        anndata.var["region"] = regions_parsed
     else:
         regions_parsed = extract_region_list(anndata.var)
     sc_df = anndata.to_df()
