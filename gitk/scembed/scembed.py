@@ -102,8 +102,8 @@ class SCEmbed(Word2Vec):
             or not hasattr(data.var, "start")
             or not hasattr(data.var, "end")
         ):
-            raise ScembedException(
-                "Data must have `chr`, `start`, and `end` attributes in the `.var` slot."
+            _LOGGER.warn(
+                "Data does not have `chr`, `start`, and `end` columns in the `var` attribute. Will fallback to default names"
             )
 
         # convert the data to a list of documents
