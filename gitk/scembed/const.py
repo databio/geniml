@@ -17,3 +17,7 @@ DEFAULT_INIT_LR = (
 )
 DEFAULT_MIN_LR = 0.0001  # gensim default
 DEFAULT_DECAY_RATE = 0.95
+
+CHR_KEY = "chr"
+START_KEY = "start"
+END_KEY = "end"

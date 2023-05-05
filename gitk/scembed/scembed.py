@@ -98,9 +98,9 @@ class SCEmbed(Word2Vec):
             raise TypeError(f"Data must be of type AnnData, not {type(data).__name__}")
 
         if (
-            not hasattr(data.var, "chr")
-            or not hasattr(data.var, "start")
-            or not hasattr(data.var, "end")
+            not hasattr(data.var, CHR_KEY)
+            or not hasattr(data.var, START_KEY)
+            or not hasattr(data.var, END_KEY)
         ):
             _LOGGER.warn(
                 "Data does not have `chr`, `start`, and `end` columns in the `var` attribute. Will fallback to default names"
@@ -317,7 +317,7 @@ def extract_region_list(region_df: pd.DataFrame) -> List[str]:
     for r in tqdm(region_df.iterrows(), total=region_df.shape[0]):
         r_dict = r[1].to_dict()
         regions_parsed.append(
-            " ".join([r_dict["chr"], str(r_dict["start"]), str(r_dict["end"])])
+            "_".join([r_dict[CHR_KEY], str(r_dict[START_KEY]), str(r_dict[END_KEY])])
         )
     return regions_parsed
 
@@ -333,15 +333,24 @@ def remove_zero_regions(cell_dict: Dict[str, int]) -> Dict[str, int]:
     return {k: v for k, v in cell_dict.items() if v > 0}
 
 
-def convert_anndata_to_documents(anndata: sc.AnnData) -> List[List[str]]:
+def convert_anndata_to_documents(
+    anndata: sc.AnnData,
+    use_defaults: bool = True,
+) -> List[List[str]]:
     """
     Parses the scanpy.AnnData object to create the required "documents" object for
     training the Word2Vec model. Each row (or cell) is treated as a "document". That
     is, each region is a "word", and the total collection of regions is the "document".
 
     :param scanpy.AnnData anndata: the AnnData object to parse.
+    :use_defaults bool: whether or not to use the default column names for the regions. this
+                        is most commonly used when the AnnData object was created without using
+                        the var attribute.
     """
-    regions_parsed = extract_region_list(anndata.var)
+    if use_defaults:
+        regions_parsed = [f"r{i}" for i in range(anndata.var.shape[0])]
+    else:
+        regions_parsed = extract_region_list(anndata.var)
     sc_df = anndata.to_df()
     docs = []
     _LOGGER.info("Generating documents.")
@@ -352,8 +361,6 @@ def convert_anndata_to_documents(anndata: sc.AnnData) -> List[List[str]]:
         new_doc = []
         for region_indx in row_dict:
             region_str = regions_parsed[int(region_indx)]
-            # replace spaces with underscores
-            region_str = region_str.replace(" ", "_")
             new_doc.append(region_str)
         docs.append(new_doc)
     return docs
