@@ -94,11 +94,9 @@ class SCEmbed(Word2Vec):
         :param int seed: The random seed to use for training.
         :param List[CallbackAny2Vec] callbacks: A list of callbacks to use for training.
         """
-        # check data, is AnnData?
         if not isinstance(data, sc.AnnData):
             raise TypeError(f"Data must be of type AnnData, not {type(data).__name__}")
 
-        # check data, has .var attrivutes (chr, start, end)
         if (
             not hasattr(data.var, "chr")
             or not hasattr(data.var, "start")
