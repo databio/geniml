@@ -160,31 +160,32 @@ def main(test_args=None):
     if args.command == "eval":
         if args.subcommand == "gdst":
             from gitk.eval.gdst import get_gds
-            gds = get_gds(
-                args.model_path, 
-                args.embed_type, 
-                args.num_samples)
+
+            gds = get_gds(args.model_path, args.embed_type, args.num_samples)
             print(gds)
         if args.subcommand == "npt":
             from gitk.eval.npt import get_snpr
+
             npt = get_snpr(
-                args.model_path, 
-                args.embed_type, 
+                args.model_path,
+                args.embed_type,
                 args.K,
                 args.num_samples,
-                resolution=args.K
+                resolution=args.K,
             )
             print(npt["SNPR"][0])
         if args.subcommand == "cct-tss":
             from gitk.eval.cct import get_scctss
+
             scctss = get_scctss(
-                args.model_path, 
-                args.embed_type, 
-                args.save_folder, 
-                args.Rscript_path, 
-                args.assembly, 
-                num_samples=args.num_samples, 
-                threshold=args.threshold)
+                args.model_path,
+                args.embed_type,
+                args.save_folder,
+                args.Rscript_path,
+                args.assembly,
+                num_samples=args.num_samples,
+                threshold=args.threshold,
+            )
             print(scctss)
     return
 
