@@ -64,6 +64,7 @@ def load_base_embeddings(path):
         base_embed_obj = pickle.load(f)
     return base_embed_obj.embeddings, base_embed_obj.vocab
 
+
 def load_genomic_embeddings(model_path, embed_type="region2vec"):
     if embed_type == "region2vec":
         model = Word2Vec.load(model_path)
@@ -73,8 +74,9 @@ def load_genomic_embeddings(model_path, embed_type="region2vec"):
     elif embed_type == "base":
         embed_rep, regions_r2v = load_base_embeddings(model_path)
         return embed_rep, regions_r2v
-    
-def get_vocab(model_path, type='base', ordered=True):
+
+
+def get_vocab(model_path, type="base", ordered=True):
     def sort_key(x):
         eles = x.split(":")
         chr_idx = eles[0][3:]
@@ -84,12 +86,13 @@ def get_vocab(model_path, type='base', ordered=True):
             idx = 23
             for c in chr_idx:
                 idx += ord(c)
-        start = int(eles[1].split('-')[0].strip())
+        start = int(eles[1].split("-")[0].strip())
         return idx, start
-    if type == 'region2vec':
+
+    if type == "region2vec":
         model = Word2Vec.load(model_path)
         regions_r2v = model.wv.index_to_key
-    elif type == 'base':
+    elif type == "base":
         _, regions_r2v = load_base_embeddings(model_path)
     if ordered:
         regions_r2v = sorted(regions_r2v, key=sort_key)
@@ -97,11 +100,11 @@ def get_vocab(model_path, type='base', ordered=True):
 
 
 def write_vocab(vocab, file_name):
-    with open(file_name, 'w') as f:
+    with open(file_name, "w") as f:
         for v in vocab:
-            eles = v.split(':')
+            eles = v.split(":")
             chr = eles[0].strip()
-            s, e = eles[1].split('-')
+            s, e = eles[1].split("-")
             s = s.strip()
             e = e.strip()
-            f.write('{}\t{}\t{}\n'.format(chr,s,e))
+            f.write("{}\t{}\t{}\n".format(chr, s, e))

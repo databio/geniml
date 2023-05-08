@@ -12,7 +12,9 @@ def bedtool_tokenization(
     temp = os.path.join(target_folder, f + "_sorted")
     target = os.path.join(target_folder, f)
     with open(temp, "w") as f_temp:
-        subprocess.run(shlex.split("sort -k1,1V -k2,2n {}".format(fname)), stdout=f_temp)
+        subprocess.run(
+            shlex.split("sort -k1,1V -k2,2n {}".format(fname)), stdout=f_temp
+        )
     with open(target, "w") as f_target:
         subprocess.run(
             shlex.split(

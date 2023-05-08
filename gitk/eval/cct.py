@@ -212,7 +212,9 @@ def cct_tss_eval(
         )
         avg_ranks_arr.append(avg_ranks)
         result_path = os.path.join(save_folder, "cct_tss_seed{}.pickle".format(seed))
-        scores_batch = [(batch[i][0], scores_batch[i]) for i in range(len(scores_batch))]
+        scores_batch = [
+            (batch[i][0], scores_batch[i]) for i in range(len(scores_batch))
+        ]
         with open(result_path, "wb") as f:
             pickle.dump(scores_batch, f)
     avg_ranks_arr = np.vstack(avg_ranks_arr)

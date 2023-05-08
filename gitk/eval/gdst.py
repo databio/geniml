@@ -17,10 +17,12 @@ from matplotlib.patches import Patch
 from sklearn.metrics import r2_score
 from gitk.eval.utils import load_genomic_embeddings
 from sklearn.linear_model import LinearRegression
+
 matplotlib.rcParams["svg.fonttype"] = "none"
 matplotlib.rcParams["text.usetex"] = False
 _log_path = None
 GENOME_DIST_SCALAR = 1e10
+
 
 def set_log_path(path):
     global _log_path
@@ -34,9 +36,11 @@ def log(obj, filename="log.txt"):
             f.write(obj)
             f.write("\n")
 
+
 func_gdist = lambda u, v: float(u[1] < v[1]) * max(v[0] - u[1] + 1, 0) + float(
-        u[1] >= v[1]
-    ) * max(u[0] - v[1] + 1, 0)
+    u[1] >= v[1]
+) * max(u[0] - v[1] + 1, 0)
+
 
 class Timer:
     def __init__(self):
@@ -52,28 +56,27 @@ class Timer:
         return "{}s".format(x)
 
 
-
 def sample_from_vocab(vocab, num_samples, seed=42):
     chr_probs = {}
     region_dict = {}
     num_vocab = len(vocab)
     # build stat from vocab
     for region in vocab:
-        chr_str, position = region.split(':')
+        chr_str, position = region.split(":")
         chr_str = chr_str.strip()
-        start, end = position.split('-')
+        start, end = position.split("-")
         start = int(start.strip())
-        end = int(end.strip())    
+        end = int(end.strip())
         chr_probs[chr_str] = chr_probs.get(chr_str, 0) + 1
         if chr_str in region_dict:
             region_dict[chr_str].append((start, end))
         else:
             region_dict[chr_str] = [(start, end)]
     total = sum([chr_probs[k] for k in chr_probs])
-    chr_probs = [(k,chr_probs[k]/total) for k in chr_probs]
-    
+    chr_probs = [(k, chr_probs[k] / total) for k in chr_probs]
+
     count = 0
-    
+
     chr_names = [t[0] for t in chr_probs]
     chr_probs = [t[1] for t in chr_probs]
     sampled_regions = []
@@ -83,17 +86,22 @@ def sample_from_vocab(vocab, num_samples, seed=42):
         regions = region_dict[sel_chr]
         if len(regions) < 2:
             continue
-        sel_indexes = np.random.choice(len(regions),2, replace=False)
+        sel_indexes = np.random.choice(len(regions), 2, replace=False)
         r1, r2 = regions[sel_indexes[0]], regions[sel_indexes[1]]
         gdist = func_gdist(r1, r2)
-        sampled_regions.append(('{}:{}-{}'.format(sel_chr, r1[0], r1[1]),'{}:{}-{}'.format(sel_chr, r2[0], r2[1]),gdist))
+        sampled_regions.append(
+            (
+                "{}:{}-{}".format(sel_chr, r1[0], r1[1]),
+                "{}:{}-{}".format(sel_chr, r2[0], r2[1]),
+                gdist,
+            )
+        )
         count += 1
     return sampled_regions
 
 
-
 def remap_name(name):
-    return name.split('/')[-3]
+    return name.split("/")[-3]
 
 
 def convert_position(pos):
@@ -104,33 +112,51 @@ def convert_position(pos):
     else:
         return "{:.4f} B".format(pos)
 
+
 def get_gds_results(save_paths):
     with open(save_paths[0], "rb") as f:
         results = pickle.load(f)
     num = len(results)
     gds_res = [[] for i in range(num)]
-    models = ['' for i in range(num)]
+    models = ["" for i in range(num)]
     for path in save_paths:
         with open(path, "rb") as f:
             results = pickle.load(f)
             for i, res in enumerate(results):
                 gds_res[i].append(res[1])
                 models[i] = res[0]
-   
+
     gds_arr = [(models[i], gds_res[i]) for i in range(num)]
     return gds_arr
 
-def get_gds(path, embed_type, num_samples=10000, seed=42, queue=None, worker_id=None, dist='cosine'):
-    if dist == 'cosine':
-        dist_func = lambda x,y: (1-((x/np.linalg.norm(x)) * (y/np.linalg.norm(y))).sum())/2
-    elif dist == 'euclidean':
-        dist_func = lambda x,y: np.linalg.norm(x-y)
-    
+
+def get_gds(
+    path,
+    embed_type,
+    num_samples=10000,
+    seed=42,
+    queue=None,
+    worker_id=None,
+    dist="cosine",
+):
+    if dist == "cosine":
+        dist_func = (
+            lambda x, y: (1 - ((x / np.linalg.norm(x)) * (y / np.linalg.norm(y))).sum())
+            / 2
+        )
+    elif dist == "euclidean":
+        dist_func = lambda x, y: np.linalg.norm(x - y)
+
     embed_rep, vocab = load_genomic_embeddings(path, embed_type)
     regions = sample_from_vocab(vocab, num_samples, seed)
-    region2idx = {r:i for i,r in enumerate(vocab)}
-    gdist_arr = [r[2]/GENOME_DIST_SCALAR for r in regions]
-    edist_arr = np.array([dist_func(embed_rep[region2idx[t[0]]], embed_rep[region2idx[t[1]]]) for t in regions])
+    region2idx = {r: i for i, r in enumerate(vocab)}
+    gdist_arr = [r[2] / GENOME_DIST_SCALAR for r in regions]
+    edist_arr = np.array(
+        [
+            dist_func(embed_rep[region2idx[t[0]]], embed_rep[region2idx[t[1]]])
+            for t in regions
+        ]
+    )
     gd_arr = list(zip(gdist_arr, edist_arr))
     X = np.array([[g[0]] for g in gd_arr])
     y = np.array([g[1] for g in gd_arr])
@@ -142,21 +168,25 @@ def get_gds(path, embed_type, num_samples=10000, seed=42, queue=None, worker_id=
     else:
         return slope
 
+
 def writer_multiprocessing(save_path, num, q):
-    results = ['' for i in range(num)]
+    results = ["" for i in range(num)]
     while True:
         m = q.get()
         if m == "kill":
             break
         index = m[0]
-        results[index] = (m[1],m[2])
+        results[index] = (m[1], m[2])
         if save_path:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             with open(save_path, "wb") as f:
                 pickle.dump(results, f)
     return results
 
-def get_gds_batch(batch, num_samples=10000, seed=42, save_path=None, num_workers=1, dist='cosine'):
+
+def get_gds_batch(
+    batch, num_samples=10000, seed=42, save_path=None, num_workers=1, dist="cosine"
+):
     if num_workers <= 1:
         gds_arr = []
         for path, embed_type in batch:
@@ -178,15 +208,7 @@ def get_gds_batch(batch, num_samples=10000, seed=42, save_path=None, num_workers
             for i, (path, embed_type) in enumerate(batch):
                 process = pool.apply_async(
                     get_gds,
-                    (
-                        path,
-                        embed_type,
-                        num_samples,
-                        seed,
-                        queue,
-                        i,
-                        dist
-                    ),
+                    (path, embed_type, num_samples, seed, queue, i, dist),
                 )
                 all_processes.append(process)
 
@@ -196,12 +218,20 @@ def get_gds_batch(batch, num_samples=10000, seed=42, save_path=None, num_workers
             gds_arr = writer.get()
     return gds_arr
 
-def gds_eval(batch, num_runs=20, num_samples=1000, dist='cosine', save_folder=None, num_workers=10):
+
+def gds_eval(
+    batch,
+    num_runs=20,
+    num_samples=1000,
+    dist="cosine",
+    save_folder=None,
+    num_workers=10,
+):
     results_seeds = []
     for seed in range(num_runs):
         print("----------------Run {}----------------".format(seed))
         save_path = (
-            os.path.join(save_folder, "gds_eval_seed{}".format(seed+42))
+            os.path.join(save_folder, "gds_eval_seed{}".format(seed + 42))
             if save_folder
             else None
         )
@@ -228,24 +258,24 @@ def gds_eval(batch, num_runs=20, num_samples=1000, dist='cosine', save_folder=No
     gds_arr = [(batch[i][0], gds_res[i]) for i in range(len(batch))]
     return gds_arr
 
+
 def plot_gds_arr(gds_arr, row_labels, filename=None):
     # yerr = None
     data = [g[1] for g in gds_arr]
-    mean_gds = [(i,np.mean(np.array(d))) for i,d in enumerate(data)]
-    mean_gds = sorted(mean_gds, key=lambda x:-x[1])
+    mean_gds = [(i, np.mean(np.array(d))) for i, d in enumerate(data)]
+    mean_gds = sorted(mean_gds, key=lambda x: -x[1])
     indexes = [t[0] for t in mean_gds]
     mean_gds = [t[1] for t in mean_gds]
     std_gds = [np.array(data[i]).std() for i in indexes]
-    sem_gds = [g/np.sqrt(len(data[0])) for g in std_gds]
+    sem_gds = [g / np.sqrt(len(data[0])) for g in std_gds]
     row_labels = [row_labels[i] for i in indexes]
 
     br1 = np.arange(len(mean_gds))
-    fig, ax = plt.subplots(figsize=(10,6))
+    fig, ax = plt.subplots(figsize=(10, 6))
     ax.bar(br1, mean_gds, yerr=sem_gds)
     ax.set_xticks(np.arange(len(mean_gds)))
     ax.set_xticklabels(row_labels)
-    _ = plt.setp(ax.get_xticklabels(), rotation=-20, ha="left",
-                 rotation_mode="anchor")
+    _ = plt.setp(ax.get_xticklabels(), rotation=-20, ha="left", rotation_mode="anchor")
     ax.set_ylabel("GDS")
     ax.yaxis.grid(True)
     if filename:
