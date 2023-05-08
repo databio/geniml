@@ -1,7 +1,7 @@
-library("optparse")
-library("GenomicDistributions")
-library(foreach)
-library(doParallel)
+suppressPackageStartupMessages(library("optparse"))
+suppressPackageStartupMessages(library("GenomicDistributions"))
+suppressPackageStartupMessages(library(foreach))
+suppressPackageStartupMessages(library(doParallel))
 
 get_cluster_median <- function(fpath){
     query_data = rtracklayer::import(fpath)
@@ -98,12 +98,12 @@ registerDoParallel(opt$num_workers)
 pattern = file.path(opt$path, 'Kmeans_*')
 paths = Sys.glob(pattern)
 num_path <- length(paths)
-foreach (i=1:num_path) %dopar% {
+out <- foreach (i=1:num_path) %dopar% {
     folder <- paths[i]
     save_path <- file.path(folder, 'pvals.txt')
-    if (!file.exists(save_path)){
-        pvals <- get_significance_vals(folder, opt$assembly, opt$num_samples)
-        cat(format(pvals, nsmall=6),sep='\n',file=save_path)
-    }
+    # if (!file.exists(save_path)){
+    pvals <- get_significance_vals(folder, opt$assembly, opt$num_samples)
+    cat(format(pvals, nsmall=6),sep='\n',file=save_path)
+    # }
 }
 

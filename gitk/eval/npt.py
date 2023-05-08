@@ -8,7 +8,7 @@ import argparse
 from gensim.models import Word2Vec
 import time
 import multiprocessing as mp
-from gitk.eval import load_genomic_embeddings
+from gitk.eval.utils import load_genomic_embeddings
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
@@ -31,7 +31,6 @@ class Timer:
 func_rdist = lambda u, v: float(u[1] < v[1]) * max(v[0] - u[1] + 1, 0) + float(
     u[1] >= v[1]
 ) * max(u[0] - v[1] + 1, 0)
-
 
 def get_topk_embed(i, K, embed, dist="cosine"):
     """
@@ -146,7 +145,7 @@ def init_worker(embed_rep, ref_embed, region2index):
     var_dict["region2vec_index"] = region2index
 
 
-def neighborhood_preserving_test(
+def get_snpr(
     model_path, embed_type, K, num_samples=100, seed=0, resolution=10, dist='cosine', num_workers=10
 ):
     """
@@ -242,11 +241,11 @@ def neighborhood_preserving_test(
     snprs_msg = " ".join(["{:.6f}".format(r) for r in snprs])
     print(model_path)
 
-    print(
-        "[seed={}] K={}\n[{}]: {}\n[Random]: {}\n[SNPR] {}\nSumSNPRs: {:.6f}".format(
-            seed, K, embed_type, ratio_msg, ratio_ref_msg, snprs_msg, snprs.sum()*resolution
-        )
-    )
+    # print(
+    #     "[seed={}] K={}\n[{}]: {}\n[Random]: {}\n[SNPR] {}".format(
+    #         seed, K, embed_type, ratio_msg, ratio_ref_msg, snprs_msg
+    #     )
+    # )
     result = {
         "K": K,
         "AvgENPR": avg_ratio,
@@ -275,13 +274,13 @@ def writer_multiprocessing(save_path, num, q):
     return results
 
 
-def neighborhood_preserving_test_batch(
+def get_snpr_batch(
     batch, K, num_samples=100, num_workers=10, seed=0, resolution=10, dist='cosine', save_path=None
 ):
     print("Total number of models: {}".format(len(batch)))
     result_list = []
     for index, (path, embed_type) in enumerate(batch):
-        result = neighborhood_preserving_test(
+        result = get_snpr(
             path, embed_type, K, num_samples, seed, resolution, dist, num_workers
         )
         result_list.append(result)
@@ -291,7 +290,7 @@ def neighborhood_preserving_test_batch(
             pickle.dump(result_list, f)
     return result_list
 
-# def neighborhood_preserving_test_batch(
+# def get_snpr_batch(
 #     batch, K, num_samples=100, num_workers=10, seed=0, resolution=10, dist='cosine', save_path=None
 # ):
 #     print("Total number of models: {}".format(len(batch)))
@@ -302,7 +301,7 @@ def neighborhood_preserving_test_batch(
 #         all_processes = []
 #         for index, (path, embed_type) in enumerate(batch):
 #             process = pool.apply_async(
-#                         neighborhood_preserving_test, (path, embed_type, K, num_samples, seed, resolution, dist, 0)
+#                         get_snpr, (path, embed_type, K, num_samples, seed, resolution, dist, 0)
 #                     )
 #             all_processes.append(process)
 #     for process in all_processes:
@@ -324,7 +323,7 @@ def npt_eval(batch, K, num_samples=100, num_workers=10, num_runs=20, resolution=
             if save_folder
             else None
         )
-        result_list = neighborhood_preserving_test_batch(
+        result_list = get_snpr_batch(
             batch,
             K,
             num_samples=num_samples,
@@ -345,12 +344,10 @@ def npt_eval(batch, K, num_samples=100, num_workers=10, num_runs=20, resolution=
     snpr_results = [np.array(v) for v in snpr_results]
     print(snpr_results[0].shape)
     for i in range(len(batch)):
-        snpr_arr = snpr_results[i] * resolution
-        print(
-            "{}\nSumSNPR_Avg (std):{:.6f} ({:.6f})".format(
-                paths[i], snpr_arr.sum(axis=1).mean(), snpr_arr.sum(axis=1).std()
-            )
-        )
+        snpr_arr = snpr_results[i]
+        avg_snprs = snpr_arr.mean(axis=0)
+        std_snprs = snpr_arr.std(axis=0)
+        print("{}\nSNPRs:{}\n".format(paths[i], " ".join(["{:.4f}({:.4f})".format(m,s) for m,s in zip(avg_snprs,std_snprs)])))
     snpr_results = [(paths[i], snpr_results[i], resolution) for i in range(len(batch))]
     return snpr_results
 
