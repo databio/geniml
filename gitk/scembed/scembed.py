@@ -1,6 +1,7 @@
 import scanpy as sc
 import pandas as pd
 import numpy as np
+import pickle
 
 from typing import Dict, List, Union
 from collections import Counter
@@ -109,21 +110,25 @@ class SCEmbed(Word2Vec):
             callbacks=callbacks,
         )
 
-    def save(self, *args, **kwargs):
+    def save_model(self, filepath: str, **kwargs):
         """
-        Wrapper around gensim.models.Word2Vec.save() to save the model. We need
-        to include other attributes that are not saved by default. Namely,
-        - data
-        - obs
-        - region_sets
-        - region2vec
-        """
-        if not self.trained:
-            raise ModelNotTrainedError(
-                "Cannot save model. Model has not been trained yet."
-            )
+        Cant use the save function from gensim because it doesnt work on subclasses. see
+        this issue: https://github.com/RaRe-Technologies/gensim/issues/1936
 
-        super().save(*args, **kwargs)
+        Instead, we will just use pickle to dump the object.
+        """
+        with open(filepath, "wb") as f:
+            pickle.dump(self, f)
+
+    def load_model(self, filepath: str, **kwargs):
+        """
+        Cant use the load function from gensim because it doesnt work on subclasses. see
+        this issue: https://github.com/RaRe-Technologies/gensim/issues/1936
+
+        Instead we will just use pickle to load the object. Override the current object.
+        """
+        with open(filepath, "rb") as f:
+            self = pickle.load(f)
 
     def train(
         self,

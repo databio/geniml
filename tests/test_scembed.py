@@ -1,7 +1,13 @@
+import os
+import sys
 import pytest
 import scanpy as sc
 import logging
 from itertools import chain
+
+# add parent directory to path
+sys.path.append("../")
+
 from gitk import scembed
 
 # set to DEBUG to see more info
@@ -71,15 +77,36 @@ def test_document_shuffle():
         # assert doc != docs[1]
 
 
-def test_model_creation(pbmc_data: sc.AnnData):
-    model = scembed.SCEmbed(pbmc_data)
+def test_model_creation():
+    model = scembed.SCEmbed()
     assert model
 
 
 def test_model_training(pbmc_data: sc.AnnData):
     # remove gensim logging
     logging.getLogger("gensim").setLevel(logging.ERROR)
-    model = scembed.SCEmbed(pbmc_data)
-    model.train(epochs=3)
+    model = scembed.SCEmbed()
+    model.train(pbmc_data, epochs=3)
     assert model.trained
     assert isinstance(model.region2vec, dict)
+
+
+def test_model_train_and_save(pbmc_data: sc.AnnData):
+    # remove gensim logging
+    logging.getLogger("gensim").setLevel(logging.ERROR)
+    model = scembed.SCEmbed()
+    model.train(pbmc_data, epochs=3)
+    assert model.trained
+    assert isinstance(model.region2vec, dict)
+
+    # save
+    try:
+        model.save_model("tests/data/test_model.model")
+        model.load_model("tests/data/test_model.model")
+
+        # ensure model is still trained and has region2vec
+        assert model.trained
+        assert isinstance(model.region2vec, dict)
+
+    finally:
+        os.remove("tests/data/test_model.model")
