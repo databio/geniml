@@ -19,6 +19,9 @@ from .utils import LearningRateScheduler, ScheduleType
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(PKG_NAME)
 
+# demote gensim logger to warning
+_GENSIM_LOGGER.setLevel("WARNING")
+
 # set the threading layer before any parallel target compilation
 config.THREADING_LAYER = "threadsafe"
 
@@ -77,7 +80,6 @@ class SCEmbed(Word2Vec):
 
     def __init__(
         self,
-        data: sc.AnnData,
         window_size: int = DEFAULT_WINDOW_SIZE,
         vector_size: int = DEFAULT_EMBEDDING_SIZE,
         min_count: int = 10,
@@ -94,33 +96,7 @@ class SCEmbed(Word2Vec):
         :param int seed: The random seed to use for training.
         :param List[CallbackAny2Vec] callbacks: A list of callbacks to use for training.
         """
-        if not isinstance(data, sc.AnnData):
-            raise TypeError(f"Data must be of type AnnData, not {type(data).__name__}")
-
-        if (
-            not hasattr(data.var, CHR_KEY)
-            or not hasattr(data.var, START_KEY)
-            or not hasattr(data.var, END_KEY)
-        ):
-            _LOGGER.warn(
-                "Data does not have `chr`, `start`, and `end` columns in the `var` attribute. Will fallback to default names"
-            )
-
-        # convert the data to a list of documents
-        _LOGGER.info("Converting data to documents.")
-        self.data = data
-        self.region_sets = convert_anndata_to_documents(data)
-
-        # remove any regions that dont satisfy the min count
-        _LOGGER.info("Removing regions that don't satisfy min count.")
-        self.region_sets = remove_regions_below_min_count(self.region_sets, min_count)
-
         self.callbacks = callbacks
-
-        # save anything in the `obs` attribute of the AnnData object
-        # this lets users save any metadata they want
-        # which can get mapped back to the embeddings
-        self.obs = data.obs
         self.trained = False
 
         # instantiate the Word2Vec model
@@ -133,8 +109,25 @@ class SCEmbed(Word2Vec):
             callbacks=callbacks,
         )
 
+    def save(self, *args, **kwargs):
+        """
+        Wrapper around gensim.models.Word2Vec.save() to save the model. We need
+        to include other attributes that are not saved by default. Namely,
+        - data
+        - obs
+        - region_sets
+        - region2vec
+        """
+        if not self.trained:
+            raise ModelNotTrainedError(
+                "Cannot save model. Model has not been trained yet."
+            )
+
+        super().save(*args, **kwargs)
+
     def train(
         self,
+        data: sc.AnnData,
         epochs: int = DEFAULT_EPOCHS,  # training cycles
         n_shuffles: int = DEAFULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
         gensim_epochs: Union[int, None] = DEFAULT_GENSIM_EPOCHS,
@@ -155,6 +148,33 @@ class SCEmbed(Word2Vec):
         :param float min_lr: The minimum learning rate.
         :param Union[str, ScheduleType] lr_schedule: The learning rate schedule to use.
         """
+
+        if not isinstance(data, sc.AnnData):
+            raise TypeError(f"Data must be of type AnnData, not {type(data).__name__}")
+
+        if (
+            not hasattr(data.var, CHR_KEY)
+            or not hasattr(data.var, START_KEY)
+            or not hasattr(data.var, END_KEY)
+        ):
+            _LOGGER.warn(
+                "Data does not have `chr`, `start`, and `end` columns in the `var` attribute. Will fallback to default names"
+            )
+
+        # convert the data to a list of documents
+        _LOGGER.info("Converting data to documents.")
+        self.data = data
+        # save anything in the `obs` attribute of the AnnData object
+        # this lets users save any metadata they want
+        # which can get mapped back to the embeddings
+        self.obs = data.obs
+        self.region_sets = convert_anndata_to_documents(data)
+
+        # remove any regions that dont satisfy the min count
+        _LOGGER.info("Removing regions that don't satisfy min count.")
+        self.region_sets = remove_regions_below_min_count(
+            self.region_sets, self.min_count
+        )
         self.trained = True
         if report_loss:
             self.callbacks.append(ReportLossCallback())
