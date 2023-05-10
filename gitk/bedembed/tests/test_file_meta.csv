@@ -1,0 +1,101 @@
+sample_name,file_name,genome,exp_protocol,cell_type,target,data_source,file_acc,format,format_type,description
+encode_20447,ENCFF743FVM.bed.gz,hg19,Histone ChIP-seq,SK-N-SH,H3K27me3,ENCODE,ENCFF743FVM,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human SK-N-SH
+encode_20229,ENCFF395VFE.bed.gz,hg19,Histone ChIP-seq,tibial artery,H3K4me1,ENCODE,ENCFF395VFE,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human tibial artery
+encode_20699,ENCFF998HPC.bed.gz,hg19,Histone ChIP-seq,gastrocnemius medialis,H3K4me3,ENCODE,ENCFF998HPC,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human gastrocnemius medialis
+encode_16853,ENCFF362BKF.bed.gz,hg19,Histone ChIP-seq,Loucy,H3K4me1,ENCODE,ENCFF362BKF,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human Loucy
+encode_6733,ENCFF001SYM.bed.gz,hg19,Histone ChIP-seq,endothelial cell of umbilical vein,H3K4me1,ENCODE,ENCFF001SYM,bed,broadPeak,H3K4me1 Histone ChIP-seq on human endothelial cell of umbilical vein
+encode_6537,ENCFF001WXW.bed.gz,hg19,Histone ChIP-seq,GM12865,H3K4me3,ENCODE,ENCFF001WXW,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human GM12865
+encode_18017,ENCFF153MIP.bed.gz,hg19,Histone ChIP-seq,NCI-H929,H3K4me1,ENCODE,ENCFF153MIP,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human NCI-H929
+encode_3363,ENCFF699ETU.bed.gz,hg19,Histone ChIP-seq,bronchial epithelial cell,H3K36me3,ENCODE,ENCFF699ETU,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human bronchial epithelial cell
+encode_16112,ENCFF387SMC.bed.gz,hg19,Histone ChIP-seq,spleen,H3K4me3,ENCODE,ENCFF387SMC,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human spleen
+encode_19710,ENCFF557MGM.bed.gz,hg19,Histone ChIP-seq,GM12878,H3K27ac,ENCODE,ENCFF557MGM,bed,narrowPeak,H3K27ac Histone ChIP-seq on human GM12878
+encode_5680,ENCFF817RNI.bed.gz,hg19,Histone ChIP-seq,Karpas-422,H3K36me3,ENCODE,ENCFF817RNI,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human Karpas-422
+encode_16679,ENCFF299GFJ.bed.gz,hg19,Histone ChIP-seq,RWPE2,H3K27ac,ENCODE,ENCFF299GFJ,bed,narrowPeak,H3K27ac Histone ChIP-seq on human RWPE2
+encode_17405,ENCFF808XMV.bed.gz,hg19,Histone ChIP-seq,HCT116,H3K9me2,ENCODE,ENCFF808XMV,bed,narrowPeak,H3K9me2 Histone ChIP-seq on human HCT116
+encode_5281,ENCFF001WYQ.bed.gz,hg19,Histone ChIP-seq,cardiac muscle cell,H3K4me3,ENCODE,ENCFF001WYQ,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human cardiac muscle cell
+encode_18851,ENCFF114CHQ.bed.gz,hg19,Histone ChIP-seq,SK-N-SH,H3K9me3,ENCODE,ENCFF114CHQ,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human SK-N-SH
+encode_11990,ENCFF467AZY.bed.gz,hg19,Histone ChIP-seq,HeLa-S3,H3K27me3,ENCODE,ENCFF467AZY,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human HeLa-S3
+encode_10641,ENCFF787ITI.bed.gz,hg19,Histone ChIP-seq,OCI-LY3,H3K27ac,ENCODE,ENCFF787ITI,bed,narrowPeak,H3K27ac Histone ChIP-seq on human OCI-LY3
+encode_18627,ENCFF140PQL.bed.gz,hg19,Histone ChIP-seq,thoracic aorta,H3K9me3,ENCODE,ENCFF140PQL,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human thoracic aorta
+encode_20829,ENCFF427REZ.bed.gz,hg19,Histone ChIP-seq,KMS-11,H3K4me3,ENCODE,ENCFF427REZ,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human KMS-11
+encode_20032,ENCFF377SKJ.bed.gz,hg19,Histone ChIP-seq,prostate gland,H3K27ac,ENCODE,ENCFF377SKJ,bed,narrowPeak,H3K27ac Histone ChIP-seq on human prostate gland
+encode_4216,ENCFF026ZVZ.bed.gz,hg19,Histone ChIP-seq,esophagus muscularis mucosa,H3K36me3,ENCODE,ENCFF026ZVZ,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human esophagus muscularis mucosa
+encode_17668,ENCFF932BMG.bed.gz,hg19,Histone ChIP-seq,H1,H3K36me3,ENCODE,ENCFF932BMG,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human H1
+encode_15370,ENCFF622LDN.bed.gz,hg19,Histone ChIP-seq,ascending aorta,H3K36me3,ENCODE,ENCFF622LDN,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human ascending aorta
+encode_8238,ENCFF423OHU.bed.gz,hg19,Histone ChIP-seq,spleen,H3K9me3,ENCODE,ENCFF423OHU,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human spleen
+encode_14677,ENCFF292VZA.bed.gz,hg19,Histone ChIP-seq,neural progenitor cell,H3K36me3,ENCODE,ENCFF292VZA,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human neural progenitor cell
+encode_20603,ENCFF006EFA.bed.gz,hg19,Histone ChIP-seq,adrenal gland,H3K4me3,ENCODE,ENCFF006EFA,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human adrenal gland
+encode_16747,ENCFF877PDN.bed.gz,hg19,Histone ChIP-seq,neural cell,H3K4me3,ENCODE,ENCFF877PDN,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human neural cell
+encode_20020,ENCFF787BOJ.bed.gz,hg19,Histone ChIP-seq,spleen,H3K27me3,ENCODE,ENCFF787BOJ,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human spleen
+encode_20589,ENCFF806PKB.bed.gz,hg19,Histone ChIP-seq,tibial nerve,H3K36me3,ENCODE,ENCFF806PKB,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human tibial nerve
+encode_19414,ENCFF123HZU.bed.gz,hg19,Histone ChIP-seq,spleen,H3K27ac,ENCODE,ENCFF123HZU,bed,narrowPeak,H3K27ac Histone ChIP-seq on human spleen
+encode_6393,ENCFF697FHS.bed.gz,hg19,Histone ChIP-seq,Panc1,H3K36me3,ENCODE,ENCFF697FHS,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human Panc1
+encode_16357,ENCFF793MNH.bed.gz,hg19,Histone ChIP-seq,hepatocyte,H3K4me1,ENCODE,ENCFF793MNH,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human hepatocyte
+encode_3551,ENCFF253WGM.bed.gz,hg19,Histone ChIP-seq,MCF-7,H3K4me3,ENCODE,ENCFF253WGM,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human MCF-7
+encode_17562,ENCFF187RUK.bed.gz,hg19,Histone ChIP-seq,MCF-7,H3K27ac,ENCODE,ENCFF187RUK,bed,narrowPeak,H3K27ac Histone ChIP-seq on human MCF-7
+encode_13214,ENCFF518ZYQ.bed.gz,hg19,Histone ChIP-seq,cardiac muscle cell,H3K27me3,ENCODE,ENCFF518ZYQ,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human cardiac muscle cell
+encode_11100,ENCFF290OIE.bed.gz,hg19,Histone ChIP-seq,esophagus squamous epithelium,H3K27me3,ENCODE,ENCFF290OIE,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human esophagus squamous epithelium
+encode_8206,ENCFF624XFO.bed.gz,hg19,Histone ChIP-seq,Peyer's patch,H3K27ac,ENCODE,ENCFF624XFO,bed,narrowPeak,H3K27ac Histone ChIP-seq on human Peyer's patch
+encode_5265,ENCFF245WIG.bed.gz,hg19,Histone ChIP-seq,GM12878,H3K79me2,ENCODE,ENCFF245WIG,bed,narrowPeak,H3K79me2 Histone ChIP-seq on human GM12878
+encode_20739,ENCFF732IVT.bed.gz,hg19,Histone ChIP-seq,esophagus squamous epithelium,H3K36me3,ENCODE,ENCFF732IVT,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human esophagus squamous epithelium
+encode_1763,ENCFF001XFL.bed.gz,hg19,Histone ChIP-seq,fibroblast of villous mesenchyme,H3K4me3,ENCODE,ENCFF001XFL,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human fibroblast of villous mesenchyme
+encode_11218,ENCFF150NIG.bed.gz,hg19,Histone ChIP-seq,esophagus muscularis mucosa,H3K4me1,ENCODE,ENCFF150NIG,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human esophagus muscularis mucosa
+encode_7649,ENCFF512SDC.bed.gz,hg19,Histone ChIP-seq,NT2/D1,H3K4me3,ENCODE,ENCFF512SDC,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human NT2/D1
+encode_5893,ENCFF555ZPF.bed.gz,hg19,Histone ChIP-seq,astrocyte of the spinal cord,H3K4me3,ENCODE,ENCFF555ZPF,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human astrocyte of the spinal cord
+encode_6649,ENCFF213GUQ.bed.gz,hg19,Histone ChIP-seq,Panc1,H3K4me3,ENCODE,ENCFF213GUQ,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human Panc1
+encode_266,ENCFF001TAQ.bed.gz,hg19,Histone ChIP-seq,CD14-positive monocyte,H3K36me3,ENCODE,ENCFF001TAQ,bed,broadPeak,H3K36me3 Histone ChIP-seq on human CD14-positive monocyte
+encode_18054,ENCFF718FXV.bed.gz,hg19,Histone ChIP-seq,SK-N-SH,H3K4me1,ENCODE,ENCFF718FXV,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human SK-N-SH
+encode_18336,ENCFF001XJP.bed.gz,hg19,Histone ChIP-seq,SK-N-SH,H3K4me3,ENCODE,ENCFF001XJP,bed,broadPeak,H3K4me3 Histone ChIP-seq on human SK-N-SH
+encode_18245,ENCFF323KXF.bed.gz,hg19,Histone ChIP-seq,K562,H3K9me3,ENCODE,ENCFF323KXF,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human K562
+encode_2999,ENCFF240LOG.bed.gz,hg19,Histone ChIP-seq,mammary epithelial cell,H3K4me2,ENCODE,ENCFF240LOG,bed,narrowPeak,H3K4me2 Histone ChIP-seq on human mammary epithelial cell
+encode_3604,ENCFF001WXA.bed.gz,hg19,Histone ChIP-seq,B cell,H3K4me3,ENCODE,ENCFF001WXA,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human B cell
+encode_4370,ENCFF981QYW.bed.gz,hg19,Histone ChIP-seq,HepG2,H3K36me3,ENCODE,ENCFF981QYW,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human HepG2
+encode_16826,ENCFF001STW.bed.gz,hg19,Histone ChIP-seq,DND-41,H3K27ac,ENCODE,ENCFF001STW,bed,broadPeak,H3K27ac Histone ChIP-seq on human DND-41
+encode_18426,ENCFF948KKV.bed.gz,hg19,Histone ChIP-seq,Peyer's patch,H3K9me3,ENCODE,ENCFF948KKV,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human Peyer's patch
+encode_15371,ENCFF380AWN.bed.gz,hg19,Histone ChIP-seq,ascending aorta,H3K36me3,ENCODE,ENCFF380AWN,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human ascending aorta
+encode_3780,ENCFF564QIG.bed.gz,hg19,Histone ChIP-seq,K562,H3K4me1,ENCODE,ENCFF564QIG,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human K562
+encode_12532,ENCFF001WVX.bed.gz,hg19,Histone ChIP-seq,BE2C,H3K4me3,ENCODE,ENCFF001WVX,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human BE2C
+encode_15439,ENCFF613JPH.bed.gz,hg19,Histone ChIP-seq,esophagus muscularis mucosa,H3K4me3,ENCODE,ENCFF613JPH,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human esophagus muscularis mucosa
+encode_3722,ENCFF268WOF.bed.gz,hg19,Histone ChIP-seq,fibroblast of lung,H3K9me3,ENCODE,ENCFF268WOF,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human fibroblast of lung
+encode_7076,ENCFF613LHD.bed.gz,hg19,Histone ChIP-seq,MM.1S,H3K4me2,ENCODE,ENCFF613LHD,bed,narrowPeak,H3K4me2 Histone ChIP-seq on human MM.1S
+encode_2159,ENCFF546TJV.bed.gz,hg19,Histone ChIP-seq,HepG2,H3K27me3,ENCODE,ENCFF546TJV,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human HepG2
+encode_17122,ENCFF839ZXH.bed.gz,hg19,Histone ChIP-seq,mammary epithelial cell,H3K4me1,ENCODE,ENCFF839ZXH,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human mammary epithelial cell
+encode_3045,ENCFF001XIJ.bed.gz,hg19,Histone ChIP-seq,epithelial cell of proximal tubule,H3K4me3,ENCODE,ENCFF001XIJ,bed,broadPeak,H3K4me3 Histone ChIP-seq on human epithelial cell of proximal tubule
+encode_13121,ENCFF744QYI.bed.gz,hg19,Histone ChIP-seq,NCI-H929,H3K4me2,ENCODE,ENCFF744QYI,bed,narrowPeak,H3K4me2 Histone ChIP-seq on human NCI-H929
+encode_20914,ENCFF753RIR.bed.gz,hg19,Histone ChIP-seq,HepG2,H3K9me3,ENCODE,ENCFF753RIR,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human HepG2
+encode_20184,ENCFF379PVI.bed.gz,hg19,Histone ChIP-seq,gastrocnemius medialis,H3K27me3,ENCODE,ENCFF379PVI,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human gastrocnemius medialis
+encode_187,ENCFF001SWY.bed.gz,hg19,Histone ChIP-seq,mammary epithelial cell,H3K36me3,ENCODE,ENCFF001SWY,bed,broadPeak,H3K36me3 Histone ChIP-seq on human mammary epithelial cell
+encode_11435,ENCFF497PCE.bed.gz,hg19,Histone ChIP-seq,SU-DHL-6,H3K9me2,ENCODE,ENCFF497PCE,bed,narrowPeak,H3K9me2 Histone ChIP-seq on human SU-DHL-6
+encode_11101,ENCFF126LUU.bed.gz,hg19,Histone ChIP-seq,tibial nerve,H3K27me3,ENCODE,ENCFF126LUU,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human tibial nerve
+encode_3932,ENCFF068UAA.bed.gz,hg19,Histone ChIP-seq,GM12878,H3K4me3,ENCODE,ENCFF068UAA,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human GM12878
+encode_7479,ENCFF726YQX.bed.gz,hg19,Histone ChIP-seq,PC-9,H3K79me2,ENCODE,ENCFF726YQX,bed,narrowPeak,H3K79me2 Histone ChIP-seq on human PC-9
+encode_8837,ENCFF792NWH.bed.gz,hg19,Histone ChIP-seq,fibroblast of lung,H3K4me3,ENCODE,ENCFF792NWH,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human fibroblast of lung
+encode_15713,ENCFF001XDX.bed.gz,hg19,Histone ChIP-seq,fibroblast of mammary gland,H3K4me3,ENCODE,ENCFF001XDX,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human fibroblast of mammary gland
+encode_754,ENCFF086CFV.bed.gz,hg19,Histone ChIP-seq,cardiac muscle cell,H3K4me3,ENCODE,ENCFF086CFV,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human cardiac muscle cell
+encode_6292,ENCFF047RVS.bed.gz,hg19,Histone ChIP-seq,upper lobe of left lung,H3K4me1,ENCODE,ENCFF047RVS,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human upper lobe of left lung
+encode_6903,ENCFF340XWP.bed.gz,hg19,Histone ChIP-seq,endothelial cell of umbilical vein,H3K27ac,ENCODE,ENCFF340XWP,bed,narrowPeak,H3K27ac Histone ChIP-seq on human endothelial cell of umbilical vein
+encode_10317,ENCFF244HYP.bed.gz,hg19,Histone ChIP-seq,Karpas-422,H3K9ac,ENCODE,ENCFF244HYP,bed,narrowPeak,H3K9ac Histone ChIP-seq on human Karpas-422
+encode_1790,ENCFF001XEQ.bed.gz,hg19,Histone ChIP-seq,kidney epithelial cell,H3K4me3,ENCODE,ENCFF001XEQ,bed,broadPeak,H3K4me3 Histone ChIP-seq on human kidney epithelial cell
+encode_10494,ENCFF594DFJ.bed.gz,hg19,Histone ChIP-seq,OCI-LY3,H3K79me2,ENCODE,ENCFF594DFJ,bed,narrowPeak,H3K79me2 Histone ChIP-seq on human OCI-LY3
+encode_7450,ENCFF535ANL.bed.gz,hg19,Histone ChIP-seq,keratinocyte,H3K4me3,ENCODE,ENCFF535ANL,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human keratinocyte
+encode_224,ENCFF001TAN.bed.gz,hg19,Histone ChIP-seq,CD14-positive monocyte,H3K9me3,ENCODE,ENCFF001TAN,bed,broadPeak,H3K9me3 Histone ChIP-seq on human CD14-positive monocyte
+encode_16422,ENCFF001XIP.bed.gz,hg19,Histone ChIP-seq,bronchial epithelial cell,H3K27me3,ENCODE,ENCFF001XIP,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human bronchial epithelial cell
+encode_6040,ENCFF506MJX.bed.gz,hg19,Histone ChIP-seq,fibroblast of dermis,H3K27ac,ENCODE,ENCFF506MJX,bed,narrowPeak,H3K27ac Histone ChIP-seq on human fibroblast of dermis
+encode_5334,ENCFF671WZE.bed.gz,hg19,Histone ChIP-seq,right atrium auricular region,H3K9me3,ENCODE,ENCFF671WZE,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human right atrium auricular region
+encode_20418,ENCFF336DDM.bed.gz,hg19,Histone ChIP-seq,breast epithelium,H3K4me1,ENCODE,ENCFF336DDM,bed,narrowPeak,H3K4me1 Histone ChIP-seq on human breast epithelium
+encode_2259,ENCFF001WWS.bed.gz,hg19,Histone ChIP-seq,Caco-2,H3K36me3,ENCODE,ENCFF001WWS,bed,broadPeak,H3K36me3 Histone ChIP-seq on human Caco-2
+encode_14756,ENCFF001WXB.bed.gz,hg19,Histone ChIP-seq,B cell,H3K4me3,ENCODE,ENCFF001WXB,bed,broadPeak,H3K4me3 Histone ChIP-seq on human B cell
+encode_17572,ENCFF494ASP.bed.gz,hg19,Histone ChIP-seq,fibroblast of dermis,H3K27me3,ENCODE,ENCFF494ASP,bed,narrowPeak,H3K27me3 Histone ChIP-seq on human fibroblast of dermis
+encode_20918,ENCFF454ZUB.bed.gz,hg19,Histone ChIP-seq,MCF-7,H3K9me3,ENCODE,ENCFF454ZUB,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human MCF-7
+encode_20429,ENCFF001XJL.bed.gz,hg19,Histone ChIP-seq,SK-N-SH,H3K36me3,ENCODE,ENCFF001XJL,bed,broadPeak,H3K36me3 Histone ChIP-seq on human SK-N-SH
+encode_18359,ENCFF014AOR.bed.gz,hg19,Histone ChIP-seq,GM23248,H3K79me2,ENCODE,ENCFF014AOR,bed,narrowPeak,H3K79me2 Histone ChIP-seq on human GM23248
+encode_18312,ENCFF060JMH.bed.gz,hg19,Histone ChIP-seq,esophagus muscularis mucosa,H3K27ac,ENCODE,ENCFF060JMH,bed,narrowPeak,H3K27ac Histone ChIP-seq on human esophagus muscularis mucosa
+encode_16762,ENCFF961YNW.bed.gz,hg19,Histone ChIP-seq,22Rv1,H3K27ac,ENCODE,ENCFF961YNW,bed,narrowPeak,H3K27ac Histone ChIP-seq on human 22Rv1
+encode_8686,ENCFF221GJG.bed.gz,hg19,Histone ChIP-seq,radial glial cell,H3K4me3,ENCODE,ENCFF221GJG,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human radial glial cell
+encode_18567,ENCFF402CCA.bed.gz,hg19,Histone ChIP-seq,gastrocnemius medialis,H3K36me3,ENCODE,ENCFF402CCA,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human gastrocnemius medialis
+encode_11939,ENCFF837MEB.bed.gz,hg19,Histone ChIP-seq,MM.1S,H3K9me3,ENCODE,ENCFF837MEB,bed,narrowPeak,H3K9me3 Histone ChIP-seq on human MM.1S
+encode_18095,ENCFF986RLS.bed.gz,hg19,Histone ChIP-seq,GM12878,H3K36me3,ENCODE,ENCFF986RLS,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human GM12878
+encode_20035,ENCFF063VHN.bed.gz,hg19,Histone ChIP-seq,prostate gland,H3K27ac,ENCODE,ENCFF063VHN,bed,narrowPeak,H3K27ac Histone ChIP-seq on human prostate gland
+encode_18152,ENCFF744CHB.bed.gz,hg19,Histone ChIP-seq,breast epithelium,H3K4me3,ENCODE,ENCFF744CHB,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human breast epithelium
+encode_4189,ENCFF607IDG.bed.gz,hg19,Histone ChIP-seq,WI38,H3K4me3,ENCODE,ENCFF607IDG,bed,narrowPeak,H3K4me3 Histone ChIP-seq on human WI38
+encode_6520,ENCFF890UNK.bed.gz,hg19,Histone ChIP-seq,gastroesophageal sphincter,H3K36me3,ENCODE,ENCFF890UNK,bed,narrowPeak,H3K36me3 Histone ChIP-seq on human gastroesophageal sphincter
