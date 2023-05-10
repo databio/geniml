@@ -324,6 +324,8 @@ def remove_regions_below_min_count(
     """
     Remove regions that don't satisfy the min count.
 
+    TODO - this is a bit slow, could be sped up using dataframe operations.
+
     :param List[List[str]] region_sets: the region sets to remove regions from
     :param int min_count: the min count to use
     """

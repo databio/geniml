@@ -135,13 +135,22 @@ def test_anndata_chunker(pbmc_data_backed: sc.AnnData):
         assert isinstance(chunk, sc.AnnData)
 
 
-def test_train_in_chunks(pbmc_data_backed: sc.AnnData, total_regions: int):
+def test_train_in_chunks(pbmc_data_backed: sc.AnnData):
+    MIN_COUNT = 2
     chunker = utils.AnnDataChunker(pbmc_data_backed, chunk_size=10)
-    model = scembed.SCEmbed(use_default_region_names=False)
+    model = scembed.SCEmbed(use_default_region_names=False, min_count=MIN_COUNT)
+
+    # need this to keep track of total regions
+    # that should be represented in the model
+    def count_regions(chunk: sc.AnnData):
+        chunk_df = chunk.to_df()
+        chunk_df = chunk_df.clip(upper=1)
+        return sum(chunk_df.sum(axis=0) >= MIN_COUNT)
 
     total_regions = 0
-
     for chunk in chunker:
+        chunk_mem = chunk.to_memory()
+        total_regions += count_regions(chunk_mem)
         model.train(chunk, epochs=3)
 
     assert model.trained
