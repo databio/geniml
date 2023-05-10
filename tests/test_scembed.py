@@ -9,6 +9,7 @@ from itertools import chain
 sys.path.append("../")
 
 from gitk import scembed
+from gitk import utils
 
 # set to DEBUG to see more info
 logging.basicConfig(level=logging.INFO)
@@ -17,6 +18,11 @@ logging.basicConfig(level=logging.INFO)
 @pytest.fixture
 def pbmc_data():
     return sc.read_h5ad("tests/data/pbmc.h5ad")
+
+
+@pytest.fixture
+def pbmc_data_backed():
+    return sc.read_h5ad("tests/data/pbmc.h5ad", backed="r")
 
 
 def test_import():
@@ -83,12 +89,21 @@ def test_model_creation():
 
 
 def test_model_training(pbmc_data: sc.AnnData):
+    # create df and clip values in dataframe to 1
+    # this is to validate the model training, that
+    # it has seen all regions
+    pbmc_df = pbmc_data.to_df()
+    pbmc_df = pbmc_df.clip(upper=1)
+    total_regions = sum(pbmc_df.sum(axis=0) >= scembed.const.DEFAULT_MIN_COUNT)
+
     # remove gensim logging
     logging.getLogger("gensim").setLevel(logging.ERROR)
     model = scembed.SCEmbed()
     model.train(pbmc_data, epochs=3)
+
     assert model.trained
-    assert isinstance(model.region2vec, dict)
+    assert len(model.region2vec) > 0
+    assert len(model.region2vec) == total_regions
 
 
 def test_model_train_and_save(pbmc_data: sc.AnnData):
@@ -106,7 +121,33 @@ def test_model_train_and_save(pbmc_data: sc.AnnData):
 
         # ensure model is still trained and has region2vec
         assert model.trained
-        assert isinstance(model.region2vec, dict)
+        assert len(model.region2vec) > 0
 
     finally:
         os.remove("tests/data/test_model.model")
+
+
+def test_anndata_chunker(pbmc_data_backed: sc.AnnData):
+    chunker = scembed.AnnDataChunker(pbmc_data_backed, chunk_size=10)
+    # ensure chunker is iterable
+    for chunk in chunker:
+        assert isinstance(chunk, sc.AnnData)
+
+
+def test_train_in_chunks(pbmc_data_backed: sc.AnnData):
+    chunker = utils.AnnDataChunker(pbmc_data_backed, chunk_size=10)
+    model = scembed.SCEmbed(use_default_region_names=False)
+
+    total_regions = 0
+
+    for chunk in chunker:
+        # read into memory
+        chunk = chunk.to_memory()
+        chunk_df = chunk.to_df()
+        chunk_df = chunk_df.clip(upper=1)
+        total_regions += sum(chunk_df.sum(axis=0) >= scembed.const.DEFAULT_MIN_COUNT)
+        model.train(chunk, epochs=3)
+
+    assert model.trained
+    assert isinstance(model.region2vec, dict)
+    assert len(model.region2vec) == total_regions

@@ -2,6 +2,8 @@ from typing import Union
 from enum import Enum
 from logging import getLogger
 
+import scanpy as sc
+
 from .const import *
 
 _LOGGER = getLogger(PKG_NAME)
@@ -76,3 +78,30 @@ class LearningRateScheduler:
 
     def get_lr(self):
         return self._current_lr
+
+
+class AnnDataChunker:
+    def __init__(self, adata: sc.AnnData, chunk_size: int = DEFAULT_CHUNK_SIZE):
+        """
+        Simple class to chunk an AnnData object into smaller pieces. Useful for
+        training on large datasets.
+
+        :param adata: AnnData object to chunk. Must be in backed mode. See: https://scanpy.readthedocs.io/en/stable/generated/scanpy.read_h5ad.html
+        :param chunk_size: Number of cells to include in each chunk
+        """
+        self.adata = adata
+        self.chunk_size = chunk_size
+        self.n_chunks = len(adata) // chunk_size + 1
+
+    def __iter__(self):
+        for i in range(self.n_chunks):
+            yield self.adata[i * self.chunk_size : (i + 1) * self.chunk_size, :]
+
+    def __len__(self):
+        return self.n_chunks
+
+    def __getitem__(self, item):
+        return self.adata[item * self.chunk_size : (item + 1) * self.chunk_size, :]
+
+    def __repr__(self):
+        return f"<AnnDataChunker: {self.n_chunks} chunks of size {self.chunk_size}>"

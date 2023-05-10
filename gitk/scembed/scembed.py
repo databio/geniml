@@ -83,10 +83,11 @@ class SCEmbed(Word2Vec):
         self,
         window_size: int = DEFAULT_WINDOW_SIZE,
         vector_size: int = DEFAULT_EMBEDDING_SIZE,
-        min_count: int = 10,
+        min_count: int = DEFAULT_MIN_COUNT,
         threads: int = 1,
         seed: int = 42,
         callbacks: List[CallbackAny2Vec] = [],
+        use_default_region_names: bool = True,
     ):
         """
         :param sc.AnnData data: The AnnData object containing the data to train on.
@@ -99,6 +100,8 @@ class SCEmbed(Word2Vec):
         """
         self.callbacks = callbacks
         self.trained = False
+        self.use_default_region_names = use_default_region_names
+        self.region2vec = dict()
 
         # instantiate the Word2Vec model
         super().__init__(
@@ -132,7 +135,7 @@ class SCEmbed(Word2Vec):
 
     def train(
         self,
-        data: sc.AnnData,
+        data: Union[sc.AnnData, str],
         epochs: int = DEFAULT_EPOCHS,  # training cycles
         n_shuffles: int = DEAFULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
         gensim_epochs: Union[int, None] = DEFAULT_GENSIM_EPOCHS,
@@ -154,8 +157,14 @@ class SCEmbed(Word2Vec):
         :param Union[str, ScheduleType] lr_schedule: The learning rate schedule to use.
         """
 
-        if not isinstance(data, sc.AnnData):
-            raise TypeError(f"Data must be of type AnnData, not {type(data).__name__}")
+        if not isinstance(data, sc.AnnData) and not isinstance(data, str):
+            raise TypeError(
+                f"Data must be of type AnnData or str, not {type(data).__name__}"
+            )
+
+        # if the data is a string, assume it is a filepath
+        if isinstance(data, str):
+            data = sc.read_h5ad(data)
 
         if (
             not hasattr(data.var, CHR_KEY)
@@ -173,23 +182,32 @@ class SCEmbed(Word2Vec):
         # this lets users save any metadata they want
         # which can get mapped back to the embeddings
         self.obs = data.obs
-        self.region_sets = convert_anndata_to_documents(data)
+        self.region_sets = convert_anndata_to_documents(
+            data, self.use_default_region_names
+        )
 
         # remove any regions that dont satisfy the min count
         _LOGGER.info("Removing regions that don't satisfy min count.")
         self.region_sets = remove_regions_below_min_count(
             self.region_sets, self.min_count
         )
-        self.trained = True
+
         if report_loss:
             self.callbacks.append(ReportLossCallback())
 
+        # create a learning rate scheduler
         lr_scheduler = LearningRateScheduler(
             init_lr=lr, min_lr=min_lr, type=lr_schedule, n_epochs=epochs
         )
 
         # train the model using these shuffled documents
         _LOGGER.info("Training starting.")
+
+        # build up the vocab
+        super().build_vocab(
+            self.region_sets,
+            update=False if not self.trained else True,
+        )
 
         for shuffle_num in range(epochs):
             # update current values
@@ -207,10 +225,7 @@ class SCEmbed(Word2Vec):
                 self.region_sets, n_shuffles=n_shuffles
             )
 
-            # update vocab and train
-            super().build_vocab(
-                self.region_sets, update=True if shuffle_num > 0 else False
-            )
+            # train the model on one iteration
             super().train(
                 self.region_sets,
                 total_examples=len(self.region_sets),
@@ -223,9 +238,14 @@ class SCEmbed(Word2Vec):
             # update learning rates
             lr_scheduler.update()
 
+            self.trained = True
+
         # once training is complete, create a region to vector mapping
         regions = list(self.wv.key_to_index.keys())
-        self.region2vec = {word: self.wv[word] for word in regions}
+
+        # create a mapping from region to vector
+        for word in regions:
+            self.region2vec[word] = self.wv[word]
 
     def get_embedding(self, region: str) -> np.ndarray:
         """
@@ -333,18 +353,16 @@ def load_scanpy_data(path_to_h5ad: str) -> sc.AnnData:
 def extract_region_list(region_df: pd.DataFrame) -> List[str]:
     """
     Parse the `var` attribute of the scanpy.AnnData object and
-    return a list of regions from the matrix
+    return a list of regions from the matrix. Converts each
+    region to a string of the form `chr_start_end`.
 
     :param pandas.DataFrame region_df: the regions dataframe to parse
     """
     _LOGGER.info("Extracting region list from matrix.")
-    regions_parsed = []
-    for r in tqdm(region_df.iterrows(), total=region_df.shape[0]):
-        r_dict = r[1].to_dict()
-        regions_parsed.append(
-            "_".join([r_dict[CHR_KEY], str(r_dict[START_KEY]), str(r_dict[END_KEY])])
-        )
-    return regions_parsed
+    regions = region_df.apply(
+        lambda x: f"{x[CHR_KEY]}_{x[START_KEY]}_{x[END_KEY]}", axis=1
+    ).tolist()
+    return regions
 
 
 def remove_zero_regions(cell_dict: Dict[str, int]) -> Dict[str, int]:
@@ -381,12 +399,15 @@ def convert_anndata_to_documents(
     docs = []
     _LOGGER.info("Generating documents.")
 
-    for row in tqdm(sc_df.iterrows(), total=sc_df.shape[0]):
-        row_dict = row[1].to_dict()
+    def process_row(row):
+        row_dict = row.to_dict()
         row_dict = remove_zero_regions(row_dict)
         new_doc = []
         for region_indx in row_dict:
             region_str = regions_parsed[int(region_indx)]
             new_doc.append(region_str)
-        docs.append(new_doc)
+        return new_doc
+
+    docs = sc_df.apply(process_row, axis=1).tolist()
+
     return docs
