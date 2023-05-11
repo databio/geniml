@@ -95,7 +95,8 @@ class AnnDataChunker:
 
     def __iter__(self):
         for i in range(self.n_chunks):
-            yield self.adata[i * self.chunk_size : (i + 1) * self.chunk_size, :]
+            chunk = self.adata[i * self.chunk_size : (i + 1) * self.chunk_size, :]
+            yield chunk.to_memory()
 
     def __len__(self):
         return self.n_chunks
