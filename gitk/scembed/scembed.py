@@ -207,6 +207,7 @@ class SCEmbed(Word2Vec):
         super().build_vocab(
             self.region_sets,
             update=False if not self.trained else True,
+            min_count=self.min_count,  # this shouldnt be needed but it is
         )
 
         for shuffle_num in range(epochs):
@@ -363,6 +364,7 @@ def remove_regions_below_min_count(
         [r for r in region_set if region_counts[r] >= min_count]
         for region_set in region_sets
     ]
+
     return region_sets
 
 
