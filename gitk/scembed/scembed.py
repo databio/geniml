@@ -279,7 +279,9 @@ class SCEmbed(Word2Vec):
 
     def cell_embeddings(self) -> sc.AnnData:
         """
-        Get the cell embeddings for the original AnnData passed in.
+        Get the cell embeddings for the original AnnData passed in. This should
+        be called after training is complete. It is only useful for extracting the
+        embeddings for the last chunk of data its seen.
         """
         if not self.trained:
             raise ValueError("Model has not been trained yet.")
@@ -316,6 +318,28 @@ class SCEmbed(Word2Vec):
 
         parsed_df = pd.DataFrame(parsed_rows)
         parsed_df.to_csv(output_path, index=False)
+
+    def anndata_to_embeddings(self, adata: sc.AnnData) -> sc.AnnData:
+        """
+        This function will take an AnnData object and add a column to the obs
+        attribute of the AnnData object that contains the embeddings for each
+        cell.
+
+        It does this by taking the regions for each cell and averaging the
+        embeddings for each region.
+
+        :param sc.AnnData adata: the AnnData object to add the embeddings to
+        :return sc.AnnData: the AnnData object with the embeddings added
+        """
+        region_sets = convert_anndata_to_documents(adata, self.use_default_region_names)
+        cell_embeddings = []
+        for cell in tqdm(region_sets, total=len(region_sets)):
+            cell_embedding = np.mean([self.get_embedding(r) for r in cell], axis=0)
+            cell_embeddings.append(cell_embedding)
+
+        # attach embeddings to the AnnData object
+        self.data.obs["embedding"] = cell_embeddings
+        return self.data
 
 
 def remove_regions_below_min_count(
