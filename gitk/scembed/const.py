@@ -4,9 +4,12 @@ __author__ = ["Nathan LeRoy", "Jason Smith", "Erfaneh Gharavi"]
 __email__ = "nleroy@virginia.edu"
 
 LOGGING_LEVEL = "INFO"
-PKG_NAME = "scembed"
+MODULE_NAME = "scembed"
 
-DEAFULT_N_SHUFFLES = 1000
+DEFAULT_EPOCHS = 100
+DEFAULT_GENSIM_EPOCHS = 1
+DEFAULT_MIN_COUNT = 10
+DEAFULT_N_SHUFFLES = 10
 DEFAULT_WINDOW_SIZE = 5
 DEFAULT_EMBEDDING_SIZE = 100
 DEFAULT_EPOCHS = 10
@@ -15,3 +18,9 @@ DEFAULT_INIT_LR = (
 )
 DEFAULT_MIN_LR = 0.0001  # gensim default
 DEFAULT_DECAY_RATE = 0.95
+
+DEFAULT_CHUNK_SIZE = 10000
+
+CHR_KEY = "chr"
+START_KEY = "start"
+END_KEY = "end"

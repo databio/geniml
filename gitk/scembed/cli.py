@@ -1,10 +1,11 @@
-import sys
 import os
+import sys
+
 import logmuse
 from gensim.models import Word2Vec
 
-from .argparser import build_argparser
 from ._version import __version__
+from .argparser import build_argparser
 from .const import *
 from .scembed import (
     convert_anndata_to_documents,
