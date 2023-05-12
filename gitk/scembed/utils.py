@@ -223,6 +223,9 @@ def convert_anndata_to_documents(
                         is most commonly used when the AnnData object was created without using
                         the var attribute.
     """
+    # enable progress bar
+    tqdm.pandas()
+
     if use_defaults:
         regions_parsed = [f"r{i}" for i in range(anndata.var.shape[0])]
         # drop var attribute since it messes with things
