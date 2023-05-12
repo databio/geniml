@@ -1,20 +1,20 @@
-import scanpy as sc
-import pandas as pd
-import numpy as np
 import pickle
-
-from typing import Dict, List, Union
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from logging import getLogger
 from random import shuffle
+from typing import Dict, List, Union
+
+import numpy as np
+import pandas as pd
+import scanpy as sc
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from numba import config
-from logging import getLogger
 from tqdm import tqdm
 
-from .exceptions import *
 from .const import *
+from .exceptions import *
 from .utils import LearningRateScheduler, ScheduleType
 
 _GENSIM_LOGGER = getLogger("gensim")

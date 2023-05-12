@@ -12,6 +12,7 @@ Then import `scEmbed` from `gitk`:
 
 ```python
 from gitk.scembed import SCEmbed
+
 ```
 
 ## Usage
