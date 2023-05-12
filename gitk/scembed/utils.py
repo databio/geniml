@@ -3,14 +3,16 @@ from collections import Counter
 from logging import getLogger
 from random import shuffle
 from concurrent.futures import ThreadPoolExecutor
-from typing import Union, List, Dict
+from typing import Union, List, Dict, TYPE_CHECKING
 
 import pandas as pd
 import scanpy as sc
 from tqdm import tqdm
 
+if TYPE_CHECKING:
+    from .scembed import SCEmbed
+
 from .const import *
-from .scembed import SCEmbed
 
 _LOGGER = getLogger(MODULE_NAME)
 
@@ -244,7 +246,7 @@ def convert_anndata_to_documents(
     return docs
 
 
-def load_scembed_model(path: str) -> SCEmbed:
+def load_scembed_model(path: str) -> 'SCEmbed':
     """
     Load a scembed model from disk.
 
