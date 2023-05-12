@@ -87,7 +87,7 @@ def clustering_batch(batch, K, save_folder, seed=0, num_workers=10):
     worker_func = clustering
     with mp.Pool(processes=num_workers) as pool:
         all_processes = []
-        for i, (path, embed_type) in enumerate(enumerate(batch)):
+        for i, (path, embed_type) in enumerate(batch):
             folder = os.path.join(save_folder, "model_{}".format(i))
             os.makedirs(folder, exist_ok=True)
             process = pool.apply_async(worker_func, (path, embed_type, K, folder))
