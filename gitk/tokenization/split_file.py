@@ -18,7 +18,7 @@ def split_file(file_path, dest_folder, num_parts):
     Split a list of files into a specified non-overlapping batches
 
     file_path: path to a list of files
-    dest_folder: name to store file splits
+    dest_folder: folder to store file splits
     num_parts: number of parts needed
     """
     if os.path.exists(dest_folder):

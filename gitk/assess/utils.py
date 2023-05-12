@@ -2,6 +2,11 @@ from subprocess import Popen, PIPE
 import subprocess
 import shlex
 import os
+import tempfile
+
+
+def help(f):
+    f.write(b"Welcome to geeksforgeeks")
 
 
 def prep_data(folder, file, tmp_file):
@@ -38,6 +43,24 @@ def process_line(line):
     pos = [int(i) for i in line[1:]]
     start = pos[0]
     return pos, start, chrom
+
+
+def chrom_cmp_bigger(a, b):
+    """Natural check if chromosomes name is bigger"""
+    ac = a.replace("chr", "")
+    ac = ac.split("_")[0]
+    bc = b.replace("chr", "")
+    bc = bc.split("_")[0]
+    if bc.isnumeric() and ac.isnumeric() and bc != ac:
+        if int(bc) < int(ac):
+            return True
+        else:
+            return False
+    else:
+        if b < a:
+            return True
+        else:
+            return False
 
 
 def process_db_line(dn, pos_index):
