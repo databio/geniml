@@ -74,7 +74,7 @@ def clustering(model_path, embed_type, n_clusters, save_folder, seed=0):
     np.random.seed(seed)
     embeds, vocab = load_genomic_embeddings(model_path, embed_type)
 
-    clustering = KMeans(n_clusters=K, random_state=seed, n_init="auto").fit(embeds)
+    clustering = KMeans(n_clusters=n_clusters, random_state=seed, n_init="auto").fit(embeds)
     labels = clustering.labels_
     cluster_idxes = np.sort(np.unique(labels))
     for c in cluster_idxes:
