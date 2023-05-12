@@ -78,13 +78,12 @@ def main(test_args=None):
                 args.raw_data_folder,
                 args.file_list,
                 args.universe,
-                args.no_workers,
+                args.npool,
                 args.flexible,
                 args.save_to_file,
                 args.folder_out,
                 args.pref,
                 args.save_each,
-                args.universe_to_file,
             )
 
         if args.subcommand == "intersection":
@@ -94,7 +93,20 @@ def main(test_args=None):
                 args.raw_data_folder,
                 args.file_list,
                 args.universe,
-                args.no_workers,
+                args.npool,
+                args.save_to_file,
+                args.folder_out,
+                args.pref,
+            )
+
+        if args.subcommand == "recovered":
+            from .assess.recovered import run_recovered
+
+            run_recovered(
+                args.raw_data_folder,
+                args.file_list,
+                args.universe,
+                args.npool,
                 args.save_to_file,
                 args.folder_out,
                 args.pref,
@@ -106,7 +118,7 @@ def main(test_args=None):
             from .likelihood.build_model import main
 
             main(
-                args.model_file,
+                args.model_folder,
                 args.coverage_folder,
                 args.coverage_prefix,
                 args.file_no,
@@ -116,15 +128,17 @@ def main(test_args=None):
             from .likelihood.universe_hard import main
 
             main(
-                args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff
+                args.coverage_file,
+                args.fout,
+                args.merge,
+                args.filter_size,
+                args.cut_off,
             )
 
         if args.subcommand == "universe_flexible":
             from .likelihood.universe_flexible import main
 
-            main(
-                args.model_file, args.cov_folder, args.coverage_prefix, args.output_file
-            )
+            main(args.model_folder, args.output_file)
 
     if args.command == "hmm":
         from .hmm.hmm import run_hmm_save_bed
@@ -133,7 +147,7 @@ def main(test_args=None):
             coverage_folder=args.cov_folder,
             out_file=args.out_file,
             prefix=args.coverage_prefix,
-            normalize=args.not_normalize,
+            normalize=args.normalize,
             save_max_cove=args.save_max_cove,
         )
 

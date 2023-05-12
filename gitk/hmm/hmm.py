@@ -20,7 +20,7 @@ _LOGGER = getLogger(PKG_NAME)
 transmat = [
     [1 - 1e-10, 1e-10, 0, 0],
     [0, 1 - 1e-6, 1e-6, 0],
-    [0, 0, 1 - 1e-10, 1e-10],
+    [0, 0, 1 - 1e-6, 1e-6],
     [0.1, 0, 0, 0.9],
 ]
 
@@ -38,7 +38,7 @@ def norm(track, mode):
     important_val_unique_sort = np.sort(important_val_unique)
     if mode == "ends":
         n = 0.1
-    else:
+    if mode == "core":
         n = 0.085
     bs = 0  # what fraction of the distribution was used for normalization
     val = {}  # for each unique value in track holds the corresponding quantile
@@ -50,7 +50,7 @@ def norm(track, mode):
     track[track != 0] = [val[i] for i in important_val]
 
 
-def process_bigwig(file, seq, p, chrom, chrom_size, normalize=True, mode=None):
+def process_bigwig(file, seq, p, chrom, chrom_size, normalize=False, mode=None):
     """Preprocess bigWig file"""
     if pyBigWig.numpy:
         track = file.values(chrom, 0, chrom_size, numpy=True)
@@ -64,7 +64,7 @@ def process_bigwig(file, seq, p, chrom, chrom_size, normalize=True, mode=None):
     seq[:, p] = track
 
 
-def read_data(start, core, end, chrom, normalize=True):
+def read_data(start, core, end, chrom, normalize=False):
     """
     Read in and preprocess data
     :param str start: path to file with start coverage
@@ -90,12 +90,8 @@ def read_data(start, core, end, chrom, normalize=True):
 
 
 def find_full_full_pos(seq, gap_size=1000, area_size=500):
-    """Look for nonzero positions in coverage matrix, when most of the positions are zero
-    :param ndarray seq: vector with information about non-zero positions
-    :param int gap_size: size of minium gap between non-zero positions that are separated
-    :param int area_size: size of the area around non-zero positions to be included in the result
-    :return list: list of starts of non-zero regions and list of ends of non-zero regions
-    """
+    """Look for nonzero positions in coverage matrix,
+    when most of the positions are zero"""
     size = len(seq)
     seq = np.argwhere(seq >= 1).flatten()
     starts, ends = [], []
@@ -112,12 +108,8 @@ def find_full_full_pos(seq, gap_size=1000, area_size=500):
 
 
 def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
-    """Look for nonzero positions in coverage matrix, when most of the positions are nonzero
-    :param ndarray seq: vector with information about non-zero positions
-    :param int gap_size: size of minium gap between non-zero positions that are separated
-    :param int area_size: size of the area around non-zero positions to be included in the result
-    :return list: list of starts of non-zero regions and list of ends of non-zero regions
-    """
+    """Look for nonzero positions in coverage matrix,
+    when most of the positions are nonzero"""
     size = len(seq)
     seq = np.argwhere(seq == 0).flatten()
     starts, ends = [], []
@@ -165,12 +157,13 @@ def ana_region(region, start_s):
 def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None):
     """
     Save HMM prediction into a file
-    :param ndarray states: result of HMM prediction
+    :param array states: result of HMM prediction
     :param str chrom: which chromosome is being analysed
     :param str bedname: path to the output file
-    :param bool save_max_cove: whether to save the maximum peak coverage to output
-     file, can result in nonstandard bed file
-    :param str cove_file: file with core coverage, require for saving maximum peak coverage
+    :param bool save_max_cove: whether to save the maximum peak
+     coverage to output file, can result in nonstandard bed file
+    :param str cove_file: file with core coverage, require for
+     saving maximum peak coverage
     """
     ind = np.argwhere(states != 3)
     ind = ind.flatten()
@@ -236,7 +229,7 @@ def split_predict(seq, empty_starts, empty_ends, model):
     return hmm_predictions
 
 
-def run_hmm(start, core, end, chrom, normalize=True):
+def run_hmm(start, core, end, chrom, normalize=False):
     """Make HMM prediction for given chromosome"""
     chrom_size, seq = read_data(start, core, end, chrom, normalize=normalize)
     empty_starts, empty_ends = find_full(seq)
@@ -250,16 +243,19 @@ def run_hmm_save_bed(
     coverage_folder,
     out_file,
     prefix="all",
-    normalize=True,
+    normalize=False,
     save_max_cove=False,
 ):
     """
     Create HMM based univers from coverage
-    :param str coverage_folder: path to name with coverage files
-    :param str prefix: prefix of coverage files
+    :param coverage_folder: path to folder with coverage files
+    :param str start: start coverage file name
+    :param str end: end coverage file name
+    :param str core: core coverage file name
     :param str out_file: path to the output file with universe
     :param bool normalize: whether to normalize file
-    :param bool save_max_cove: whether to save the maximum peak coverage
+    :param bool save_max_cove: whether to save the maximum
+    peak coverage
     """
     if os.path.isfile(out_file):
         raise Exception(f"File : {out_file} exists")

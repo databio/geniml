@@ -14,8 +14,8 @@ class Namespace:
 
 
 def region2vec(
-    token_folder,  # path to the name of tokenized files
-    save_dir,  # name to save the training results
+    token_folder,  # path to the folder of tokenized files
+    save_dir,  # folder to save the training results
     file_list=None,  # specifies which files from token_folder are used for training
     data_type="files",
     mat_path=None,

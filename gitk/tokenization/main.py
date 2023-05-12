@@ -57,7 +57,7 @@ def hard_tokenization_main(
         return 1
     elif len(existing_set) > 0:
         print(
-            "Folder {} exists with incomplete tokenized files. Please empty/delete the name first".format(
+            "Folder {} exists with incomplete tokenized files. Please empty/delete the folder first".format(
                 dst_folder
             )
         )
