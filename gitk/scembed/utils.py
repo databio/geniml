@@ -225,6 +225,11 @@ def convert_anndata_to_documents(
     """
     if use_defaults:
         regions_parsed = [f"r{i}" for i in range(anndata.var.shape[0])]
+        # drop var attribute since it messes with things
+        anndata.var.drop(anndata.var.columns, axis=1, inplace=True)
+        anndata.var.reset_index(inplace=True)
+
+        # add the region column back in
         anndata.var["region"] = regions_parsed
     else:
         regions_parsed = extract_region_list(anndata.var)
