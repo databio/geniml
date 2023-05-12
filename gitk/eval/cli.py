@@ -5,9 +5,9 @@ def build_subparser_gdst(parser):
     :return argparse.ArgumentParser
     """
 
-    parser.add_argument("--model_path", required=True, type=str)
-    parser.add_argument("--embed_type", required=True, type=str)
-    parser.add_argument("--num_samples", default=10000, type=int)
+    parser.add_argument("--model-path", required=True, type=str)
+    parser.add_argument("--embed-type", required=True, type=str)
+    parser.add_argument("--num-samples", default=10000, type=int)
 
     return parser
 
@@ -18,10 +18,10 @@ def build_subparser_npt(parser):
 
     :return argparse.ArgumentParser
     """
-    parser.add_argument("--model_path", required=True, type=str)
-    parser.add_argument("--embed_type", required=True, type=str)
+    parser.add_argument("--model-path", required=True, type=str)
+    parser.add_argument("--embed-type", required=True, type=str)
     parser.add_argument("--K", required=True, type=int)
-    parser.add_argument("--num_samples", default=1000, type=int)
+    parser.add_argument("--num-samples", default=1000, type=int)
 
     return parser
 
@@ -32,13 +32,13 @@ def build_subparser_cct_tss(parser):
 
     :return argparse.ArgumentParser
     """
-    parser.add_argument("--model_path", required=True, type=str)
-    parser.add_argument("--embed_type", required=True, type=str)
-    parser.add_argument("--save_folder", required=True, type=str)
-    parser.add_argument("--Rscript_path", required=True, type=str)
+    parser.add_argument("--model-path", required=True, type=str)
+    parser.add_argument("--embed-type", required=True, type=str)
+    parser.add_argument("--save-folder", required=True, type=str)
+    parser.add_argument("--Rscript-path", required=True, type=str)
     parser.add_argument("--assembly", required=True, type=str)
     parser.add_argument("--threshold", default=0.0001, type=float)
-    parser.add_argument("--num_samples", default=1000, type=int)
+    parser.add_argument("--num-samples", default=1000, type=int)
 
     return parser
 
