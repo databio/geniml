@@ -1,5 +1,7 @@
 import scanpy as sc
 from time import time
+import pyBigWig
+import numpy as np
 
 
 def natural_chr_sort(a, b):
@@ -32,6 +34,17 @@ def timer_func(func):
         return result
 
     return wrap_func
+
+
+def read_chromosome_from_bw(file, chrom):
+    bw = pyBigWig.open(file)
+    chrom_size = bw.chroms(chrom)
+    if pyBigWig.numpy:
+        cove = bw.values(chrom, 0, chrom_size, numpy=True)
+    else:
+        cove = bw.values(chrom, 0, chrom_size)
+        cove = np.array(cove)
+    return cove.astype(np.uint16)
 
 
 class AnnDataChunker:

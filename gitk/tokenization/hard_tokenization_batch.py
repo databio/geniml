@@ -52,7 +52,7 @@ def generate_tokens(
         not_covered = all_set - existing_set
         number = len(not_covered)
         if number == 0:
-            print("Use the existing folder {}".format(token_folder), flush=True)
+            print("Use the existing name {}".format(token_folder), flush=True)
             return 0
         else:
             print(
