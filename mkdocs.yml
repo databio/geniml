@@ -9,7 +9,6 @@ nav:
     - Introduction: README.md
   - How-to guides:    
     - Create consensus peaks: likelihood/consensus-peaks.md
-    - Assess universe fit to collection: likelihood/assess.md
   - Reference:
     - API: autodoc_build/gitk.md
     - Support: support.md

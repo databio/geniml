@@ -1,7 +1,5 @@
 import scanpy as sc
 from time import time
-import pyBigWig
-import numpy as np
 
 
 def natural_chr_sort(a, b):
@@ -34,7 +32,6 @@ def timer_func(func):
         return result
 
     return wrap_func
-
 
 def read_chromosome_from_bw(file, chrom):
     bw = pyBigWig.open(file)
