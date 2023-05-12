@@ -246,7 +246,7 @@ def convert_anndata_to_documents(
     return docs
 
 
-def load_scembed_model(path: str) -> 'SCEmbed':
+def load_scembed_model(path: str) -> "SCEmbed":
     """
     Load a scembed model from disk.
 
