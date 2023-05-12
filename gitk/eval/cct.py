@@ -70,7 +70,7 @@ def get_cluster_regions(cluster_idx, labels, vocab, path):
             f.write("{}\t{}\t{}\n".format(chr_name, start, end))
 
 
-def clustering(model_path, embed_type, K, save_folder, seed=0):
+def clustering(model_path, embed_type, n_clusters, save_folder, seed=0):
     np.random.seed(seed)
     embeds, vocab = load_genomic_embeddings(model_path, embed_type)
 
