@@ -43,15 +43,12 @@ for chunk in tqdm(chunker):
     i += 1
 
 # %%
-# get embeddings out of the adata object
+# save the model locally
 model.save_model("buenrostro2018.model")
 
 # %%
-model.load_model("buenrostro2018.model")
-
-# %%
 adata = sc.read_h5ad("../data/buenrostro2018.h5ad")
-documents = scembed.convert_anndata_to_documents(adata)
+documents = scembed.convert_anndata_to_documents(adata, use_defaults=False)
 
 # %%
 import numpy as np
@@ -72,17 +69,17 @@ for cell in tqdm(documents, total=len(documents)):
 adata.obs["embedding"] = cell_embeddings
 
 # %%
+import pandas as pd
+
 # add cell type labels using the metadata
 metadata = pd.read_csv(
-    "../data/buenrostro_metadata.tsv", sep="\t", skiprows=1, names=["id", "label"]
+    "../data/metadata.tsv", sep="\t", skiprows=1, names=["id", "label"]
 )
 
 adata.obs["label"] = adata.obs["id"].map(metadata.set_index("id")["label"])
 
 
 # %%
-import pandas as pd
-
 embeddings_df = pd.DataFrame(adata.obs["embedding"].tolist())
 
 # %%
@@ -97,20 +94,31 @@ adata.obs["umap1"] = umap_embeddings[:, 0]
 adata.obs["umap2"] = umap_embeddings[:, 1]
 
 # %%
-
-
-# attach cell types
-embeddings_df["color"] = embeddings_df["id"].map(metadata.set_index("id")["label"])
+# attach cell type colors
+embeddings_df["color"] = adata.obs["label"].map(COLORMAP)
+adata.obs["color"] = adata.obs["label"].map(COLORMAP)
 
 # %%
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 fig, ax = plt.subplots(figsize=(10, 10))
-sns.scatterplot(data=adata.obs, x="umap1", y="umap2", ax=ax, s=10, alpha=1)
+sns.scatterplot(
+    data=adata.obs,
+    x="umap1",
+    y="umap2",
+    hue="color",
+    ax=ax,
+    s=20,
+    alpha=1,
+)
 ax.set_title("UMAP of Buenrostro 2018 data")
 ax.set_xlabel("UMAP 1")
 ax.set_ylabel("UMAP 2")
+
+# add cell types back to legend
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles=handles[1:], labels=labels[1:], bbox_to_anchor=(1.05, 1), loc=2)
 
 # increase font
 for item in (

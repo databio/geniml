@@ -4,7 +4,7 @@ __author__ = ["Nathan LeRoy", "Jason Smith", "Erfaneh Gharavi"]
 __email__ = "nleroy@virginia.edu"
 
 LOGGING_LEVEL = "INFO"
-PKG_NAME = "scembed"
+MODULE_NAME = "scembed"
 
 DEFAULT_EPOCHS = 100
 DEFAULT_GENSIM_EPOCHS = 1
