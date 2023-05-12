@@ -11,4 +11,3 @@ seaborn
 tqdm
 umap-learn
 ubiquerg
-scipy

@@ -136,7 +136,9 @@ if __name__ == "__main__":
     parser.add_argument("--file_list", help="path to a file list")
     parser.add_argument("--tokenization_mode", help="tokenization mode")
     parser.add_argument("--tokenization_folder", help="path to the tokenized regions")
-    parser.add_argument("--save_dir", help="parent name to generated shuffled datasets")
+    parser.add_argument(
+        "--save_dir", help="parent folder to generated shuffled datasets"
+    )
     parser.add_argument(
         "--pool",
         type=int,
