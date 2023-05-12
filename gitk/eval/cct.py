@@ -10,7 +10,7 @@ from scipy.stats import rankdata
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import multiprocessing as mp
-from gitk.eval import load_genomic_embeddings
+from gitk.eval.utils import load_genomic_embeddings
 import subprocess
 
 
@@ -74,7 +74,7 @@ def clustering(model_path, embed_type, K, save_folder, seed=0):
     np.random.seed(seed)
     embeds, vocab = load_genomic_embeddings(model_path, embed_type)
 
-    clustering = KMeans(n_clusters=K, random_state=seed).fit(embeds)
+    clustering = KMeans(n_clusters=K, random_state=seed, n_init="auto").fit(embeds)
     labels = clustering.labels_
     cluster_idxes = np.sort(np.unique(labels))
     for c in cluster_idxes:
@@ -101,7 +101,7 @@ def cal_significance_val(pvals, threshold):
     return num / len(pvals)
 
 
-def clustering_significance_test(
+def get_scctss(
     model_path,
     embed_type,
     save_folder,
@@ -120,7 +120,7 @@ def clustering_significance_test(
     subprocess.call(
         [
             Rscript_path,
-            "{}/permutation_test.R".format(curr_folder),
+            "{}/permutation.R".format(curr_folder),
             "--assembly",
             assembly,
             "--num_workers",
@@ -133,8 +133,11 @@ def clustering_significance_test(
     )
     scores = []
     for K in K_arr:
-        target_path = os.path.join(save_folder, "Kmeans_{}".format(K), "pvals.txt")
-        with open(target_path, "r") as f:
+        target_folder = os.path.join(save_folder, "Kmeans_{}".format(K))
+        tmp_files = glob.glob(os.path.join(target_folder, "cluster_*.bed"))
+        for tmp in tmp_files:
+            os.remove(tmp)
+        with open(os.path.join(target_folder, "pvals.txt"), "r") as f:
             pvals = f.readlines()
         pvals = np.array([float(p.strip()) for p in pvals])
         score = cal_significance_val(pvals, threshold)
@@ -150,7 +153,7 @@ def clustering_significance_test(
     return scores
 
 
-def clustering_significance_test_batch(
+def get_scctss_batch(
     batch,
     save_folder,
     Rscript_path,
@@ -164,7 +167,7 @@ def clustering_significance_test_batch(
     scores_batch = []
     for i, (model_path, embed_type) in enumerate(batch):
         target_folder = os.path.join(save_folder, "model_{}".format(i))
-        scores = clustering_significance_test(
+        scores = get_scctss(
             model_path,
             embed_type,
             target_folder,
@@ -182,7 +185,7 @@ def clustering_significance_test_batch(
     return scores_batch, avg_ranks
 
 
-def cst_eval(
+def cct_tss_eval(
     batch,
     save_folder,
     Rscript_path,
@@ -195,8 +198,8 @@ def cst_eval(
 ):
     avg_ranks_arr = []
     for seed in range(num_runs):
-        target_folder = os.path.join(save_folder, "cst_seed{}".format(seed))
-        scores_batch, avg_ranks = clustering_significance_test_batch(
+        target_folder = os.path.join(save_folder, "cct_tss_seed{}".format(seed))
+        scores_batch, avg_ranks = get_scctss_batch(
             batch,
             target_folder,
             Rscript_path,
@@ -208,12 +211,18 @@ def cst_eval(
             seed,
         )
         avg_ranks_arr.append(avg_ranks)
+        result_path = os.path.join(save_folder, "cct_tss_seed{}.pickle".format(seed))
+        scores_batch = [
+            (batch[i][0], scores_batch[i]) for i in range(len(scores_batch))
+        ]
+        with open(result_path, "wb") as f:
+            pickle.dump(scores_batch, f)
     avg_ranks_arr = np.vstack(avg_ranks_arr)
     avg_ranks_arr = [(batch[i][0], avg_ranks_arr[:, i]) for i in range(num_runs)]
     return avg_ranks_arr
 
 
-def cst_plot(avg_ranks_arr, row_labels=None, legend_pos=(0.25, 0.6), filename=None):
+def cct_tss_plot(avg_ranks_arr, row_labels=None, legend_pos=(0.25, 0.6), filename=None):
     mean_rank = [t[1].mean() for t in avg_ranks_arr]
     std_rank = [t[1].std() for t in avg_ranks_arr]
     mean_rank_tuple = [(i, r) for i, r in enumerate(mean_rank)]

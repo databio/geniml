@@ -8,7 +8,7 @@ import argparse
 from gensim.models import Word2Vec
 import time
 import multiprocessing as mp
-from gitk.eval import load_genomic_embeddings
+from gitk.eval.utils import load_genomic_embeddings
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
@@ -33,7 +33,7 @@ func_rdist = lambda u, v: float(u[1] < v[1]) * max(v[0] - u[1] + 1, 0) + float(
 ) * max(u[0] - v[1] + 1, 0)
 
 
-def get_topk_embed(i, K, embed, dist="euclidean"):
+def get_topk_embed(i, K, embed, dist="cosine"):
     """
     Return the indices for the most similar K regions to the i-th region
     embed is the embedding matrix for all the regions in the vocabulary of a region2vec model
@@ -80,8 +80,18 @@ def find_Kneighbors(region_array, index, K):
     return Kneighbors_idx
 
 
-def calculate_overlap(i, K, chromo, region_array, region2index, embed_rep):
-    Kindices = find_Kneighbors(region_array, i, K)
+def calculate_overlap_bins(
+    local_idx,
+    K,
+    chromo,
+    region_array,
+    region2index,
+    embed_rep,
+    res=10,
+    dist="cosine",
+    same_chromo=True,
+):
+    Kindices = find_Kneighbors(region_array, local_idx, K)
     if len(Kindices) == 0:
         return 0
     str_kregions = [
@@ -89,28 +99,20 @@ def calculate_overlap(i, K, chromo, region_array, region2index, embed_rep):
     ]  # sorted in ascending order
     _Krdist_global_indices = np.array([region2index[r] for r in str_kregions])
 
-    idx = region2index["{}:{}-{}".format(chromo, *region_array[i])]
-    _Kedist_global_indices, _ = get_topk_embed(
-        idx, K, embed_rep
-    )  # sorted in ascending order
-
-    overlap = len(set(_Krdist_global_indices).intersection(set(_Kedist_global_indices)))
-    return overlap
-
-
-def calculate_overlap_bins(i, K, chromo, region_array, region2index, embed_rep, res=50):
-    Kindices = find_Kneighbors(region_array, i, K)
-    if len(Kindices) == 0:
-        return 0
-    str_kregions = [
-        "{}:{}-{}".format(chromo, *region_array[k]) for k in Kindices
-    ]  # sorted in ascending order
-    _Krdist_global_indices = np.array([region2index[r] for r in str_kregions])
-
-    idx = region2index["{}:{}-{}".format(chromo, *region_array[i])]
-    _Kedist_global_indices, _ = get_topk_embed(
-        idx, K, embed_rep
-    )  # sorted in ascending order
+    if same_chromo:
+        chr_regions = [
+            "{}:{}-{}".format(chromo, *region_array[k])
+            for k in range(len(region_array))
+        ]
+        chr_global_indices = np.array([region2index[r] for r in chr_regions])
+        chr_embeds = embed_rep[chr_global_indices]
+        _Kedist_local_indices, _ = get_topk_embed(local_idx, K, chr_embeds, dist)
+        _Kedist_global_indices = np.array(
+            [chr_global_indices[i] for i in _Kedist_local_indices]
+        )
+    else:
+        idx = region2index["{}:{}-{}".format(chromo, *region_array[local_idx])]
+        _Kedist_global_indices, _ = get_topk_embed(idx, K, embed_rep, dist)
 
     bin_overlaps = []
     prev = 0
@@ -119,42 +121,35 @@ def calculate_overlap_bins(i, K, chromo, region_array, region2index, embed_rep, 
         set1 = set(_Krdist_global_indices[prev:i])
         set2 = set(_Kedist_global_indices[prev:i])
 
-        overlap = len(set1.intersection(set2)) / min(i, len(set1))
+        overlap = len(set1.intersection(set2)) / len(set1)
         bin_overlaps.append(overlap)
 
     return np.array(bin_overlaps)
 
 
-def calculate_overlap_same_chromosome(i, K, chromo, region_array, embed_rep, dist):
-    _Krindices = find_Kneighbors(region_array, i, K)
-    if len(_Krindices) == 0:
-        return np.zeros(K)
-    Krindices = np.ones(K) * (-1)
-    Krindices[0 : len(_Krindices)] = _Krindices
-
-    _Keindices, _ = get_topk_embed(i, K, embed_rep, dist)
-    Keindices = np.ones(K) * (-2)
-    Keindices[0 : len(_Keindices)] = _Keindices
-
-    # overlap = set(Krindices).intersection(set(Keindices))
-    overlap = (Krindices == Keindices).astype(np.float)
-    return overlap
-
-
 def cal_snpr(ratio_embed, ratio_random):
-    return np.log10((ratio_embed + 1.0e-10) / (ratio_random + 1.0e-10))
+    res = np.log10((ratio_embed + 1.0e-10) / (ratio_random + 1.0e-10))
+    res = np.maximum(res, 0)
+    return res
 
 
 var_dict = {}
 
 
-def worker_func(i, K, chromo, region_array, embed_type, resolution):
+def worker_func(i, K, chromo, region_array, embed_type, resolution, dist):
     if embed_type == "embed":
         embeds = var_dict["embed_rep"]
     elif embed_type == "random":
         embeds = var_dict["ref_embed"]
     nprs = calculate_overlap_bins(
-        i, K, chromo, region_array, var_dict["region2vec_index"], embeds, resolution
+        i,
+        K,
+        chromo,
+        region_array,
+        var_dict["region2vec_index"],
+        embeds,
+        resolution,
+        dist,
     )
     return nprs
 
@@ -165,18 +160,23 @@ def init_worker(embed_rep, ref_embed, region2index):
     var_dict["region2vec_index"] = region2index
 
 
-def neighborhood_preserving_test(
-    model_path, embed_type, K, num_samples=100, seed=0, resolution=None, num_workers=10
+def get_snpr(
+    model_path,
+    embed_type,
+    K,
+    num_samples=100,
+    seed=0,
+    resolution=10,
+    dist="cosine",
+    num_workers=10,
 ):
     """
     If sampling > 0, then randomly sample num_samples regions in total (proportional for each chromosome)
 
     If num_samples == 0, all regions are used in calculation
     """
-    embed_rep, regions_r2v = load_genomic_embeddings(model_path, embed_type)
     timer = Timer()
-    if resolution is None:
-        resolution = K
+    embed_rep, regions_r2v = load_genomic_embeddings(model_path, embed_type)
 
     region2index = {r: i for i, r in enumerate(regions_r2v)}
     # Group regions by chromosomes
@@ -210,12 +210,40 @@ def neighborhood_preserving_test(
     avg_ratio_ref = 0.0
     count = 0
 
-    with mp.Pool(
-        processes=num_workers,
-        initializer=init_worker,
-        initargs=(embed_rep, ref_embed, region2index),
-    ) as pool:
-        all_processes = []
+    if num_workers > 1:
+        with mp.Pool(
+            processes=num_workers,
+            initializer=init_worker,
+            initargs=(embed_rep, ref_embed, region2index),
+        ) as pool:
+            all_processes = []
+            for chromo in chromo_regions:
+                region_array = chromo_regions[chromo]
+                if num_samples == 0:  # exhaustive
+                    indexes = list(range(len(region_array)))
+                else:
+                    num = min(
+                        len(region_array), round(num_samples * chromo_ratios[chromo])
+                    )
+                    indexes = np.random.permutation(len(region_array))[0:num]
+                for i in indexes:
+                    process_embed = pool.apply_async(
+                        worker_func,
+                        (i, K, chromo, region_array, "embed", resolution, dist),
+                    )
+                    process_random = pool.apply_async(
+                        worker_func,
+                        (i, K, chromo, region_array, "random", resolution, dist),
+                    )
+                    all_processes.append((process_embed, process_random))
+
+            for i, (process_embed, process_random) in enumerate(all_processes):
+                avg_ratio = (avg_ratio * count + process_embed.get()) / (count + 1)
+                avg_ratio_ref = (avg_ratio_ref * count + process_random.get()) / (
+                    count + 1
+                )
+                count = count + 1
+    else:
         for chromo in chromo_regions:
             region_array = chromo_regions[chromo]
             if num_samples == 0:  # exhaustive
@@ -224,18 +252,29 @@ def neighborhood_preserving_test(
                 num = min(len(region_array), round(num_samples * chromo_ratios[chromo]))
                 indexes = np.random.permutation(len(region_array))[0:num]
             for i in indexes:
-                process_embed = pool.apply_async(
-                    worker_func, (i, K, chromo, region_array, "embed", resolution)
+                nprs_embed = calculate_overlap_bins(
+                    i,
+                    K,
+                    chromo,
+                    region_array,
+                    region2index,
+                    embed_rep,
+                    resolution,
+                    dist,
                 )
-                process_random = pool.apply_async(
-                    worker_func, (i, K, chromo, region_array, "random", resolution)
+                nprs_random = calculate_overlap_bins(
+                    i,
+                    K,
+                    chromo,
+                    region_array,
+                    region2index,
+                    ref_embed,
+                    resolution,
+                    dist,
                 )
-                all_processes.append((process_embed, process_random))
-
-        for i, (process_embed, process_random) in enumerate(all_processes):
-            avg_ratio = (avg_ratio * count + process_embed.get()) / (count + 1)
-            avg_ratio_ref = (avg_ratio_ref * count + process_random.get()) / (count + 1)
-            count = count + 1
+                avg_ratio = (avg_ratio * count + nprs_embed) / (count + 1)
+                avg_ratio_ref = (avg_ratio_ref * count + nprs_random) / (count + 1)
+                count = count + 1
     snprs = cal_snpr(avg_ratio, avg_ratio_ref)
 
     ratio_msg = " ".join(["{:.6f}".format(r) for r in avg_ratio])
@@ -243,16 +282,17 @@ def neighborhood_preserving_test(
     snprs_msg = " ".join(["{:.6f}".format(r) for r in snprs])
     print(model_path)
 
-    print(
-        "[seed={}] K={}\n[{}]: {}\n[Random]: {}\n[SNPR] {}".format(
-            seed, K, embed_type, ratio_msg, ratio_ref_msg, snprs_msg
-        )
-    )
+    # print(
+    #     "[seed={}] K={}\n[{}]: {}\n[Random]: {}\n[SNPR] {}".format(
+    #         seed, K, embed_type, ratio_msg, ratio_ref_msg, snprs_msg
+    #     )
+    # )
     result = {
         "K": K,
         "AvgENPR": avg_ratio,
         "AvgRNPR": avg_ratio_ref,
         "SNPR": snprs,
+        "Resolution": resolution,
         "Path": model_path,
     }
     elapsed_time = timer.measure()
@@ -275,14 +315,21 @@ def writer_multiprocessing(save_path, num, q):
     return results
 
 
-def neighborhood_preserving_test_batch(
-    batch, K, num_samples=100, num_workers=10, seed=0, save_path=None
+def get_snpr_batch(
+    batch,
+    K,
+    num_samples=100,
+    num_workers=10,
+    seed=0,
+    resolution=10,
+    dist="cosine",
+    save_path=None,
 ):
     print("Total number of models: {}".format(len(batch)))
     result_list = []
     for index, (path, embed_type) in enumerate(batch):
-        result = neighborhood_preserving_test(
-            path, embed_type, K, num_samples, seed, K, num_workers
+        result = get_snpr(
+            path, embed_type, K, num_samples, seed, resolution, dist, num_workers
         )
         result_list.append(result)
     if save_path:
@@ -292,8 +339,41 @@ def neighborhood_preserving_test_batch(
     return result_list
 
 
-def npt_eval(batch, K, num_samples=100, num_workers=10, num_runs=20, save_folder=None):
+# def get_snpr_batch(
+#     batch, K, num_samples=100, num_workers=10, seed=0, resolution=10, dist='cosine', save_path=None
+# ):
+#     print("Total number of models: {}".format(len(batch)))
+#     result_list = []
+#     with mp.Pool(
+#         processes=num_workers
+#     ) as pool:
+#         all_processes = []
+#         for index, (path, embed_type) in enumerate(batch):
+#             process = pool.apply_async(
+#                         get_snpr, (path, embed_type, K, num_samples, seed, resolution, dist, 0)
+#                     )
+#             all_processes.append(process)
+#     for process in all_processes:
+#         result_list.append(process.get())
+#     if save_path:
+#         os.makedirs(os.path.dirname(save_path), exist_ok=True)
+#         with open(save_path, "wb") as f:
+#             pickle.dump(result_list, f)
+#     return result_list
+
+
+def npt_eval(
+    batch,
+    K,
+    num_samples=100,
+    num_workers=10,
+    num_runs=20,
+    resolution=10,
+    dist="cosine",
+    save_folder=None,
+):
     results_seeds = []
+    assert resolution < K, "resolution < K"
     for seed in range(num_runs):
         print("----------------Run {}----------------".format(seed))
         save_path = (
@@ -301,12 +381,14 @@ def npt_eval(batch, K, num_samples=100, num_workers=10, num_runs=20, save_folder
             if save_folder
             else None
         )
-        result_list = neighborhood_preserving_test_batch(
+        result_list = get_snpr_batch(
             batch,
             K,
             num_samples=num_samples,
             num_workers=num_workers,
             seed=seed,
+            resolution=resolution,
+            dist=dist,
             save_path=save_path,
         )
         results_seeds.append(result_list)
@@ -320,12 +402,21 @@ def npt_eval(batch, K, num_samples=100, num_workers=10, num_runs=20, save_folder
     snpr_results = [np.array(v) for v in snpr_results]
     print(snpr_results[0].shape)
     for i in range(len(batch)):
+        snpr_arr = snpr_results[i]
+        avg_snprs = snpr_arr.mean(axis=0)
+        std_snprs = snpr_arr.std(axis=0)
         print(
-            "{}\nSNPR_Avg (std):{:.6f} ({:.6f})".format(
-                paths[i], snpr_results[i][:, 0].mean(), snpr_results[i][:, 0].std()
+            "{}\nSNPRs:{}\n".format(
+                paths[i],
+                " ".join(
+                    [
+                        "{:.4f}({:.4f})".format(m, s)
+                        for m, s in zip(avg_snprs, std_snprs)
+                    ]
+                ),
             )
         )
-    snpr_results = [(paths[i], snpr_results[i]) for i in range(len(batch))]
+    snpr_results = [(paths[i], snpr_results[i], resolution) for i in range(len(batch))]
     return snpr_results
 
 
@@ -336,16 +427,19 @@ def get_npt_results(save_paths):
             results = pickle.load(f)
             for result in results:
                 key = result["Path"]
+                resolution = result["Resolution"]
                 if key in snpr_results:
                     snpr_results[key].append(result["SNPR"])
                 else:
                     snpr_results[key] = [result["SNPR"]]
-    snpr_results = [(k, np.array(v)) for k, v in snpr_results.items()]
+    snpr_results = [(k, np.array(v), resolution) for k, v in snpr_results.items()]
     return snpr_results
 
 
 def snpr_plot(snpr_data, row_labels=None, legend_pos=(0.25, 0.6), filename=None):
-    snpr_vals = [(k, v[:, 0].mean(), v[:, 0].std()) for k, v in snpr_data]
+    snpr_vals = [
+        (k, v.sum(axis=1).mean(), v.sum(axis=1).std()) for k, v, res in snpr_data
+    ]
     cmap = plt.get_cmap("Set1")
     cmaplist = [cmap(i) for i in range(9)]
     if row_labels is None:
