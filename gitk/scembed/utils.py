@@ -423,3 +423,45 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
             ]
         )
     return regions
+
+
+def barcode_mtx_peaks_to_anndata(
+    barcodes_path: str, mtx_path: str, peaks_path: str, transpose: bool = True
+) -> sc.AnnData:
+    """
+    This function will take three files:
+
+    1. a barcodes file (.tsv)
+    2. a matrix file (.mtx)
+    3. a peaks file (.bed)
+
+    And turn them into an AnnData object. It will attach the peaks
+    as a .var attribute (chr, start, end) and the barcodes as a .obs attribute (index)
+
+    :param str barcodes_path: the path to the barcodes file
+    :param str mtx_path: the path to the matrix file
+    :param str peaks_path: the path to the peaks file
+    :param bool transpose: whether or not to transpose the matrix
+
+    :return sc.AnnData: an AnnData object
+    """
+    from scipy.io import mmread
+
+    # load the barcodes
+    barcodes = pd.read_csv(barcodes_path, sep="\t", header=None)
+    barcodes.columns = ["barcode"]
+    barcodes.index = barcodes["barcode"]
+
+    # load the mtx
+    mtx = mmread(mtx_path).toarray()
+    if transpose:
+        mtx = mtx.T
+
+    # load the peaks
+    peaks = pd.read_csv(peaks_path, sep="\t", header=None)
+    peaks.columns = ["chr", "start", "end"]
+
+    # create the AnnData object
+    adata = sc.AnnData(X=mtx, obs=barcodes, var=peaks)
+
+    return adata
