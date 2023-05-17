@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 import pandas as pd
 import scanpy as sc
-import pybedtools
+import numpy as np
 from tqdm import tqdm
 
 if TYPE_CHECKING:
@@ -393,3 +393,33 @@ def generate_var_conversion_map(
     os.remove(overlaps_file)
 
     return olaps
+
+
+# This method should only be used in the Projector. It
+# assmes that the AnnData.var attribute has chr, start, and end
+def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
+    """
+    Converts an AnnData object to a list of lists of regions. This
+    is done by taking each cell and creating a list of all regions
+    that have a value greater than 0.
+
+    *Note: this method requires that the sc.AnnData object have
+    chr, start, and end in `.var` attributes*
+    """
+    # Extract the arrays for chr, start, and end
+    chr_values = adata.var["chr"].values
+    start_values = adata.var["start"].values
+    end_values = adata.var["end"].values
+
+    # Perform the comparison using numpy operations
+    positive_values = adata.X > 0
+
+    regions = []
+    for i in tqdm(range(adata.shape[0]), total=adata.shape[0]):
+        regions.append(
+            [
+                f"{chr_values[j]}_{start_values[j]}_{end_values[j]}"
+                for j in np.where(positive_values[i])[0]
+            ]
+        )
+    return regions

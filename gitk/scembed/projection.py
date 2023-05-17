@@ -14,6 +14,7 @@ from .utils import (
     download_remote_model,
     load_universe_file,
     generate_var_conversion_map,
+    anndata_to_regionsets,
 )
 from .models import ModelCard, Universe
 
@@ -143,13 +144,18 @@ class Projector:
         # create a new DataFrame with the updated values
         updated_var = adata.var.copy()
 
+        # find the regions that overlap with the universe
+        # use dynamic programming to create a boolean mask of columns to keep
+        columns_to_keep = []
         for i, row in tqdm(adata.var.iterrows(), total=adata.var.shape[0]):
             region = f"{row['chr']}_{row['start']}_{row['end']}"
             if region not in _map:
+                columns_to_keep.append(False)
                 continue
 
             # if it is, change the region to the universe region,
             # grab the first for now
+            # TODO - this is a simplification, we should be able to handle multiple
             universe_region = _map[region][0]
             chr, start, end = universe_region.split("_")
 
@@ -157,16 +163,48 @@ class Projector:
             updated_var.at[i, "start"] = start
             updated_var.at[i, "end"] = end
 
-        # create a boolean mask of columns to keep
-        columns_to_keep = np.array(
-            [
-                region in _map
-                for region in updated_var.apply(
-                    lambda x: f"{x['chr']}_{x['start']}_{x['end']}", axis=1
-                )
-            ]
-        )
+            columns_to_keep.append(True)
 
         # update adata with the new DataFrame and filtered columns
         adata = adata[:, columns_to_keep]
         adata.var = updated_var[columns_to_keep]
+
+        return adata
+
+    def get_embedding(self, region: str) -> np.ndarray:
+        """
+        Get the embedding for a region.
+        """
+        return self.model[region]
+
+    def project(self, adata: sc.AnnData) -> sc.AnnData:
+        """
+        Project the AnnData object into the model space. This is done in two steps:
+
+        1. Convert the consensus peaks to a universe representation
+        2. Project the universe representation into the model space using the
+           model.
+
+        """
+        adata_converted = self.convert_to_universe(adata)
+
+        # convert each row to a region set
+        region_sets = anndata_to_regionsets(adata_converted)
+
+        # convert each region set to a vector by averaging the region
+        # vectors in the model
+        cell_embeddings = []
+        for region_set in tqdm(region_sets, total=len(region_sets)):
+            cell_embeddings.append(
+                np.mean(
+                    [
+                        self.get_embedding(region)
+                        for region in region_set
+                        if region in self.model  # ignore regions not in the model
+                    ],
+                    axis=0,
+                )
+            )
+
+        adata.obs["embedding"] = cell_embeddings
+        return adata
