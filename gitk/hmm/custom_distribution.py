@@ -3,9 +3,9 @@
 
 
 import numpy as np
-from sklearn.utils import check_random_state
-from scipy.stats import nbinom, beta
 from hmmlearn.base import BaseHMM
+from scipy.stats import beta, nbinom
+from sklearn.utils import check_random_state
 
 
 def _check_and_set_n_features(model, X):

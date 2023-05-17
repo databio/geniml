@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .utils import process_line, prep_data, check_if_uni_sorted
 import os
-from multiprocessing import Pool
-import numpy as np
-from ..utils import natural_chr_sort
 import tempfile
+from multiprocessing import Pool
+
+import numpy as np
+
+from ..utils import natural_chr_sort
+from .utils import check_if_uni_sorted, prep_data, process_line
 
 
 def chrom_cmp(a, b):

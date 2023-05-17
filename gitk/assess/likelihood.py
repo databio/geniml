@@ -1,7 +1,9 @@
-import numpy as np
 import os
-from .utils import check_if_uni_sorted
+
+import numpy as np
+
 from ..likelihood.build_model import ModelLH
+from .utils import check_if_uni_sorted
 
 
 def calc_likelihood_hard(universe, chroms, model_lh, name, s_index, e_index=None):
