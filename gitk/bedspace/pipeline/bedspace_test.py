@@ -2,33 +2,32 @@
 """
 bedfile embeding pipeline (test)
 """
-import sys
-import pandas as pd
-import numpy as np
-import os
-import json
-import yaml
-from multiprocessing import Pool
-import itertools
-import pybedtools
-import umap
-import matplotlib.pyplot as plt
-from collections import Counter
-from sklearn.metrics.pairwise import cosine_similarity
-from scipy.spatial import distance
-from sklearn.preprocessing import MinMaxScaler
-import argparse
-from random import shuffle
-from collections import Counter
-from sklearn.model_selection import train_test_split
-from ubiquerg import VersionInHelpParser
-import subprocess
 import argparse
 import datetime
+import itertools
+import json
+import os
+import subprocess
+import sys
+from collections import Counter
+from multiprocessing import Pool
+from random import shuffle
 from subprocess import check_output
-from bbconf.const import *
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pybedtools
+import umap
+import yaml
 from bbconf import BedBaseConf
+from bbconf.const import *
 from helpers import data_prepration_test, hash_bedfile
+from scipy.spatial import distance
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from ubiquerg import VersionInHelpParser
 
 
 def data_preprocessing(path_embeded_document):

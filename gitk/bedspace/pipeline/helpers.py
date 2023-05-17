@@ -1,12 +1,16 @@
 import os
+from hashlib import md5
+from multiprocessing import Pool
+from subprocess import check_output
+
 import pandas as pd
 import pybedtools
-from subprocess import check_output
-from multiprocessing import Pool
-from hashlib import md5
 
 
-def data_prepration(path_file_label, univ):
+def data_prepration(
+        path_file_label: str, 
+        univ: str
+):
     path_file_label = path_file_label.split(",")
     path_file = path_file_label[0]
     labels = " ".join(

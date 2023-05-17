@@ -5,25 +5,25 @@ bedfile embeding pipeline (train)
 
 
 
-import sys
-from posixpath import join
-import pandas as pd
-import numpy as np
-import os
-from multiprocessing import Pool
+import argparse
 import itertools
+import os
+import subprocess
+import sys
+from collections import Counter
+from multiprocessing import Pool
+from posixpath import join
+from subprocess import check_output
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import pybedtools
 import umap
-import matplotlib.pyplot as plt
-from collections import Counter
-from sklearn.metrics.pairwise import cosine_similarity
-from scipy.spatial import distance
-from sklearn.preprocessing import MinMaxScaler
-import argparse
-import subprocess
-from subprocess import check_output
 from helpers import data_prepration
-
+from scipy.spatial import distance
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import MinMaxScaler
 
 parser = argparse.ArgumentParser()
 

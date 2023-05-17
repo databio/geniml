@@ -31,6 +31,7 @@ setup(
         "gitk.hmm",
         "gitk.likelihood",
         "gitk.scembed",
+        "gitk.bedspace",
     ],
     version=version,
     long_description=long_description,
