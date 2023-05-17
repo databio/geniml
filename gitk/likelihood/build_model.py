@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import os
-from ..utils import timer_func
-import pyBigWig
 import tarfile
 import tempfile
 
-WINDOW_SIZE = 25
-WRONG_UNIWIG = False
+import numpy as np
+import pyBigWig
+
+from ..utils import timer_func
 
 
 def model_binomial(folder_in, in_file, chrom, file_out, file_no=None, start=0):
@@ -25,8 +24,6 @@ def model_binomial(folder_in, in_file, chrom, file_out, file_no=None, start=0):
         distr_cov = bw.values(chrom, start, chrom_size)
         distr_cov = np.array(distr_cov)
     distr_cov[np.isnan(distr_cov)] = 0
-    if WRONG_UNIWIG and ("cove" not in in_file):
-        distr_cov = np.pad(distr_cov[WINDOW_SIZE:], (0, WINDOW_SIZE))
     no_possible = file_no * len(distr_cov)  # number of possible spots covered
     no_cov = np.sum(distr_cov)  # number of spots covered
     no_ncov = np.subtract(no_possible, no_cov)  # number of spots uncovered

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from hmmlearn import hmm
-import numpy as np
 import os
-from .custom_distribution import NBHMM, BetaHMM
 from abc import ABC, abstractmethod
+
+import numpy as np
+from hmmlearn import hmm
+
+from .custom_distribution import NBHMM, BetaHMM
 
 
 class Model(ABC):
@@ -25,11 +27,6 @@ class Model(ABC):
         self.save_matrix = save_matrix
         self.trans_matrix = trans_matrix
         self.start_matrix = np.array([0.01, 0.01, 0.97, 0.01])
-
-    @abstractmethod
-    def make(self):
-        """Abstract method for defining the model"""
-        pass
 
     def save_tras(self, out_folder):
         np.savetxt(os.path.join(out_folder, "trans_matrix.csv"), self.trans_matrix)
@@ -66,9 +63,7 @@ class PoissonModel(Model):
                 os.path.join(out_folder, "lambdas_matrix.csv"), self.lambdas_matrix
             )
 
-    def make(self):
-        """Initialize HMM model"""
-        model = hmm.PoissonHMM(
+        self.model = hmm.PoissonHMM(
             n_components=self.state_no,
             verbose=True,
             init_params=self.init_para,
@@ -76,11 +71,10 @@ class PoissonModel(Model):
         )
 
         if "t" not in self.init_para:
-            model.transmat_ = self.trans_matrix
+            self.model.transmat_ = self.trans_matrix
         if "l" not in self.init_para:
-            model.lambdas_ = self.lambdas_matrix
-        model.startprob_ = self.start_matrix
-        return model
+            self.model.lambdas_ = self.lambdas_matrix
+        self.model.startprob_ = self.start_matrix
 
 
 class GaussianModel(Model):
@@ -116,9 +110,7 @@ class GaussianModel(Model):
             )
             np.savetxt(os.path.join(out_folder, "means_matrix.csv"), self.means_matrix)
 
-    def make(self):
-        """Initialize HMM model"""
-        model = hmm.GaussianHMM(
+        self.model = hmm.GaussianHMM(
             n_components=self.state_no,
             verbose=True,
             init_params=self.init_para,
@@ -126,13 +118,12 @@ class GaussianModel(Model):
         )
 
         if "t" not in self.init_para:
-            model.transmat_ = self.trans_matrix
+            self.model.transmat_ = self.trans_matrix
         if "m" not in self.init_para:
-            model.means_ = self.means_matrix
+            self.model.means_ = self.means_matrix
         if "c" not in self.init_para:
-            model.covars_ = self.covars_matrix
-        model.startprob_ = self.start_matrix
-        return model
+            self.model.covars_ = self.covars_matrix
+        self.model.startprob_ = self.start_matrix
 
 
 class NBModel(Model):
@@ -168,20 +159,17 @@ class NBModel(Model):
             )
             np.savetxt(os.path.join(out_folder, "prob_matrix.csv"), self.prob_matrix)
 
-    def make(self):
-        """Initialize HMM model"""
-        model = NBHMM(
+        self.model = NBHMM(
             n_components=self.state_no,
             verbose=True,
             init_params=self.init_para,
             params=self.para,
         )
 
-        model.transmat_ = self.trans_matrix
-        model.failures_ = self.failures_matrix
-        model.prob_ = self.prob_matrix
-        model.startprob_ = self.start_matrix
-        return model
+        self.model.transmat_ = self.trans_matrix
+        self.model.failures_ = self.failures_matrix
+        self.model.prob_ = self.prob_matrix
+        self.model.startprob_ = self.start_matrix
 
 
 class BetaModel(Model):
@@ -215,17 +203,14 @@ class BetaModel(Model):
             np.savetxt(os.path.join(out_folder, "alfa_matrix.csv"), self.alfa_matrix)
             np.savetxt(os.path.join(out_folder, "beta_matrix.csv"), self.beta_matrix)
 
-    def make(self):
-        """Initialize HMM model"""
-        model = BetaHMM(
+        self.model = BetaHMM(
             n_components=self.state_no,
             verbose=True,
             init_params=self.init_para,
             params=self.para,
         )
 
-        model.transmat_ = self.trans_matrix
-        model.alfa_ = self.alfa_matrix
-        model.beta_ = self.beta_matrix
-        model.startprob_ = self.start_matrix
-        return model
+        self.model.transmat_ = self.trans_matrix
+        self.model.alfa_ = self.alfa_matrix
+        self.model.beta_ = self.beta_matrix
+        self.model.startprob_ = self.start_matrix

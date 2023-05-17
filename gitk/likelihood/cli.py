@@ -5,27 +5,27 @@ def build_subparser_model(parser):
     :return argparse.ArgumentParser
     """
 
-    parser.add_argument("--model_folder", required=True, type=str)
-    parser.add_argument("--file_no", type=int)
-    parser.add_argument("--coverage_folder", required=True, type=str)
-    parser.add_argument("--coverage_prefix", default="all", type=str)
+    parser.add_argument("--model-folder", required=True, type=str)
+    parser.add_argument("--file-no", type=int)
+    parser.add_argument("--coverage-folder", required=True, type=str)
+    parser.add_argument("--coverage-prefix", default="all", type=str)
 
     return parser
 
 
 def build_subparser_universe_hard(parser):
     parser.add_argument("--merge", default=0, type=int)
-    parser.add_argument("--filter_size", default=0, type=int)
+    parser.add_argument("--filter-size", default=0, type=int)
     parser.add_argument("--fout", required=True, type=str)
-    parser.add_argument("--coverage_file", required=True, type=str)
-    parser.add_argument("--cut_off", type=int)
+    parser.add_argument("--coverage-file", required=True, type=str)
+    parser.add_argument("--cut-off", type=int)
 
     return parser
 
 
 def build_subparser_universe_flexible(parser):
-    parser.add_argument("--output_file", required=True, type=str)
-    parser.add_argument("--model_folder", required=True, type=str)
+    parser.add_argument("--output-file", required=True, type=str)
+    parser.add_argument("--model-folder", required=True, type=str)
 
     return parser
 

@@ -1,13 +1,15 @@
-import numpy as np
 import os
-from .models import PoissonModel
+from functools import cmp_to_key
+from logging import getLogger
+
+import numpy as np
 import pyBigWig
 from scipy.stats import nbinom
-from functools import cmp_to_key
-from ..utils import natural_chr_sort
 
-from logging import getLogger
 from ..const import PKG_NAME
+from ..utils import natural_chr_sort
+from .const import LAMBDAS, TRANSMAT
+from .models import PoissonModel
 
 _LOGGER = getLogger(PKG_NAME)
 
@@ -16,15 +18,6 @@ _LOGGER = getLogger(PKG_NAME)
 1 -> core
 2 -> end
 3 -> background"""
-
-transmat = [
-    [1 - 1e-10, 1e-10, 0, 0],
-    [0, 1 - 1e-6, 1e-6, 0],
-    [0, 0, 1 - 1e-6, 1e-6],
-    [0.1, 0, 0, 0.9],
-]
-
-lambdas = [[3, 1, 0.0001], [0.05, 2, 0.05], [0.0001, 1, 3], [1e-4, 1e-3, 1e-4]]
 
 
 def norm(track, mode):
@@ -233,8 +226,7 @@ def run_hmm(start, core, end, chrom, normalize=False):
     """Make HMM prediction for given chromosome"""
     chrom_size, seq = read_data(start, core, end, chrom, normalize=normalize)
     empty_starts, empty_ends = find_full(seq)
-    model = PoissonModel(transmat, lambdas, save_matrix=False)
-    model = model.make()
+    model = PoissonModel(TRANSMAT, LAMBDAS, save_matrix=False).model()
     hmm_predictions = split_predict(seq, empty_starts, empty_ends, model)
     return hmm_predictions, model
 

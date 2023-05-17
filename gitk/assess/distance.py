@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
 import os
-from typing import List, Any
+import tempfile
+from multiprocessing import Pool
+from typing import Any, List
 
 import numpy as np
-import argparse
-from multiprocessing import Pool
-from .utils import process_db_line, chrom_cmp_bigger, prep_data, check_if_uni_sorted
+
 from ..utils import natural_chr_sort
-import tempfile
+from .utils import check_if_uni_sorted, prep_data, process_db_line
 
 
 def flexible_distance(r, q):
@@ -204,7 +205,7 @@ def calc_distance(
             flexible,
         )
         (waiting_end, current_chrom_end) = res_end
-    tmp_file.close()
+    q.close()
     if save_each:
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
