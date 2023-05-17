@@ -20,7 +20,6 @@ from .utils import (
     shuffle_documents,
 )
 
-
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
 
