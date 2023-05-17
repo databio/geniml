@@ -1,14 +1,15 @@
-import numpy as np
 import os
-from .models import PoissonModel
-from .const import TRANSMAT, LAMBDAS
+from functools import cmp_to_key
+from logging import getLogger
+
+import numpy as np
 import pyBigWig
 from scipy.stats import nbinom
-from functools import cmp_to_key
-from ..utils import natural_chr_sort
 
-from logging import getLogger
 from ..const import PKG_NAME
+from ..utils import natural_chr_sort
+from .const import LAMBDAS, TRANSMAT
+from .models import PoissonModel
 
 _LOGGER = getLogger(PKG_NAME)
 

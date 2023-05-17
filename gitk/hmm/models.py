@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from hmmlearn import hmm
-import numpy as np
 import os
-from .custom_distribution import NBHMM, BetaHMM
 from abc import ABC, abstractmethod
+
+import numpy as np
+from hmmlearn import hmm
+
+from .custom_distribution import NBHMM, BetaHMM
 
 
 class Model(ABC):

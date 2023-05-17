@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import os
-from ..utils import timer_func
-import pyBigWig
 import tarfile
 import tempfile
+
+import numpy as np
+import pyBigWig
+
+from ..utils import timer_func
 
 
 def model_binomial(folder_in, in_file, chrom, file_out, file_no=None, start=0):
