@@ -66,6 +66,7 @@ def test_init_projector(projector):
     assert isinstance(projector.universe, scembed.models.Universe)
 
 
+@pytest.mark.skip(reason="bedtools isnt installed in CI")
 def test_tokenization():
     """
      Tokenize the top into the bottom
