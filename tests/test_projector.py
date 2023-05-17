@@ -1,13 +1,24 @@
-import logging
 import os
 import sys
 
 import pytest
+import scanpy as sc
+import numpy as np
 
 # add parent directory to path
 sys.path.append("../")
 
 from gitk import scembed
+
+
+@pytest.fixture
+def adata():
+    return sc.read_h5ad("tests/data/buenrostro.h5ad")
+
+
+@pytest.fixture
+def projector():
+    return scembed.Projector("databio/scatlas")
 
 
 def test_model_exists():
@@ -26,7 +37,7 @@ def test_model_doesnt_exist():
     assert not exists
 
 
-@pytest.mark.skip
+@pytest.mark.skip  # projector is too large to test in CI
 def test_download_model():
     registry = "databio/scatlas"
     scembed.utils.download_remote_model(registry, scembed.const.MODEL_CACHE_DIR)
@@ -36,7 +47,7 @@ def test_download_model():
     assert os.path.exists(config_file)
 
 
-@pytest.mark.skip
+@pytest.mark.skip  # projector is too large to test in CI
 def test_load_local_model():
     registry = "databio/scatlas"
     config_file = os.path.join(
@@ -48,16 +59,13 @@ def test_load_local_model():
     assert isinstance(projector.universe, scembed.models.Universe)
 
 
-@pytest.mark.skip
-def test_init_projector():
-    registry = "databio/scatlas"
-    projector = scembed.Projector(registry)
+# @pytest.mark.skip  # projector is too large to test in CI
+def test_init_projector(projector):
     assert isinstance(projector.model_config, scembed.models.ModelCard)
     assert isinstance(projector.model, dict)
     assert isinstance(projector.universe, scembed.models.Universe)
 
 
-@pytest.mark.skip
 def test_tokenization():
     """
      Tokenize the top into the bottom
@@ -91,12 +99,39 @@ def test_tokenization():
 
 
 @pytest.mark.skip
-def test_convert_to_universe():
-    registry = "databio/scatlas"
-    projector = scembed.Projector(registry)
-
-    path_to_data = "/Users/nathanleroy/uva/lab/code/scEmbed-benchmarking/input/buenrostro2018/buenrostro2018_annotated.h5ad"
-    adata = scembed.load_scanpy_data(path_to_data)
-
+def test_convert_to_universe(projector, adata):
     # convert to universe
     adata_converted = projector.convert_to_universe(adata)
+
+    # ensure all chr_start_end in the new adata are in the universe
+    def check_region_in_universe(r):
+        assert f"{r['chr']}_{r['start'] }_{r['end']}" in projector.universe.regions
+
+    adata_converted.var.apply(
+        lambda r: check_region_in_universe(r),
+        axis=1,
+    )
+
+
+def test_anndata_to_regionsets(adata):
+    region_sets = scembed.utils.anndata_to_regionsets(adata)
+
+    # assert the sum of the clipped row in the matrix equals
+    # the number of regions in the region set
+    x_clipped = adata.X.clip(max=1)
+    for i in range(adata.shape[0]):
+        assert len(region_sets[i]) == int(x_clipped[i, :].sum())
+
+
+@pytest.mark.skip  # projector is too large to test in CI
+def test_projection(projector, adata):
+    adata_projected = projector.project(adata)
+
+    # assert the embeddings are there and the shape is correct
+    assert "embedding" in adata_projected.obs
+
+    embeddings = np.array(adata_projected.obs["embedding"].to_numpy().tolist())
+    assert embeddings.shape == (
+        adata.shape[0],
+        projector.model_config.model_parameters[0].embedding_dim,
+    )
