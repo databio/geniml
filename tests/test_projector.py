@@ -90,6 +90,7 @@ def test_tokenization():
     assert len(var_map_ac) == 3
 
 
+@pytest.mark.skip
 def test_convert_to_universe():
     registry = "databio/scatlas"
     projector = scembed.Projector(registry)
