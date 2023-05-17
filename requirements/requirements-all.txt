@@ -12,3 +12,4 @@ tqdm
 umap-learn
 ubiquerg
 yacman
+pydantic
