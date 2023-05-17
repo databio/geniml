@@ -12,14 +12,9 @@ from tqdm import tqdm
 
 from .const import *
 from .exceptions import *
-from .utils import (
-    LearningRateScheduler,
-    ScheduleType,
-    convert_anndata_to_documents,
-    remove_regions_below_min_count,
-    shuffle_documents,
-)
-
+from .utils import (LearningRateScheduler, ScheduleType,
+                    convert_anndata_to_documents,
+                    remove_regions_below_min_count, shuffle_documents)
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
