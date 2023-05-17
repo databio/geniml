@@ -37,6 +37,7 @@ def build_argparser():
         "lh": "Compute likelihood",
         "assess": "Assess a universe",
         "scembed": "Embed single-cell data as region vectors",
+        "eval": "Evaluate a set of region embeddings",
     }
 
     sp = parser.add_subparsers(dest="command")
@@ -49,7 +50,7 @@ def build_argparser():
     subparsers["assess"] = assess_subparser(subparsers["assess"])
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
-
+    subparsers["eval"] = eval_subparser(subparsers["eval"])
     return parser
 
 
@@ -156,7 +157,36 @@ def main(test_args=None):
         _LOGGER.info("Running scembed")
         pass
         # scembed_main(test_args)
+    if args.command == "eval":
+        if args.subcommand == "gdst":
+            from gitk.eval.gdst import get_gds
 
+            gds = get_gds(args.model_path, args.embed_type, args.num_samples)
+            print(gds)
+        if args.subcommand == "npt":
+            from gitk.eval.npt import get_snpr
+
+            npt = get_snpr(
+                args.model_path,
+                args.embed_type,
+                args.K,
+                args.num_samples,
+                resolution=args.K,
+            )
+            print(npt["SNPR"][0])
+        if args.subcommand == "cct-tss":
+            from gitk.eval.cct import get_scctss
+
+            scctss = get_scctss(
+                args.model_path,
+                args.embed_type,
+                args.save_folder,
+                args.Rscript_path,
+                args.assembly,
+                num_samples=args.num_samples,
+                threshold=args.threshold,
+            )
+            print(scctss)
     return
 
 

@@ -1,4 +1,4 @@
-""" Constants for scembed """
+from pathlib import Path
 
 __author__ = ["Nathan LeRoy", "Jason Smith", "Erfaneh Gharavi"]
 __email__ = "nleroy@virginia.edu"
@@ -24,3 +24,9 @@ DEFAULT_CHUNK_SIZE = 10000
 CHR_KEY = "chr"
 START_KEY = "start"
 END_KEY = "end"
+
+MODEL_CACHE_DIR = str(Path.home() / ".scembed")
+MODEL_HUB_URL = "http://big.databio.org/scembed/models"
+MODEL_CONFIG_FILE_NAME = "model.yaml"
+
+DEFAULT_BEDTOOLS_PATH = "bedtools"
