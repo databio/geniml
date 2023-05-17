@@ -1,15 +1,15 @@
+import logging
 import os
 import sys
+from itertools import chain
+
 import pytest
 import scanpy as sc
-import logging
-from itertools import chain
 
 # add parent directory to path
 sys.path.append("../")
 
-from gitk import scembed
-from gitk import utils
+from gitk import scembed, utils
 
 # set to DEBUG to see more info
 logging.basicConfig(level=logging.INFO)
