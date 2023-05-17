@@ -17,6 +17,8 @@ def region2vec(
     token_folder,  # path to the folder of tokenized files
     save_dir,  # folder to save the training results
     file_list=None,  # specifies which files from token_folder are used for training
+    data_type="files",
+    mat_path=None,
     num_shufflings=1000,  # Number of shuffled datasets or number of training epochs
     num_processes=10,  # Maximum number of parallel processes
     tokenization_mode="hard",  # tokenization mode
@@ -73,6 +75,8 @@ def region2vec(
         for n in range(nworkers):
             sent_gen_args = Namespace(
                 tokenization_folder=token_folder,
+                data_type=data_type,
+                mat_path=mat_path,
                 save_dir=save_dir,
                 file_list=file_list_path,
                 tokenization_mode=tokenization_mode,
