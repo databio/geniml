@@ -5,11 +5,11 @@ def build_subparser(parser):
     :return argparse.ArgumentParser
     """
 
-    parser.add_argument("--raw_data_folder", type=str, required=True)
-    parser.add_argument("--file_list", type=str, required=True)
+    parser.add_argument("--raw-data-folder", type=str, required=True)
+    parser.add_argument("--file-list", type=str, required=True)
     parser.add_argument("--universe", type=str, required=True)
     parser.add_argument("--npool", default=4, type=int)
-    parser.add_argument("--save_to_file", action="store_true")
+    parser.add_argument("--save-to-file", action="store_true")
     parser.add_argument("--folder_out", type=str)
     parser.add_argument("--pref", type=str)
 
@@ -19,7 +19,7 @@ def build_subparser(parser):
 def build_subparser_distance(parser):
     parser = build_subparser(parser)
     parser.add_argument("--flexible", action="store_true")
-    parser.add_argument("--save_each", action="store_true")
+    parser.add_argument("--save-each", action="store_true")
 
     return parser
 
