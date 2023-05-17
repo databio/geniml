@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
+
 """
 bedfile embeding pipeline (train)
 """
 
-__author__ = ["Erfaneh Gharavi", "Bingjie Xue"]
-__email__ = "eg8qe@virginia.edu"
-__version__ = "0.0.0"
+
 
 import sys
 from posixpath import join
@@ -140,7 +138,6 @@ universe = pybedtools.BedTool(args.univ_path)
 train_files = os.path.join(
     args.output_path, "documents_file_{}.txt".format(args.genome)
 )
-files = os.path.join(args.output_path, "filenames_file_{}.txt".format(args.genome))
 model = os.path.join(args.output_path, "starspace_model_{}".format(args.genome))
 
 
@@ -178,9 +175,6 @@ def main():
 
     with open(train_files, "w") as input_file:
         input_file.write("\n".join(df.context))
-    input_file.close()
-    with open(files, "w") as input_file:
-        input_file.write("\n".join(df.file_path))
     input_file.close()
 
     if os.path.exists(model):

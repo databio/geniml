@@ -1,6 +1,6 @@
-# bedembed
+# BEDSpace
 
-Uses the StarSpace method to embed the bed files and the realted meta data.
+Uses the StarSpace method to embed the bed files and the meta data.
 
 The resulted embeddings are used in the following scenarios:
 
@@ -22,64 +22,64 @@ Create a directory to store all the outputs files
 
 ```
 export BEDEMBED=`pwd`
-mkdir -p outputs/bedembed_output/figures/S1
-mkdir -p outputs/bedembed_output/figures/S2
-mkdir -p outputs/bedembed_output/figures/S3
+mkdir -p outputs/bedspace_output/figures/S1
+mkdir -p outputs/bedspace_output/figures/S2
+mkdir -p outputs/bedspace_output/figures/S3
 module load anaconda gcc/9.2.0 boost
 ```
 
-### 3. Run the bedembed_train pipeline to train the StarSpace model
+### 3. Run the bedspace_train pipeline to train the StarSpace model
 
 This model will be use in all the scenarios. 
 
 ```
 cd pipeline
-bash run-train.sh
+python ./bedspace_train.py 
 
 ```
 
 #### 3.1 To generate the UMAP-plot of the label embeddings use:
 ```
 cd pipeline
-Analysis-label-embedding.ipynb
+Visualization.py
 ```
 
 
-### 4. Run the bedembed_test pipeline for Scenario-1 and Scenario-2
+### 4. Run the bedspace_test pipeline for Scenario-1 and Scenario-2
 
 This code calculate the similarity between the test file embedding and label embedding 
 ```
 cd pipeline
-bash run-S1S2.sh
+python ./bedspace_test.py
 
 ```
 
 #### 4.1 To generate and save the plots for Scenario-1 use:
 ```
 cd pipeline
-Analysis-S1.ipynb
+Visualization.py
 ```
 
 #### 4.2 To generate and save the plots for Scenario-2 use:
 ```
 cd pipeline
-Analysis-S2.ipynb
+Visualization.py
 ```
 
 
-### 5. Run the bedembed_test for pipeline Scenario-3
+### 5. Run the bedspace_test for pipeline Scenario-3
 
 This code calculate the similarity between the embedding of the query(test) files and database(train) files
 
 ```
 cd pipeline
-bash run-S3.sh
+python ./bedspace_queryDBsim.py
 
 ```
 #### 5.1 To generate and save the plots for Scenario-3 use:
 ```
 cd pipeline
-Analysis-S3.ipynb
+Visualization.py
 ```
 
 

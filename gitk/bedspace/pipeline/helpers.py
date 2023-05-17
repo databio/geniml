@@ -82,22 +82,14 @@ def bed2vec(file_list, universe, model, assembly, source, output_path):
     df = df.fillna(" ")
     df = df[df.context != " "]
 
-    # Data prepration
-    #     documents = data_prepration_test(meta_data, universe)
-
-    #     print("Reading files done")
-
-    #     df = pd.DataFrame({'file_path': [documents[0]], 'context': [documents[1]]})
-    #     df = df.fillna(" ")
-    #     df = df[df.context != " "]
 
     with open(docs, "w") as input_file:
         input_file.write("\n".join(df.context))
     input_file.close()
 
-    with open(files, "w") as input_file:
-        input_file.write("\n".join(df.file_path))
-    input_file.close()
+#     with open(files, "w") as input_file:
+#         input_file.write("\n".join(df.file_path))
+#     input_file.close()
 
     starspace_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -116,21 +108,3 @@ def bed2vec(file_list, universe, model, assembly, source, output_path):
 
     return doc_embed
 
-
-def hash_bedfile(filepath):
-    """generate digest for bedfile"""
-    with gzip.open(filepath, "rb") as f:
-        # concate column values
-        chrs = ",".join([row.split()[0].decode("utf-8") for row in f])
-        starts = ",".join([row.split()[1].decode("utf-8") for row in f])
-        ends = ",".join([row.split()[2].decode("utf-8") for row in f])
-        # hash column values
-        chr_digest = md5(chrs.encode("utf-8")).hexdigest()
-        start_digest = md5(starts.encode("utf-8")).hexdigest()
-        end_digest = md5(ends.encode("utf-8")).hexdigest()
-        # hash column digests
-        bed_digest = md5(
-            ",".join([chr_digest, start_digest, end_digest]).encode("utf-8")
-        ).hexdigest()
-
-        return bed_digest

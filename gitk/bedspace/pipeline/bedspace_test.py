@@ -131,13 +131,7 @@ parser.add_argument(
     required=True,
     help="Path to output directory to store file.",
 )
-parser.add_argument(
-    "--bedbase-config",
-    dest="bedbase_config",
-    type=str,
-    default=None,
-    help="a path to the bedbase configuratiion file",
-)
+
 parser.add_argument(
     "-l",
     "--labels",
@@ -195,9 +189,6 @@ def main():
         input_file.write("\n".join(df.context))
     input_file.close()
 
-#     with open(files, "w") as input_file:
-#         input_file.write("\n".join(df.file_path))
-#     input_file.close()
 
     print("Writing files done")
 
@@ -224,9 +215,7 @@ def main():
 
         df_similarity['filename'] = [file_list[i].split(",")[0]] * len(labels)
 
-#         md5sum = hash_bedfile(df["file_path"][i])
 
-#         df_similarity["md5sum"] = md5sum * len(labels)
         df_similarity = df_similarity[['filename', "file_label", "search_term", "score"]]
 
         # filter res by dist threshold
@@ -235,24 +224,12 @@ def main():
             drop=True
         )
 
-        # report to db
-        if args.bedbase_config:
-            print("Report distances to the database.")
-            bbc = BedBaseConf(config_path=args.bedbase_config, database_only=True)
-            for index, row in df_similarity.iterrows():
-                bbc.report_distance(
-                    bed_md5sum=md5sum,
-                    bed_label=row["file_label"],
-                    search_term=row["search_term"],
-                    score=row["score"],
-                )
-        else:
-            if os.path.exists(dist):
-                df_similarity.to_csv(dist, header=False, index=None, mode="a")
-            else:
-                df_similarity.to_csv(dist, index=False)
 
-#         print("End", datetime.datetime.now())
+        if os.path.exists(dist):
+            df_similarity.to_csv(dist, header=False, index=None, mode="a")
+        else:
+            df_similarity.to_csv(dist, index=False)
+
 
 
 if __name__ == "__main__":
