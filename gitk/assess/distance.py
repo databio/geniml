@@ -10,8 +10,7 @@ from typing import Any, List
 import numpy as np
 
 from ..utils import natural_chr_sort
-from .utils import (check_if_uni_sorted, chrom_cmp_bigger, prep_data,
-                    process_db_line)
+from .utils import check_if_uni_sorted, prep_data, process_db_line
 
 
 def flexible_distance(r, q):

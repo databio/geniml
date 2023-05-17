@@ -7,8 +7,7 @@ from functools import cmp_to_key
 import numpy as np
 from numba import njit
 
-from ..hmm.hmm import (find_full_empty_pos, find_full_full_pos,
-                       predictions_to_bed)
+from ..hmm.hmm import find_full_empty_pos, find_full_full_pos, predictions_to_bed
 from ..utils import natural_chr_sort, timer_func
 from .build_model import ModelLH
 
