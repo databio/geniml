@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .utils import process_line, prep_data, check_if_uni_sorted
 import os
-from multiprocessing import Pool
-import numpy as np
-from ..utils import natural_chr_sort
 import tempfile
+from multiprocessing import Pool
+
+import numpy as np
+
+from ..utils import natural_chr_sort
+from .utils import check_if_uni_sorted, prep_data, process_line
 
 
 def chrom_cmp(a, b):
     """Natural chromosome names comparison"""
-    # com = natural_chr_sort(a, b)
-    # if com < 0:
-    #     return a, False, True
-    # if com == 0:
-    #     return a, False, False
-    # if com > 0:
-    #     return b, True, False
     ac = a.replace("chr", "")
     ac = ac.split("_")[0]
     bc = b.replace("chr", "")
@@ -34,9 +29,14 @@ def chrom_cmp(a, b):
             return a, False, True
 
 
-def relationship_helper(region_a, region_b, only_in, overlap, start_a, start_b):
+def relationship_helper(region_a, region_b, only_in, overlap):
     """For two region calculate their overlap; for earlier region
-    calculate how many base pair only in it"""
+    calculate how many base pair only in it
+    :param [int, int] region_a: region that starts first
+    :param [int, int] region_b: region that starts second
+    :param int only_in: number of positions only in a so far
+    :param int overlap: number of overlapping so far
+    :return:"""
     if region_b[0] <= region_a[1]:
         only_in += region_b[0] - region_a[0]
         if region_b[1] <= region_a[1]:
@@ -54,7 +54,7 @@ def relationship_helper(region_a, region_b, only_in, overlap, start_a, start_b):
     return only_in, inside_a, inside_b, overlap, start_a, start_b
 
 
-def relationship(
+def two_region_intersection_diff(
     region_d,
     region_q,
     only_in_d,
@@ -91,14 +91,10 @@ def relationship(
         inside_q, inside_d = False, True
     else:
         if region_d[0] <= region_q[0]:
-            res = relationship_helper(
-                region_d, region_q, only_in_d, overlap, start_d, start_q
-            )
+            res = relationship_helper(region_d, region_q, only_in_d, overlap)
             (only_in_d, inside_d, inside_q, overlap, start_d, start_q) = res
         if region_d[0] > region_q[0]:
-            res = relationship_helper(
-                region_q, region_d, only_in_q, overlap, start_q, start_d
-            )
+            res = relationship_helper(region_q, region_d, only_in_q, overlap)
             (only_in_q, inside_q, inside_d, overlap, start_q, start_d) = res
     return only_in_d, only_in_q, inside_d, inside_q, overlap, start_d, start_q
 
@@ -120,7 +116,7 @@ def read_in_new_line(region, start, chrom, inside, waiting, lines, cchrom, not_e
     return region, start, chrom, waiting, not_e
 
 
-def calc_stats(db, folder, query):
+def calc_diff_intersection(db, folder, query):
     """
     Difference and overlap of two files on base pair level
     :param str db: path to universe file
@@ -148,7 +144,7 @@ def calc_stats(db, folder, query):
     else:
         c_chrom, waiting_d, waiting_q = chrom_cmp(chrom_d, chrom_q)
     while not_end_d or not_end_q:
-        res = relationship(
+        regions_stats = two_region_intersection_diff(
             [start_d, pos_d[1]],
             [start_q, pos_q[1]],
             only_in_d,
@@ -161,7 +157,15 @@ def calc_stats(db, folder, query):
             waiting_d,
             waiting_q,
         )
-        (only_in_d, only_in_q, inside_d, inside_q, overlap, start_d, start_q) = res
+        (
+            only_in_d,
+            only_in_q,
+            inside_d,
+            inside_q,
+            overlap,
+            start_d,
+            start_q,
+        ) = regions_stats
         new_d = read_in_new_line(
             pos_d, start_d, chrom_d, inside_d, waiting_d, lines_db, c_chrom, not_end_d
         )
@@ -212,12 +216,12 @@ def run_intersection(
     res = []
     if npool <= 1:
         for i in files:
-            r = calc_stats(universe, folder, i)
+            r = calc_diff_intersection(universe, folder, i)
             res.append(r)
     else:
         with Pool(npool) as p:
             args = [(universe, folder, f) for f in files]
-            res = p.starmap(calc_stats, args)
+            res = p.starmap(calc_diff_intersection, args)
     # os.rmdir("tmp")
     if save_to_file:
         fout = os.path.join(folder_out, pref + "_data.tsv")

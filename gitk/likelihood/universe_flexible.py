@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import os
 from functools import cmp_to_key
-from ..utils import natural_chr_sort, timer_func
-from ..hmm.hmm import predictions_to_bed, find_full_full_pos, find_full_empty_pos
-from .build_model import ModelLH
+
+import numpy as np
 from numba import njit
+
+from ..hmm.hmm import find_full_empty_pos, find_full_full_pos, predictions_to_bed
+from ..utils import natural_chr_sort, timer_func
+from .build_model import ModelLH
 
 
 @njit

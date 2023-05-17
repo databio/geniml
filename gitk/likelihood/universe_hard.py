@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import os
-from time import time
 from functools import cmp_to_key
+from time import time
+
+import numpy as np
 import pyBigWig
+
 from ..utils import natural_chr_sort, timer_func
 
 
