@@ -204,7 +204,7 @@ def calc_distance(
             flexible,
         )
         (waiting_end, current_chrom_end) = res_end
-    tmp_file.close()
+    q.close()
     if save_each:
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
             for i, j in zip(dist_start, dist_end):
