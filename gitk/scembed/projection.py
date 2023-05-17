@@ -186,14 +186,17 @@ class Projector:
            model.
 
         """
+        _LOGGER.info("Step 1/3: Converting consensus peaks to universe representation")
         adata_converted = self.convert_to_universe(adata)
 
         # convert each row to a region set
+        _LOGGER.info("Step 2/3: Converting universe representation to region sets")
         region_sets = anndata_to_regionsets(adata_converted)
 
         # convert each region set to a vector by averaging the region
         # vectors in the model
         cell_embeddings = []
+        _LOGGER.info("Step 3/3: Projecting region sets into model space")
         for region_set in tqdm(region_sets, total=len(region_sets)):
             cell_embeddings.append(
                 np.mean(
