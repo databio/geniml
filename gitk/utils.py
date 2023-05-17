@@ -33,6 +33,7 @@ def timer_func(func):
 
     return wrap_func
 
+
 def read_chromosome_from_bw(file, chrom):
     bw = pyBigWig.open(file)
     chrom_size = bw.chroms(chrom)
