@@ -426,7 +426,11 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
 
 
 def barcode_mtx_peaks_to_anndata(
-    barcodes_path: str, mtx_path: str, peaks_path: str, transpose: bool = True
+    barcodes_path: str,
+    mtx_path: str,
+    peaks_path: str,
+    transpose: bool = True,
+    sparse: bool = True,
 ) -> sc.AnnData:
     """
     This function will take three files:
@@ -442,6 +446,7 @@ def barcode_mtx_peaks_to_anndata(
     :param str mtx_path: the path to the matrix file
     :param str peaks_path: the path to the peaks file
     :param bool transpose: whether or not to transpose the matrix
+    :param bool sparse: whether or not the matrix is sparse
 
     :return sc.AnnData: an AnnData object
     """
@@ -453,7 +458,7 @@ def barcode_mtx_peaks_to_anndata(
     barcodes.index = barcodes["barcode"]
 
     # load the mtx
-    mtx = mmread(mtx_path).toarray()
+    mtx = mmread(mtx_path)
     if transpose:
         mtx = mtx.T
 
