@@ -177,7 +177,7 @@ class Projector:
         """
         return self.model[region]
 
-    def project(self, adata: sc.AnnData) -> sc.AnnData:
+    def project(self, adata: sc.AnnData, key_added: str = "embedding") -> sc.AnnData:
         """
         Project the AnnData object into the model space. This is done in two steps:
 
@@ -185,6 +185,8 @@ class Projector:
         2. Project the universe representation into the model space using the
            model.
 
+        :param adata: AnnData object to project
+        :param key_added: Key to add to the .obsm attribute of the AnnData object
         """
         _LOGGER.info("Step 1/3: Converting consensus peaks to universe representation")
         adata_converted = self.convert_to_universe(adata)
@@ -209,5 +211,5 @@ class Projector:
                 )
             )
 
-        adata.obs["embedding"] = cell_embeddings
+        adata.obsm[key_added] = np.array(cell_embeddings)
         return adata
