@@ -33,7 +33,7 @@ def build_subparser_universe_flexible(parser):
 def build_subparser(parser):
     sp = parser.add_subparsers(dest="subcommand")
     msg_by_cmd = {
-        "build_model": "Asses based on distance",
+        "build_model": "Assess based on distance",
         "universe_hard": "Making cut-off universe",
         "universe_flexible": "Making ML flexible universe",
     }

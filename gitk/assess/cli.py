@@ -10,7 +10,7 @@ def build_subparser(parser):
     parser.add_argument("--universe", type=str, required=True)
     parser.add_argument("--npool", default=4, type=int)
     parser.add_argument("--save-to-file", action="store_true")
-    parser.add_argument("--folder_out", type=str)
+    parser.add_argument("--folder-out", type=str)
     parser.add_argument("--pref", type=str)
 
     return parser
@@ -36,6 +36,5 @@ def build_mode_parser(parser):
         subparsers[k] = sp.add_parser(k, description=v, help=v)
     subparsers["distance"] = build_subparser_distance(subparsers["distance"])
     subparsers["intersection"] = build_subparser(subparsers["intersection"])
-    subparsers["recovered"] = build_subparser(subparsers["recovered"])
 
     return parser
