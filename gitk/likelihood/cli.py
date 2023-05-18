@@ -18,7 +18,7 @@ def build_subparser_universe_hard(parser):
     parser.add_argument("--filter-size", default=0, type=int)
     parser.add_argument("--fout", required=True, type=str)
     parser.add_argument("--coverage-file", required=True, type=str)
-    parser.add_argument("--cut-off", type=int)
+    parser.add_argument("--cutoff", type=int)
 
     return parser
 
