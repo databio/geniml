@@ -226,7 +226,7 @@ def run_hmm(start, core, end, chrom, normalize=False):
     """Make HMM prediction for given chromosome"""
     chrom_size, seq = read_data(start, core, end, chrom, normalize=normalize)
     empty_starts, empty_ends = find_full(seq)
-    model = PoissonModel(TRANSMAT, LAMBDAS, save_matrix=False).model()
+    model = PoissonModel(TRANSMAT, LAMBDAS, save_matrix=False).model
     hmm_predictions = split_predict(seq, empty_starts, empty_ends, model)
     return hmm_predictions, model
 
