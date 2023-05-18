@@ -1,10 +1,18 @@
+import logging
+
+from ..const import (DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS,
+                     PKG_NAME)
+
+_LOGGER = logging.getLogger(PKG_NAME)
+
+
 def main(
     path_to_starsapce: str,
     input: str,
-    num_epochs: int,
-    dim: str,
-    learning_rate: float,
     output: str,
+    num_epochs: int = DEFAULT_NUM_EPOCHS,
+    dim: str = DEFAULT_DIM,
+    learning_rate: float = DEFAULT_LEARNING_RATE,
 ):
     """
     Train a starspace model.
@@ -16,4 +24,6 @@ def main(
     :param learning_rate: Learning rate
     :param output: Path to output folder
     """
-    # train the model :D
+    _LOGGER.info("Running training...")
+
+    # PLACE TRAINING CODE HERE

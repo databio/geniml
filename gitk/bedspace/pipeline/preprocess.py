@@ -1,4 +1,8 @@
-from .helpers import data_prepration
+import logging
+
+from ..const import PKG_NAME
+
+_LOGGER = logging.getLogger(PKG_NAME)
 
 
 def main(
@@ -15,12 +19,8 @@ def main(
     :param metadata: Path to metadata file
     :param universe: Path to universe file
     :param output: Path to output folder
-    :param labels: Labels string
+    :param labels: Labels string (cell_type,target)
     """
-    # preprocess the data
-    print("Running preprocess...")
+    _LOGGER.info("Running preprocess...")
 
-    # do other stuff ...
-    data_prep = data_prepration(input, metadata, universe, output, labels)
-
-    # do mroe stuff ....
+    # PLACE CODE FOR RUNNING PREPROCESS HERE

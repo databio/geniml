@@ -12,7 +12,6 @@ from .argparsers import build_search_argparser as search_subparser
 from .argparsers import build_train_argparser as train_subparser
 from .const import *
 
-
 global _LOGGER
 logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(PKG_NAME)

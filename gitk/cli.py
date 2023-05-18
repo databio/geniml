@@ -171,35 +171,42 @@ def main(test_args=None):
 
             _LOGGER.info("Running bedspace preprocess")
             preprocess_main(
-                args.input_bed,
-                args.input_labels,
-                args.output_dir,
-                args.output_prefix,
-                args.n_jobs,
-                args.n_samples,
+                args.input, args.metadata, args.universe, args.output, args.labels
             )
 
         elif args.subcommand == TRAIN_CMD:
             from .bedspace.pipeline.train import main as train_main
 
             _LOGGER.info("Running bedspace train")
-
             train_main(
                 args.path_to_starspace,
                 args.input,
+                args.output,
                 args.num_epochs,
                 args.dim,
                 args.learning_rate,
-                args.output,
             )
-            # insert code to run training
-            # ...
-            # ...
 
         elif args.subcommand == DISTANCES_CMD:
+            from .bedspace.pipeline.distances import main as distances_main
+
             _LOGGER.info("Running bedspace distances")
+            distances_main(
+                args.input,
+                args.metadata,
+                args.universe,
+                args.output,
+                args.labels,
+                args.files,
+                args.threshold,
+            )
+
         elif args.subcommand == SEARCH_CMD:
+            from .bedspace.pipeline.search import main as search_main
+
             _LOGGER.info("Running bedspace search")
+            search_main(args.type, args.distances, args.num_results)
+
         else:
             # print help for this subcommand
             _LOGGER.info("Running bedspace help")

@@ -1,16 +1,7 @@
-from enum import Enum
-
 from ubiquerg import VersionInHelpParser
 
 from ._version import __version__
 from .const import *
-
-
-# search type enum. Can be "l2r", "r2l", or "r2r"
-class SearchType(Enum):
-    l2r = "l2r"
-    r2l = "r2l"
-    r2r = "r2r"
 
 
 def build_preprocess_argparser(parser: VersionInHelpParser) -> VersionInHelpParser:
