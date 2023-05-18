@@ -11,13 +11,13 @@ import pyBigWig
 from ..utils import natural_chr_sort, timer_func
 
 
-def get_uni(file, chrom, cut_off=None):
+def get_uni(file, chrom, cutoff=None):
     """For each position check if coverage is bigger than cut-off;
     if cut-off not provided calculate value that gives
     maximum likelihood universe
     :param str file: coverage file
     :param str chrom: chromosome to analyse
-    :param int cut_off: base pairs with values grater of equal to cut-off can be included in universe
+    :param int cutoff: base pairs with values grater of equal to cut-off can be included in universe
     :return:"""
     file = pyBigWig.open(file)
     if pyBigWig.numpy:
@@ -27,9 +27,9 @@ def get_uni(file, chrom, cut_off=None):
         track = np.array(track)
     track[np.isnan(track)] = 0
     track = track.astype(np.uint16)
-    if cut_off is None:
-        cut_off = np.sum(track) / len(track)
-    inter_pos = track >= cut_off
+    if cutoff is None:
+        cutoff = np.sum(track) / len(track)
+    inter_pos = track >= cutoff
     file.close()
     return inter_pos
 
@@ -76,14 +76,14 @@ def marge_filter(fout, inter_pos, chrom, merge_dist=100, size_flt=1000):
             f.write(f"{chrom}\t{start}\t{end}\n")
 
 
-def main(file, fout, merge=0, filter_size=0, cut_off=None):
+def main(file, fout, merge=0, filter_size=0, cutoff=None):
     """
     Creat cut-off universe based on coverage track
     :param str file: path to coverage file without extension
     :param int merge: regions closer than this value will be merged into one
     :param int filter_size: regions smaller than this value will not be reported
     :param str fout: output file
-    :param int cut_off: base pairs with coverage equal to or greater than this value will be included in the universe
+    :param int cutoff: base pairs with coverage equal to or greater than this value will be included in the universe
     """
     if os.path.isfile(fout):
         raise Exception(f"File : {fout} exists")
@@ -95,7 +95,7 @@ def main(file, fout, merge=0, filter_size=0, cut_off=None):
     chroms = {i: chroms[i] for i in chroms_key}
     for chrom in chroms:
         if chroms[chrom] > 0:
-            inter_pos = get_uni(file, chrom, cut_off)
+            inter_pos = get_uni(file, chrom, cutoff)
             if merge == 0 and filter_size == 0:
                 save_simple(fout, inter_pos, chrom)
             else:
