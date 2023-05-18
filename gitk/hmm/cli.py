@@ -11,7 +11,11 @@ def build_subparser(parser):
     parser.add_argument(
         "--cov-folder", type=str, help="path to coverage folder", required=True
     )
-    parser.add_argument("--normalize", action="store_true")
+    parser.add_argument(
+        "--not_normalize",
+        help="if not to normalize coverage signal before using HMM",
+        action="store_false",
+    )
     parser.add_argument(
         "--save-max-cove",
         help="if present saves maximum coverage for each peak",
