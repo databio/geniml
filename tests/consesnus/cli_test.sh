@@ -29,16 +29,16 @@ gitk lh universe_flexible --model-file tests/consesnus/results/lh_model.tar \
                           --cov-folder tests/consesnus/coverage/
 
 # make HMM universe
-gitk hmm --out-file tests/consesnus/results/universe/hmm_raw.bed --cov-folder tests/consesnus/coverage/
+gitk hmm --out-file tests/consesnus/results/hmm_raw.bed --cov-folder tests/consesnus/coverage/
 
 gitk hmm --out_file tests/consesnus/results/universe/hmm_norm.bed --cov_folder tests/consesnus/coverage/ --normlaize --save_max_cove
 
 # assessment
- gitk assess distance --raw_data_folder tests/consesnus/raw/\
-  --file_list tests/consesnus/file_list.txt \
-  --universe tests/consesnus/results/universe/ML_flexible.bed \
-  --save_to_file --folder_out tests/consesnus/results/distance/ \
-  --pref test --npool 1 --save_each
+ gitk assess distance --raw-data-folder tests/consesnus/raw/\
+  --file-list tests/consesnus/file_list.txt \
+  --universe tests/consesnus/results/ML_flexible.bed \
+  --save-to-file --folder-out tests/consesnus/results/distance/ \
+  --pref test --no-workers 1 --save-each
 
  gitk assess distance --raw_data_folder tests/consesnus/raw/\
   --file_list tests/consesnus/file_list.txt \
@@ -46,8 +46,8 @@ gitk hmm --out_file tests/consesnus/results/universe/hmm_norm.bed --cov_folder t
   --save_to_file --folder_out tests/consesnus/results/distance/ \
   --pref test_flex --npool 1 --save_each --flexible
 
-gitk assess intersection --raw-data_folder tests/consesnus/raw/\
+gitk assess intersection --raw-data-folder tests/consesnus/raw/\
   --file-list tests/consesnus/file_list.txt \
-  --universe tests/consesnus/results/universe/ML_flexible.bed \
-  --save-to-file --folder_out tests/consesnus/results/intersection/ \
-  --pref test --npool 1
+  --universe tests/consesnus/results/ML_flexible.bed \
+  --save-to-file --folder-out tests/consesnus/results/intersection/ \
+  --pref test --no-workers 1

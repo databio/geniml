@@ -148,8 +148,8 @@ def read_in_new_universe_regions(
 
 
 def calc_distance_between_two_files(
-    q_folder,
     universe,
+    q_folder,
     q_file,
     flexible,
     save_each,
@@ -251,7 +251,7 @@ def calc_distance_between_two_files(
                     flexible,
                     uni_to_file,
                 )
-                dist_start.append(res)
+                dist_end.append(res)
     query.close()
     if save_each:
         with open(os.path.join(folder_out, pref, q_file), "w") as f:
