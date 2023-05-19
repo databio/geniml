@@ -202,10 +202,32 @@ def main(test_args=None):
             )
 
         elif args.subcommand == SEARCH_CMD:
-            from .bedspace.pipeline.search import main as search_main
+            from .bedspace.const import SearchType
+            from .bedspace.pipeline.search import run_scenario1 as scenario1
+            from .bedspace.pipeline.search import run_scenario2 as scenario2
+            from .bedspace.pipeline.search import run_scenario3 as scenario3
 
-            _LOGGER.info("Running bedspace search")
-            search_main(args.type, args.distances, args.num_results)
+            if args.type == SearchType.l2r:
+                _LOGGER.info("Running bedspace search (scenario 1)")
+                scenario1(
+                    args.query,
+                    args.distances,
+                    args.num_results,
+                )
+            elif args.type == SearchType.r2l:
+                _LOGGER.info("Running bedspace search (scenario 2)")
+                scenario2(
+                    args.query,
+                    args.distances,
+                    args.num_results,
+                )
+            elif args.type == SearchType.l2l:
+                _LOGGER.info("Running bedspace search (scenario 3)")
+                scenario3(
+                    args.query,
+                    args.distances,
+                    args.num_results,
+                )
 
         else:
             # print help for this subcommand
