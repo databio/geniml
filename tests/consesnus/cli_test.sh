@@ -4,7 +4,7 @@ rm -r tests/consesnus/results
 mkdir tests/consesnus/results
 
 # make lh model
-gitk lh build_model --model-folder tests/consesnus/results/lh_model.tar \
+gitk lh build_model --model-file tests/consesnus/results/lh_model.tar \
               --file-no 4 \
               --coverage-folder tests/consesnus/coverage/
 
@@ -24,8 +24,9 @@ gitk lh universe_hard --coverage_file tests/consesnus/coverage/all_core.bw  \
                        --fout tests/consesnus/results/universe/cut_off_c1_m100_f300.bed
 # make ML flexible universe
 
-gitk lh universe_flexible --model_folder tests/consesnus/results/lh_model.tar \
-                          --output_file tests/consesnus/results/universe/ML_flexible.bed
+gitk lh universe_flexible --model-file tests/consesnus/results/lh_model.tar \
+                          --output-file tests/consesnus/results/ML_flexible.bed \
+                          --cov-folder tests/consesnus/coverage/
 
 # make HMM universe
 gitk hmm --out-file tests/consesnus/results/universe/hmm_raw.bed --cov-folder tests/consesnus/coverage/

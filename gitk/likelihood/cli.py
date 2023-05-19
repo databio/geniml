@@ -20,7 +20,11 @@ def build_subparser_model(parser):
         default="all",
         type=str,
     )
-
+    parser.add_argument(
+        "--force",
+        help="if overwrite existing model",
+        action="store_true",
+    )
     return parser
 
 
