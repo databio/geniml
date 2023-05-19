@@ -109,12 +109,15 @@ def main(test_args=None):
                 args.coverage_folder,
                 args.coverage_prefix,
                 args.file_no,
+                args.force,
             )
 
         if args.subcommand == "universe_hard":
             from .likelihood.universe_hard import main
 
-            main(args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff)
+            main(
+                args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff
+            )
 
         if args.subcommand == "universe_flexible":
             from .likelihood.universe_flexible import main

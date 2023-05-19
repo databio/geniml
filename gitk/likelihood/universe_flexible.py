@@ -29,7 +29,6 @@ def process_part(
     """
     mat = np.zeros((len(cove), 4))
     (N, M) = mat.shape
-    background = [0, 2, 4]
     for i in range(N):
         start_b = model_start[cove[i, 0], 0]
         core_b = model_core[cove[i, 1], 0]
@@ -89,6 +88,7 @@ def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_ou
             chrom_model["core"],
             chrom_model["end"],
         )
+        path[s:e] = res
 
     predictions_to_bed(path, chrom, file_out)
 
