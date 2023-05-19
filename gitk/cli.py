@@ -1,7 +1,6 @@
 from typing import Dict
 import logmuse
 import sys
-import os
 
 from ubiquerg import VersionInHelpParser
 
@@ -10,6 +9,7 @@ from .eval.cli import build_subparser as eval_subparser
 from .hmm.cli import build_subparser as hmm_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
+from .bedspace.cli import build_argparser as bedspace_subparser
 
 from ._version import __version__
 
@@ -37,6 +37,7 @@ def build_argparser():
         "lh": "Compute likelihood",
         "assess": "Assess a universe",
         "scembed": "Embed single-cell data as region vectors",
+        "bedspace": "Coembed regionsets (bed files) and labels",
     }
 
     sp = parser.add_subparsers(dest="command")
@@ -49,6 +50,7 @@ def build_argparser():
     subparsers["assess"] = assess_subparser(subparsers["assess"])
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
+    subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
 
     return parser
 
@@ -66,7 +68,7 @@ def main(test_args=None):
         parser.print_help(sys.stderr)
         sys.exit(1)
 
-    _LOGGER.info(f"Command: {args.command}")
+    _LOGGER.info(f"Command was: {args.command}")
 
     if args.command == "assess":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
@@ -157,7 +159,57 @@ def main(test_args=None):
         pass
         # scembed_main(test_args)
 
-    return
+        return
+
+    if args.command == "bedspace":
+        from .bedspace.const import PREPROCESS_CMD, TRAIN_CMD, DISTANCES_CMD, SEARCH_CMD
+
+        _LOGGER.info(f"Subcommand: {args.subcommand}")
+
+        if args.subcommand == PREPROCESS_CMD:
+            from .bedspace.pipeline.preprocess import main as preprocess_main
+
+            _LOGGER.info("Running bedspace preprocess")
+            preprocess_main(
+                args.input, args.metadata, args.universe, args.output, args.labels
+            )
+
+        elif args.subcommand == TRAIN_CMD:
+            from .bedspace.pipeline.train import main as train_main
+
+            _LOGGER.info("Running bedspace train")
+            train_main(
+                args.path_to_starspace,
+                args.input,
+                args.output,
+                args.num_epochs,
+                args.dim,
+                args.learning_rate,
+            )
+
+        elif args.subcommand == DISTANCES_CMD:
+            from .bedspace.pipeline.distances import main as distances_main
+
+            _LOGGER.info("Running bedspace distances")
+            distances_main(
+                args.input,
+                args.metadata,
+                args.universe,
+                args.output,
+                args.labels,
+                args.files,
+                args.threshold,
+            )
+
+        elif args.subcommand == SEARCH_CMD:
+            from .bedspace.pipeline.search import main as search_main
+
+            _LOGGER.info("Running bedspace search")
+            search_main(args.type, args.distances, args.num_results)
+
+        else:
+            # print help for this subcommand
+            _LOGGER.info("Running bedspace help")
 
 
 if __name__ == "__main__":

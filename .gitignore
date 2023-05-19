@@ -168,3 +168,13 @@ gitk/tokenization/bedtools
 test.*
 
 **/*.ipynb_checkpoints/
+
+# data
+tests/data/buenrostro2018.h5ad
+tests/data/buenrostro_metadata.tsv
+
+# integration test stuff
+tests/integration/buenrostro2018.model
+
+# examples
+examples/scembed/pbmc/

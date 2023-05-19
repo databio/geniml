@@ -1,17 +1,17 @@
-import pandas as pd
-from collections import Counter
 import glob
-import numpy as np
 import re
-import seaborn as sns
-from scipy import stats
-import umap.umap_ as umap
+from collections import Counter
 
 import matplotlib
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import umap.umap_ as umap
+from scipy import stats
+
 matplotlib.rcParams["svg.fonttype"] = "none"
 matplotlib.rcParams["text.usetex"] = False
 import matplotlib.pyplot as plt
-
 
 # Label embedding
 
@@ -75,8 +75,6 @@ def UMAP_plot(data_X, y, title = '', nn = 100, metric = 'cosine', filename = '',
     return fig
 
 from scipy.cluster import hierarchy
-
-
 
 nn = 5
 target='target'
