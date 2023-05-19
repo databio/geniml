@@ -1,3 +1,4 @@
+import gzip
 import pickle
 from logging import getLogger
 from typing import Dict, List, Union
@@ -90,7 +91,7 @@ class SCEmbed(Word2Vec):
 
         Instead, we will just use pickle to dump the object.
         """
-        with open(filepath, "wb") as f:
+        with gzip.open(filepath, "wb") as f:
             pickle.dump(self, f)
 
     def load_model(self, filepath: str, **kwargs):
@@ -100,8 +101,9 @@ class SCEmbed(Word2Vec):
 
         Instead we will just use pickle to load the object. Override the current object.
         """
-        with open(filepath, "rb") as f:
-            self = pickle.load(f)
+        with gzip.open(filepath, "rb") as f:
+            obj = pickle.load(f)
+            self.__dict__.update(obj.__dict__)
 
     def train(
         self,
