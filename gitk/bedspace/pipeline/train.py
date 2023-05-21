@@ -1,4 +1,5 @@
 import logging
+import pybedtools
 
 from ..const import (DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS,
                      PKG_NAME)
@@ -27,3 +28,62 @@ def main(
     _LOGGER.info("Running training...")
 
     # PLACE TRAINING CODE HERE
+    
+    
+    n_process = 8
+    label_prefix = "__label__"
+
+    model = os.path.join(output, "starspace_trained_model")
+
+
+    
+    if os.path.exists(model):
+        subprocess.Popen(
+            [
+                path_to_starsapce + 'starspace',
+                "train",
+                "-trainFile",
+                input,
+                "-model",
+                model,
+                "-initModel",
+                model,
+                "-trainMode",
+                "0",
+                "-dim",
+                dim,
+                "-epoch",
+                num_epochs,
+                "-negSearchLimit",
+                "5",
+                "-thread",
+                "20",
+                "-lr",
+                learning_rate,
+            ]
+        )
+    else:
+        subprocess.Popen(
+            [
+                path_to_starsapce + 'starspace',
+                "train",
+                "-trainFile",
+                input,
+                "-model",
+                model,
+                "-trainMode",
+                "0",
+                "-dim",
+                dim,
+                "-epoch",
+                num_epochs,
+                "-negSearchLimit",
+                "5",
+                "-thread",
+                "20",
+                "-lr",
+                learning_rate,
+            ]
+        )
+
+    print("Train bedembed done.")
