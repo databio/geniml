@@ -7,30 +7,39 @@ from functools import cmp_to_key
 import numpy as np
 from numba import njit
 
-from ..hmm.hmm import find_full_empty_pos, find_full_full_pos, predictions_to_bed
-from ..utils import natural_chr_sort, timer_func
+from ..utils import natural_chr_sort, timer_func, read_chromosome_from_bw
+from ..hmm.hmm import predictions_to_bed, find_full
 from .build_model import ModelLH
 
 
 @njit
-def process_part(model):
+def process_part(
+    cove,
+    model_start=np.array([[]]),
+    model_core=np.array([[]]),
+    model_end=np.array([[]]),
+):
     """
     Finding ML path through matrix using dynamic programing
-    :param array mat: fragment of likelihood model to be processed
-    :return array: ML path through matrix
+    :param ndarray cove: coverage tracks
+    :param ndarray model_start: lh model for starts
+    :param ndarray model_core: lh model for core
+    :param ndarray model_end: lh model for ends
+    :return ndarray: ML path through matrix
     """
-    mat = np.zeros((len(model), 4))
+    mat = np.zeros((len(cove), 4))
     (N, M) = mat.shape
-    background = [0, 2, 4]
     for i in range(N):
-        for k in background:
-            mat[i, 3] += model[i, k]
-        for j in range(M - 1):
-            back = background[:]
-            back.remove(2 * j)
-            mat[i, j] = model[i, 2 * j + 1]
-            for k in back:
-                mat[i, j] += model[i, k]
+        start_b = model_start[cove[i, 0], 0]
+        core_b = model_core[cove[i, 1], 0]
+        end_b = model_end[cove[i, 2], 0]
+        start = model_start[cove[i, 0], 1]
+        core = model_core[cove[i, 1], 1]
+        end = model_end[cove[i, 2], 1]
+        mat[i, 0] = start + core_b + end_b
+        mat[i, 1] = start_b + core + end_b
+        mat[i, 2] = start_b + core_b + end
+        mat[i, 3] = start_b + core_b + end_b
 
     for i in range(1, N):
         for j in range(M):
@@ -46,46 +55,55 @@ def process_part(model):
     return path
 
 
-def make_ml_flexible_universe(model_lh, chrom, fout):
+def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_out):
     """
     Make ML flexible universe per chromosome
-    :param str folderin: input folder with likelihood models
+    :param ModelLH model_lh: lh model
+    :param str cove_folder: path to a folder with genome coverage by tracks
+    :param str cove_prefix: prefix used in uniwig for creating coverage
     :param str chrom: chromosome to be processed
-    :param str fout: output file with the universe
+    :param str file_out: output file with the universe
     """
     model_lh.read_chrom(chrom)
-    chrom_model = model_lh.chromosomes_models[chrom]
-    model = np.hstack(
-        (
-            chrom_model.models["start"],
-            chrom_model.models["core"],
-            chrom_model.models["end"],
-        )
+    chrom_model = model_lh[chrom]
+    start = read_chromosome_from_bw(
+        os.path.join(cove_folder, f"{cove_prefix}_start.bw"), chrom
     )
-    model_lh.clear_chrom(chrom)
-    seq = np.where(np.sum(model[:, [1, 3, 5]], axis=1) > -30, 1, 0).astype(np.uint8)
-    full_pos_no = np.sum(seq)
-    if full_pos_no < len(seq) - full_pos_no:
-        full_start, full_end = find_full_full_pos(seq)
-    else:
-        full_start, full_end = find_full_empty_pos(seq)
-    path = np.full(len(model), 3, dtype=np.uint8)
+    core = read_chromosome_from_bw(
+        os.path.join(cove_folder, f"{cove_prefix}_core.bw"), chrom
+    )
+    end = read_chromosome_from_bw(
+        os.path.join(cove_folder, f"{cove_prefix}_end.bw"), chrom
+    )
+    cove = np.zeros((len(start), 3), dtype=np.uint16)
+    cove[:, 0] = start
+    cove[:, 1] = core
+    cove[:, 2] = end
+    full_start, full_end = find_full(cove)
+    path = np.full(len(cove), 3, dtype=np.uint8)
     for s, e in zip(full_start, full_end):
-        res = process_part(model[s:e])
+        res = process_part(
+            cove[s:e],
+            chrom_model["start"],
+            chrom_model["core"],
+            chrom_model["end"],
+        )
         path[s:e] = res
-    predictions_to_bed(path, chrom, fout)
+
+    predictions_to_bed(path, chrom, file_out)
 
 
-@timer_func
-def main(folderin, fout):
+def main(folder_in, cove_folder, cove_prefix, file_out):
     """
     Make ML flexible universe
-    :param str folderin: input folder with likelihood models
-    :param str fout: output file with the universe
+    :param str folder_in: input name with likelihood models
+    :param str file_out: output file with the universe
+    :param str cove_folder: path to a folder with genome coverage by tracks
+    :param str cove_prefix: prefix used in uniwig for creating coverage
     """
-    if os.path.isfile(fout):
-        raise Exception(f"File : {fout} exists")
-    lh_model = ModelLH(folderin)
+    if os.path.isfile(file_out):
+        raise Exception(f"File : {file_out} exists")
+    lh_model = ModelLH(folder_in)
     chroms = sorted(lh_model.chromosomes_list, key=cmp_to_key(natural_chr_sort))
     for C in chroms:
-        make_ml_flexible_universe(lh_model, C, fout)
+        make_ml_flexible_universe(lh_model, cove_folder, cove_prefix, C, file_out)
