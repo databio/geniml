@@ -265,9 +265,8 @@ def load_scembed_model(path: str) -> "SCEmbed":
     :param str path: The path to the model.
     """
     import pickle
-    import gzip
 
-    with gzip.open(path, "rb") as f:
+    with open(path, "rb") as f:
         model = pickle.load(f)
         return model
 
