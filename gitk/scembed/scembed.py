@@ -283,7 +283,8 @@ class SCEmbed(Word2Vec):
         for row in list(embeddings_df.iterrows()):
             row_dict = row[1].to_dict()
             new_row_dict = {
-                f"embedding_dim_{i}": row_dict["embedding"][i] for i in range(100)
+                f"embedding_dim_{i}": row_dict["embedding"][i]
+                for i in range(self.vector_size)
             }
             if "id" in row_dict:
                 new_row_dict["id"] = row_dict["id"]
