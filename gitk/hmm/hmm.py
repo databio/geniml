@@ -43,7 +43,7 @@ def norm(track, mode):
     track[track != 0] = [val[i] for i in important_val]
 
 
-def process_bigwig(file, seq, p, chrom, chrom_size, normalize=False, mode=None):
+def process_bigwig(file, seq, p, chrom, chrom_size, normalize=True, mode=None):
     """Preprocess bigWig file"""
     if pyBigWig.numpy:
         track = file.values(chrom, 0, chrom_size, numpy=True)
@@ -57,7 +57,7 @@ def process_bigwig(file, seq, p, chrom, chrom_size, normalize=False, mode=None):
     seq[:, p] = track
 
 
-def read_data(start, core, end, chrom, normalize=False):
+def read_data(start, core, end, chrom, normalize=True):
     """
     Read in and preprocess data
     :param str start: path to file with start coverage
@@ -83,8 +83,12 @@ def read_data(start, core, end, chrom, normalize=False):
 
 
 def find_full_full_pos(seq, gap_size=1000, area_size=500):
-    """Look for nonzero positions in coverage matrix,
-    when most of the positions are zero"""
+    """Look for nonzero positions in coverage matrix, when most of the positions are zero
+    :param ndarray seq: vector with information about non-zero positions
+    :param int gap_size: size of minium gap between non-zero positions that are separated
+    :param int area_size: size of the area around non-zero positions to be included in the result
+    :return list: list of starts of non-zero regions and list of ends of non-zero regions
+    """
     size = len(seq)
     seq = np.argwhere(seq >= 1).flatten()
     starts, ends = [], []
@@ -101,8 +105,12 @@ def find_full_full_pos(seq, gap_size=1000, area_size=500):
 
 
 def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
-    """Look for nonzero positions in coverage matrix,
-    when most of the positions are nonzero"""
+    """Look for nonzero positions in coverage matrix, when most of the positions are nonzero
+    :param ndarray seq: vector with information about non-zero positions
+    :param int gap_size: size of minium gap between non-zero positions that are separated
+    :param int area_size: size of the area around non-zero positions to be included in the result
+    :return list: list of starts of non-zero regions and list of ends of non-zero regions
+    """
     size = len(seq)
     seq = np.argwhere(seq == 0).flatten()
     starts, ends = [], []
@@ -150,13 +158,12 @@ def ana_region(region, start_s):
 def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None):
     """
     Save HMM prediction into a file
-    :param array states: result of HMM prediction
+    :param ndarray states: result of HMM prediction
     :param str chrom: which chromosome is being analysed
     :param str bedname: path to the output file
-    :param bool save_max_cove: whether to save the maximum peak
-     coverage to output file, can result in nonstandard bed file
-    :param str cove_file: file with core coverage, require for
-     saving maximum peak coverage
+    :param bool save_max_cove: whether to save the maximum peak coverage to output
+     file, can result in nonstandard bed file
+    :param str cove_file: file with core coverage, require for saving maximum peak coverage
     """
     ind = np.argwhere(states != 3)
     ind = ind.flatten()
@@ -222,11 +229,11 @@ def split_predict(seq, empty_starts, empty_ends, model):
     return hmm_predictions
 
 
-def run_hmm(start, core, end, chrom, normalize=False):
+def run_hmm(start, core, end, chrom, normalize=True):
     """Make HMM prediction for given chromosome"""
     chrom_size, seq = read_data(start, core, end, chrom, normalize=normalize)
     empty_starts, empty_ends = find_full(seq)
-    model = PoissonModel(TRANSMAT, LAMBDAS, save_matrix=False).model()
+    model = PoissonModel(TRANSMAT, LAMBDAS, save_matrix=False).model
     hmm_predictions = split_predict(seq, empty_starts, empty_ends, model)
     return hmm_predictions, model
 
@@ -235,7 +242,7 @@ def run_hmm_save_bed(
     coverage_folder,
     out_file,
     prefix="all",
-    normalize=False,
+    normalize=True,
     save_max_cove=False,
 ):
     """
