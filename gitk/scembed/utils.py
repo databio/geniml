@@ -272,6 +272,19 @@ def load_scembed_model(path: str) -> "SCEmbed":
         return model
 
 
+def load_scembed_model_deprecated(path: str) -> "SCEmbed":
+    """
+    Load a scembed model from disk. THIS IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE.
+
+    :param str path: The path to the model.
+    """
+    import pickle
+
+    with open(path, "rb") as f:
+        model = pickle.load(f)
+        return model
+
+
 def check_model_exists_on_hub(registry: str) -> bool:
     """
     Check the model hub for the existing model registry. Registry
@@ -415,6 +428,9 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
 
     # Perform the comparison using numpy operations
     positive_values = adata.X > 0
+
+    if not isinstance(positive_values, np.ndarray):
+        positive_values = positive_values.toarray()
 
     regions = []
     for i in tqdm(range(adata.shape[0]), total=adata.shape[0]):
