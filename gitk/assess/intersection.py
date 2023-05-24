@@ -6,6 +6,7 @@ import tempfile
 from multiprocessing import Pool
 
 import numpy as np
+import pandas as pd
 
 from ..utils import natural_chr_sort
 from .utils import check_if_uni_sorted, prep_data, process_line
@@ -194,9 +195,6 @@ def run_intersection(
     file_list,
     universe,
     no_workers,
-    save_to_file=False,
-    folder_out=None,
-    pref=None,
 ):
     """
     Calculate the base pair intersection of universe and group of files
@@ -211,8 +209,6 @@ def run_intersection(
     mean of fractions of intersection of file and universe divided by file size
     """
     check_if_uni_sorted(universe)
-    if save_to_file:
-        os.makedirs(folder_out, exist_ok=True)
     with open(file_list) as f:
         files = f.read().split("\n")[:-1]
     res = []
@@ -224,17 +220,25 @@ def run_intersection(
         with Pool(no_workers) as p:
             args = [(universe, folder, f) for f in files]
             res = p.starmap(calc_diff_intersection, args)
-    if save_to_file:
-        file_out = os.path.join(folder_out, pref + "_data.tsv")
-        with open(file_out, "w") as o:
-            o.write("file\tunivers/file\tfile/universe\tuniverse&file\n")
-            for r in res:
-                o.write(f"{r[0]}\t{r[1]}\t{r[2]}\t{r[3]}\n")
-    else:
-        res = np.array(res)
-        res = res[:, 1:]
-        res = res.astype("float")
-        recall = res[:, 2] / (res[:, 2] + res[:, 1])
-        precision = res[:, 2] / (res[:, 2] + res[:, 0])
-        f_10 = (1 + 10**2) * (precision * recall) / ((10**2 * precision) + recall)
-        return np.median(f_10)
+    return pd.DataFrame(res)
+
+
+def get_f_10_score(
+    folder,
+    file_list,
+    universe,
+    no_workers,
+):
+    res = run_intersection(
+        folder,
+        file_list,
+        universe,
+        no_workers,
+    )
+    res = np.array(res)
+    res = res[:, 1:]
+    res = res.astype("float")
+    recall = res[:, 2] / (res[:, 2] + res[:, 1])
+    precision = res[:, 2] / (res[:, 2] + res[:, 0])
+    f_10 = (1 + 10**2) * (precision * recall) / ((10**2 * precision) + recall)
+    return np.mean(f_10)

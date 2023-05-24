@@ -6,6 +6,7 @@ import tempfile
 from multiprocessing import Pool
 
 import numpy as np
+import pandas as pd
 
 from ..utils import natural_chr_sort
 from .utils import check_if_uni_sorted, prep_data, process_db_line
@@ -171,16 +172,16 @@ def calc_distance_between_two_files(
     :return str, int, int: file name; median od distance of starts to
      starts in universe; median od distance of ends to ends in universe
     """
-
     query = tempfile.NamedTemporaryFile()
     prep_data(q_folder, q_file, query)
     if uni_to_file:
         db_start_name = query.name
         db_end_name = query.name
-        query = open(universe)
+        q = open(universe)
     else:
         db_start_name = universe
         db_end_name = universe
+        q = query
     with open(db_start_name) as db_start, open(db_end_name) as db_end:
         db_queue_start = []
         current_chrom_start = "chr0"
@@ -197,7 +198,7 @@ def calc_distance_between_two_files(
         if flexible and not uni_to_file:
             pos_start = [1, 6]
             pos_end = [7, 2]
-        for i in query:
+        for i in q:
             if not uni_to_file:
                 i = i.decode("utf-8")
             i = i.split("\t")
@@ -244,7 +245,7 @@ def calc_distance_between_two_files(
                 res = distance_to_closest_region(
                     db_end,
                     db_queue_end,
-                    start,
+                    end,
                     current_chrom_end,
                     unused_db_end,
                     pos_end,
@@ -270,7 +271,6 @@ def run_distance(
     universe,
     no_workers,
     flexible=False,
-    save_to_file=False,
     folder_out=None,
     pref=None,
     save_each=False,
@@ -283,7 +283,6 @@ def run_distance(
     :param str universe: path to universe file
     :param int no_workers: number of parallel processes
     :param bool flexible: whether the universe if flexible
-    :param bool save_to_file: whether to save median of calculated distances for each file
     :param str folder_out: output folder
     :param str pref: prefix used for saving
     :param bool save_each: whether to save calculated distances for each file
@@ -318,15 +317,7 @@ def run_distance(
                 for f in files
             ]
             res = p.starmap(calc_distance_between_two_files, args)
-    if save_to_file:
-        file_out = os.path.join(folder_out, pref + "_data.tsv")
-        with open(file_out, "w") as o:
-            o.write("file\tmedian_dist\n")
-            for r in res:
-                o.write(f"{r[0]}\t{r[1]}\n")
-    else:
-        res = np.array(res)
-        return res
+    return pd.DataFrame(res)
 
 
 def get_closeness_score(folder, file_list, universe, no_workers, flexible=False):
