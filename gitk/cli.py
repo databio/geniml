@@ -1,11 +1,12 @@
+import os.path
 from typing import Dict
 import logmuse
 import sys
-import os
+import pandas as pd
 
 from ubiquerg import VersionInHelpParser
 
-from .assess.cli import build_mode_parser as assess_subparser
+from .assess.cli import build_subparser as assess_subparser
 from .eval.cli import build_subparser as eval_subparser
 from .hmm.cli import build_subparser as hmm_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
@@ -70,33 +71,104 @@ def main(test_args=None):
     _LOGGER.info(f"Command: {args.command}")
 
     if args.command == "assess":
-        _LOGGER.info(f"Subcommand: {args.subcommand}")
-        if args.subcommand == "distance":
+        asses_results = []
+        if args.distance:
             from .assess.distance import run_distance
 
-            run_distance(
+            r_distance = run_distance(
                 args.raw_data_folder,
                 args.file_list,
                 args.universe,
                 args.no_workers,
-                args.flexible,
-                args.save_to_file,
+                False,
                 args.folder_out,
-                args.pref,
+                args.pref + "_dist_file_to_universe",
                 args.save_each,
+                False,
             )
+            r_distance.columns = ["file", "median_dist_file_to_universe"]
+            print(r_distance)
+            asses_results.append(r_distance)
 
-        if args.subcommand == "intersection":
+        if args.distance_flexible:
+            from .assess.distance import run_distance
+
+            r_distance_flex = run_distance(
+                args.raw_data_folder,
+                args.file_list,
+                args.universe,
+                args.no_workers,
+                True,
+                args.folder_out,
+                args.pref + "_dist_file_to_universe_flex",
+                args.save_each,
+                False,
+            )
+            r_distance_flex.columns = ["file", "median_dist_file_to_universe_flex"]
+            print(r_distance_flex)
+            asses_results.append(r_distance_flex)
+
+        if args.distance_universe_to_file:
+            from .assess.distance import run_distance
+
+            r_distance_utf = run_distance(
+                args.raw_data_folder,
+                args.file_list,
+                args.universe,
+                args.no_workers,
+                False,
+                args.folder_out,
+                args.pref + "_dist_universe_to_file",
+                args.save_each,
+                True,
+            )
+            r_distance_utf.columns = ["file", "median_dist_universe_to_file"]
+            print(r_distance_utf)
+            asses_results.append(r_distance_utf)
+
+        if args.distance_flexible_universe_to_file:
+            from .assess.distance import run_distance
+
+            r_distance_utf_flex = run_distance(
+                args.raw_data_folder,
+                args.file_list,
+                args.universe,
+                args.no_workers,
+                True,
+                args.folder_out,
+                args.pref + "median_dist_universe_to_file_flex",
+                args.save_each,
+                True,
+            )
+            r_distance_utf_flex.columns = ["file", "median_dist_universe_to_file_flex"]
+            print(r_distance_utf_flex)
+            asses_results.append(r_distance_utf_flex)
+
+        if args.overlap:
             from .assess.intersection import run_intersection
 
-            run_intersection(
+            r_overlap = run_intersection(
                 args.raw_data_folder,
                 args.file_list,
                 args.universe,
                 args.no_workers,
-                args.save_to_file,
-                args.folder_out,
-                args.pref,
+            )
+            r_overlap.columns = [
+                "file",
+                "univers/file",
+                "file/universe",
+                "universe&file",
+            ]
+            print(r_overlap)
+            asses_results.append(r_overlap)
+        if len(asses_results) == 0:
+            raise Exception("No assessment method was provided")
+        if args.save_to_file:
+            df = asses_results[0]
+            for i in asses_results[1:]:
+                df = pd.merge(df, i, on="file")
+            df.to_csv(
+                os.path.join(args.folder_out, args.pref + "_data.csv"), index=False
             )
 
     if args.command == "lh":
