@@ -1,4 +1,12 @@
-import logging
+# import logging
+import pybedtools
+import pandas as pd
+import numpy as np
+import os
+from multiprocessing import Pool
+from subprocess import check_output
+from scipy.spatial import distance
+from sklearn.preprocessing import MinMaxScaler
 
 from ..const import DEFAULT_THRESHOLD, PKG_NAME
 
@@ -32,9 +40,47 @@ def data_prepration_test(
             return [path_file, " "]
     else:
         return [path_file, " "]
+    
+    
+def bed2vec(file_list, universe, model, source, output_path, path_to_starsapce):
+
+    docs = os.path.join(output_path, "documents.txt")
+
+    doc_embed = os.path.join(
+        output_path, "{}_starspace_embed.txt".format(source)
+    )
+
+    documents = []
+    with Pool(16) as p:
+        documents = p.starmap(data_prepration_test, [(x, universe) for x in file_list])
+        p.close()
+        p.join()
+#     print("Reading files done")
+
+    df = pd.DataFrame(documents, columns=["file_path", "context"])
+    df = df.fillna(" ")
+    df = df[df.context != " "]
+
+
+    with open(docs, "w") as input_file:
+        input_file.write("\n".join(df.context))
+    input_file.close()
+
+
+    starspace_path = os.path.join(
+        path_to_starsapce,
+        "embed_doc",
+    )
+
+    output = check_output([starspace_path, model, docs]).decode("utf-8")
+
+    with open(doc_embed, "w") as out:
+        out.write(output)
+        out.close()
+    return doc_embed
 
     
-    def data_preprocessing(path_embeded_document):
+def data_preprocessing(path_embeded_document):
     document_embedding = pd.read_csv(path_embeded_document, header=None)
     document_embedding = document_embedding[0].str.split("__label__", expand=True)
     document_embedding[list(document_embedding)[1:]] = document_embedding[
@@ -49,7 +95,7 @@ def data_prepration_test(
         X = document_embedding[i : i + 1]
         X = X[list(X)[0:-1]].astype(float)
         X = list(X.values)
-        Xs.append(X)
+        Xs.append(X[0])
     return Xs
 
 
@@ -72,7 +118,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
     distance_matrix = distance.cdist(X_files, X_labels, "cosine")
     df_distance_matrix = pd.DataFrame(distance_matrix)
     df_distance_matrix.columns = y_labels
-    df_distance_matrix["file_label"] = y_files
+    df_distance_matrix["file_label"] = [y_files[i].split(",")[1] for i in range(len(y_files))] 
     file_distance = pd.melt(
         df_distance_matrix,
         id_vars="file_label",
@@ -85,12 +131,32 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
     )
     return file_distance
 
+def calculate_distance_qc(X_files, X_labels, y_files, y_labels):
+    X_files = np.array(X_files)
+    X_labels = np.array(X_labels)
+    distance_matrix = distance.cdist(X_files, X_labels, "cosine")
+    df_distance_matrix = pd.DataFrame(distance_matrix)
+    df_distance_matrix.columns = y_labels
+    df_distance_matrix["db_file"] = y_files
+    file_distance = pd.melt(
+        df_distance_matrix,
+        id_vars="db_file",
+        var_name="test_file",
+        value_name="score",
+    )
+    scaler = MinMaxScaler()
+    file_distance["score"] = scaler.fit_transform(
+        np.array(file_distance["score"]).reshape(-1, 1)
+    )
+    return file_distance
+
+
 
 def meta_preprocessing(meta, labels, data_path):
     cols = ["file_name"]
-    cols.extend(labels)
+    cols.extend(labels.split(','))
     meta = meta[cols]
-    meta["file_name"] = data_path + meta["file_name"]
+    meta.loc[:, "file_name"] = data_path + meta["file_name"]
     meta = meta.fillna("")
     meta[0] = meta.apply(",".join, axis=1)
     return meta[0]
@@ -136,112 +202,75 @@ def main(
     distance_file_path_rl = os.path.join(output, "similarity_score_rl.csv")
 
 
-    # Data prepration
-    tokenized_documents = []
-    with Pool(n_process) as p:
-        tokenized_documents = p.starmap(
-            data_prepration_test, [(x, universe) for x in file_list]
-        )
-        p.close()
-        p.join()
-    print("Reading files done")
 
-    df = pd.DataFrame(tokenized_documents, columns=["file_path", "context"])
-    df = df.fillna(" ")
-#     df = df[df.context != " "]
-
-    with open(docs_test, "w") as file:
-        file.write("\n".join(df.context))
-    file.close()
-
-
-    print("Writing files done")
-
-    starspace_path = os.path.join(
-        path_to_starsapce,
-        "embed_doc",
-    )
-
-    output = check_output([starspace_path, input, docs_test]).decode("utf-8")
-
-    with open(doc_embed_test, "w") as out:
-        out.write(output)
-        out.close()
-
-    Xs = data_preprocessing(doc_embed_test)
-
-    for i in range(len(file_list)):
-        y = ",".join(file_list[i].split(",")[1:])
-        X = Xs[i]
-
-        df_similarity = calculate_distance(X, embedding_labels, y, labels)
-
-        df_similarity['filename'] = [file_list[i].split(",")[0]] * len(labels)
-
-
-        df_similarity = df_similarity[['filename', "file_label", "search_term", "score"]]
-
-        # filter res by dist threshold
-        thresh = 0.5
-        df_similarity = df_similarity[df_similarity["score"] < thresh].reset_index(
-            drop=True
-        )
-
-
-        if os.path.exists(distance_file_path):
-            df_similarity.to_csv(distance_file_path, header=False, index=None, mode="a")
-        else:
-            df_similarity.to_csv(distance_file_path, index=False)
-            
-            
-            
-            
-            
+    embedding_labels, labels_l = label_preprocessing(label_embed, label_prefix)
     
-    universe = pybedtools.BedTool(args.univ_path)
+    doc_embed_query = bed2vec(file_list, universe, input, "testfiles", temp_path, path_to_starsapce)
 
-    meta_data_db, assembly, file_list_db = meta(args.meta_path_db)
-    meta_data_query, assembly, file_list_query = meta(args.meta_path_query)
+
+    Xs = data_preprocessing(doc_embed_query)
     
+    
+    df_similarity = calculate_distance(Xs, embedding_labels, file_list, labels_l)
+    
+    
+    
+    
+    df_similarity['filename'] = [file_list[i].split(",")[0] for i in range(len(file_list))] * len(labels_l)
+    
+    
+    df_similarity = df_similarity[['filename', "file_label", "search_term", "score"]]
 
-
-    # define file path
-    model = os.path.join(args.output_path, "starspace_model_{}".format(assembly))
-
-
-    dist = os.path.join(
-        args.output_path, "query_db_similarity_score_{}.csv".format(assembly)
+    # filter res by dist threshold
+    
+    df_similarity = df_similarity[df_similarity["score"] > threshold].reset_index(
+        drop=True
     )
 
 
-    doc_embed_dB = bed2vec(file_list_db, universe, model, assembly, "DB", args.output_path)
+    df_similarity['score'] = 1 - df_similarity['score'] 
+    
+    if os.path.exists(distance_file_path_rl):
+        df_similarity.to_csv(distance_file_path_rl, header=False, index=None, mode="a")
+    else:
+        df_similarity.to_csv(distance_file_path_rl, index=False)
+            
+    
+
+    universe = pybedtools.BedTool(universe)
+
+    file_list_db = meta_preprocessing(pd.read_csv(metadata_train), labels, files)
+    file_list_query = meta_preprocessing(pd.read_csv(metadata_test), labels, files)
+    
+
+
+    distance_file_path_rr = os.path.join(
+        output, "similarity_score_rr.csv"
+    )
+
+    doc_embed_dB = bed2vec(file_list_db, universe, input, "DB", temp_path, path_to_starsapce)
 
     db_vectors = data_preprocessing(doc_embed_dB)
-
-    print(db_vectors.shape)
-    doc_embed_query = bed2vec(file_list_query, universe, model, assembly, "Query", args.output_path)
+   
+    doc_embed_query = bed2vec(file_list_query, universe, input, "Query", temp_path, path_to_starsapce)
 
     query_vectors = data_preprocessing(doc_embed_query)
 
-    print(query_vectors.shape)
+
+    df_similarity = calculate_distance_qc(
+        db_vectors, query_vectors, file_list_db, file_list_query
+    )
+
+    df_similarity = df_similarity[["db_file", "test_file", "score"]]
     
-    for i in range(len(query_vectors)):
+    df_similarity['score'] = 1 - df_similarity['score'] 
+    
 
-        query_vector = query_vectors[i]
-
-        df_similarity = calculate_distance(
-            db_vectors, query_vectors, file_list_db, file_list_query
-        )
-
-        df_similarity = df_similarity[["db_file", "test_file", "score"]]
-
-        if os.path.exists(dist):
-            df_similarity.to_csv(dist, header=False, index=None, mode="a")
-        else:
-            df_similarity.to_csv(dist, index=False)
+    if os.path.exists(distance_file_path_rr):
+        df_similarity.to_csv(distance_file_path_rr, header=False, index=None, mode="a")
+    else:
+        df_similarity.to_csv(distance_file_path_rr, index=False)
             
 
 
-    
-    
     

@@ -1,5 +1,7 @@
 import logging
-import pybedtools
+import os
+import subprocess
+
 
 from ..const import (DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS,
                      PKG_NAME)
@@ -11,9 +13,9 @@ def main(
     path_to_starsapce: str,
     input: str,
     output: str,
-    num_epochs: int = DEFAULT_NUM_EPOCHS,
+    num_epochs: str = DEFAULT_NUM_EPOCHS,
     dim: str = DEFAULT_DIM,
-    learning_rate: float = DEFAULT_LEARNING_RATE,
+    learning_rate: str = DEFAULT_LEARNING_RATE,
 ):
     """
     Train a starspace model.
@@ -34,13 +36,16 @@ def main(
     label_prefix = "__label__"
 
     model = os.path.join(output, "starspace_trained_model")
+    path_to_starsapce = os.path.join(path_to_starsapce, 'starspace')
 
+
+    print(type(input))
 
     
     if os.path.exists(model):
         subprocess.Popen(
             [
-                path_to_starsapce + 'starspace',
+                path_to_starsapce,
                 "train",
                 "-trainFile",
                 input,
@@ -65,7 +70,7 @@ def main(
     else:
         subprocess.Popen(
             [
-                path_to_starsapce + 'starspace',
+                path_to_starsapce,
                 "train",
                 "-trainFile",
                 input,
@@ -87,3 +92,4 @@ def main(
         )
 
     print("Train bedembed done.")
+
