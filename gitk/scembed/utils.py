@@ -1,6 +1,7 @@
 import os
-import subprocess
 import shutil
+import subprocess
+import urllib.request
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
@@ -8,9 +9,9 @@ from logging import getLogger
 from random import shuffle
 from typing import TYPE_CHECKING, Dict, List, Union
 
+import numpy as np
 import pandas as pd
 import scanpy as sc
-import numpy as np
 from tqdm import tqdm
 
 if TYPE_CHECKING:
@@ -305,11 +306,12 @@ def download_remote_model(registry: str, path: str, overwrite: bool = True) -> N
     :param str registry: the registry name of the model to download
     :param str path: the path to download the model to, this is the folder that will contain registry/model.yaml
     """
-    if os.path.exists(path) and overwrite:
+    path_to_model = os.path.join(path, registry)
+    if os.path.exists(path_to_model) and overwrite:
         _LOGGER.debug("Removing existing model.")
-        shutil.rmtree(path)
+        shutil.rmtree(path_to_model)
 
-    cmd = f"wget -r -np -nH --cut-dirs=2 -P {path} {MODEL_HUB_URL}/{registry}"
+    cmd = f"wget -r -np -nH --cut-dirs=2 -P {path} -l 1 {MODEL_HUB_URL}/{registry}"
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
     if result.returncode != 0:
         raise ValueError("Could not download model from model-hub.")
