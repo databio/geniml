@@ -1,7 +1,9 @@
 # %%
 # import libraries
 import logging
+
 import scanpy as sc
+
 from gitk import scembed
 
 # set to DEBUG to see more info
