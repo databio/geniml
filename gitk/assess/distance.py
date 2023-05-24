@@ -338,6 +338,6 @@ def get_closeness_score(folder, file_list, universe, no_workers, flexible=False)
         flexible=flexible,
         uni_to_file=True,
     )
-    me = (file_to_uni[:, 1].astype("float") + uni_to_file[:, 1].astype("float")) / 2
-    cs = 11 / (me + 10) / 1.1
+    me = (10 * file_to_uni[1] + uni_to_file[1]) / 11
+    cs = 1001 / (me + 1000) / 1.001
     return np.mean(cs)
