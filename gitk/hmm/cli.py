@@ -6,20 +6,24 @@ def build_subparser(parser):
     """
 
     parser.add_argument(
-        "--out_file", type=str, help="path to result file", required=True
+        "--out-file", type=str, help="path to result file", required=True
     )
     parser.add_argument(
-        "--cov_folder", type=str, help="path to coverage folder", required=True
+        "--cov-folder", type=str, help="path to coverage folder", required=True
     )
-    parser.add_argument("--normalize", action="store_true")
     parser.add_argument(
-        "--save_max_cove",
+        "--not_normalize",
+        help="if not to normalize coverage signal before using HMM",
+        action="store_false",
+    )
+    parser.add_argument(
+        "--save-max-cove",
         help="if present saves maximum coverage for each peak",
         action="store_true",
     )
     parser.add_argument(
         "--lambdas", type=str, help="lambdas matrix used to set emissions"
     )
-    parser.add_argument("--coverage_prefix", default="all", type=str)
+    parser.add_argument("--coverage-prefix", default="all", type=str)
 
     return parser

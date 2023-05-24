@@ -1,12 +1,8 @@
-from subprocess import Popen, PIPE
-import subprocess
-import shlex
 import os
+import shlex
+import subprocess
 import tempfile
-
-
-def help(f):
-    f.write(b"Welcome to geeksforgeeks")
+from subprocess import PIPE, Popen
 
 
 def prep_data(folder, file, tmp_file):
