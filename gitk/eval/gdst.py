@@ -6,20 +6,13 @@ import numpy as np
 import random
 import glob
 import time
-import time
 import multiprocessing as mp
 import argparse
 from gensim.models import Word2Vec
-import matplotlib.pyplot as plt
-import matplotlib
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
 from sklearn.metrics import r2_score
-from gitk.eval.utils import load_genomic_embeddings
+from gitk.eval.utils import load_genomic_embeddings, Timer, genome_distance
 from sklearn.linear_model import LinearRegression
 
-matplotlib.rcParams["svg.fonttype"] = "none"
-matplotlib.rcParams["text.usetex"] = False
 _log_path = None
 GENOME_DIST_SCALAR = 1e10
 
@@ -35,25 +28,6 @@ def log(obj, filename="log.txt"):
         with open(os.path.join(_log_path, filename), "a") as f:
             f.write(obj)
             f.write("\n")
-
-
-func_gdist = lambda u, v: float(u[1] < v[1]) * max(v[0] - u[1] + 1, 0) + float(
-    u[1] >= v[1]
-) * max(u[0] - v[1] + 1, 0)
-
-
-class Timer:
-    def __init__(self):
-        self.o = time.time()
-
-    def measure(self, p=1):
-        x = (time.time() - self.o) / float(p)
-        x = int(x)
-        if x >= 3600:
-            return "{:.1f}h".format(x / 3600)
-        if x >= 60:
-            return "{}m".format(round(x / 60))
-        return "{}s".format(x)
 
 
 def sample_from_vocab(vocab, num_samples, seed=42):
@@ -88,13 +62,9 @@ def sample_from_vocab(vocab, num_samples, seed=42):
             continue
         sel_indexes = np.random.choice(len(regions), 2, replace=False)
         r1, r2 = regions[sel_indexes[0]], regions[sel_indexes[1]]
-        gdist = func_gdist(r1, r2)
+        gdist = genome_distance(r1, r2)
         sampled_regions.append(
-            (
-                "{}:{}-{}".format(sel_chr, r1[0], r1[1]),
-                "{}:{}-{}".format(sel_chr, r2[0], r2[1]),
-                gdist,
-            )
+            (f"{sel_chr}:{r1[0]}-{r1[1]}", f"{sel_chr}:{r2[0]}-{r2[1]}", gdist,)
         )
         count += 1
     return sampled_regions
@@ -106,11 +76,11 @@ def remap_name(name):
 
 def convert_position(pos):
     if pos // 1e6 > 0:
-        return "{:.4f} MB".format(pos / 1e6)
+        return f"{pos / 1e6:.4f} MB"
     elif pos // 1e3 > 0:
-        return "{:.4f} KB".format(pos / 1e3)
+        return f"{pos / 1e3:.4f} KB"
     else:
-        return "{:.4f} B".format(pos)
+        return f"{pos:.4f} B"
 
 
 def get_gds_results(save_paths):
@@ -207,8 +177,7 @@ def get_gds_batch(
             all_processes = []
             for i, (path, embed_type) in enumerate(batch):
                 process = pool.apply_async(
-                    get_gds,
-                    (path, embed_type, num_samples, seed, queue, i, dist),
+                    get_gds, (path, embed_type, num_samples, seed, queue, i, dist),
                 )
                 all_processes.append(process)
 
@@ -229,11 +198,9 @@ def gds_eval(
 ):
     results_seeds = []
     for seed in range(num_runs):
-        print("----------------Run {}----------------".format(seed))
+        print(f"----------------Run {seed}----------------")
         save_path = (
-            os.path.join(save_folder, "gds_eval_seed{}".format(seed + 42))
-            if save_folder
-            else None
+            os.path.join(save_folder, f"gds_eval_seed{seed}") if save_folder else None
         )
         result_list = get_gds_batch(
             batch, num_samples, seed, save_path, num_workers, dist
@@ -250,33 +217,6 @@ def gds_eval(
     std_gds = [np.array(r).std() for r in gds_res]
     models = [t[0] for t in batch]
     for i in range(len(mean_gds)):
-        print(
-            "{}\n GDS (std): {:.4f} ({:.4f}) \n".format(
-                batch[i][0], mean_gds[i], std_gds[i]
-            )
-        )
+        print(f"{batch[i][0]}\n GDS (std): {mean_gds[i]:.4f} ({std_gds[i]:.4f}) \n")
     gds_arr = [(batch[i][0], gds_res[i]) for i in range(len(batch))]
     return gds_arr
-
-
-def plot_gds_arr(gds_arr, row_labels, filename=None):
-    # yerr = None
-    data = [g[1] for g in gds_arr]
-    mean_gds = [(i, np.mean(np.array(d))) for i, d in enumerate(data)]
-    mean_gds = sorted(mean_gds, key=lambda x: -x[1])
-    indexes = [t[0] for t in mean_gds]
-    mean_gds = [t[1] for t in mean_gds]
-    std_gds = [np.array(data[i]).std() for i in indexes]
-    sem_gds = [g / np.sqrt(len(data[0])) for g in std_gds]
-    row_labels = [row_labels[i] for i in indexes]
-
-    br1 = np.arange(len(mean_gds))
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.bar(br1, mean_gds, yerr=sem_gds)
-    ax.set_xticks(np.arange(len(mean_gds)))
-    ax.set_xticklabels(row_labels)
-    _ = plt.setp(ax.get_xticklabels(), rotation=-20, ha="left", rotation_mode="anchor")
-    ax.set_ylabel("GDS")
-    ax.yaxis.grid(True)
-    if filename:
-        fig.savefig(filename, bbox_inches="tight")

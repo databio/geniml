@@ -50,8 +50,8 @@ def main(args):
         msg_model += "hierarchical softmax\033[00m"
     else:
         hs = 0
-        msg_model += "negative sampling with {} negative samples\033[00m".format(
-            args.neg_samples
+        msg_model += (
+            f"negative sampling with {args.neg_samples} negative samples\033[00m"
         )
     if not os.path.exists(args.resume):
         vocab_update = False
@@ -72,9 +72,7 @@ def main(args):
         utils.log(msg_model)
     else:
         utils.log(
-            "\033[91mResuming {}, make sure the model configurations are consistent\033[00m".format(
-                args.resume
-            )
+            f"\033[91mResuming {args.resume}, make sure the model configurations are consistent\033[00m"
         )
         model = Word2Vec.load(args.resume)
         vocab_update = True
@@ -91,17 +89,15 @@ def main(args):
     )
 
     run_timer = utils.Timer()
-    utils.log("[{}] Start training".format(datetime.datetime.now().strftime("%x-%X")))
-    utils.log(
-        "[{}] Building vocabulary".format(datetime.datetime.now().strftime("%x-%X"))
-    )
+    cur_time = datetime.datetime.now().strftime("%x-%X")
+    utils.log(f"[{cur_time}] Start training")
+    utils.log(f"[{cur_time}] Building vocabulary")
     dset = find_dataset(data_folder)
     sentences = LineSentence(dset)  # create sentence iterator
     model.build_vocab(sentences, update=vocab_update)  # prepare the model vocabulary
+    cur_time = datetime.datetime.now().strftime("%x-%X")
     utils.log(
-        "[{}]\033[93m Vocabulary size is {}\033[00m".format(
-            datetime.datetime.now().strftime("%x-%X"), len(model.wv.index_to_key)
-        )
+        f"[{cur_time}]\033[93m Vocabulary size is {len(model.wv.index_to_key)}\033[00m"
     )
     build_vocab_time = run_timer.t()
     min_loss = 1.0e100
@@ -109,7 +105,7 @@ def main(args):
     # start training
     for sidx in range(args.num_shuffle):
         epoch_timer = utils.Timer()
-        msg = "[Shuffling {:>4d}] ".format(sidx + 1)
+        msg = f"[Shuffling {sidx + 1:>4d}] "
         dset = find_dataset(data_folder)
         dname = dset.split("/")[-1]
         dst_name = os.path.join(data_folder, dname + "using")
@@ -136,17 +132,11 @@ def main(args):
             model.save(os.path.join(model_dir, "word2vec_best.pt"))
         model.save(os.path.join(model_dir, "word2vec_latest.pt"))
         if args.save_freq > 0 and (sidx + 1) % args.save_freq == 0:
-            model.save(os.path.join(model_dir, "word2vec_{}.pt".format(sidx + 1)))
+            model.save(os.path.join(model_dir, f"word2vec_{sidx + 1}.pt"))
         est_time = (run_timer.t() - build_vocab_time) / (
             sidx + 1
         ) * args.num_shuffle + build_vocab_time
-        msg += "loss {:>12.4f} lr {:>5.4f} vocab_size {:>12d} ({}/{})".format(
-            loss,
-            lr_scheduler.lr,
-            len(model.wv.index_to_key),
-            utils.time_str(epoch_timer.t()),
-            utils.time_str(est_time),
-        )
+        msg += f"loss {loss:>12.4f} lr {lr_scheduler.lr:>5.4f} vocab_size {len(model.wv.index_to_key):>12d} ({utils.time_str(epoch_timer.t())}/{utils.time_str(est_time)})"
         utils.log(msg)
         lr_scheduler.step()
 
@@ -154,13 +144,12 @@ def main(args):
         pickle.dump(loss_all, f)
 
     elasped_time = run_timer.t()
+    cur_time = datetime.datetime.now().strftime("%x-%X")
     utils.log(
-        "[{}] Training finished, training Time {}".format(
-            datetime.datetime.now().strftime("%x-%X"), utils.time_str(elasped_time)
-        )
+        f"[{cur_time}] Training finished, training Time {utils.time_str(elasped_time)}"
     )
     # remove intermediate datasets
-    os.system("rm -rf {}".format(data_folder))  # remove the generated shuffled datasets
+    os.system(f"rm -rf {data_folder}")  # remove the generated shuffled datasets
 
 
 if __name__ == "__main__":

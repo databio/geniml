@@ -106,4 +106,3 @@ out <- foreach (i=1:num_path) %dopar% {
     cat(format(pvals, nsmall=6),sep='\n',file=save_path)
     # }
 }
-
