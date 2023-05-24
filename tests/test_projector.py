@@ -39,7 +39,7 @@ def test_model_doesnt_exist():
 
 @pytest.mark.skip  # projector is too large to test in CI
 def test_download_model():
-    registry = "databio/scatlas"
+    registry = "databio/scatlas_v2"
     scembed.utils.download_remote_model(registry, scembed.const.MODEL_CACHE_DIR)
     config_file = os.path.join(
         scembed.const.MODEL_CACHE_DIR, registry, scembed.const.MODEL_CONFIG_FILE_NAME
@@ -49,7 +49,7 @@ def test_download_model():
 
 @pytest.mark.skip  # projector is too large to test in CI
 def test_load_local_model():
-    registry = "databio/scatlas"
+    registry = "databio/scatlas_v2"
     config_file = os.path.join(
         scembed.const.MODEL_CACHE_DIR, registry, scembed.const.MODEL_CONFIG_FILE_NAME
     )
@@ -59,7 +59,7 @@ def test_load_local_model():
     assert isinstance(projector.universe, scembed.models.Universe)
 
 
-# @pytest.mark.skip  # projector is too large to test in CI
+@pytest.mark.skip  # projector is too large to test in CI
 def test_init_projector(projector):
     assert isinstance(projector.model_config, scembed.models.ModelCard)
     assert isinstance(projector.model, dict)
