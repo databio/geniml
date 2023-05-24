@@ -41,7 +41,7 @@ def split_file(file_path, dest_folder, num_parts):
         num_arr = [num_per_file] * (num_parts - 1) + [last_file_num]
         pos = 0
         for index in range(num_parts):
-            fname = os.path.join(dest_folder, "split_{}.txt".format(index))
+            fname = os.path.join(dest_folder, f"split_{index}.txt")
             with open(fname, "w") as fout:
                 for _ in range(num_arr[index]):
                     fout.write(list_arr[pos])

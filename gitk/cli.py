@@ -175,9 +175,9 @@ def main(test_args=None):
             )
             print(npt["SNPR"][0])
         if args.subcommand == "cct-tss":
-            from gitk.eval.cct import get_scctss
+            from gitk.eval.cct import get_scc_tss
 
-            scctss = get_scctss(
+            scctss = get_scc_tss(
                 args.model_path,
                 args.embed_type,
                 args.save_folder,

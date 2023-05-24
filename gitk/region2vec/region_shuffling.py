@@ -103,9 +103,7 @@ def main(args):
         dataset = MatrixDataset(matrix)
     pool = args.pool
     utils.log(
-        "[{}] Creating shuffled datasets in \033[93m{}\033[00m (at most {} datasets coexist)".format(
-            worker_id, DATA_FOLDER, pool
-        )
+        f"[{worker_id}] Creating shuffled datasets in \033[93m{DATA_FOLDER}\033[00m"
     )
 
     for i in range(pool):
@@ -142,8 +140,7 @@ def main(args):
             # delete the used dataset and generate a new dataset in the same foler
             sel_file = files[random.randint(0, len(files) - 1)]
             fname = sel_file.split("/")[-1][:-4]
-            # print('[',datetime.datetime.now(),']','Find used dataset {}'.format(fname))
-            os.system("rm -f {}".format(sel_file))  # delete the dataset
+            os.system(f"rm -f {sel_file}")  # delete the dataset
             dpath = os.path.join(DATA_FOLDER, fname + "creating")
             with open(dpath, "w") as f:
                 pass
