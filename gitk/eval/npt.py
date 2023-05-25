@@ -1,16 +1,17 @@
-import pickle
 import os
+import pickle
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
-import numpy as np
-import time
 import argparse
-from gensim.models import Word2Vec
-import time
 import multiprocessing as mp
-from gitk.eval.utils import load_genomic_embeddings, Timer, genome_distance
+import time
+
 import matplotlib.pyplot as plt
+import numpy as np
+from gensim.models import Word2Vec
 from matplotlib.lines import Line2D
+
+from .utils import Timer, genome_distance, load_genomic_embeddings
 
 
 def get_topk_embed(i, K, embed, dist="cosine"):

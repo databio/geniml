@@ -1,17 +1,19 @@
-import pickle
-import numpy as np
 import glob
+import multiprocessing as mp
 import os
+import pickle
+import shutil
+import subprocess
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.lines import Line2D
+from scipy.stats import rankdata
 from sklearn.cluster import KMeans
 from tqdm import tqdm
-import shutil
-from scipy.stats import rankdata
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-import multiprocessing as mp
-from gitk.eval.utils import load_genomic_embeddings, region2tuple
-import subprocess
+
+from .utils import load_genomic_embeddings, region2tuple
 
 
 def random_annotate_points(
@@ -195,66 +197,3 @@ def cct_tss_eval(
         with open(result_path, "wb") as f:
             pickle.dump(scores_batch, f)
     return scores_batch
-
-
-def cct_tss_plot(avg_ranks_arr, row_labels=None, legend_pos=(0.25, 0.6), filename=None):
-    mean_rank = [t[1].mean() for t in avg_ranks_arr]
-    std_rank = [t[1].std() for t in avg_ranks_arr]
-    mean_rank_tuple = [(i, r) for i, r in enumerate(mean_rank)]
-    mean_rank_tuple = sorted(mean_rank_tuple, key=lambda x: x[1])
-    indexes = [t[0] for t in mean_rank_tuple]
-
-    if row_labels is None:
-        row_labels = [t[0] for t in avg_ranks_arr]
-
-    mean_rank = [mean_rank[i] for i in indexes]
-    std_rank = [std_rank[i] for i in indexes]
-    row_labels = [row_labels[i] for i in indexes]
-
-    cmap = plt.get_cmap("Set1")
-    cmaplist = [cmap(i) for i in range(9)]
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.set_xticks(list(range(1, len(mean_rank) + 1)))
-
-    ax.errorbar(
-        range(1, len(mean_rank) + 1),
-        mean_rank,
-        yerr=std_rank,
-        fmt="o",
-        ms=10,
-        mfc=cmaplist[1],
-        mec=cmaplist[8],
-        ecolor=cmaplist[2],
-        elinewidth=3,
-        capsize=5,
-    )
-    ax.set_xticklabels(row_labels)
-    ax.set_ylabel("CCSI Rank")
-    _ = plt.setp(
-        ax.get_xticklabels(), rotation=-15, ha="left", va="top", rotation_mode="anchor"
-    )
-    patches = [
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            linestyle="",
-            color=cmaplist[1],
-            markersize=12,
-            mec=cmaplist[8],
-        ),
-        Line2D([0], [0], color=cmaplist[2], lw=4),
-    ]
-    legend = ax.legend(
-        labels=["CCSI average rank", "CCSI rank standard deviation"],
-        handles=patches,
-        bbox_to_anchor=legend_pos,
-        loc="center left",
-        borderaxespad=0,
-        fontsize=12,
-        frameon=True,
-    )
-    ax.grid("on")
-    ax.set_ylim(ax.get_ylim()[::-1])
-    if filename:
-        fig.savefig(filename, bbox_inches="tight")

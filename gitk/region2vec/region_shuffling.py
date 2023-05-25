@@ -1,13 +1,13 @@
-import os
-import numpy as np
-import random
-import glob
-import time
-import datetime
 import argparse
+import datetime
+import glob
 import os
-from gitk.region2vec import utils
 import pickle
+import random
+import time
+
+import numpy as np
+from gitk.region2vec import utils
 
 
 class BEDDataset:
@@ -157,11 +157,13 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sentence Generation")
-    parser.add_argument("--file_list", help="path to a file list")
-    parser.add_argument("--tokenization_mode", help="tokenization mode")
-    parser.add_argument("--tokenization_folder", help="path to the tokenized regions")
+    parser.add_argument("--file-list", help="path to a file list")
+    parser.add_argument("--tokenization-mode", help="tokenization mode")
     parser.add_argument(
-        "--save_dir", help="parent folder to generated shuffled datasets"
+        "--tokenization-folder", help="path to the folder that saves tokenized regions"
+    )
+    parser.add_argument(
+        "--save-dir", help="parent folder to generated shuffled datasets"
     )
     parser.add_argument(
         "--pool",
@@ -170,13 +172,13 @@ if __name__ == "__main__":
         help="maximum number of shuffled datasets before consuming one",
     )
     parser.add_argument(
-        "--worker_id",
+        "--worker-id",
         type=int,
         default=0,
-        help="maximum number of shuffled datasets before consuming one",
+        help="used in the parallel mode",
     )
     parser.add_argument(
-        "--number", type=int, default=1000, help="total number of shuffled datasets"
+        "--number", type=int, default=1000, help="number of shuffling the whole dataset"
     )
 
     args = parser.parse_args()

@@ -1,13 +1,14 @@
-import time
-import sys
-import select
 import os
-import numpy as np
+import select
 import shutil
+import sys
+import time
+
+import numpy as np
 
 
 def prRed(skk):
-    print(f"\033[91mskk}\033[00m")
+    print(f"\033[91m{skk}\033[00m")
 
 
 def prGreen(skk):

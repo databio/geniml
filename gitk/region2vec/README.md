@@ -1,5 +1,5 @@
 # region2vec
-`region2vec` will generate embedding vectors for a given region set (universe) from a set of raw bed files. The program will first map all raw regions to the given region set. Then, it will concatenate all regions in a bed file in random orders into a sentence. The generated sentences will be used for word2vec training.
+`region2vec` will generate embedding vectors for a given region set (universe) from a set of raw bed files. The program will first map all raw regions to the given region set. Then, it will concatenate all regions in a bed file in random orders into a sentence. The generated sentences will be used for Region2Vec training.
 
 
 ## Requirements

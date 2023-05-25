@@ -1,21 +1,22 @@
-import numpy as np
-import shutil
 import argparse
-import subprocess
-import json
-
-import multiprocessing
-import shlex
-import os
-from queue import Queue
-import yaml
-import random
-import sys
-import requests
 import glob
-from .hard_tokenization_batch import main as hard_tokenization
-from gitk.tokenization.split_file import split_file
+import json
+import multiprocessing
+import os
+import random
+import shlex
+import shutil
+import subprocess
+import sys
+from queue import Queue
+
 import gitk.region2vec.utils as utils
+import numpy as np
+import requests
+import yaml
+from gitk.tokenization.split_file import split_file
+
+from .hard_tokenization_batch import main as hard_tokenization
 
 
 class Namespace:
@@ -24,7 +25,13 @@ class Namespace:
 
 
 def hard_tokenization_main(
-    src_folder, dst_folder, universe_file, fraction=1e-9, file_list=None, num_workers=10
+    src_folder,
+    dst_folder,
+    universe_file,
+    fraction=1e-9,
+    file_list=None,
+    num_workers=10,
+    bedtools_path="",
 ):
     timer = utils.Timer()
     start_time = timer.t()
@@ -66,22 +73,23 @@ def hard_tokenization_main(
             f.write(file)
             f.write("\n")
 
-    # Download bedtools for tokenization
-    bedtools_folder = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "bedtools"
-    )
-    os.makedirs(bedtools_folder, exist_ok=True)
-    bedtools_path = os.path.join(bedtools_folder, "bedtools")
-    if not os.path.isfile(bedtools_path):
-        # Download bedtools
-        bedtool_url = "https://github.com/arq5x/bedtools2/releases/download/v2.30.0/bedtools.static.binary"
-        print(f"Downloading bedtools from \n{bedtool_url}")
-        response = requests.get(bedtool_url)
-        with open(bedtools_path, "wb") as f:
-            f.write(response.content)
-        print(f"bedtools is saved in \n{bedtools_path}")
-        subprocess.run(shlex.split(f"chmod +x {bedtools_path}"))
-        subprocess.run(shlex.split(f"{bedtools_path} --version"))
+    if bedtools_path == "":
+        # Download bedtools for tokenization
+        bedtools_folder = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "bedtools"
+        )
+        os.makedirs(bedtools_folder, exist_ok=True)
+        bedtools_path = os.path.join(bedtools_folder, "bedtools")
+        if not os.path.isfile(bedtools_path):
+            # Download bedtools
+            bedtool_url = "https://github.com/arq5x/bedtools2/releases/download/v2.30.0/bedtools.static.binary"
+            print(f"Downloading bedtools from \n{bedtool_url}")
+            response = requests.get(bedtool_url)
+            with open(bedtools_path, "wb") as f:
+                f.write(response.content)
+            print(f"bedtools is saved in \n{bedtools_path}")
+            subprocess.run(shlex.split(f"chmod +x {bedtools_path}"))
+            subprocess.run(shlex.split(f"{bedtools_path} --version"))
 
     print(f"Tokenizing {len(file_list)} bed files ...")
 

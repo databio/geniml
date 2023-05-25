@@ -1,8 +1,9 @@
 import argparse
 import os
-from gitk.tokenization import utils
-import subprocess
 import shlex
+import subprocess
+
+from gitk.tokenization import utils
 
 
 def bedtool_tokenization(
@@ -85,23 +86,43 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--data_folder", type=str, default="/scratch/gz5hp/encode3/cell/datasets"
+        "--data-folder",
+        type=str,
+        default="/scratch/gz5hp/encode3/cell/datasets",
+        help="path to the folder that stores BED files",
     )
     parser.add_argument(
-        "--file_list", type=str, default="/home/gz5hp/encode3_proj/all_file_list.txt"
+        "--file-list",
+        type=str,
+        default="/home/gz5hp/encode3_proj/all_file_list.txt",
+        help="list of BED files that will be tokenized",
     )
 
     parser.add_argument(
-        "--token_folder", type=str, default="/scratch/gz5hp/encode3/cell/tokens"
+        "--token-folder",
+        type=str,
+        default="/scratch/gz5hp/encode3/cell/tokens",
+        help="folder that stores tokenized files",
     )
     # parameters for hard tokenization
     parser.add_argument(
-        "--universe", type=str, default="/home/gz5hp/encode3_proj/GRCh38-universe.bed"
+        "--universe",
+        type=str,
+        default="/home/gz5hp/encode3_proj/GRCh38-universe.bed",
+        help="path to a universe file",
     )
     parser.add_argument(
-        "--bedtools_path", type=str, default="/scratch/gz5hp/genomes/bedtools"
+        "--bedtools-path",
+        type=str,
+        default="/scratch/gz5hp/genomes/bedtools",
+        help="path to the bedtools binary",
     )
-    parser.add_argument("--fraction", type=float, default=1.0e-9)
+    parser.add_argument(
+        "--fraction",
+        type=float,
+        default=1.0e-9,
+        help="a parameter for bedtools.intersect",
+    )
 
     args = parser.parse_args()
     if os.path.exists(args.file_list):
