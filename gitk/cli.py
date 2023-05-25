@@ -8,7 +8,7 @@ from ubiquerg import VersionInHelpParser
 from .assess.cli import build_mode_parser as assess_subparser
 from .eval.cli import build_subparser as eval_subparser
 from .region2vec.cli import build_subparser as region2vec_subparser
-from .tokenization.cli import build_subparser as tokenization_subparser 
+from .tokenization.cli import build_subparser as tokenization_subparser
 from .hmm.cli import build_subparser as hmm_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
@@ -149,18 +149,19 @@ def main(test_args=None):
         _LOGGER.info("Running scembed")
         pass
         # scembed_main(test_args)
-        
+
     if args.command == "region2vec":
         from .region2vec import region2vec
+
         region2vec(
-            token_folder=args.token_folder, 
+            token_folder=args.token_folder,
             save_dir=args.save_dir,
             num_shufflings=args.num_shuffle,
-            num_processes=args.nworkers, 
+            num_processes=args.nworkers,
             embedding_dim=args.embed_dim,
             context_win_size=args.context_len,
             save_freq=args.save_freq,
-            resume_path=args.resume, 
+            resume_path=args.resume,
             train_alg=args.train_alg,
             min_count=args.min_count,
             neg_samples=args.neg_samples,
@@ -172,13 +173,14 @@ def main(test_args=None):
         )
     if args.command == "tokenize":
         from .tokenization import hard_tokenization
+
         hard_tokenization(
-            src_folder=args.data_folder, 
-            dst_folder=args.token_folder, 
-            universe_file=args.universe, 
-            fraction=args.fraction, 
-            num_workers=args.nworkers, 
-            bedtools_path=args.bedtools_path
+            src_folder=args.data_folder,
+            dst_folder=args.token_folder,
+            universe_file=args.universe,
+            fraction=args.fraction,
+            num_workers=args.nworkers,
+            bedtools_path=args.bedtools_path,
         )
     if args.command == "eval":
         if args.subcommand == "gdst":
