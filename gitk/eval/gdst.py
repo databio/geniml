@@ -1,20 +1,22 @@
-import pickle
 import os
+import pickle
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
-import numpy as np
-import random
-import glob
-import time
-import multiprocessing as mp
 import argparse
+import glob
+import multiprocessing as mp
+import random
+import time
+
+import numpy as np
 from gensim.models import Word2Vec
-from sklearn.metrics import r2_score
-from gitk.eval.utils import load_genomic_embeddings, Timer, genome_distance
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+
+from .const import *
+from .utils import Timer, cosine_distance, genome_distance, load_genomic_embeddings
 
 _log_path = None
-GENOME_DIST_SCALAR = 1e10
 
 
 def set_log_path(path):
@@ -64,7 +66,11 @@ def sample_from_vocab(vocab, num_samples, seed=42):
         r1, r2 = regions[sel_indexes[0]], regions[sel_indexes[1]]
         gdist = genome_distance(r1, r2)
         sampled_regions.append(
-            (f"{sel_chr}:{r1[0]}-{r1[1]}", f"{sel_chr}:{r2[0]}-{r2[1]}", gdist,)
+            (
+                f"{sel_chr}:{r1[0]}-{r1[1]}",
+                f"{sel_chr}:{r2[0]}-{r2[1]}",
+                gdist,
+            )
         )
         count += 1
     return sampled_regions
@@ -107,23 +113,14 @@ def get_gds(
     seed=42,
     queue=None,
     worker_id=None,
-    dist="cosine",
 ):
-    if dist == "cosine":
-        dist_func = (
-            lambda x, y: (1 - ((x / np.linalg.norm(x)) * (y / np.linalg.norm(y))).sum())
-            / 2
-        )
-    elif dist == "euclidean":
-        dist_func = lambda x, y: np.linalg.norm(x - y)
-
     embed_rep, vocab = load_genomic_embeddings(path, embed_type)
     regions = sample_from_vocab(vocab, num_samples, seed)
     region2idx = {r: i for i, r in enumerate(vocab)}
     gdist_arr = [r[2] / GENOME_DIST_SCALAR for r in regions]
     edist_arr = np.array(
         [
-            dist_func(embed_rep[region2idx[t[0]]], embed_rep[region2idx[t[1]]])
+            cosine_distance(embed_rep[region2idx[t[0]]], embed_rep[region2idx[t[1]]])
             for t in regions
         ]
     )
@@ -177,7 +174,8 @@ def get_gds_batch(
             all_processes = []
             for i, (path, embed_type) in enumerate(batch):
                 process = pool.apply_async(
-                    get_gds, (path, embed_type, num_samples, seed, queue, i, dist),
+                    get_gds,
+                    (path, embed_type, num_samples, seed, queue, i, dist),
                 )
                 all_processes.append(process)
 

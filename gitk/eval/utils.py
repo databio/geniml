@@ -1,10 +1,11 @@
-import pickle
-import os
-import numpy as np
-import time
 import argparse
-import multiprocessing as mp
 import glob
+import multiprocessing as mp
+import os
+import pickle
+import time
+
+import numpy as np
 from gensim.models import Word2Vec
 
 
@@ -26,6 +27,10 @@ def genome_distance(u, v):
     return float(u[1] < v[1]) * max(v[0] - u[1] + 1, 0) + float(u[1] >= v[1]) * max(
         u[0] - v[1] + 1, 0
     )
+
+
+def cosine_distance(x, y):
+    return (1 - ((x / np.linalg.norm(x)) * (y / np.linalg.norm(y))).sum()) / 2
 
 
 class BaseEmbeddings:

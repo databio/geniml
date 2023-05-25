@@ -1,9 +1,10 @@
-import time
-import sys
-import select
 import os
-import numpy as np
+import select
 import shutil
+import sys
+import time
+
+import numpy as np
 
 
 def prRed(skk):

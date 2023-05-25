@@ -1,3 +1,6 @@
+packages <- c("optparse", "GenomicDistributions", "foreach", "doParallel")
+install.packages(setdiff(packages, rownames(installed.packages())))
+
 suppressPackageStartupMessages(library("optparse"))
 suppressPackageStartupMessages(library("GenomicDistributions"))
 suppressPackageStartupMessages(library(foreach))
@@ -84,9 +87,9 @@ option_list = list(
               help="dataset file name", metavar="character"),
     make_option("--assembly", type="character", default="hg19", 
               help="hg19 or hg38", metavar="character"),
-    make_option("--num_workers", type="integer",default=10,
+    make_option("--num-workers", type="integer",default=10,
               help="number of parallel processes", metavar="number of processes"),
-    make_option("--num_samples", type="integer",default=1000,
+    make_option("--num-samples", type="integer",default=1000,
               help="number of samples", metavar="number of samples")
 ); 
  

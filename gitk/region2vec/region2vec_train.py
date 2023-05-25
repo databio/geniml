@@ -1,14 +1,17 @@
-import os
-import glob
-import time
-import datetime
 import argparse
+import datetime
+import glob
+import logging
+import os
 import pickle
+import random
+import time
+
 from gensim.models import Word2Vec
 from gensim.models.word2vec import LineSentence
-from gitk.region2vec import utils
-import logging
-import random
+
+from . import utils
+from .const import *
 
 logging.basicConfig(
     format="%(asctime)s : %(levelname)s : %(message)s", level=logging.ERROR
@@ -17,11 +20,16 @@ logging.basicConfig(
 
 def find_dataset(data_folder):
     train_pattern = os.path.join(data_folder, "pool*[0-9]")
+    count = 0
     while True:
         dsets = glob.glob(train_pattern)
         if len(dsets) == 0:
             print("No available dataset, waiting for generation...", end="\r")
             time.sleep(1)
+            count += 1
+            if count == MAX_WAIT_TIME:
+                print("Wait time exceeds MAX_WAIT_TIME, exit")
+                return -1
         else:
             return dsets[random.randint(0, len(dsets) - 1)]
 
@@ -55,9 +63,6 @@ def main(args):
         )
     if not os.path.exists(args.resume):
         vocab_update = False
-        # model = Word2Vec(size=args.embed_dim, alpha=args.init_lr, window=args.context_len, min_count=args.min_count,
-        #                 seed=args.seed, workers=args.nworkers, sg=train_alg, negative=args.neg_samples, hs=hs)
-        # lasest
         model = Word2Vec(
             vector_size=args.embed_dim,
             alpha=args.init_lr,
@@ -93,6 +98,8 @@ def main(args):
     utils.log(f"[{cur_time}] Start training")
     utils.log(f"[{cur_time}] Building vocabulary")
     dset = find_dataset(data_folder)
+    if dset == -1:
+        return
     sentences = LineSentence(dset)  # create sentence iterator
     model.build_vocab(sentences, update=vocab_update)  # prepare the model vocabulary
     cur_time = datetime.datetime.now().strftime("%x-%X")
@@ -107,6 +114,8 @@ def main(args):
         epoch_timer = utils.Timer()
         msg = f"[Shuffling {sidx + 1:>4d}] "
         dset = find_dataset(data_folder)
+        if dset == -1:
+            return
         dname = dset.split("/")[-1]
         dst_name = os.path.join(data_folder, dname + "using")
         os.rename(dset, dst_name)  # change to file name to pool%dusing
@@ -129,10 +138,10 @@ def main(args):
 
         if loss < min_loss:
             min_loss = loss
-            model.save(os.path.join(model_dir, "word2vec_best.pt"))
-        model.save(os.path.join(model_dir, "word2vec_latest.pt"))
+            model.save(os.path.join(model_dir, "region2vec_best.pt"))
+        model.save(os.path.join(model_dir, "region2vec_latest.pt"))
         if args.save_freq > 0 and (sidx + 1) % args.save_freq == 0:
-            model.save(os.path.join(model_dir, f"word2vec_{sidx + 1}.pt"))
+            model.save(os.path.join(model_dir, f"region2vec_{sidx + 1}.pt"))
         est_time = (run_timer.t() - build_vocab_time) / (
             sidx + 1
         ) * args.num_shuffle + build_vocab_time
@@ -154,45 +163,47 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Gene Embedding")
-    parser.add_argument("--num_shuffle", type=int, help="number of shuffled datasets")
-    parser.add_argument("--embed_dim", type=int, help="embedding dimension")
-    parser.add_argument("--context_len", type=int, help="window size")
+    parser.add_argument("--num-shuffle", type=int, help="number of shuffled datasets")
+    parser.add_argument("--embed-dim", type=int, help="embedding dimension")
+    parser.add_argument("--context-len", type=int, help="window size")
     parser.add_argument("--nworkers", type=int, help="number of workers")
-    parser.add_argument("--save_freq", type=int, default=0, help="save frequency")
-    parser.add_argument("--save_dir", help="path to save the training result")
+    parser.add_argument("--save-freq", type=int, default=0, help="save frequency")
+    parser.add_argument(
+        "--save-dir", help="path to the folder that saves the training result"
+    )
     parser.add_argument("--resume", help="path to a saved model")
     parser.add_argument(
-        "--train_alg", help="training algorithm, select from [cbow, skip-gram]"
+        "--train-alg", help="training algorithm, select from [cbow, skip-gram]"
     )
     parser.add_argument(
-        "--min_count", type=int, help="threshold of pruning the internal vocabulary"
+        "--min-count", type=int, help="threshold of pruning the internal vocabulary"
     )
     parser.add_argument(
-        "--neg_samples",
+        "--neg-samples",
         type=int,
         help="number of noise words in negative sampling, usually between 5-20",
     )
     parser.add_argument(
-        "--hier_softmax",
+        "--hier-softmax",
         default=False,
         action="store_true",
         help="if given, hierarchical softmax will be used",
     )
-    parser.add_argument("--init_lr", type=float, help="initial learning rate")
+    parser.add_argument("--init-lr", type=float, help="initial learning rate")
     parser.add_argument("--milestones", nargs="+", type=int, default=[100, 200])
     parser.add_argument(
-        "--lr_mode",
+        "--lr-mode",
         type=str,
         choices=["milestone", "linear"],
-        help="milestone or linear",
+        help="type of learning rate scheduler, milestone or linear",
     )
     parser.add_argument(
-        "--update_vocab",
+        "--update-vocab",
         type=str,
         default="once",
         help="[every] update at every epoch; [once] Update once since the vocabulary does not change",
     )
-    parser.add_argument("--min_lr", type=float, help="minimum learning rate")
+    parser.add_argument("--min-lr", type=float, help="minimum learning rate")
     parser.add_argument("--seed", type=int, help="random seed")
     args = parser.parse_args()
     main(args)
