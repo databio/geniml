@@ -1,12 +1,36 @@
-import pickle
-import os
-import numpy as np
-import time
 import argparse
-import time
-import multiprocessing as mp
 import glob
+import multiprocessing as mp
+import os
+import pickle
+import time
+
+import numpy as np
 from gensim.models import Word2Vec
+
+
+class Timer:
+    def __init__(self):
+        self.o = time.time()
+
+    def measure(self, p=1):
+        x = (time.time() - self.o) / float(p)
+        x = int(x)
+        if x >= 3600:
+            return f"{x / 3600:.1f}h"
+        if x >= 60:
+            return f"{round(x / 60)}m"
+        return f"{x}s"
+
+
+def genome_distance(u, v):
+    return float(u[1] < v[1]) * max(v[0] - u[1] + 1, 0) + float(u[1] >= v[1]) * max(
+        u[0] - v[1] + 1, 0
+    )
+
+
+def cosine_distance(x, y):
+    return (1 - ((x / np.linalg.norm(x)) * (y / np.linalg.norm(y))).sum()) / 2
 
 
 class BaseEmbeddings:
@@ -20,7 +44,7 @@ def get_bin_embeddings(universe_file, tokenized_files):
     with open(universe_file, "r") as f:
         for line in f:
             eles = line.strip().split("\t")
-            region = "{}:{}-{}".format(*eles)
+            region = f"{eles[0]}:{eles[1]}-{eles[2]}"
             vocab.append(region)
     vocab_dict = {v: i for i, v in enumerate(vocab)}
     print("vocab size is", len(vocab))
@@ -29,7 +53,7 @@ def get_bin_embeddings(universe_file, tokenized_files):
         with open(token_file, "r") as f:
             for line in f:
                 eles = line.strip().split("\t")
-                region = "{}:{}-{}".format(*eles)
+                region = f"{eles[0]}:{eles[1]}-{eles[2]}"
                 if region in vocab_dict:
                     bin_embeds[vocab_dict[region]][i] = 1
     bin_embed_obj = BaseEmbeddings(bin_embeds, vocab)
@@ -107,4 +131,12 @@ def write_vocab(vocab, file_name):
             s, e = eles[1].split("-")
             s = s.strip()
             e = e.strip()
-            f.write("{}\t{}\t{}\n".format(chr, s, e))
+            f.write(f"{chr}\t{s}\t{e}\n")
+
+
+def region2tuple(x):
+    eles = x.split(":")
+    chr_name = eles[0].strip()
+    start, end = eles[1].split("-")
+    start, end = int(start.strip()), int(end.strip())
+    return chr_name, start, end

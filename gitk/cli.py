@@ -7,6 +7,8 @@ from ubiquerg import VersionInHelpParser
 
 from .assess.cli import build_mode_parser as assess_subparser
 from .eval.cli import build_subparser as eval_subparser
+from .region2vec.cli import build_subparser as region2vec_subparser
+from .tokenization.cli import build_subparser as tokenization_subparser
 from .hmm.cli import build_subparser as hmm_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
@@ -37,6 +39,8 @@ def build_argparser():
         "lh": "Compute likelihood",
         "assess": "Assess a universe",
         "scembed": "Embed single-cell data as region vectors",
+        "region2vec": "Train a region2vec model",
+        "tokenize": "Tokenize BED files",
         "eval": "Evaluate a set of region embeddings",
     }
 
@@ -50,6 +54,8 @@ def build_argparser():
     subparsers["assess"] = assess_subparser(subparsers["assess"])
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
+    subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
+    subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
     subparsers["eval"] = eval_subparser(subparsers["eval"])
     return parser
 
@@ -143,6 +149,39 @@ def main(test_args=None):
         _LOGGER.info("Running scembed")
         pass
         # scembed_main(test_args)
+
+    if args.command == "region2vec":
+        from .region2vec import region2vec
+
+        region2vec(
+            token_folder=args.token_folder,
+            save_dir=args.save_dir,
+            num_shufflings=args.num_shuffle,
+            num_processes=args.nworkers,
+            embedding_dim=args.embed_dim,
+            context_win_size=args.context_len,
+            save_freq=args.save_freq,
+            resume_path=args.resume,
+            train_alg=args.train_alg,
+            min_count=args.min_count,
+            neg_samples=args.neg_samples,
+            init_lr=args.init_lr,
+            min_lr=args.min_lr,
+            lr_scheduler=args.lr_mode,  # How to decay the learning rate. Select from linear and milestone
+            milestones=args.milestones,  # Specify only when lr_scheduler=milestone. At each given epoch, the learning rate will be multiplied by 0.1
+            seed=args.seed,  # random seed
+        )
+    if args.command == "tokenize":
+        from .tokenization import hard_tokenization
+
+        hard_tokenization(
+            src_folder=args.data_folder,
+            dst_folder=args.token_folder,
+            universe_file=args.universe,
+            fraction=args.fraction,
+            num_workers=args.nworkers,
+            bedtools_path=args.bedtools_path,
+        )
     if args.command == "eval":
         if args.subcommand == "gdst":
             from gitk.eval.gdst import get_gds
@@ -161,9 +200,9 @@ def main(test_args=None):
             )
             print(npt["SNPR"][0])
         if args.subcommand == "cct-tss":
-            from gitk.eval.cct import get_scctss
+            from gitk.eval.cct import get_scc_tss
 
-            scctss = get_scctss(
+            scctss = get_scc_tss(
                 args.model_path,
                 args.embed_type,
                 args.save_folder,

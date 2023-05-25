@@ -1,8 +1,7 @@
-import numpy as np
-
 import multiprocessing
 import os
 
+import numpy as np
 from gitk.region2vec import utils
 from gitk.region2vec.region2vec_train import main as region2_train
 from gitk.region2vec.region_shuffling import main as sent_gen
@@ -53,7 +52,7 @@ def region2vec(
     training_processes = []
     num_sent_processes = min(int(np.ceil(num_processes / 2)), 4)
     nworkers = min(num_shufflings, num_sent_processes)
-    utils.log("num_sent_processes: {}".format(nworkers))
+    utils.log(f"num_sent_processes: {nworkers}")
     if nworkers <= 1:
         sent_gen_args = Namespace(
             tokenization_folder=token_folder,
@@ -117,8 +116,4 @@ def region2vec(
         p.join()
     os.remove(file_list_path)
     elapsed_time = timer.t() - start_time
-    print(
-        "[Training] {}/{}".format(
-            utils.time_str(elapsed_time), utils.time_str(timer.t())
-        )
-    )
+    print(f"[Training] {utils.time_str(elapsed_time)}/{utils.time_str(timer.t())}")
