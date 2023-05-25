@@ -1,17 +1,19 @@
-import pickle
-import numpy as np
 import glob
+import multiprocessing as mp
 import os
+import pickle
+import shutil
+import subprocess
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.lines import Line2D
+from scipy.stats import rankdata
 from sklearn.cluster import KMeans
 from tqdm import tqdm
-import shutil
-from scipy.stats import rankdata
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-import multiprocessing as mp
-from gitk.eval.utils import load_genomic_embeddings
-import subprocess
+
+from .utils import load_genomic_embeddings, region2tuple
 
 
 def random_annotate_points(
@@ -20,9 +22,9 @@ def random_annotate_points(
     cluster_labels = np.unique(labels)  # sorted
     positions = np.arange(len(labels))
     if cluster_labels[0] == -1:
-        print("Number of clusters: {}".format(len(cluster_labels) - 1))
+        print(f"Number of clusters: {len(cluster_labels) - 1}")
     else:
-        print("Number of clusters: {}".format(len(cluster_labels)))
+        print(f"Number of clusters: {len(cluster_labels)}")
     clusters = [positions[labels == c] for c in cluster_labels]
     ratios = np.array([len(clusters[i]) / len(labels) for i in range(len(clusters))])
     annotate_arr = []
@@ -54,27 +56,22 @@ def assign_color_by_size(cmap_name, labels):
 
 
 def get_cluster_regions(cluster_idx, labels, vocab, path):
-    def region2tuple(x):
-        eles = x.split(":")
-        chr_name = eles[0].strip()
-        start, end = eles[1].split("-")
-        start, end = int(start.strip()), int(end.strip())
-        return chr_name, start, end
-
     positions = np.arange(len(labels))
     indices = positions[labels == cluster_idx]
     regions = [region2tuple(vocab[i]) for i in indices]
     os.makedirs(path, exist_ok=True)
-    with open(os.path.join(path, "cluster_{}.bed".format(cluster_idx)), "w") as f:
+    with open(os.path.join(path, f"cluster_{cluster_idx}.bed"), "w") as f:
         for chr_name, start, end in regions:
-            f.write("{}\t{}\t{}\n".format(chr_name, start, end))
+            f.write(f"{chr_name}\t{start}\t{end}\n")
 
 
 def clustering(model_path, embed_type, n_clusters, save_folder, seed=0):
     np.random.seed(seed)
     embeds, vocab = load_genomic_embeddings(model_path, embed_type)
 
-    clustering = KMeans(n_clusters=n_clusters, random_state=seed, n_init="auto").fit(embeds)
+    clustering = KMeans(n_clusters=n_clusters, random_state=seed, n_init="auto").fit(
+        embeds
+    )
     labels = clustering.labels_
     cluster_idxes = np.sort(np.unique(labels))
     for c in cluster_idxes:
@@ -83,25 +80,12 @@ def clustering(model_path, embed_type, n_clusters, save_folder, seed=0):
         pickle.dump(labels, f)
 
 
-def clustering_batch(batch, K, save_folder, seed=0, num_workers=10):
-    worker_func = clustering
-    with mp.Pool(processes=num_workers) as pool:
-        all_processes = []
-        for i, (path, embed_type) in enumerate(batch):
-            folder = os.path.join(save_folder, "model_{}".format(i))
-            os.makedirs(folder, exist_ok=True)
-            process = pool.apply_async(worker_func, (path, embed_type, K, folder))
-            all_processes.append(process)
-        for process in all_processes:
-            process.get()
-
-
 def cal_significance_val(pvals, threshold):
     num = (pvals < threshold).sum() + (pvals > 1 - threshold).sum()
     return num / len(pvals)
 
 
-def get_scctss(
+def get_scc_tss(
     model_path,
     embed_type,
     save_folder,
@@ -114,13 +98,13 @@ def get_scctss(
     seed=0,
 ):
     for K in K_arr:
-        target_folder = os.path.join(save_folder, "Kmeans_{}".format(K))
+        target_folder = os.path.join(save_folder, f"Kmeans_{K}")
         clustering(model_path, embed_type, K, target_folder, seed=0)
     curr_folder = os.path.dirname(os.path.abspath(__file__))
     subprocess.call(
         [
             Rscript_path,
-            "{}/permutation.R".format(curr_folder),
+            f"{curr_folder}/permutation.R",
             "--assembly",
             assembly,
             "--num_workers",
@@ -133,10 +117,10 @@ def get_scctss(
     )
     scores = []
     for K in K_arr:
-        target_folder = os.path.join(save_folder, "Kmeans_{}".format(K))
+        target_folder = os.path.join(save_folder, f"Kmeans_{K}")
         tmp_files = glob.glob(os.path.join(target_folder, "cluster_*.bed"))
-        for tmp in tmp_files:
-            os.remove(tmp)
+        # for tmp in tmp_files:
+        #     os.remove(tmp)
         with open(os.path.join(target_folder, "pvals.txt"), "r") as f:
             pvals = f.readlines()
         pvals = np.array([float(p.strip()) for p in pvals])
@@ -145,15 +129,13 @@ def get_scctss(
     print(model_path)
     print(
         "(K, CCSI): "
-        + " ".join(
-            ["({},{:.6f})".format(K_arr[i], scores[i]) for i in range(len(K_arr))]
-        )
+        + " ".join([f"({K_arr[i]},{scores[i]:.6f})" for i in range(len(K_arr))])
     )
     print("\n")
     return scores
 
 
-def get_scctss_batch(
+def get_scc_tss_batch(
     batch,
     save_folder,
     Rscript_path,
@@ -166,8 +148,8 @@ def get_scctss_batch(
 ):
     scores_batch = []
     for i, (model_path, embed_type) in enumerate(batch):
-        target_folder = os.path.join(save_folder, "model_{}".format(i))
-        scores = get_scctss(
+        target_folder = os.path.join(save_folder, f"model_{i}")
+        scores = get_scc_tss(
             model_path,
             embed_type,
             target_folder,
@@ -181,8 +163,7 @@ def get_scctss_batch(
         )
         scores_batch.append(scores)
     scores_batch = np.array(scores_batch)
-    avg_ranks = rankdata(-scores_batch, method="average", axis=0).mean(axis=1)
-    return scores_batch, avg_ranks
+    return scores_batch
 
 
 def cct_tss_eval(
@@ -196,10 +177,9 @@ def cct_tss_eval(
     num_runs=20,
     num_workers=10,
 ):
-    avg_ranks_arr = []
     for seed in range(num_runs):
-        target_folder = os.path.join(save_folder, "cct_tss_seed{}".format(seed))
-        scores_batch, avg_ranks = get_scctss_batch(
+        target_folder = os.path.join(save_folder, f"cct_tss_seed{seed}")
+        scores_batch = get_scc_tss_batch(
             batch,
             target_folder,
             Rscript_path,
@@ -210,76 +190,10 @@ def cct_tss_eval(
             num_workers,
             seed,
         )
-        avg_ranks_arr.append(avg_ranks)
-        result_path = os.path.join(save_folder, "cct_tss_seed{}.pickle".format(seed))
+        result_path = os.path.join(save_folder, f"cct_tss_seed{seed}.pickle")
         scores_batch = [
             (batch[i][0], scores_batch[i]) for i in range(len(scores_batch))
         ]
         with open(result_path, "wb") as f:
             pickle.dump(scores_batch, f)
-    avg_ranks_arr = np.vstack(avg_ranks_arr)
-    avg_ranks_arr = [(batch[i][0], avg_ranks_arr[:, i]) for i in range(num_runs)]
-    return avg_ranks_arr
-
-
-def cct_tss_plot(avg_ranks_arr, row_labels=None, legend_pos=(0.25, 0.6), filename=None):
-    mean_rank = [t[1].mean() for t in avg_ranks_arr]
-    std_rank = [t[1].std() for t in avg_ranks_arr]
-    mean_rank_tuple = [(i, r) for i, r in enumerate(mean_rank)]
-    mean_rank_tuple = sorted(mean_rank_tuple, key=lambda x: x[1])
-    indexes = [t[0] for t in mean_rank_tuple]
-
-    if row_labels is None:
-        row_labels = [t[0] for t in avg_ranks_arr]
-
-    mean_rank = [mean_rank[i] for i in indexes]
-    std_rank = [std_rank[i] for i in indexes]
-    row_labels = [row_labels[i] for i in indexes]
-
-    cmap = plt.get_cmap("Set1")
-    cmaplist = [cmap(i) for i in range(9)]
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.set_xticks(list(range(1, len(mean_rank) + 1)))
-
-    ax.errorbar(
-        range(1, len(mean_rank) + 1),
-        mean_rank,
-        yerr=std_rank,
-        fmt="o",
-        ms=10,
-        mfc=cmaplist[1],
-        mec=cmaplist[8],
-        ecolor=cmaplist[2],
-        elinewidth=3,
-        capsize=5,
-    )
-    ax.set_xticklabels(row_labels)
-    ax.set_ylabel("CCSI Rank")
-    _ = plt.setp(
-        ax.get_xticklabels(), rotation=-15, ha="left", va="top", rotation_mode="anchor"
-    )
-    patches = [
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            linestyle="",
-            color=cmaplist[1],
-            markersize=12,
-            mec=cmaplist[8],
-        ),
-        Line2D([0], [0], color=cmaplist[2], lw=4),
-    ]
-    legend = ax.legend(
-        labels=["CCSI average rank", "CCSI rank standard deviation"],
-        handles=patches,
-        bbox_to_anchor=legend_pos,
-        loc="center left",
-        borderaxespad=0,
-        fontsize=12,
-        frameon=True,
-    )
-    ax.grid("on")
-    ax.set_ylim(ax.get_ylim()[::-1])
-    if filename:
-        fig.savefig(filename, bbox_inches="tight")
+    return scores_batch

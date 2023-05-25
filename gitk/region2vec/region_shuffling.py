@@ -1,13 +1,13 @@
-import os
-import numpy as np
-import random
-import glob
-import time
-import datetime
 import argparse
+import datetime
+import glob
 import os
-from gitk.region2vec import utils
 import pickle
+import random
+import time
+
+import numpy as np
+from gitk.region2vec import utils
 
 
 class BEDDataset:
@@ -103,9 +103,7 @@ def main(args):
         dataset = MatrixDataset(matrix)
     pool = args.pool
     utils.log(
-        "[{}] Creating shuffled datasets in \033[93m{}\033[00m (at most {} datasets coexist)".format(
-            worker_id, DATA_FOLDER, pool
-        )
+        f"[{worker_id}] Creating shuffled datasets in \033[93m{DATA_FOLDER}\033[00m"
     )
 
     for i in range(pool):
@@ -142,8 +140,7 @@ def main(args):
             # delete the used dataset and generate a new dataset in the same foler
             sel_file = files[random.randint(0, len(files) - 1)]
             fname = sel_file.split("/")[-1][:-4]
-            # print('[',datetime.datetime.now(),']','Find used dataset {}'.format(fname))
-            os.system("rm -f {}".format(sel_file))  # delete the dataset
+            os.system(f"rm -f {sel_file}")  # delete the dataset
             dpath = os.path.join(DATA_FOLDER, fname + "creating")
             with open(dpath, "w") as f:
                 pass
@@ -160,11 +157,13 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sentence Generation")
-    parser.add_argument("--file_list", help="path to a file list")
-    parser.add_argument("--tokenization_mode", help="tokenization mode")
-    parser.add_argument("--tokenization_folder", help="path to the tokenized regions")
+    parser.add_argument("--file-list", help="path to a file list")
+    parser.add_argument("--tokenization-mode", help="tokenization mode")
     parser.add_argument(
-        "--save_dir", help="parent folder to generated shuffled datasets"
+        "--tokenization-folder", help="path to the folder that saves tokenized regions"
+    )
+    parser.add_argument(
+        "--save-dir", help="parent folder to generated shuffled datasets"
     )
     parser.add_argument(
         "--pool",
@@ -173,13 +172,13 @@ if __name__ == "__main__":
         help="maximum number of shuffled datasets before consuming one",
     )
     parser.add_argument(
-        "--worker_id",
+        "--worker-id",
         type=int,
         default=0,
-        help="maximum number of shuffled datasets before consuming one",
+        help="used in the parallel mode",
     )
     parser.add_argument(
-        "--number", type=int, default=1000, help="total number of shuffled datasets"
+        "--number", type=int, default=1000, help="number of shuffling the whole dataset"
     )
 
     args = parser.parse_args()

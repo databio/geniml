@@ -1,21 +1,22 @@
-import numpy as np
-import shutil
 import argparse
-import subprocess
-import json
-
-import multiprocessing
-import shlex
-import os
-from queue import Queue
-import yaml
-import random
-import sys
-import requests
 import glob
-from .hard_tokenization_batch import main as hard_tokenization
-from gitk.tokenization.split_file import split_file
+import json
+import multiprocessing
+import os
+import random
+import shlex
+import shutil
+import subprocess
+import sys
+from queue import Queue
+
 import gitk.region2vec.utils as utils
+import numpy as np
+import requests
+import yaml
+from gitk.tokenization.split_file import split_file
+
+from .hard_tokenization_batch import main as hard_tokenization
 
 
 class Namespace:
@@ -24,7 +25,13 @@ class Namespace:
 
 
 def hard_tokenization_main(
-    src_folder, dst_folder, universe_file, fraction=1e-9, file_list=None, num_workers=10
+    src_folder,
+    dst_folder,
+    universe_file,
+    fraction=1e-9,
+    file_list=None,
+    num_workers=10,
+    bedtools_path="",
 ):
     timer = utils.Timer()
     start_time = timer.t()
@@ -33,17 +40,17 @@ def hard_tokenization_main(
     files = os.listdir(src_folder)
     file_count = len(files)
     if file_count == 0:
-        print("No files in {}".format(src_folder))
+        print(f"No files in {src_folder}")
         return 0
 
     os.makedirs(dst_folder, exist_ok=True)
     if file_list is None:  # use all bed files in data_folder
         # generate a file list
         file_list = files
-        print("Use all ({}) bed files in {}".format(file_count, src_folder))
+        print(f"Use all ({file_count}) bed files in {src_folder}")
     else:
         file_number = len(file_list)
-        print("{} bed files in total, use {} of them".format(file_count, file_number))
+        print(f"{file_count} bed files in total, use {file_number} of them")
 
     # check whether all files in file_list are tokenized
     number = -1
@@ -57,9 +64,7 @@ def hard_tokenization_main(
         return 1
     elif len(existing_set) > 0:
         print(
-            "Folder {} exists with incomplete tokenized files. Please empty/delete the folder first".format(
-                dst_folder
-            )
+            f"Folder {dst_folder} exists with incomplete tokenized files. Please empty/delete the folder first"
         )
         return 0
 
@@ -68,24 +73,25 @@ def hard_tokenization_main(
             f.write(file)
             f.write("\n")
 
-    # Download bedtools for tokenization
-    bedtools_folder = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "bedtools"
-    )
-    os.makedirs(bedtools_folder, exist_ok=True)
-    bedtools_path = os.path.join(bedtools_folder, "bedtools")
-    if not os.path.isfile(bedtools_path):
-        # Download bedtools
-        bedtool_url = "https://github.com/arq5x/bedtools2/releases/download/v2.30.0/bedtools.static.binary"
-        print("Downloading bedtools from \n{}".format(bedtool_url))
-        response = requests.get(bedtool_url)
-        with open(bedtools_path, "wb") as f:
-            f.write(response.content)
-        print("bedtools is saved in \n{}".format(bedtools_path))
-        subprocess.run(shlex.split("chmod +x {}".format(bedtools_path)))
-        subprocess.run(shlex.split("{} --version".format(bedtools_path)))
+    if bedtools_path == "":
+        # Download bedtools for tokenization
+        bedtools_folder = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "bedtools"
+        )
+        os.makedirs(bedtools_folder, exist_ok=True)
+        bedtools_path = os.path.join(bedtools_folder, "bedtools")
+        if not os.path.isfile(bedtools_path):
+            # Download bedtools
+            bedtool_url = "https://github.com/arq5x/bedtools2/releases/download/v2.30.0/bedtools.static.binary"
+            print(f"Downloading bedtools from \n{bedtool_url}")
+            response = requests.get(bedtool_url)
+            with open(bedtools_path, "wb") as f:
+                f.write(response.content)
+            print(f"bedtools is saved in \n{bedtools_path}")
+            subprocess.run(shlex.split(f"chmod +x {bedtools_path}"))
+            subprocess.run(shlex.split(f"{bedtools_path} --version"))
 
-    print("Tokenizing {} bed files ...".format(len(file_list)))
+    print(f"Tokenizing {len(file_list)} bed files ...")
 
     file_count = len(file_list)
     # split the file_list into several subsets for each worker to process in parallel
@@ -106,10 +112,10 @@ def hard_tokenization_main(
         split_file(file_list_path, dest_folder, nworkers)
         args_arr = []
         for n in range(nworkers):
-            temp_token_folder = os.path.join(dst_folder, "batch_{}".format(n))
+            temp_token_folder = os.path.join(dst_folder, f"batch_{n}")
             tokenization_args = Namespace(
                 data_folder=src_folder,
-                file_list=os.path.join(dest_folder, "split_{}.txt".format(n)),
+                file_list=os.path.join(dest_folder, f"split_{n}.txt"),
                 token_folder=temp_token_folder,
                 universe=universe_file,
                 bedtools_path=bedtools_path,
@@ -131,15 +137,7 @@ def hard_tokenization_main(
                 )
             shutil.rmtree(param.token_folder)
     os.remove(file_list_path)
-    print(
-        "Tokenization complete {}/{} bed files".format(
-            len(os.listdir(dst_folder)), file_count
-        )
-    )
+    print(f"Tokenization complete {len(os.listdir(dst_folder))}/{file_count} bed files")
     elapsed_time = timer.t() - start_time
-    print(
-        "[Tokenization] {}/{}".format(
-            utils.time_str(elapsed_time), utils.time_str(timer.t())
-        )
-    )
+    print(f"[Tokenization] {utils.time_str(elapsed_time)}/{utils.time_str(timer.t())}")
     return 1

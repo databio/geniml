@@ -1,8 +1,9 @@
 import argparse
 import os
-from gitk.tokenization import utils
-import subprocess
 import shlex
+import subprocess
+
+from gitk.tokenization import utils
 
 
 def bedtool_tokenization(
@@ -12,15 +13,11 @@ def bedtool_tokenization(
     temp = os.path.join(target_folder, f + "_sorted")
     target = os.path.join(target_folder, f)
     with open(temp, "w") as f_temp:
-        subprocess.run(
-            shlex.split("sort -k1,1V -k2,2n {}".format(fname)), stdout=f_temp
-        )
+        subprocess.run(shlex.split(f"sort -k1,1V -k2,2n {fname}"), stdout=f_temp)
     with open(target, "w") as f_target:
         subprocess.run(
             shlex.split(
-                "{} intersect -a {} -b {} -u -f {} ".format(
-                    bedtool_path, universe, temp, fraction
-                )
+                f"{bedtool_path} intersect -a {universe} -b {temp} -u -f {fraction} "
             ),
             stdout=f_target,
         )
@@ -37,7 +34,7 @@ def generate_tokens(
     with open(universe, "r") as f:
         for _ in f:
             usize += 1
-    print("\033[93mUniverse size is {}\033[00m".format(usize))
+    print(f"\033[93mUniverse size is {usize}\033[00m")
 
     all_set = []
     with open(file_list, "r") as fin:
@@ -52,13 +49,11 @@ def generate_tokens(
         not_covered = all_set - existing_set
         number = len(not_covered)
         if number == 0:
-            print("Use the existing folder {}".format(token_folder), flush=True)
+            print(f"Use the existing folder {token_folder}", flush=True)
             return 0
         else:
             print(
-                "Folder {} exists with {} files not processed. Continue...".format(
-                    token_folder, number
-                ),
+                f"Folder {token_folder} exists with {number} files not processed. Continue...",
                 flush=True,
             )
     else:
@@ -73,7 +68,7 @@ def generate_tokens(
 
 def main(args):
     local_timer = utils.Timer()
-    print("Entering hard tokenization. Results stored in {}".format(args.token_folder))
+    print(f"Entering hard tokenization. Results stored in {args.token_folder}")
     status = generate_tokens(
         args.data_folder,
         args.token_folder,
@@ -85,29 +80,49 @@ def main(args):
     if status < 0:
         return
     tokenization_time = local_timer.t()
-    print("Hard tokenization takes {}".format(utils.time_str(tokenization_time)))
+    print(f"Hard tokenization takes {utils.time_str(tokenization_time)}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--data_folder", type=str, default="/scratch/gz5hp/encode3/cell/datasets"
+        "--data-folder",
+        type=str,
+        default="/scratch/gz5hp/encode3/cell/datasets",
+        help="path to the folder that stores BED files",
     )
     parser.add_argument(
-        "--file_list", type=str, default="/home/gz5hp/encode3_proj/all_file_list.txt"
+        "--file-list",
+        type=str,
+        default="/home/gz5hp/encode3_proj/all_file_list.txt",
+        help="list of BED files that will be tokenized",
     )
 
     parser.add_argument(
-        "--token_folder", type=str, default="/scratch/gz5hp/encode3/cell/tokens"
+        "--token-folder",
+        type=str,
+        default="/scratch/gz5hp/encode3/cell/tokens",
+        help="folder that stores tokenized files",
     )
     # parameters for hard tokenization
     parser.add_argument(
-        "--universe", type=str, default="/home/gz5hp/encode3_proj/GRCh38-universe.bed"
+        "--universe",
+        type=str,
+        default="/home/gz5hp/encode3_proj/GRCh38-universe.bed",
+        help="path to a universe file",
     )
     parser.add_argument(
-        "--bedtools_path", type=str, default="/scratch/gz5hp/genomes/bedtools"
+        "--bedtools-path",
+        type=str,
+        default="/scratch/gz5hp/genomes/bedtools",
+        help="path to the bedtools binary",
     )
-    parser.add_argument("--fraction", type=float, default=1.0e-9)
+    parser.add_argument(
+        "--fraction",
+        type=float,
+        default=1.0e-9,
+        help="a parameter for bedtools.intersect",
+    )
 
     args = parser.parse_args()
     if os.path.exists(args.file_list):

@@ -32,7 +32,7 @@ model_path1 = '/path/to/the/region2vec/model1/'
 model_path2 = '/path/to/the/region2vec/model2/' 
 batch = [(model_path1, 'region2vec'), (model_path2, 'base')] # (model_path, embed_type)
 gds_arr = get_gds_batch(batch, num_samples=1000, seed=42, num_workers=2) # set num_workers > 1 to enable multiprocessing
-print("Model1: {}, GDS:{:.4f}".format(gds_arr[0][0],gds_arr[0][1]))
+print(f"Model1: {gds_arr[0][0]}, GDS:{gds_arr[0][1]:.4f}")
 ```
 
 Run GDST 20 times for the two models
@@ -76,7 +76,7 @@ print(result_list[1]["SNPR"][0]) # SNPRs for model2
 K = 1000
 resolution = 100 # increase the number of neighboring regions by resolution every time
 npr_results = npt_eval(batch, K, num_samples=1000, num_workers=10, num_runs=20, resolution=resolution)
-print("Model: {}".format(snpr_results[0][0]))
+print("Model: {snpr_results[0][0]}")
 print(snpr_results[0][1].shape) # (20,10)
 print(snpr_results[0][1][:,0]) # results from 20 runs when num_neighborhs=100
 print(snpr_results[0][1][:,1]) # results from 20 runs when num_neighborhs=200
@@ -99,7 +99,7 @@ assembly = 'hg19'
 num_samples = 1000
 K_arr = [5, 20, 40, 60, 100]
 threshold = 0.0001 # significance threshold, the smaller the more significant
-scores = get_scctss(model_path, embed_type, save_folder, Rscript_path, assembly, K_arr, num_samples, threshold)
+scores = get_scc_tss(model_path, embed_type, save_folder, Rscript_path, assembly, K_arr, num_samples, threshold)
 print(scores) # scroes for each K in K_arr
 
 # process a batch of two models
@@ -108,7 +108,7 @@ model_path2 = '/path/to/the/region2vec/model2/'
 batch = [(model_path1, 'region2vec'), (model_path2, 'base')] # (model_path, embed_type)
 
 # since we have more than one models, we can rank them based on the average scores over different Ks
-scores_batch, avg_ranks = get_scctss_batch(batch, save_folder, Rscript_path, assembly, K_arr, num_samples, threshold)
+scores_batch, avg_ranks = get_scc_tss_batch(batch, save_folder, Rscript_path, assembly, K_arr, num_samples, threshold)
 
 # average ranks after running clustering_significance_test_batch num_runs times
 avg_ranks_arr = cct_tss_eval(batch, save_folder, Rscript_path, assembly, K_arr, num_samples, threshold, num_runs=20)
