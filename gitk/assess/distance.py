@@ -293,7 +293,7 @@ def run_distance(
     check_if_uni_sorted(universe)
     files = open(file_list).read().split("\n")[:-1]
     res = []
-    if folder_out:
+    if save_each:
         os.makedirs(os.path.join(folder_out, pref), exist_ok=True)
     if no_workers <= 1:
         for i in files:
