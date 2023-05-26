@@ -32,6 +32,14 @@ def check_if_uni_sorted(universe):
         raise Exception("Universe not sorted")
 
 
+def check_if_uni_flexible(universe):
+    with open(universe) as u:
+        l = u.readline()
+        l = l.split("\t")
+        if len(l) < 6:
+            raise Exception("Universe is not flexible")
+
+
 def process_line(line):
     """Helper for reading in bed file line"""
     line = line.split("\t")[:3]
