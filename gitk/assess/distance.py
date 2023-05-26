@@ -318,26 +318,3 @@ def run_distance(
             ]
             res = p.starmap(calc_distance_between_two_files, args)
     return pd.DataFrame(res)
-
-
-def get_closeness_score(folder, file_list, universe, no_workers, flexible=False):
-    file_to_uni = run_distance(
-        folder,
-        file_list,
-        universe,
-        no_workers,
-        flexible=flexible,
-        uni_to_file=False,
-    )
-
-    uni_to_file = run_distance(
-        folder,
-        file_list,
-        universe,
-        no_workers,
-        flexible=flexible,
-        uni_to_file=True,
-    )
-    me = (10 * file_to_uni[1] + uni_to_file[1]) / 11
-    cs = 1001 / (me + 1000) / 1.001
-    return np.mean(cs)
