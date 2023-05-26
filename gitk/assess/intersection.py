@@ -221,24 +221,3 @@ def run_intersection(
             args = [(universe, folder, f) for f in files]
             res = p.starmap(calc_diff_intersection, args)
     return pd.DataFrame(res)
-
-
-def get_f_10_score(
-    folder,
-    file_list,
-    universe,
-    no_workers,
-):
-    res = run_intersection(
-        folder,
-        file_list,
-        universe,
-        no_workers,
-    )
-    res = np.array(res)
-    res = res[:, 1:]
-    res = res.astype("float")
-    recall = res[:, 2] / (res[:, 2] + res[:, 1])
-    precision = res[:, 2] / (res[:, 2] + res[:, 0])
-    f_10 = (1 + 10**2) * (precision * recall) / ((10**2 * precision) + recall)
-    return np.mean(f_10)
