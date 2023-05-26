@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from .utils import check_if_uni_sorted
+from .utils import check_if_uni_sorted, check_if_uni_flexible
 from ..utils import read_chromosome_from_bw
 from ..likelihood.build_model import ModelLH
 
@@ -219,6 +219,7 @@ def likelihood_flexible_universe(
     empty_start = 0
     res = 0
     check_if_uni_sorted(universe)
+    check_if_uni_flexible(universe)
     model_lh = ModelLH(model_file)
     chroms = model_lh.chromosomes_list
     output = []

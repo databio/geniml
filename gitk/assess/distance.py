@@ -9,7 +9,12 @@ import numpy as np
 import pandas as pd
 
 from ..utils import natural_chr_sort
-from .utils import check_if_uni_sorted, prep_data, process_db_line
+from .utils import (
+    check_if_uni_sorted,
+    prep_data,
+    process_db_line,
+    check_if_uni_flexible,
+)
 
 
 def flexible_distance_between_two_regions(region, query):
@@ -25,7 +30,7 @@ def flexible_distance_between_two_regions(region, query):
 
 
 def distance_between_two_regions(region, query):
-    """Calculate distance between region and region from hard universe
+    """Calculate distance between region in database and region from the query
     :param [int] region: region from hard universe
     :param int query: analysed region
     :return int: distance
@@ -37,10 +42,10 @@ def distance_to_closest_region(
     db, db_queue, i, current_chrom, unused_db, pos_index, flexible, uni_to_file
 ):
     """
-    Calculate distance from given peak to the closest region in universe
-    :param file db: universe file
-    :param list db_queue: queue of three last positions in universe
-    :param int i: analysed position from the query
+    Calculate distance from given peak to the closest region in database
+    :param file db: database file
+    :param list db_queue: queue of three last positions in database
+    :param i: analysed position from the query
     :param str current_chrom: current analysed chromosome from query
     :param list unused_db: list of positions from universe that were not compared to query
     :param list pos_index: which indexes from universe region use to calculate distance
@@ -193,21 +198,17 @@ def calc_distance_between_two_files(
         dist_end = []
         unused_db_end = []
         waiting_end = False
-        pos_start = [1]
-        pos_end = [2]
+        start_index = [1]
+        end_index = [2]
         if flexible and not uni_to_file:
-            pos_start = [1, 6]
-            pos_end = [7, 2]
+            start_index = [1, 6]
+            end_index = [7, 2]
         for i in q:
             if not uni_to_file:
                 i = i.decode("utf-8")
             i = i.split("\t")
-            if uni_to_file and flexible:
-                start = [int(i[1]), int(i[6])]
-                end = [int(i[7]), int(i[2])]
-            else:
-                start = int(i[1])
-                end = int(i[2])
+            start = [int(i[ind]) for ind in start_index]
+            end = [int(i[ind]) for ind in end_index]
             q_chrom = i[0]
             result_start = read_in_new_universe_regions(
                 db_start,
@@ -216,7 +217,7 @@ def calc_distance_between_two_files(
                 unused_db_start,
                 db_queue_start,
                 waiting_start,
-                pos_start,
+                start_index,
             )
             (waiting_start, current_chrom_start) = result_start
             if not waiting_start:
@@ -226,7 +227,7 @@ def calc_distance_between_two_files(
                     start,
                     current_chrom_start,
                     unused_db_start,
-                    pos_start,
+                    start_index,
                     flexible,
                     uni_to_file,
                 )
@@ -238,7 +239,7 @@ def calc_distance_between_two_files(
                 unused_db_end,
                 db_queue_end,
                 waiting_end,
-                pos_end,
+                end_index,
             )
             (waiting_end, current_chrom_end) = result_end
             if not waiting_end:
@@ -248,7 +249,7 @@ def calc_distance_between_two_files(
                     end,
                     current_chrom_end,
                     unused_db_end,
-                    pos_end,
+                    end_index,
                     flexible,
                     uni_to_file,
                 )
@@ -291,7 +292,11 @@ def run_distance(
     mean of median distances from ends in query to the nearest ends in universe
     """
     check_if_uni_sorted(universe)
-    files = open(file_list).read().split("\n")[:-1]
+    if flexible:
+        check_if_uni_flexible(universe)
+    print(no_workers)
+    with open(file_list) as f:
+        files = f.read().split("\n")[:-1]
     res = []
     if save_each:
         os.makedirs(os.path.join(folder_out, pref), exist_ok=True)
