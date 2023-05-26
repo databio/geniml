@@ -1,11 +1,12 @@
+import os.path
 from typing import Dict
 import logmuse
 import sys
-import os
+import pandas as pd
 
 from ubiquerg import VersionInHelpParser
 
-from .assess.cli import build_mode_parser as assess_subparser
+from .assess.cli import build_subparser as assess_subparser
 from .eval.cli import build_subparser as eval_subparser
 from .region2vec.cli import build_subparser as region2vec_subparser
 from .tokenization.cli import build_subparser as tokenization_subparser
@@ -76,34 +77,22 @@ def main(test_args=None):
     _LOGGER.info(f"Command: {args.command}")
 
     if args.command == "assess":
-        _LOGGER.info(f"Subcommand: {args.subcommand}")
-        if args.subcommand == "distance":
-            from .assess.distance import run_distance
+        from .assess.assess import run_all_assessment_methods
 
-            run_distance(
-                args.raw_data_folder,
-                args.file_list,
-                args.universe,
-                args.no_workers,
-                args.flexible,
-                args.save_to_file,
-                args.folder_out,
-                args.pref,
-                args.save_each,
-            )
-
-        if args.subcommand == "intersection":
-            from .assess.intersection import run_intersection
-
-            run_intersection(
-                args.raw_data_folder,
-                args.file_list,
-                args.universe,
-                args.no_workers,
-                args.save_to_file,
-                args.folder_out,
-                args.pref,
-            )
+        run_all_assessment_methods(
+            args.raw_data_folder,
+            args.file_list,
+            args.universe,
+            args.no_workers,
+            args.folder_out,
+            args.pref,
+            args.save_each,
+            args.overlap,
+            args.distance,
+            args.distance_flexible,
+            args.distance_universe_to_file,
+            args.distance_flexible_universe_to_file,
+        )
 
     if args.command == "lh":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
