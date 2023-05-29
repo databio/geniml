@@ -1,4 +1,4 @@
-# import logging
+import logging
 import pybedtools
 import pandas as pd
 import numpy as np
@@ -8,15 +8,12 @@ from subprocess import check_output
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler
 
-from ..const import DEFAULT_THRESHOLD, PKG_NAME
+from ..const import DEFAULT_THRESHOLD, PKG_NAME, CACHE_DIR
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
-def data_prepration_test(
-    path_file_label, 
-    univ
-):
+def data_prepration_test(path_file_label, univ):
     path_file_label = path_file_label.split(",")
     path_file = path_file_label[0]
     if os.path.exists(path_file):
@@ -40,32 +37,27 @@ def data_prepration_test(
             return [path_file, " "]
     else:
         return [path_file, " "]
-    
-    
-def bed2vec(file_list, universe, model, source, output_path, path_to_starsapce):
 
+
+def bed2vec(file_list, universe, model, source, output_path, path_to_starsapce):
     docs = os.path.join(output_path, "documents.txt")
 
-    doc_embed = os.path.join(
-        output_path, "{}_starspace_embed.txt".format(source)
-    )
+    doc_embed = os.path.join(output_path, "{}_starspace_embed.txt".format(source))
 
     documents = []
     with Pool(16) as p:
         documents = p.starmap(data_prepration_test, [(x, universe) for x in file_list])
         p.close()
         p.join()
-#     print("Reading files done")
+    #     print("Reading files done")
 
     df = pd.DataFrame(documents, columns=["file_path", "context"])
     df = df.fillna(" ")
     df = df[df.context != " "]
 
-
     with open(docs, "w") as input_file:
         input_file.write("\n".join(df.context))
     input_file.close()
-
 
     starspace_path = os.path.join(
         path_to_starsapce,
@@ -79,7 +71,7 @@ def bed2vec(file_list, universe, model, source, output_path, path_to_starsapce):
         out.close()
     return doc_embed
 
-    
+
 def data_preprocessing(path_embeded_document):
     document_embedding = pd.read_csv(path_embeded_document, header=None)
     document_embedding = document_embedding[0].str.split("__label__", expand=True)
@@ -118,7 +110,9 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
     distance_matrix = distance.cdist(X_files, X_labels, "cosine")
     df_distance_matrix = pd.DataFrame(distance_matrix)
     df_distance_matrix.columns = y_labels
-    df_distance_matrix["file_label"] = [y_files[i].split(",")[1] for i in range(len(y_files))] 
+    df_distance_matrix["file_label"] = [
+        y_files[i].split(",")[1] for i in range(len(y_files))
+    ]
     file_distance = pd.melt(
         df_distance_matrix,
         id_vars="file_label",
@@ -130,6 +124,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
         np.array(file_distance["score"]).reshape(-1, 1)
     )
     return file_distance
+
 
 def calculate_distance_qc(X_files, X_labels, y_files, y_labels):
     X_files = np.array(X_files)
@@ -151,15 +146,15 @@ def calculate_distance_qc(X_files, X_labels, y_files, y_labels):
     return file_distance
 
 
-
 def meta_preprocessing(meta, labels, data_path):
     cols = ["file_name"]
-    cols.extend(labels.split(','))
+    cols.extend(labels.split(","))
     meta = meta[cols]
     meta.loc[:, "file_name"] = data_path + meta["file_name"]
     meta = meta.fillna("")
     meta[0] = meta.apply(",".join, axis=1)
     return meta[0]
+
 
 def main(
     input: str,
@@ -186,85 +181,71 @@ def main(
     :param threshold: Threshold for filtering
     """
     _LOGGER.info("Running distances...")
-    
+
     # PLACE CODE FOR RUNNING DISTANCES HERE
     n_process = 20
     label_prefix = "__label__"
-    temp_path = './'
-    
-    
+    temp_path = CACHE_DIR
+
     universe = pybedtools.BedTool(universe)
 
     file_list = meta_preprocessing(pd.read_csv(metadata_test), labels, files)
     label_embed = os.path.join("{}.tsv".format(input))
     docs_test = os.path.join(temp_path, "documents_test.txt")
-    doc_embed_test = os.path.join(temp_path, "testfiles_embed.txt")    
+    doc_embed_test = os.path.join(temp_path, "testfiles_embed.txt")
     distance_file_path_rl = os.path.join(output, "similarity_score_rl.csv")
 
-
-
     embedding_labels, labels_l = label_preprocessing(label_embed, label_prefix)
-    
-    doc_embed_query = bed2vec(file_list, universe, input, "testfiles", temp_path, path_to_starsapce)
 
+    doc_embed_query = bed2vec(
+        file_list, universe, input, "testfiles", temp_path, path_to_starsapce
+    )
 
     Xs = data_preprocessing(doc_embed_query)
-    
-    
+
     df_similarity = calculate_distance(Xs, embedding_labels, file_list, labels_l)
-    
-    
-    
-    
-    df_similarity['filename'] = [file_list[i].split(",")[0] for i in range(len(file_list))] * len(labels_l)
-    
-    
-    df_similarity = df_similarity[['filename', "file_label", "search_term", "score"]]
+
+    df_similarity["filename"] = [
+        file_list[i].split(",")[0] for i in range(len(file_list))
+    ] * len(labels_l)
+
+    df_similarity = df_similarity[["filename", "file_label", "search_term", "score"]]
 
     # filter res by dist threshold
-    
+
     df_similarity = df_similarity[df_similarity["score"] > threshold].reset_index(
         drop=True
     )
 
-
-    df_similarity['score'] = 1 - df_similarity['score'] 
-    
+    df_similarity["score"] = 1 - df_similarity["score"]
 
     df_similarity.to_csv(distance_file_path_rl, index=False)
-            
-    
 
     universe = pybedtools.BedTool(universe)
 
     file_list_db = meta_preprocessing(pd.read_csv(metadata_train), labels, files)
     file_list_query = meta_preprocessing(pd.read_csv(metadata_test), labels, files)
-    
 
+    distance_file_path_rr = os.path.join(output, "similarity_score_rr.csv")
 
-    distance_file_path_rr = os.path.join(
-        output, "similarity_score_rr.csv"
+    doc_embed_dB = bed2vec(
+        file_list_db, universe, input, "DB", temp_path, path_to_starsapce
     )
 
-    doc_embed_dB = bed2vec(file_list_db, universe, input, "DB", temp_path, path_to_starsapce)
-
     db_vectors = data_preprocessing(doc_embed_dB)
-   
-    doc_embed_query = bed2vec(file_list_query, universe, input, "Query", temp_path, path_to_starsapce)
+
+    doc_embed_query = bed2vec(
+        file_list_query, universe, input, "Query", temp_path, path_to_starsapce
+    )
 
     query_vectors = data_preprocessing(doc_embed_query)
-
 
     df_similarity = calculate_distance_qc(
         db_vectors, query_vectors, file_list_db, file_list_query
     )
 
     df_similarity = df_similarity[["db_file", "test_file", "score"]]
-    
-    df_similarity['score'] = 1 - df_similarity['score'] 
-    
+
+    df_similarity["score"] = 1 - df_similarity["score"]
+
     df_similarity.to_csv(distance_file_path_rr, index=False)
-            
-
-
-    
