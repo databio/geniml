@@ -128,6 +128,8 @@ class SCEmbed(Word2Vec):
         :param float min_lr: The minimum learning rate.
         :param Union[str, ScheduleType] lr_schedule: The learning rate schedule to use.
         """
+        # force to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205683978)
+        n_shuffles = 1
 
         if not isinstance(data, sc.AnnData) and not isinstance(data, str):
             raise TypeError(
@@ -202,7 +204,7 @@ class SCEmbed(Word2Vec):
             super().train(
                 self.region_sets,
                 total_examples=len(self.region_sets),
-                epochs=gensim_epochs or 1,  # use the epochs passed in or just one
+                epochs=1,  # for to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205692089)
                 callbacks=self.callbacks,
                 compute_loss=report_loss,
                 start_alpha=current_lr,
