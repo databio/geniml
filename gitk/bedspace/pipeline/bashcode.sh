@@ -4,7 +4,7 @@
 path_starspace='../tools/StarSpace/starspace'
 path_meta='../tests/test_file_meta.csv'
 path_universe='/project/shefflab/data/StarSpace/universe/tiles1000.hg19.bed'
-path_output='../outputs/bedembed_output'
+path_output='../outputs/bedspace_output'
 assembly='hg19'
 path_data='/project/shefflab/data/encode/'
 labels="cell_type,target"
@@ -15,7 +15,7 @@ dim=50
 epochs=20
 learning_rate=0.001
 
-python ./bedembed_train.py -star $path_starspace -i $path_data -g $assembly -meta $path_meta -univ $path_universe \
+python ./bedspace_train.py -star $path_starspace -i $path_data -g $assembly -meta $path_meta -univ $path_universe \
 -l $labels -nof $no_files -o $path_output -startline $start_line -dim $dim -epochs $epochs -lr $learning_rate
 
 
@@ -25,14 +25,14 @@ python ./bedembed_train.py -star $path_starspace -i $path_data -g $assembly -met
 
 
 path_universe='/project/shefflab/data/StarSpace/universe/tiles1000.hg19.bed'
-path_output='../outputs/bedembed_output'
+path_output='../outputs/bedspace_output'
 assembly='hg19'
 
 path_meta_test='../tests/test_file_meta.csv'
 path_data='/project/shefflab/data/encode/'
 labels="cell_type,target"
 
-python ./bedembed_test.py -data_path $path_data -meta $path_meta_test -univ $path_universe -o $path_output \
+python ./bedspace_test.py -data_path $path_data -meta $path_meta_test -univ $path_universe -o $path_output \
 -l $labels 
 
 
@@ -42,13 +42,13 @@ python ./bedembed_test.py -data_path $path_data -meta $path_meta_test -univ $pat
 path_starspace='../tools/Starspace/starspace'
 path_meta='../tests/test_file_meta.csv'
 path_universe='/project/shefflab/data/StarSpace/universe/tiles1000.hg19.bed'
-path_output='../outputs/bedembed_output'
+path_output='../outputs/bedspace_output'
 assembly='hg19'
 path_data='/project/shefflab/data/encode/'
 path_meta_test='../tests/test_file_meta.csv'
 labels="cell_type,target"
 
-python ./bedembed_queryDBsim.py -data_path $path_data -db_path $path_meta -query_path $path_meta_test -univ $path_universe -o $path_output \
+python ./bedspace_queryDBsim.py -data_path $path_data -db_path $path_meta -query_path $path_meta_test -univ $path_universe -o $path_output \
 -l $labels 
 
 
