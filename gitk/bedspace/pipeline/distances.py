@@ -230,10 +230,8 @@ def main(
 
     df_similarity['score'] = 1 - df_similarity['score'] 
     
-    if os.path.exists(distance_file_path_rl):
-        df_similarity.to_csv(distance_file_path_rl, header=False, index=None, mode="a")
-    else:
-        df_similarity.to_csv(distance_file_path_rl, index=False)
+
+    df_similarity.to_csv(distance_file_path_rl, index=False)
             
     
 
@@ -265,11 +263,7 @@ def main(
     
     df_similarity['score'] = 1 - df_similarity['score'] 
     
-
-    if os.path.exists(distance_file_path_rr):
-        df_similarity.to_csv(distance_file_path_rr, header=False, index=None, mode="a")
-    else:
-        df_similarity.to_csv(distance_file_path_rr, index=False)
+    df_similarity.to_csv(distance_file_path_rr, index=False)
             
 
 
