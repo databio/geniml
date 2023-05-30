@@ -1,6 +1,7 @@
 import os
-import subprocess
 import shutil
+import subprocess
+import urllib.request
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
@@ -8,9 +9,9 @@ from logging import getLogger
 from random import shuffle
 from typing import TYPE_CHECKING, Dict, List, Union
 
+import numpy as np
 import pandas as pd
 import scanpy as sc
-import numpy as np
 from tqdm import tqdm
 
 if TYPE_CHECKING:
@@ -267,7 +268,21 @@ def load_scembed_model(path: str) -> "SCEmbed":
     import pickle
 
     with open(path, "rb") as f:
-        return pickle.load(f)
+        model = pickle.load(f)
+        return model
+
+
+def load_scembed_model_deprecated(path: str) -> "SCEmbed":
+    """
+    Load a scembed model from disk. THIS IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE.
+
+    :param str path: The path to the model.
+    """
+    import pickle
+
+    with open(path, "rb") as f:
+        model = pickle.load(f)
+        return model
 
 
 def check_model_exists_on_hub(registry: str) -> bool:
@@ -291,11 +306,12 @@ def download_remote_model(registry: str, path: str, overwrite: bool = True) -> N
     :param str registry: the registry name of the model to download
     :param str path: the path to download the model to, this is the folder that will contain registry/model.yaml
     """
-    if os.path.exists(path) and overwrite:
+    path_to_model = os.path.join(path, registry)
+    if os.path.exists(path_to_model) and overwrite:
         _LOGGER.debug("Removing existing model.")
-        shutil.rmtree(path)
+        shutil.rmtree(path_to_model)
 
-    cmd = f"wget -r -np -nH --cut-dirs=2 -P {path} {MODEL_HUB_URL}/{registry}"
+    cmd = f"wget -r -np -nH --cut-dirs=2 -P {path} -l 1 {MODEL_HUB_URL}/{registry}"
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
     if result.returncode != 0:
         raise ValueError("Could not download model from model-hub.")
@@ -413,6 +429,9 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
 
     # Perform the comparison using numpy operations
     positive_values = adata.X > 0
+
+    if not isinstance(positive_values, np.ndarray):
+        positive_values = positive_values.toarray()
 
     regions = []
     for i in tqdm(range(adata.shape[0]), total=adata.shape[0]):
