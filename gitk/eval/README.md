@@ -1,6 +1,7 @@
 # Evaluation of Genomic Region Embeddings
 
-## Create a Base Embedding Object
+## Preparations
+### Create a Base Embedding Object
 Given a set of genomic region embeddings `embeddings` and the corresponding regions `vocab`, use `BaseEmbeddings` to create an `base` embedding object.
 ```
 from gitk.eval.utils import BaseEmbeddings
@@ -9,108 +10,105 @@ base_obj =  BaseEmbeddings(embeddings, vocab)
 with open("base_embed.pt", "wb") as f:
     pickle.dump(base_obj, f)
 ```
-## Genome Distance Scaling Test (GDST)
-GDST evaluates how significant a set of genomic region embeddings preserves the biological knowledge that close regions on the genome tend to have similar biological functions and distant regions on the genome tend to have different biological functions. We assume that embedding distance reflects the function similarity between two genomic regions. The code uses a set of embeddings as input and outputs a GDS value showing how much the embedding distance scales the corresponding genome distance.
-
+### Generate Binary Embeddings
+```python
+from gitk.eval.utils import get_bin_embeddings
+universe_file = "/path/to/universe.bed"
+token_files = ["file1.bed", "file2.bed"]
+bin_embed = get_bin_embeddings(universe_file, token_files)
 ```
-from gitk.eval.gdst import *
-import numpy as np
-
-# evaluate a single model
-model_path = "/path/to/a/region2vec/model/"
-gds = get_gds(model_path, embed_type="region2vec", num_samples=1000, seed=42)
-print("Genome distance scaling: ", gds)
+Or use command line:
+```bash
+gitk eval bin-gen --universe /path/to/universe.bed --token-folder /path/to/tokenized/folder --file-name bin_embed.pickle
 ```
+## Statistical Tests
+### Cluster Tendency Test (CTT)
+CTT analyzes how well a set of region embeddings can be clustered.  CTT score lies between 0 and 1. A larger CTT score indicates a greater tendency for the embeddings being evaluated to have clusters. When the embeddings are uniformly distributed, the score is 0.5. For evenly spaced embeddings, the score approaches 0.
+
+```python
+from gitk.eval.ctt import get_ctt_score, ctt_eval
+path = "/path/to/a/region2vec/model/"
+embed_type = "region2vec"
+ctt_score = get_ctt_score(path, embed_type, seed=42, num_data=10000, num_workers=10)
+print(ctt_score)
+
+# evaluate a batch of models and run CTT for 5 times with different random seeds
+batch = [(path, embed_type)]
+ctt_score_arr = ctt_eval(batch, num_runs=5, num_data=10000,num_workers=10)
+print(f"Model: {ctt_score_arr[0][0]}\n CTT scores:{ctt_score_arr[0][1]}") # CTT scores for the 1st model in the batch
+```
+
+Or use the command line
+```bash
+gitk eval ctt --model-path /path/to/a/region2vec/model/ --embed-type region2vec
+```
+### Reconstruction Test (RCT)
+RCT evaluates how well an embedding of a region preserves the region’s occurrence information in the training data. The best RCT score is 1.
+
+```python
+from gitk.eval.rct import get_rct_score, rct_eval
+path = "/path/to/a/region2vec/model/"
+embed_type = "region2vec"
+bin_path = "/path/to/a/binary/embedding/for/the/same/tokenized/files/"
+# set out_dim to -1 use all the dimensions of the binary embeddings. Set out_dim to a small positive number to reduce computational complexity.
+rct_score = get_rct_score(path, embed_type, bin_path, out_dim=-1, cv_num=5, seed=42, num_workers=10)
+print(rct_score)
+
+# evaluate a batch of models and run RCT for 5 times with different random seeds
+batch = [(path, embed_type, bin_path)]
+rct_score_arr = rct_eval(batch, num_runs=5, cv_num=5, out_dim=-1, num_workers=10) 
+print(f"Model: {rct_score_arr[0][0]}\n RCT scores:{rct_score_arr[0][1]}") # RCT scores for the 1st model in the batch
+```
+
 Or use the command line 
+```bash
+gitk eval rct --model-path /path/to/a/region2vec/model/ --embed-type region2vec
 ```
-gitk eval gdst --model_path /path/to/a/region2vec/model/ --embed_type region2vec
+To change the learning setting, go to the definition of `get_rct_score` in `gitk/eval/rct.py` and change the constructor of `MLPRegressor`.
+
+## Biological Tests
+### Genome Distance Scaling Test (GDST)
+GDST calculates a score measuring how much the embedding distance between two regions scales the corresponding genome distance.
+
+```python
+from gitk.eval.gdst import get_gdst_score, gdst_eval
+path = "/path/to/a/region2vec/model/"
+embed_type = "region2vec"
+gdst_score = get_gdst_score(path, embed_type, num_samples=10000,seed=42)
+print(gdst_score)
+
+# evaluate a batch of models and run GDST for 5 times with different random seeds
+batch = [(path,embed_type)] 
+gdst_score_arr = gdst_eval(batch, num_runs=5, num_samples=10000)
 ```
 
-Process a batch of two models (can be more than two models)
-```
-model_path1 = '/path/to/the/region2vec/model1/' 
-model_path2 = '/path/to/the/region2vec/model2/' 
-batch = [(model_path1, 'region2vec'), (model_path2, 'base')] # (model_path, embed_type)
-gds_arr = get_gds_batch(batch, num_samples=1000, seed=42, num_workers=2) # set num_workers > 1 to enable multiprocessing
-print(f"Model1: {gds_arr[0][0]}, GDS:{gds_arr[0][1]:.4f}")
-```
-
-Run GDST 20 times for the two models
-```
-row_labels = ['model1-region2vec', 'model2-base']
-gds_arr = gds_eval(batch, num_runs=20, num_samples=1000, num_workers=10)
-print(gds_arr[0])
+Or use the command line 
+```bash
+gitk eval gdst --model-path /path/to/a/region2vec/model/ --embed-type region2vec
 ```
 
 
-## Neighborhood Preserving Test (NPT)
-Evaluate how significant genomic region embeddings preserve their neighboring regions on the genome against random embeddings. The code output the significance of neighborhood preserving ratio (SNPR) for a set of region embeddings. 
+### Neighborhood Preserving Test (NPT)
+NPT evaluates how significant genomic region embeddings preserve their neighboring regions on the genome against random embeddings. The code output the NPT score for a set of region embeddings. 
 
-```
-from gitk.eval.npt import *
-model_path = '/path/to/a/region2vec/model/'
-embed_type = 'region2vec'
-K = 50
-resolution = 10
-result = get_snpr(
-    model_path, embed_type, K, num_samples=1000, seed=0, resolution=resolution, num_workers=10
-)
-print(result["SNPR"]) # an array of SNPRs when the number of neighbors is 10, 20, 30, 40, 50, respectively
+```python
+from gitk.eval.npt import get_npt_score, npt_eval
+path = "/path/to/a/region2vec/model/"
+embed_type = "region2vec"
+K = 10
+# If resolution = K gives NPT for K neighbors
+# If resolution < K, gives NPT for [resolution, resolution*2, ...] neighbors
+resolution = K 
+npt_score = get_npt_score(path, embed_type, K, num_samples=100, seed=0, resolution=resolution,num_workers=10)
+print(npt_score['SNPR'])
+
+# evaluate a batch of models and run NPT for 5 times with different random seeds
+batch = [(path, embed_type)]
+npt_score_arr = npt_eval(batch, K, num_samples=100, num_workers=10, num_runs=5, resolution=resolution)
+print(f"Model: {npt_score_arr[0][0]}\n NPT scores: {npt_score_arr[0][1]}") # NPT scores for the 1st model in the batch
 ```
 
 Or use the command line (the output will be the result when resolution=K)
-```
-gitk eval npt --model_path /path/to/a/region2vec/model/ --embed_type region2vec --K 50 --num_samples 1000
-```
-
-Process a batch of models
-```
-model_path1 = '/path/to/the/region2vec/model1/' 
-model_path2 = '/path/to/the/region2vec/model2/' 
-batch = [(model_path1, 'region2vec'), (model_path2, 'base')] # (model_path, embed_type)
-result_list = get_snpr_batch(batch, K, num_samples=1000, seed=0)
-print(result_list[0]["SNPR"][0]) # SNPRs for model1
-print(result_list[1]["SNPR"][0]) # SNPRs for model2
-
-# Run the genome distance test 20 times for the two models, setting save_folder will save the result for each run
-K = 1000
-resolution = 100 # increase the number of neighboring regions by resolution every time
-npr_results = npt_eval(batch, K, num_samples=1000, num_workers=10, num_runs=20, resolution=resolution)
-print("Model: {snpr_results[0][0]}")
-print(snpr_results[0][1].shape) # (20,10)
-print(snpr_results[0][1][:,0]) # results from 20 runs when num_neighborhs=100
-print(snpr_results[0][1][:,1]) # results from 20 runs when num_neighborhs=200
-```
-
-## Constrastive Clusters Test - Transcription Start Sites (CCT-TSS)
-CCT-TSS evaluates how well a set of genomic region embeddings can separate regions relating to transcription start sites from those are not. This test involves clustering. 
-Since we do not know a priori the true number of clusters for a set of region embeddings, we specify `K_arr` to test clusters in different sizes. The code gives the significance of contrastive clusters relating to transcription start sites (SCC-TSS) for a set of region embeddings.
-
-The test requires running R scripts with the `GenomicDistributions`, `doParallel` and `optparse` packages.
-```
-from gitk.eval.cct import *
-
-# process a single model (a set of genomic region embeddings)
-model_path = '/path/to/a/region2vec/model/'
-embed_type = 'region2vec'
-save_folder = '/path/to/cst/results/'
-Rscript_path = '/path/to/Rscript/'
-assembly = 'hg19'
-num_samples = 1000
-K_arr = [5, 20, 40, 60, 100]
-threshold = 0.0001 # significance threshold, the smaller the more significant
-scores = get_scc_tss(model_path, embed_type, save_folder, Rscript_path, assembly, K_arr, num_samples, threshold)
-print(scores) # scroes for each K in K_arr
-
-# process a batch of two models
-model_path1 = '/path/to/the/region2vec/model1/' 
-model_path2 = '/path/to/the/region2vec/model2/' 
-batch = [(model_path1, 'region2vec'), (model_path2, 'base')] # (model_path, embed_type)
-
-# since we have more than one models, we can rank them based on the average scores over different Ks
-scores_batch, avg_ranks = get_scc_tss_batch(batch, save_folder, Rscript_path, assembly, K_arr, num_samples, threshold)
-
-# average ranks after running clustering_significance_test_batch num_runs times
-avg_ranks_arr = cct_tss_eval(batch, save_folder, Rscript_path, assembly, K_arr, num_samples, threshold, num_runs=20)
-
+```bash
+gitk eval npt --model-path /path/to/a/region2vec/model/ --embed-type region2vec --K 50 --num-samples 1000
 ```

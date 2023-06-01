@@ -167,9 +167,9 @@ def main(test_args=None):
             neg_samples=args.neg_samples,
             init_lr=args.init_lr,
             min_lr=args.min_lr,
-            lr_scheduler=args.lr_mode,  # How to decay the learning rate. Select from linear and milestone
-            milestones=args.milestones,  # Specify only when lr_scheduler=milestone. At each given epoch, the learning rate will be multiplied by 0.1
-            seed=args.seed,  # random seed
+            lr_scheduler=args.lr_mode,
+            milestones=args.milestones,
+            seed=args.seed,
         )
     if args.command == "tokenize":
         from .tokenization import hard_tokenization
@@ -184,34 +184,63 @@ def main(test_args=None):
         )
     if args.command == "eval":
         if args.subcommand == "gdst":
-            from gitk.eval.gdst import get_gds
+            from gitk.eval.gdst import get_gdst_score
 
-            gds = get_gds(args.model_path, args.embed_type, args.num_samples)
-            print(gds)
+            gdst_score = get_gdst_score(
+                args.model_path, args.embed_type, args.num_samples, args.seed
+            )
+            print(gdst_score)
         if args.subcommand == "npt":
-            from gitk.eval.npt import get_snpr
+            from gitk.eval.npt import get_npt_score
 
-            npt = get_snpr(
+            npt_score = get_npt_score(
                 args.model_path,
                 args.embed_type,
                 args.K,
                 args.num_samples,
-                resolution=args.K,
+                args.seed,
+                args.K,
+                num_workers=args.num_workers,
             )
-            print(npt["SNPR"][0])
-        if args.subcommand == "cct-tss":
-            from gitk.eval.cct import get_scc_tss
+            print(npt_score["SNPR"][0])
+        if args.subcommand == "ctt":
+            from gitk.eval.ctt import get_ctt_score
 
-            scctss = get_scc_tss(
+            ctt_score = get_ctt_score(
                 args.model_path,
                 args.embed_type,
-                args.save_folder,
-                args.Rscript_path,
-                args.assembly,
-                num_samples=args.num_samples,
-                threshold=args.threshold,
+                args.seed,
+                args.num_samples,
+                args.num_workers,
             )
-            print(scctss)
+            print(ctt_score)
+        if args.subcommand == "rct":
+            from gitk.eval.rct import get_rct_score
+
+            rct_score = get_rct_score(
+                args.model_path,
+                args.embed_type,
+                args.bin_path,
+                args.out_dim,
+                args.cv_num,
+                args.seed,
+                args.num_workers,
+            )
+            print(rct_score)
+        if args.subcommand == "bin-gen":
+            from gitk.eval.utils import get_bin_embeddings
+            import glob, pickle
+
+            if os.path.exists(args.file_name):
+                print(f"{args.file_name} exists!")
+                return
+            token_files = glob.glob(os.path.join(args.token_folder, "*"))
+            bin_embed = get_bin_embeddings(args.universe, token_files)
+            os.makedirs(os.path.dirname(args.file_name), exist_ok=True)
+            with open(args.file_name, "wb") as f:
+                pickle.dump(bin_embed, f)
+            print(f"binary embeddings saved to {args.file_name}")
+
     return
 
 
