@@ -7,6 +7,7 @@ import random
 import time
 
 import numpy as np
+
 from gitk.region2vec import utils
 
 
