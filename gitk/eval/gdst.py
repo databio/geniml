@@ -11,25 +11,9 @@ import time
 import numpy as np
 from gensim.models import Word2Vec
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
 
 from .const import *
 from .utils import Timer, cosine_distance, genome_distance, load_genomic_embeddings
-
-_log_path = None
-
-
-def set_log_path(path):
-    global _log_path
-    _log_path = path
-
-
-def log(obj, filename="log.txt"):
-    print(obj)
-    if _log_path is not None:
-        with open(os.path.join(_log_path, filename), "a") as f:
-            f.write(obj)
-            f.write("\n")
 
 
 def sample_from_vocab(vocab, num_samples, seed=42):
@@ -89,7 +73,7 @@ def convert_position(pos):
         return f"{pos:.4f} B"
 
 
-def get_gds_results(save_paths):
+def get_gdst_results(save_paths):
     with open(save_paths[0], "rb") as f:
         results = pickle.load(f)
     num = len(results)
@@ -106,7 +90,7 @@ def get_gds_results(save_paths):
     return gds_arr
 
 
-def get_gds(
+def get_gdst_score(
     path,
     embed_type,
     num_samples=10000,
@@ -151,13 +135,13 @@ def writer_multiprocessing(save_path, num, q):
     return results
 
 
-def get_gds_batch(
-    batch, num_samples=10000, seed=42, save_path=None, num_workers=1, dist="cosine"
+def get_gdst_score_batch(
+    batch, num_samples=10000, seed=42, save_path=None, num_workers=1
 ):
     if num_workers <= 1:
         gds_arr = []
         for path, embed_type in batch:
-            gds = get_gds(path, embed_type, num_samples, seed, dist=dist)
+            gds = get_gdst_score(path, embed_type, num_samples, seed)
             print(path, gds)
             gds_arr.append((path, gds))
         if save_path:
@@ -174,8 +158,8 @@ def get_gds_batch(
             all_processes = []
             for i, (path, embed_type) in enumerate(batch):
                 process = pool.apply_async(
-                    get_gds,
-                    (path, embed_type, num_samples, seed, queue, i, dist),
+                    get_gdst_score,
+                    (path, embed_type, num_samples, seed, queue, i),
                 )
                 all_processes.append(process)
 
@@ -186,11 +170,10 @@ def get_gds_batch(
     return gds_arr
 
 
-def gds_eval(
+def gdst_eval(
     batch,
     num_runs=20,
     num_samples=1000,
-    dist="cosine",
     save_folder=None,
     num_workers=10,
 ):
@@ -198,10 +181,10 @@ def gds_eval(
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")
         save_path = (
-            os.path.join(save_folder, f"gds_eval_seed{seed}") if save_folder else None
+            os.path.join(save_folder, f"gdst_eval_seed{seed}") if save_folder else None
         )
-        result_list = get_gds_batch(
-            batch, num_samples, seed, save_path, num_workers, dist
+        result_list = get_gdst_score_batch(
+            batch, num_samples, seed, save_path, num_workers
         )
         results_seeds.append(result_list)
 
@@ -215,6 +198,8 @@ def gds_eval(
     std_gds = [np.array(r).std() for r in gds_res]
     models = [t[0] for t in batch]
     for i in range(len(mean_gds)):
-        print(f"{batch[i][0]}\n GDS (std): {mean_gds[i]:.4f} ({std_gds[i]:.4f}) \n")
+        print(
+            f"{batch[i][0]}\n GDST score (std): {mean_gds[i]:.4f} ({std_gds[i]:.4f}) \n"
+        )
     gds_arr = [(batch[i][0], gds_res[i]) for i in range(len(batch))]
     return gds_arr

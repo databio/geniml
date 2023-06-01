@@ -143,7 +143,7 @@ def init_worker(embed_rep, ref_embed, region2index):
     var_dict["region2vec_index"] = region2index
 
 
-def get_snpr(
+def get_npt_score(
     model_path,
     embed_type,
     K,
@@ -158,7 +158,6 @@ def get_snpr(
 
     If num_samples == 0, all regions are used in calculation
     """
-    timer = Timer()
     embed_rep, regions_r2v = load_genomic_embeddings(model_path, embed_type)
 
     region2index = {r: i for i, r in enumerate(regions_r2v)}
@@ -263,21 +262,14 @@ def get_snpr(
     ratio_msg = " ".join([f"{r:.6f}" for r in avg_ratio])
     ratio_ref_msg = " ".join([f"{r:.6f}" for r in avg_ratio_ref])
     snprs_msg = " ".join([f"{r:.6f}" for r in snprs])
-    print(model_path)
-
-    # print(
-    #     f"[seed={seed}] K={K}\n[{embed_type}]: {ratio_msg}\n[Random]: {ratio_ref_msg}\n[SNPR] {snprs_msg}"
-    # )
     result = {
         "K": K,
-        "AvgENPR": avg_ratio,
-        "AvgRNPR": avg_ratio_ref,
+        "Avg_qNPR": avg_ratio,
+        "Avg_rNPR": avg_ratio_ref,
         "SNPR": snprs,
         "Resolution": resolution,
         "Path": model_path,
     }
-    elapsed_time = timer.measure()
-    print("Elapsed time:", elapsed_time)
     return result
 
 
@@ -296,7 +288,7 @@ def writer_multiprocessing(save_path, num, q):
     return results
 
 
-def get_snpr_batch(
+def get_npt_score_batch(
     batch,
     K,
     num_samples=100,
@@ -306,10 +298,9 @@ def get_snpr_batch(
     dist="cosine",
     save_path=None,
 ):
-    print(f"Total number of models: {len(batch)}")
     result_list = []
     for index, (path, embed_type) in enumerate(batch):
-        result = get_snpr(
+        result = get_npt_score(
             path, embed_type, K, num_samples, seed, resolution, dist, num_workers
         )
         result_list.append(result)
@@ -318,29 +309,6 @@ def get_snpr_batch(
         with open(save_path, "wb") as f:
             pickle.dump(result_list, f)
     return result_list
-
-
-# def get_snpr_batch(
-#     batch, K, num_samples=100, num_workers=10, seed=0, resolution=10, dist='cosine', save_path=None
-# ):
-#     print(f"Total number of models: {len(batch)}")
-#     result_list = []
-#     with mp.Pool(
-#         processes=num_workers
-#     ) as pool:
-#         all_processes = []
-#         for index, (path, embed_type) in enumerate(batch):
-#             process = pool.apply_async(
-#                         get_snpr, (path, embed_type, K, num_samples, seed, resolution, dist, 0)
-#                     )
-#             all_processes.append(process)
-#     for process in all_processes:
-#         result_list.append(process.get())
-#     if save_path:
-#         os.makedirs(os.path.dirname(save_path), exist_ok=True)
-#         with open(save_path, "wb") as f:
-#             pickle.dump(result_list, f)
-#     return result_list
 
 
 def npt_eval(
@@ -354,13 +322,13 @@ def npt_eval(
     save_folder=None,
 ):
     results_seeds = []
-    assert resolution < K, "resolution < K"
+    assert resolution <= K, "resolution <= K"
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")
         save_path = (
             os.path.join(save_folder, f"npt_eval_seed{seed}") if save_folder else None
         )
-        result_list = get_snpr_batch(
+        result_list = get_npt_score_batch(
             batch,
             K,
             num_samples=num_samples,
@@ -379,7 +347,6 @@ def npt_eval(
             snpr_results[i].append(result["SNPR"])
             paths[i] = key
     snpr_results = [np.array(v) for v in snpr_results]
-    print(snpr_results[0].shape)
     for i in range(len(batch)):
         snpr_arr = snpr_results[i]
         avg_snprs = snpr_arr.mean(axis=0)
