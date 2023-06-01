@@ -15,8 +15,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from ..utils import timer_func
-from .utils import (Timer, cosine_distance, genome_distance,
-                    load_genomic_embeddings)
+from .utils import Timer, cosine_distance, genome_distance, load_genomic_embeddings
 
 
 def get_rct_score(
