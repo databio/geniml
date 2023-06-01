@@ -7,16 +7,16 @@ import scanpy as sc
 import yacman
 from tqdm import tqdm
 
-from .const import MODEL_CACHE_DIR, MODEL_HUB_URL, MODULE_NAME, MODEL_CONFIG_FILE_NAME
+from .const import MODEL_CACHE_DIR, MODEL_CONFIG_FILE_NAME, MODEL_HUB_URL, MODULE_NAME
+from .models import ModelCard, Universe
 from .utils import (
-    load_scembed_model,
+    anndata_to_regionsets,
     check_model_exists_on_hub,
     download_remote_model,
-    load_universe_file,
     generate_var_conversion_map,
-    anndata_to_regionsets,
+    load_scembed_model,
+    load_universe_file,
 )
-from .models import ModelCard, Universe
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 
@@ -26,7 +26,7 @@ class Projector:
         """
         Initialize a projector object.
 
-        :param str path_to_model: The path to the model. This can be a local path or a registry name ont he model hub.
+        :param str path_to_model: The path to the model. This can be a local path or a registry name on the model hub.
         :param bool no_cache: If True, will not use the cache directory.
         """
         self.path_to_model = path_to_model
@@ -197,19 +197,27 @@ class Projector:
 
         # convert each region set to a vector by averaging the region
         # vectors in the model
+        # TODO: what do we do if there are no region overlaps? i.e. the regionset
+        # representation of the cell is []
         cell_embeddings = []
         _LOGGER.info("Step 3/3: Projecting region sets into model space")
         for region_set in tqdm(region_sets, total=len(region_sets)):
-            cell_embeddings.append(
-                np.mean(
-                    [
-                        self.get_embedding(region)
-                        for region in region_set
-                        if region in self.model  # ignore regions not in the model
-                    ],
-                    axis=0,
-                )
+            embedding = np.mean(
+                [
+                    self.get_embedding(region)
+                    for region in region_set
+                    if region in self.model  # ignore regions not in the model
+                ],
+                axis=0,
             )
+            # make sure not nan before appending,
+            # otherwise append np.zeros
+            if np.isnan(embedding).any():
+                embedding = np.zeros(
+                    self.model_config.model_parameters[0].embedding_dim
+                )
+
+            cell_embeddings.append(embedding)
 
         adata.obsm[key_added] = np.array(cell_embeddings)
         return adata
