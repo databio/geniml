@@ -13,8 +13,7 @@ from gensim.models import Word2Vec
 from sklearn.linear_model import LinearRegression
 
 from .const import *
-from .utils import (Timer, cosine_distance, genome_distance,
-                    load_genomic_embeddings)
+from .utils import Timer, cosine_distance, genome_distance, load_genomic_embeddings
 
 
 def sample_from_vocab(vocab, num_samples, seed=42):

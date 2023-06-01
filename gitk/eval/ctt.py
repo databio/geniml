@@ -15,8 +15,7 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 
 from .const import *
-from .utils import (Timer, cosine_distance, genome_distance,
-                    load_genomic_embeddings)
+from .utils import Timer, cosine_distance, genome_distance, load_genomic_embeddings
 
 
 def explained_variance(bin_path, dim):
