@@ -60,10 +60,10 @@ def distance_to_closest_region(
             ]
         else:
             dist_to_db_que = [
-                flexible_distance_between_two_regions(j, i) for j in db_queue
+                flexible_distance_between_two_regions(j, i[0]) for j in db_queue
             ]
     else:
-        dist_to_db_que = [distance_between_two_regions(j, i) for j in db_queue]
+        dist_to_db_que = [distance_between_two_regions(j, i[0]) for j in db_queue]
     min_pos = np.argmin(dist_to_db_que)
     while min_pos == 2:
         d = db.readline().strip("\n")
@@ -82,10 +82,10 @@ def distance_to_closest_region(
                 ]
             else:
                 dist_to_db_que = [
-                    flexible_distance_between_two_regions(j, i) for j in db_queue
+                    flexible_distance_between_two_regions(j, i[0]) for j in db_queue
                 ]
         else:
-            dist_to_db_que = [distance_between_two_regions(j, i) for j in db_queue]
+            dist_to_db_que = [distance_between_two_regions(j, i[0]) for j in db_queue]
         min_pos = np.argmin(dist_to_db_que)
     return dist_to_db_que[min_pos]
 
@@ -198,17 +198,20 @@ def calc_distance_between_two_files(
         dist_end = []
         unused_db_end = []
         waiting_end = False
-        start_index = [1]
-        end_index = [2]
+        start_index_q, start_index_db = [1], [1]
+        end_index_q, end_index_db = [2], [2]
+        if flexible and uni_to_file:
+            start_index_q = [1, 6]
+            end_index_q = [7, 2]
         if flexible and not uni_to_file:
-            start_index = [1, 6]
-            end_index = [7, 2]
+            start_index_db = [1, 6]
+            end_index_db = [7, 2]
         for i in q:
             if not uni_to_file:
                 i = i.decode("utf-8")
             i = i.split("\t")
-            start = [int(i[ind]) for ind in start_index]
-            end = [int(i[ind]) for ind in end_index]
+            start = [int(i[ind]) for ind in start_index_q]
+            end = [int(i[ind]) for ind in end_index_q]
             q_chrom = i[0]
             result_start = read_in_new_universe_regions(
                 db_start,
@@ -217,7 +220,7 @@ def calc_distance_between_two_files(
                 unused_db_start,
                 db_queue_start,
                 waiting_start,
-                start_index,
+                start_index_db,
             )
             (waiting_start, current_chrom_start) = result_start
             if not waiting_start:
@@ -227,7 +230,7 @@ def calc_distance_between_two_files(
                     start,
                     current_chrom_start,
                     unused_db_start,
-                    start_index,
+                    start_index_db,
                     flexible,
                     uni_to_file,
                 )
@@ -239,7 +242,7 @@ def calc_distance_between_two_files(
                 unused_db_end,
                 db_queue_end,
                 waiting_end,
-                end_index,
+                end_index_db,
             )
             (waiting_end, current_chrom_end) = result_end
             if not waiting_end:
@@ -249,7 +252,7 @@ def calc_distance_between_two_files(
                     end,
                     current_chrom_end,
                     unused_db_end,
-                    end_index,
+                    end_index_db,
                     flexible,
                     uni_to_file,
                 )
@@ -294,7 +297,6 @@ def run_distance(
     check_if_uni_sorted(universe)
     if flexible:
         check_if_uni_flexible(universe)
-    print(no_workers)
     with open(file_list) as f:
         files = f.read().split("\n")[:-1]
     res = []
