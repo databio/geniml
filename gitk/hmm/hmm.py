@@ -32,7 +32,7 @@ def norm(track, mode):
     if mode == "ends":
         n = 0.1
     if mode == "core":
-        n = 0.085
+        n = 0.2
     bs = 0  # what fraction of the distribution was used for normalization
     val = {}  # for each unique value in track holds the corresponding quantile
     for i in important_val_unique_sort:
