@@ -162,7 +162,7 @@ def main():
         args.output_path, "starspace_model_{}.tsv".format(assembly)
     )
     docs = os.path.join(args.output_path, "documents_{}.txt".format(assembly))
-#     files = os.path.join(args.output_path, "filenames_{}.txt".format(assembly))
+    #     files = os.path.join(args.output_path, "filenames_{}.txt".format(assembly))
     doc_embed = os.path.join(
         args.output_path, "train_starspace_embed_{}.txt".format(assembly)
     )
@@ -188,7 +188,6 @@ def main():
         input_file.write("\n".join(df.context))
     input_file.close()
 
-
     print("Writing files done")
 
     starspace_path = os.path.join(
@@ -212,10 +211,11 @@ def main():
 
         df_similarity = calculate_distance(X, embedding_labels, y, labels)
 
-        df_similarity['filename'] = [file_list[i].split(",")[0]] * len(labels)
+        df_similarity["filename"] = [file_list[i].split(",")[0]] * len(labels)
 
-
-        df_similarity = df_similarity[['filename', "file_label", "search_term", "score"]]
+        df_similarity = df_similarity[
+            ["filename", "file_label", "search_term", "score"]
+        ]
 
         # filter res by dist threshold
         thresh = 0.5
@@ -223,12 +223,10 @@ def main():
             drop=True
         )
 
-
         if os.path.exists(dist):
             df_similarity.to_csv(dist, header=False, index=None, mode="a")
         else:
             df_similarity.to_csv(dist, index=False)
-
 
 
 if __name__ == "__main__":

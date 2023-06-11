@@ -1,14 +1,15 @@
 import logging
-import pybedtools
-import pandas as pd
-import numpy as np
 import os
 from multiprocessing import Pool
 from subprocess import check_output
+
+import numpy as np
+import pandas as pd
+import pybedtools
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler
 
-from ..const import DEFAULT_THRESHOLD, PKG_NAME, CACHE_DIR
+from ..const import CACHE_DIR, DEFAULT_THRESHOLD, PKG_NAME
 
 _LOGGER = logging.getLogger(PKG_NAME)
 

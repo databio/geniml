@@ -1,26 +1,22 @@
 import logging
-import pandas as pd
-from multiprocessing import Pool
 import os
-import pybedtools
+from multiprocessing import Pool
 
+import pandas as pd
+import pybedtools
 
 from ..const import PKG_NAME
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
-
-def data_prepration(
-        path_file_label: str, 
-        univ
-):
+def data_prepration(path_file_label: str, univ):
     path_file_label = path_file_label.split(",")
     path_file = path_file_label[0]
     labels = " ".join(
         ["__label__" + label for label in path_file_label[1:] if label != ""]
     )
-    
+
     if os.path.exists(path_file):
         try:
             df = pybedtools.BedTool(path_file)
@@ -29,7 +25,7 @@ def data_prepration(
             if len(file_regions) == 0:
                 return " "
             file_regions = file_regions.to_dataframe().drop_duplicates()
-            
+
             file_regions["region"] = (
                 file_regions["chrom"]
                 + "_"
@@ -43,20 +39,17 @@ def data_prepration(
             return [path_file, " "]
     else:
         return [path_file, " "]
-    
 
-def meta_preprocessing(
-    meta,
-    labels,
-    data_path
-):
+
+def meta_preprocessing(meta, labels, data_path):
     cols = ["file_name"]
-    cols.extend(labels.split(','))
+    cols.extend(labels.split(","))
     meta = meta[cols]
     meta.loc[:, "file_name"] = data_path + meta["file_name"]
     meta = meta.fillna("")
     meta[0] = meta.apply(",".join, axis=1)
     return meta[0]
+
 
 def main(
     data_path: str,
@@ -65,9 +58,6 @@ def main(
     output: str,
     labels: str,
 ):
-    
-
-    
     """
     Main function for the preprocess pipeline
 
@@ -80,22 +70,19 @@ def main(
     _LOGGER.info("Running preprocess...")
 
     # PLACE CODE FOR RUNNING PREPROCESS HERE
-    
-    meta_data = meta_preprocessing(pd.read_csv(metadata),labels, data_path)
+
+    meta_data = meta_preprocessing(pd.read_csv(metadata), labels, data_path)
     file_list = list(meta_data)
     universe = pybedtools.BedTool(universe)
     trained_documents = []
-    with Pool(processes = 8) as p:
+    with Pool(processes=8) as p:
         trained_documents = p.starmap(
             data_prepration,
-            [
-                (x, universe)
-                for x in file_list
-            ],
+            [(x, universe) for x in file_list],
         )
         p.close()
         p.join()
-    
+
     print("Reading files done")
 
     df = pd.DataFrame(trained_documents, columns=["file_path", "context"])
@@ -105,5 +92,3 @@ def main(
     with open(f"{output}train_input.txt", "w") as output_file:
         output_file.write("\n".join(df.context))
     output_file.close()
-    
-    

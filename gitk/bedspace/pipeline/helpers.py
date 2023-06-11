@@ -7,10 +7,7 @@ import pandas as pd
 import pybedtools
 
 
-def data_prepration(
-        path_file_label: str, 
-        univ: str
-):
+def data_prepration(path_file_label: str, univ: str):
     path_file_label = path_file_label.split(",")
     path_file = path_file_label[0]
     labels = " ".join(
@@ -86,14 +83,13 @@ def bed2vec(file_list, universe, model, assembly, source, output_path):
     df = df.fillna(" ")
     df = df[df.context != " "]
 
-
     with open(docs, "w") as input_file:
         input_file.write("\n".join(df.context))
     input_file.close()
 
-#     with open(files, "w") as input_file:
-#         input_file.write("\n".join(df.file_path))
-#     input_file.close()
+    #     with open(files, "w") as input_file:
+    #         input_file.write("\n".join(df.file_path))
+    #     input_file.close()
 
     starspace_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -107,8 +103,5 @@ def bed2vec(file_list, universe, model, assembly, source, output_path):
     with open(doc_embed, "w") as out:
         out.write(output)
         out.close()
-        
-    
 
     return doc_embed
-

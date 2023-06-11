@@ -2,9 +2,7 @@ import logging
 import os
 import subprocess
 
-
-from ..const import (DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS,
-                     PKG_NAME)
+from ..const import DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS, PKG_NAME
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -30,18 +28,15 @@ def main(
     _LOGGER.info("Running training...")
 
     # PLACE TRAINING CODE HERE
-    
-    
+
     n_process = 8
     label_prefix = "__label__"
 
     model = os.path.join(output, "starspace_trained_model")
-    path_to_starsapce = os.path.join(path_to_starsapce, 'starspace')
-
+    path_to_starsapce = os.path.join(path_to_starsapce, "starspace")
 
     print(type(input))
 
-    
     if os.path.exists(model):
         subprocess.Popen(
             [
@@ -92,4 +87,3 @@ def main(
         )
 
     print("Train bedembed done.")
-

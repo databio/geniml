@@ -1,4 +1,3 @@
-
 import argparse
 import datetime
 import itertools
@@ -42,7 +41,7 @@ def data_preprocessing(path_embeded_document):
         X = document_embedding[i : i + 1]
         X = X[list(X)[0:-1]].astype(float)
         X = list(X.values)
-        
+
         Xs.append(X[0])
     return np.array(Xs)
 
@@ -68,7 +67,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
 
 
 def meta_preprocessing(meta):
-#     print(meta)
+    #     print(meta)
     assembly = meta["genome"]
     labels = []
     for l in args.labels.split(","):
@@ -162,29 +161,29 @@ def main():
 
     meta_data_db, assembly, file_list_db = meta(args.meta_path_db)
     meta_data_query, assembly, file_list_query = meta(args.meta_path_query)
-    
-
 
     # define file path
     model = os.path.join(args.output_path, "starspace_model_{}".format(assembly))
-
 
     dist = os.path.join(
         args.output_path, "query_db_similarity_score_{}.csv".format(assembly)
     )
 
-
-    doc_embed_dB = bed2vec(file_list_db, universe, model, assembly, "DB", args.output_path)
+    doc_embed_dB = bed2vec(
+        file_list_db, universe, model, assembly, "DB", args.output_path
+    )
 
     db_vectors = data_preprocessing(doc_embed_dB)
 
     print(db_vectors.shape)
-    doc_embed_query = bed2vec(file_list_query, universe, model, assembly, "Query", args.output_path)
+    doc_embed_query = bed2vec(
+        file_list_query, universe, model, assembly, "Query", args.output_path
+    )
 
     query_vectors = data_preprocessing(doc_embed_query)
 
     print(query_vectors.shape)
-    
+
     for i in range(len(query_vectors)):
 
         query_vector = query_vectors[i]
@@ -211,6 +210,7 @@ def main():
                 df_similarity.to_csv(dist, header=False, index=None, mode="a")
             else:
                 df_similarity.to_csv(dist, index=False)
+
 
 #         print("End", datetime.datetime.now())
 

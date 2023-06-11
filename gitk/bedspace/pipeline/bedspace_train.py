@@ -1,8 +1,6 @@
-
 """
 bedfile embeding pipeline (train)
 """
-
 
 
 import argparse
@@ -165,7 +163,7 @@ def main():
         )
         p.close()
         p.join()
-    
+
     print("Reading files done")
 
     df = pd.DataFrame(trained_documents, columns=["file_path", "context"])

@@ -57,7 +57,7 @@ def build_train_argparser(parser: VersionInHelpParser) -> VersionInHelpParser:
 
     parser.add_argument(
         "-n",
-        "--num-epochs",
+        "--epochs",
         dest="num_epochs",
         help="Number of epochs",
     )
@@ -71,7 +71,7 @@ def build_train_argparser(parser: VersionInHelpParser) -> VersionInHelpParser:
 
     parser.add_argument(
         "-l",
-        "--learning-rate",
+        "--lr",
         dest="learning_rate",
         help="Learning rate",
     )
