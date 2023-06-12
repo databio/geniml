@@ -1,6 +1,10 @@
 from .distance import run_distance
+from .utils import check_if_uni_flexible
 from .intersection import run_intersection
-from .likelihood import hard_universe_likelihood, likelihood_flexible_universe
+from .likelihood import (
+    hard_universe_likelihood,
+    likelihood_flexible_universe,
+)
 import pandas as pd
 import os
 import numpy as np
@@ -21,7 +25,7 @@ def run_all_assessment_methods(
     distance_u_t_f=False,
     distance_u_t_f_flex=False,
 ):
-    if not all(
+    if not any(
         [
             overlap,
             distance_f_t_u,
@@ -31,7 +35,7 @@ def run_all_assessment_methods(
         ]
     ):
         raise AttributeError("Choose at least one assessment method")
-    if not all(
+    if not any(
         [
             distance_f_t_u,
             distance_f_t_u_flex,
@@ -204,3 +208,47 @@ def get_likelihood(
         lh = hard_universe_likelihood(model_file, universe, cove_folder, cove_prefix)
 
     return lh
+
+
+def filter_universe(
+    universe,
+    universe_filtered,
+    min_size=0,
+    min_coverage=0,
+    filter_lh=False,
+    model_file=None,
+    cove_folder=None,
+    cove_prefix=None,
+    lh_cutoff=0,
+):
+    if filter_lh:
+        check_if_uni_flexible(universe)
+        if not all([model_file, cove_folder, cove_prefix]):
+            miss_args = []
+            if not model_file:
+                miss_args.append("model_file")
+            if not cove_folder:
+                miss_args.append("cove_folder")
+            if not cove_prefix:
+                miss_args.append("cove_prefix")
+            raise ValueError(
+                "Missing {} for peak likelihood calculations.".format(
+                    ",".join(miss_args)
+                )
+            )
+        likelihood_flexible_universe(
+            model_file, universe, cove_folder, cove_prefix, True
+        )
+        universe = universe + "_peak_likelihood"
+    with open(universe) as uni:
+        with open(universe_filtered, "w+") as uni_flt:
+            for i in uni:
+                j = i.split("\t")
+                j[1], j[2], j[4] = int(j[1]), int(j[2]), int(j[4])
+                if j[2] - j[1] > min_size:
+                    if j[4] > min_coverage:
+                        if filter_lh:
+                            if int(j[0]) > lh_cutoff:
+                                uni_flt.write(i)
+                        else:
+                            uni_flt.write(i)
