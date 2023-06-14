@@ -20,24 +20,25 @@ def check_if_line_correct(line):
 def ana_region(reg, start_s, starts, ends, track_val):
     core_s, core_e = [], []
     core_pos = np.argwhere(reg == 2).flatten()
-
     if len(core_pos) == 0:
         return "empty"
     else:
         core_s.append(core_pos[0] + start_s)
         if core_pos[0] == 0:
-            core_s[0] += 10
+            core_s[0] += 1
         for i in range(1, len(core_pos)):
-            if core_pos[i] - core_pos[i - 1] >= 100:
+            if core_pos[i] - core_pos[i - 1] >= 50:
                 core_e.append(core_pos[i - 1] + start_s)
                 min_point = np.argmin(track_val[core_pos[i - 1] : core_pos[i]])
                 min_point = min_point + core_pos[i - 1]
                 ends.append(int(min_point) + start_s)
                 starts.append(ends[-1] + 1)
                 core_s.append(core_pos[i] + start_s)
+                if core_s[-1] == starts[-1]:
+                    core_s[-1] += 1
         core_e.append(core_pos[-1] + start_s)
         if core_pos[-1] == len(reg) - 1:
-            core_e[-1] -= 10
+            core_e[-1] -= 1
     return core_s, core_e, starts, ends
 
 
@@ -151,6 +152,7 @@ def ccf_universe(cove, cove_prefix, file_out):
     chroms_key = list(chroms.keys())
     chroms_key = sorted(chroms_key, key=cmp_to_key(natural_chr_sort))
     chroms = {i: chroms[i] for i in chroms_key}
+    chroms = {"chr5": chroms["chr5"]}
     for chrom in chroms:
         if chroms[chrom] > 0:
             get_uni(file, chrom, file_out)
