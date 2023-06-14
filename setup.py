@@ -28,7 +28,7 @@ setup(
         PACKAGE_NAME,
         "gitk.assess",
         "gitk.eval",
-        "gitk.hmm",
+        "gitk.universe",
         "gitk.likelihood",
         "gitk.scembed",
     ],

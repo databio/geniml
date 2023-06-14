@@ -238,7 +238,7 @@ def run_hmm(start, core, end, chrom, normalize=True):
     return hmm_predictions, model
 
 
-def run_hmm_save_bed(
+def hmm_universe(
     coverage_folder,
     out_file,
     prefix="all",
