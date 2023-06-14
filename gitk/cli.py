@@ -1,14 +1,12 @@
-import os.path
 from typing import Dict
 import logmuse
 import sys
-import pandas as pd
 
 from ubiquerg import VersionInHelpParser
 
 from .assess.cli import build_subparser as assess_subparser
 from .eval.cli import build_subparser as eval_subparser
-from .hmm.cli import build_subparser as hmm_subparser
+from .universe.cli import build_subparser as hmm_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
 
@@ -34,7 +32,7 @@ def build_argparser():
 
     # Individual subcommands
     msg_by_cmd = {
-        "hmm": "Use an HMM to build a consensus peak set.",
+        "universe": "Use an HMM to build a consensus peak set.",
         "lh": "Compute likelihood",
         "assess": "Assess a universe",
         "scembed": "Embed single-cell data as region vectors",
@@ -47,7 +45,7 @@ def build_argparser():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
     # build up subparsers for modules
-    subparsers["hmm"] = hmm_subparser(subparsers["hmm"])
+    subparsers["universe"] = hmm_subparser(subparsers["universe"])
     subparsers["assess"] = assess_subparser(subparsers["assess"])
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
@@ -102,21 +100,21 @@ def main(test_args=None):
             )
 
         if args.subcommand == "universe_hard":
-            from .likelihood.universe_hard import main
+            from gitk.universe.universe_hard import main
 
             main(
                 args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff
             )
 
         if args.subcommand == "universe_flexible":
-            from .likelihood.universe_flexible import main
+            from gitk.universe.universe_flexible import main
 
             main(
                 args.model_file, args.cov_folder, args.coverage_prefix, args.output_file
             )
 
-    if args.command == "hmm":
-        from .hmm.hmm import run_hmm_save_bed
+    if args.command == "universe":
+        from .universe.hmm import run_hmm_save_bed
 
         run_hmm_save_bed(
             coverage_folder=args.cov_folder,
@@ -127,8 +125,6 @@ def main(test_args=None):
         )
 
     if args.command == "scembed":
-        from .scembed.scembed import main as scembed_main
-
         _LOGGER.info("Running scembed")
         pass
         # scembed_main(test_args)
