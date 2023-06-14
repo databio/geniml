@@ -7,7 +7,7 @@ from functools import cmp_to_key
 import numpy as np
 import pyBigWig
 
-from ..utils import natural_chr_sort, timer_func
+from gitk.utils import natural_chr_sort, timer_func
 
 
 def get_uni(file, chrom, cutoff=None):

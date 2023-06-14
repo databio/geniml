@@ -7,9 +7,9 @@ from functools import cmp_to_key
 import numpy as np
 from numba import njit
 
-from ..utils import natural_chr_sort, timer_func, read_chromosome_from_bw
-from ..hmm.hmm import predictions_to_bed, find_full
-from .build_model import ModelLH
+from gitk.utils import natural_chr_sort, timer_func, read_chromosome_from_bw
+from gitk.universe.hmm import predictions_to_bed, find_full
+from gitk.likelihood.build_model import ModelLH
 
 
 @njit
