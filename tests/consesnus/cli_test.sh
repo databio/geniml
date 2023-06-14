@@ -29,7 +29,7 @@ gitk universe hmm --output-file tests/consesnus/results/universe/hmm_universe.be
   --file-list tests/consesnus/file_list.txt \
   --universe tests/consesnus/results/universe/cc_universe.bed\
   --save-to-file --folder-out tests/consesnus/results/ \
-  --pref cc --no-workers 1 --save-each \
+  --pref cc --no-workers 1 \
   --overlap \
   --distance \
   --distance-universe-to-file
@@ -38,7 +38,7 @@ gitk universe hmm --output-file tests/consesnus/results/universe/hmm_universe.be
   --file-list tests/consesnus/file_list.txt \
   --universe tests/consesnus/results/universe/ccf_universe.bed \
   --save-to-file --folder-out tests/consesnus/results/ \
-  --pref ccf --no-workers 1 --save-each \
+  --pref ccf --no-workers 1 \
   --overlap \
   --distance \
   --distance-universe-to-file\
@@ -49,7 +49,7 @@ gitk universe hmm --output-file tests/consesnus/results/universe/hmm_universe.be
   --file-list tests/consesnus/file_list.txt \
   --universe tests/consesnus/results/universe/ml_universe.bed \
   --save-to-file --folder-out tests/consesnus/results/ \
-  --pref ml --no-workers 1 --save-each \
+  --pref ml --no-workers 1 \
   --overlap \
   --distance \
   --distance-universe-to-file\
@@ -60,7 +60,7 @@ gitk universe hmm --output-file tests/consesnus/results/universe/hmm_universe.be
   --file-list tests/consesnus/file_list.txt \
   --universe tests/consesnus/results/universe/hmm_universe.bed \
   --save-to-file --folder-out tests/consesnus/results/ \
-  --pref hmm --no-workers 1 --save-each \
+  --pref hmm --no-workers 1 \
   --overlap \
   --distance \
   --distance-universe-to-file\
