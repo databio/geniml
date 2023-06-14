@@ -152,7 +152,6 @@ def ccf_universe(cove, cove_prefix, file_out):
     chroms_key = list(chroms.keys())
     chroms_key = sorted(chroms_key, key=cmp_to_key(natural_chr_sort))
     chroms = {i: chroms[i] for i in chroms_key}
-    chroms = {"chr5": chroms["chr5"]}
     for chrom in chroms:
         if chroms[chrom] > 0:
             get_uni(file, chrom, file_out)
