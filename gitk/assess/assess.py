@@ -9,6 +9,10 @@ import pandas as pd
 import os
 import numpy as np
 import warnings
+from logging import getLogger
+from ..const import PKG_NAME
+
+_LOGGER = getLogger(PKG_NAME)
 
 
 def run_all_assessment_methods(
@@ -59,6 +63,7 @@ def run_all_assessment_methods(
             "universe&file",
         ]
         asses_results.append(r_overlap)
+        _LOGGER.info("DONE: Overlap")
     if distance_f_t_u:
         r_distance = run_distance(
             raw_data_folder,
@@ -73,6 +78,7 @@ def run_all_assessment_methods(
         )
         r_distance.columns = ["file", "median_dist_file_to_universe"]
         asses_results.append(r_distance)
+        _LOGGER.info("DONE: Distance file to universe")
     if distance_f_t_u_flex:
         r_distance_flex = run_distance(
             raw_data_folder,
@@ -87,6 +93,7 @@ def run_all_assessment_methods(
         )
         r_distance_flex.columns = ["file", "median_dist_file_to_universe_flex"]
         asses_results.append(r_distance_flex)
+        _LOGGER.info("DONE: Flexible distance file to universe")
 
     if distance_u_t_f:
         r_distance_utf = run_distance(
@@ -102,6 +109,7 @@ def run_all_assessment_methods(
         )
         r_distance_utf.columns = ["file", "median_dist_universe_to_file"]
         asses_results.append(r_distance_utf)
+        _LOGGER.info("DONE: Distance universe to file")
     if distance_u_t_f_flex:
         r_distance_utf_flex = run_distance(
             raw_data_folder,
@@ -116,6 +124,8 @@ def run_all_assessment_methods(
         )
         r_distance_utf_flex.columns = ["file", "median_dist_universe_to_file_flex"]
         asses_results.append(r_distance_utf_flex)
+        _LOGGER.info("DONE: Flexible distance universe to file")
+
     df = asses_results[0]
     for i in asses_results[1:]:
         df = pd.merge(df, i, on="file")
