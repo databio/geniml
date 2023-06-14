@@ -6,7 +6,7 @@ from ubiquerg import VersionInHelpParser
 
 from .assess.cli import build_subparser as assess_subparser
 from .eval.cli import build_subparser as eval_subparser
-from .universe.cli import build_subparser as hmm_subparser
+from .universe.cli import build_mode_parser as universe_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
 
@@ -45,7 +45,7 @@ def build_argparser():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
     # build up subparsers for modules
-    subparsers["universe"] = hmm_subparser(subparsers["universe"])
+    subparsers["universe"] = universe_subparser(subparsers["universe"])
     subparsers["assess"] = assess_subparser(subparsers["assess"])
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
@@ -99,30 +99,48 @@ def main(test_args=None):
             args.force,
         )
 
-        # if args.subcommand == "universe_hard":
-        #     from gitk.universe.universe_hard import main
-        #
-        #     main(
-        #         args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff
-        #     )
-        #
-        # if args.subcommand == "universe_flexible":
-        #     from gitk.universe.universe_flexible import main
-        #
-        #     main(
-        #         args.model_file, args.cov_folder, args.coverage_prefix, args.output_file
-        #     )
-
     if args.command == "universe":
-        from .universe.hmm import run_hmm_save_bed
+        _LOGGER.info(f"Subcommand: {args.subcommand}")
+        if args.subcommand == "hmm":
+            from .universe.hmm_universe import hmm_universe
 
-        run_hmm_save_bed(
-            coverage_folder=args.cov_folder,
-            out_file=args.out_file,
-            prefix=args.coverage_prefix,
-            normalize=args.not_normalize,
-            save_max_cove=args.save_max_cove,
-        )
+            hmm_universe(
+                coverage_folder=args.coverage_folder,
+                out_file=args.output_file,
+                prefix=args.coverage_prefix,
+                normalize=args.not_normalize,
+                save_max_cove=args.save_max_cove,
+            )
+
+        if args.subcommand == "ml":
+            from .universe.ml_universe import ml_universe
+
+            ml_universe(
+                model_file=args.model_file,
+                cove_folder=args.coverage_folder,
+                cove_prefix=args.coverage_prefix,
+                file_out=args.output_file,
+            )
+
+        if args.subcommand == "cc":
+            from .universe.cc_universe import cc_universe
+
+            cc_universe(
+                cove=args.coverage_folder,
+                cove_prefix=args.coverage_prefix,
+                file_out=args.output_file,
+                merge=args.merge,
+                filter_size=args.filter_size,
+                cutoff=args.cutoff,
+            )
+        if args.subcommand == "ccf":
+            from .universe.ccf_universe import ccf_universe
+
+            ccf_universe(
+                cove=args.coverage_folder,
+                cove_prefix=args.coverage_prefix,
+                file_out=args.output_file,
+            )
 
     if args.command == "scembed":
         _LOGGER.info("Running scembed")
