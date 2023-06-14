@@ -178,3 +178,5 @@ tests/integration/buenrostro2018.model
 
 # examples
 examples/scembed/pbmc/
+examples/scembed/buenrostro
+examples/scembed/atlas
