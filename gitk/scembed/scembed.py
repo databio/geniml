@@ -1,5 +1,7 @@
+import os
 import gzip
 import pickle
+import yaml
 from logging import getLogger
 from typing import Dict, List, Union
 
@@ -17,6 +19,7 @@ from .utils import (
     LearningRateScheduler,
     ScheduleType,
     convert_anndata_to_documents,
+    create_model_info_dict,
     remove_regions_below_min_count,
     shuffle_documents,
 )
@@ -93,6 +96,41 @@ class SCEmbed(Word2Vec):
         """
         with gzip.open(filepath, "wb") as f:
             pickle.dump(self, f)
+
+    def export_model(
+        self,
+        out_path: str,
+        model_config_name: str = DEFAULT_MODEL_CONFIG_FILE_NAME,
+        model_export_name: str = DEFAULT_MODEL_EXPORT_FILE_NAME,
+        universe_file_name: str = DEFAULT_UNIVERSE_EXPORT_FILE_NAME,
+        **config_kwargs,
+    ):
+        """
+        This function will do a full export of the model. This includes three files:
+        1. the actual pickled `.model` file
+        2. the `yaml` config file with metadata
+        3. the universe `.bed` file that determines the universe of regions
+        """
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+
+        # save the model
+        self.save_model(os.path.join(out_path, model_export_name))
+
+        # save the universe to disk
+        with open(os.path.join(out_path, universe_file_name), "w") as f:
+            for region in self.region2vec:
+                chr, start, end = region.split("_")
+                f.write(f"{chr}\t{start}\t{end}\n")
+
+        config_dict = create_model_info_dict(
+            path_to_weights=model_export_name,
+            path_to_universe=universe_file_name,
+            **config_kwargs,
+        )
+
+        with open(os.path.join(out_path, model_config_name), "w") as f:
+            yaml.dump(config_dict, f)
 
     def load_model(self, filepath: str, **kwargs):
         """
@@ -264,11 +302,74 @@ class SCEmbed(Word2Vec):
         # get the embeddings for each cell
         cell_embeddings = []
         for cell in tqdm(self.region_sets, total=len(self.region_sets)):
-            cell_embedding = np.mean([self.get_embedding(r) for r in cell], axis=0)
+            cell_embedding = np.mean(
+                [self.get_embedding(r) for r in cell if r in self.region2vec], axis=0
+            )
             cell_embeddings.append(cell_embedding)
 
+        cell_embeddings = np.array(cell_embeddings)
+
         # attach embeddings to the AnnData object
-        self.data.obs["embedding"] = cell_embeddings
+        self.data.obsm["embedding"] = cell_embeddings
+        return self.data
+
+    def cell_embeddings(self) -> sc.AnnData:
+        """
+        Get the cell embeddings for the original AnnData passed in. This should
+        be called after training is complete. It is only useful for extracting the
+        embeddings for the last chunk of data its seen.
+        """
+        if not self.trained:
+            raise ValueError("Model has not been trained yet.")
+
+        if self.data is None:
+            raise ValueError(
+                "Data not found. Please pass in an AnnData object to the constructor."
+            )
+
+        # get the embeddings for each cell
+        cell_embeddings = []
+        for cell in tqdm(self.region_sets, total=len(self.region_sets)):
+            cell_embedding = np.mean(
+                [self.get_embedding(r) for r in cell if r in self.region2vec], axis=0
+            )
+            cell_embeddings.append(cell_embedding)
+
+        cell_embeddings = np.array(cell_embeddings)
+
+        return cell_embeddings
+
+    def attach_cell_embeddings(self, key_added: str = "embedding") -> sc.AnnData:
+        """
+        Get the cell embeddings for the original AnnData passed in. This should
+        be called after training is complete. It is only useful for extracting the
+        embeddings for the last chunk of data its seen.
+
+        :param str key_added: the key to add the embeddings to in the obsm attribute of the AnnData object
+        """
+        if not self.trained:
+            raise ValueError("Model has not been trained yet.")
+
+        if not self.data:
+            raise ValueError(
+                "Data not found. Please pass in an AnnData object to the constructor."
+            )
+
+        if not self.region_sets:
+            self.region_sets = convert_anndata_to_documents(self.data)
+
+        # get the embeddings for each cell
+        cell_embeddings = []
+        for cell in tqdm(self.region_sets, total=len(self.region_sets)):
+            cell_embedding = np.mean(
+                [self.get_embedding(r) for r in cell if r in self.region2vec], axis=0
+            )
+            cell_embeddings.append(cell_embedding)
+
+        cell_embeddings = np.array(cell_embeddings)
+
+        # attach embeddings to the AnnData object
+        self.data.obsm[key_added] = cell_embeddings
         return self.data
 
     def embeddings_to_csv(self, output_path: str):

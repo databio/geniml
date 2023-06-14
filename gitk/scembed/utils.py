@@ -1,13 +1,13 @@
 import os
 import shutil
 import subprocess
-import urllib.request
+
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from logging import getLogger
 from random import shuffle
-from typing import TYPE_CHECKING, Dict, List, Union
+from typing import TYPE_CHECKING, Dict, List, Union, Optional
 
 import numpy as np
 import pandas as pd
@@ -197,21 +197,11 @@ def extract_region_list(region_df: pd.DataFrame) -> List[str]:
     :param pandas.DataFrame region_df: the regions dataframe to parse
     """
     _LOGGER.info("Extracting region list from matrix.")
-    regions = region_df.apply(
-        lambda x: f"{x[CHR_KEY]}_{x[START_KEY]}_{x[END_KEY]}", axis=1
-    ).tolist()
+    regions = [
+        f"{row[CHR_KEY]}_{row[START_KEY]}_{row[END_KEY]}"
+        for _, row in region_df.iterrows()
+    ]
     return regions
-
-
-def remove_zero_regions(cell_dict: Dict[str, int]) -> Dict[str, int]:
-    """
-    Removes any key-value pairs in a dictionary where the value (copy number)
-    is equal to zero (no signal). This is done using dictionary comprehension
-    as it is much faster.
-
-    :param cell_dict Dict[str, int]: the cell dictionary with region index keys and copy number values
-    """
-    return {k: v for k, v in cell_dict.items() if v > 0}
 
 
 def convert_anndata_to_documents(
@@ -242,19 +232,16 @@ def convert_anndata_to_documents(
     else:
         regions_parsed = extract_region_list(anndata.var)
     sc_df = anndata.to_df()
-    docs = []
     _LOGGER.info("Generating documents.")
 
-    def process_row(row):
-        row_dict = row.to_dict()
-        row_dict = remove_zero_regions(row_dict)
-        new_doc = []
-        for region_indx in row_dict:
-            region_str = regions_parsed[int(region_indx)]
-            new_doc.append(region_str)
-        return new_doc
-
-    docs = sc_df.apply(process_row, axis=1).tolist()
+    docs = [
+        [
+            regions_parsed[int(region_indx)]
+            for region_indx, value in row.to_dict().items()
+            if value > 0
+        ]
+        for _, row in sc_df.iterrows()
+    ]
 
     return docs
 
@@ -489,3 +476,41 @@ def barcode_mtx_peaks_to_anndata(
     adata = sc.AnnData(X=mtx, obs=barcodes, var=peaks)
 
     return adata
+
+
+def create_model_info_dict(
+    path_to_weights: Optional[str] = None,
+    path_to_universe: Optional[str] = None,
+    name: Optional[str] = None,
+    reference: Optional[str] = None,
+    description: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+    datasets: Optional[List[str]] = None,
+    model_parameters: Optional[Dict[str, Union[str, int]]] = None,
+    model_architecture: Optional[str] = None,
+    maintainers: Optional[List[Dict[str, str]]] = None,
+) -> Dict[str, Union[str, List[str], List[Dict[str, Union[str, int]]]]]:
+    model_info = {}
+
+    if path_to_weights:
+        model_info["path_to_weights"] = path_to_weights
+    if path_to_universe:
+        model_info["path_to_universe"] = path_to_universe
+    if name:
+        model_info["name"] = name
+    if reference:
+        model_info["reference"] = reference
+    if description:
+        model_info["description"] = description
+    if tags:
+        model_info["tags"] = tags
+    if datasets:
+        model_info["datasets"] = datasets
+    if model_parameters:
+        model_info["model_parameters"] = model_parameters
+    if model_architecture:
+        model_info["model_architecture"] = model_architecture
+    if maintainers:
+        model_info["maintainers"] = maintainers
+
+    return model_info
