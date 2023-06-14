@@ -87,31 +87,31 @@ def main(test_args=None):
         )
 
     if args.command == "lh":
-        _LOGGER.info(f"Subcommand: {args.subcommand}")
-        if args.subcommand == "build_model":
-            from .likelihood.build_model import main
+        # _LOGGER.info(f"Subcommand: {args.subcommand}")
+        # if args.subcommand == "build_model":
+        from .likelihood.build_model import main
 
-            main(
-                args.model_file,
-                args.coverage_folder,
-                args.coverage_prefix,
-                args.file_no,
-                args.force,
-            )
+        main(
+            args.model_file,
+            args.coverage_folder,
+            args.coverage_prefix,
+            args.file_no,
+            args.force,
+        )
 
-        if args.subcommand == "universe_hard":
-            from gitk.universe.universe_hard import main
-
-            main(
-                args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff
-            )
-
-        if args.subcommand == "universe_flexible":
-            from gitk.universe.universe_flexible import main
-
-            main(
-                args.model_file, args.cov_folder, args.coverage_prefix, args.output_file
-            )
+        # if args.subcommand == "universe_hard":
+        #     from gitk.universe.universe_hard import main
+        #
+        #     main(
+        #         args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff
+        #     )
+        #
+        # if args.subcommand == "universe_flexible":
+        #     from gitk.universe.universe_flexible import main
+        #
+        #     main(
+        #         args.model_file, args.cov_folder, args.coverage_prefix, args.output_file
+        #     )
 
     if args.command == "universe":
         from .universe.hmm import run_hmm_save_bed
