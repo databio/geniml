@@ -248,7 +248,7 @@ def filter_universe(
                 if j[2] - j[1] > min_size:
                     if j[4] > min_coverage:
                         if filter_lh:
-                            if int(j[0]) > lh_cutoff:
+                            if int(j[9].strip("\n")) > lh_cutoff:
                                 uni_flt.write(i)
                         else:
                             uni_flt.write(i)
