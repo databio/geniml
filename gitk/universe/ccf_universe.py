@@ -98,6 +98,7 @@ def save_regions(inter_pos, chrom, bedname, track):
 
 
 def get_uni(file, chrom, bedname):
+    print(chrom)
     """For each position check if coverage is bigger than cut-off;
     if cut-off not provided calculate value that gives
     maximum likelihood universe
@@ -116,7 +117,7 @@ def get_uni(file, chrom, bedname):
     cutoff = np.sum(track) / len(track)
     track_non_zero_sort = np.sort(track[track != 0])
 
-    cutoff = np.round(cutoff)
+    cutoff = max([1, np.round(cutoff)])
     pos = np.where(track_non_zero_sort == cutoff)[0]
 
     f, l = pos[0] / len(track_non_zero_sort), pos[-1] / len(track_non_zero_sort)
