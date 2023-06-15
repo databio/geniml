@@ -9,6 +9,7 @@ from .eval.cli import build_subparser as eval_subparser
 from .universe.cli import build_mode_parser as universe_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
+from .bedspace.cli import build_argparser as bedspace_subparser
 
 from ._version import __version__
 
@@ -37,6 +38,7 @@ def build_argparser():
         "assess": "Assess a universe",
         "scembed": "Embed single-cell data as region vectors",
         "eval": "Evaluate a set of region embeddings",
+        "bedspace": "Coembed regionsets (bed files) and labels",
     }
 
     sp = parser.add_subparsers(dest="command")
@@ -50,6 +52,8 @@ def build_argparser():
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
     subparsers["eval"] = eval_subparser(subparsers["eval"])
+    subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
+
     return parser
 
 
@@ -177,6 +181,78 @@ def main(test_args=None):
             )
             print(scctss)
     return
+
+    if args.command == "bedspace":
+        from .bedspace.const import PREPROCESS_CMD, TRAIN_CMD, DISTANCES_CMD, SEARCH_CMD
+
+        _LOGGER.info(f"Subcommand: {args.subcommand}")
+
+        if args.subcommand == PREPROCESS_CMD:
+            from .bedspace.pipeline.preprocess import main as preprocess_main
+
+            _LOGGER.info("Running bedspace preprocess")
+            preprocess_main(
+                args.input, args.metadata, args.universe, args.output, args.labels
+            )
+
+        elif args.subcommand == TRAIN_CMD:
+            from .bedspace.pipeline.train import main as train_main
+
+            _LOGGER.info("Running bedspace train")
+            train_main(
+                args.path_to_starspace,
+                args.input,
+                args.output,
+                args.num_epochs,
+                args.dim,
+                args.learning_rate,
+            )
+
+        elif args.subcommand == DISTANCES_CMD:
+            from .bedspace.pipeline.distances import main as distances_main
+
+            _LOGGER.info("Running bedspace distances")
+            distances_main(
+                args.input,
+                args.metadata,
+                args.universe,
+                args.output,
+                args.labels,
+                args.files,
+                args.threshold,
+            )
+
+        elif args.subcommand == SEARCH_CMD:
+            from .bedspace.const import SearchType
+            from .bedspace.pipeline.search import run_scenario1 as scenario1
+            from .bedspace.pipeline.search import run_scenario2 as scenario2
+            from .bedspace.pipeline.search import run_scenario3 as scenario3
+
+            if args.type == SearchType.l2r:
+                _LOGGER.info("Running bedspace search (scenario 1)")
+                scenario1(
+                    args.query,
+                    args.distances,
+                    args.num_results,
+                )
+            elif args.type == SearchType.r2l:
+                _LOGGER.info("Running bedspace search (scenario 2)")
+                scenario2(
+                    args.query,
+                    args.distances,
+                    args.num_results,
+                )
+            elif args.type == SearchType.l2l:
+                _LOGGER.info("Running bedspace search (scenario 3)")
+                scenario3(
+                    args.query,
+                    args.distances,
+                    args.num_results,
+                )
+
+        else:
+            # print help for this subcommand
+            _LOGGER.info("Running bedspace help")
 
 
 if __name__ == "__main__":
