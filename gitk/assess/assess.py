@@ -133,10 +133,11 @@ def run_all_assessment_methods(
 
 
 def get_rbs(f_t_u, u_t_f):
-    a = 101/(f_t_u+100)
-    b = 101/(u_t_f+100)
-    rbs = (10*a + b)/11
+    a = 101 / (f_t_u + 100)
+    b = 101 / (u_t_f + 100)
+    rbs = (10 * a + b) / 11
     return rbs
+
 
 def get_mean_rbs(folder, file_list, universe, no_workers, flexible=False):
     file_to_uni = run_distance(
@@ -161,7 +162,7 @@ def get_mean_rbs(folder, file_list, universe, no_workers, flexible=False):
     return np.mean(rbs)
 
 
-def get_rbs_from_assessment_file(file, cs_each_file=False, flexible = False):
+def get_rbs_from_assessment_file(file, cs_each_file=False, flexible=False):
     df = pd.read_csv(file, index_col=(0))
     if flexible:
         df["f_t_u"] = df["median_dist_file_to_universe_flex"]
@@ -266,7 +267,7 @@ def filter_universe(
                 if j[2] - j[1] > min_size:
                     if j[4] > min_coverage:
                         if filter_lh:
-                            if int(j[9].strip("\n")) > lh_cutoff:
+                            if float(j[9].strip("\n")) > lh_cutoff:
                                 uni_flt.write(i)
                         else:
                             uni_flt.write(i)
