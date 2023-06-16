@@ -26,4 +26,3 @@ def build_subparser(parser):
         action="store_true",
     )
     return parser
-

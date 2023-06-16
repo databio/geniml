@@ -33,9 +33,9 @@ def build_argparser():
 
     # Individual subcommands
     msg_by_cmd = {
-        "universe": "Use an HMM to build a consensus peak set.",
-        "lh": "Compute likelihood",
-        "assess": "Assess a universe",
+        "build-universe": "Build a consensus peak set using one of provided model",
+        "lh": "Make likelihood model",
+        "assess-universe": "Assess a universe",
         "scembed": "Embed single-cell data as region vectors",
         "eval": "Evaluate a set of region embeddings",
         "bedspace": "Coembed regionsets (bed files) and labels",
@@ -47,8 +47,8 @@ def build_argparser():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
     # build up subparsers for modules
-    subparsers["universe"] = universe_subparser(subparsers["universe"])
-    subparsers["assess"] = assess_subparser(subparsers["assess"])
+    subparsers["build-universe"] = universe_subparser(subparsers["build-universe"])
+    subparsers["assess-universe"] = assess_subparser(subparsers["assess-universe"])
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
     subparsers["eval"] = eval_subparser(subparsers["eval"])
@@ -72,7 +72,7 @@ def main(test_args=None):
 
     _LOGGER.info(f"Command: {args.command}")
 
-    if args.command == "assess":
+    if args.command == "assess-universe":
         from .assess.assess import run_all_assessment_methods
 
         run_all_assessment_methods(
@@ -103,7 +103,7 @@ def main(test_args=None):
             args.force,
         )
 
-    if args.command == "universe":
+    if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
         if args.subcommand == "hmm":
             from .universe.hmm_universe import hmm_universe
@@ -180,7 +180,7 @@ def main(test_args=None):
                 threshold=args.threshold,
             )
             print(scctss)
-    return
+
 
     if args.command == "bedspace":
         from .bedspace.const import PREPROCESS_CMD, TRAIN_CMD, DISTANCES_CMD, SEARCH_CMD
