@@ -130,7 +130,7 @@ class SCEmbed(Word2Vec):
         )
 
         with open(os.path.join(out_path, model_config_name), "w") as f:
-            yaml.dump(config_dict, f)
+            yaml.dump({"model": config_dict}, f)
 
     def load_model(self, filepath: str, **kwargs):
         """
@@ -259,6 +259,65 @@ class SCEmbed(Word2Vec):
         # create a mapping from region to vector
         for word in regions:
             self.region2vec[word] = self.wv[word]
+
+    # this is here for testing and debugging
+    def train_legacy(
+        self,
+        data: Union[sc.AnnData, str],
+        epochs: int = DEFAULT_EPOCHS,  # training cycles
+        n_shuffles: int = DEAFULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
+        gensim_epochs: Union[int, None] = DEFAULT_GENSIM_EPOCHS,
+        report_loss: bool = True,
+        lr: float = DEFAULT_INIT_LR,
+        min_lr: float = DEFAULT_MIN_LR,
+        lr_schedule: Union[str, ScheduleType] = "linear",
+    ):
+        self.trained = True
+        if report_loss:
+            self.callbacks.append(ReportLossCallback())
+
+        lr_scheduler = LearningRateScheduler(
+            init_lr=lr, min_lr=min_lr, type=lr_schedule, n_epochs=epochs
+        )
+
+        region_sets = convert_anndata_to_documents(data, self.use_default_region_names)
+
+        _LOGGER.info("Training starting.")
+
+        for shuffle_num in range(epochs):
+            # update current values
+            current_lr = lr_scheduler.get_lr()
+            current_loss = self.get_latest_training_loss()
+
+            # update user
+            _LOGGER.info(
+                f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}"
+            )
+            _LOGGER.info("Shuffling documents.")
+
+            # shuffle regions
+            self.region_sets = shuffle_documents(region_sets, n_shuffles=n_shuffles)
+
+            # update vocab and train
+            super().build_vocab(region_sets, update=True if shuffle_num > 0 else False)
+            super().train(
+                self.region_sets,
+                total_examples=len(region_sets),
+                epochs=gensim_epochs or 1,  # use the epochs passed in or just one
+                callbacks=self.callbacks,
+                compute_loss=report_loss,
+                start_alpha=current_lr,
+            )
+
+            # update learning rates
+            lr_scheduler.update()
+
+            # once training is complete, create a region to vector mapping
+            regions = list(self.wv.key_to_index.keys())
+
+            # create a mapping from region to vector
+            for word in regions:
+                self.region2vec[word] = self.wv[word]
 
     def get_embedding(self, region: str) -> np.ndarray:
         """

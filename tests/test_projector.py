@@ -69,34 +69,68 @@ def test_init_projector(projector):
 @pytest.mark.skip(reason="bedtools isnt installed in CI")
 def test_tokenization():
     """
-     Tokenize the top into the bottom
+    Test tokenization for three scenarios:
+    1. One overlap in B per region in A
+    2. At least one region in A doesn't overlap with any region in B
+    3. A region in A overlaps with multiple regions in B
 
-        chr1: 1000     2000     3000     4000     5000     6000
-    A         |--------|        |--------|        |--------|
-    B              |--------|        |--------|  |----| |--------|
+    Scenario 1:
+    A: |-----------|        |-----------|           |-----------|
+    B:     |-----------|        |-----------|           |-----------|
 
-        chr1: 1000     2000     3000     4000     5000     6000
-    A         |--------|        |--------|        |--------|
-    C              |--------|        |---------------|
+    Scenario 2:
+    A: |-----------|        |-------|              |-----------|
+    B:     |-----------|                 |-------|          |-----------|
+
+    Scenario 3:
+    A: |-----------|        |-----------|           |-----------|
+    B:     |-----------|  |--------| |-----------|           |-----------|
 
     """
-    regions_a = [
-        "chr1_1000_2000",
-        "chr1_3000_4000",
-        "chr1_5000_6000",
-    ]
-    regions_b = [
-        "chr1_1500_2500",
-        "chr1_3500_4500",
-        "chr1_4800_5050",
-        "chr1_5500_6050",
-    ]
-    regions_c = ["chr1_1500_2500", "chr1_3500_5500"]
+    # scenario 1
+    with open("tests/data/s1_a.bed", "r") as f:
+        lines = f.readlines()
+        a = ["_".join(l.strip().split("\t")) for l in lines]
+    with open("tests/data/s1_b.bed", "r") as f:
+        lines = f.readlines()
+        b = ["_".join(l.strip().split("\t")) for l in lines]
 
-    var_map_ab = scembed.utils.generate_var_conversion_map(regions_a, regions_b)
-    var_map_ac = scembed.utils.generate_var_conversion_map(regions_a, regions_c)
-    assert len(var_map_ab) == 3
-    assert len(var_map_ac) == 3
+    conversion_map = scembed.utils.generate_var_conversion_map(a, b)
+    assert conversion_map == {
+        "chr1_10_30": "chr1_20_40",
+        "chr1_110_130": "chr1_120_140",
+        "chr1_210_230": "chr1_220_240",
+    }
+
+    # scenario 2
+    with open("tests/data/s2_a.bed", "r") as f:
+        lines = f.readlines()
+        a = ["_".join(l.strip().split("\t")) for l in lines]
+    with open("tests/data/s2_b.bed", "r") as f:
+        lines = f.readlines()
+        b = ["_".join(l.strip().split("\t")) for l in lines]
+
+    conversion_map = scembed.utils.generate_var_conversion_map(a, b)
+    assert conversion_map == {
+        "chr1_10_30": "chr1_20_40",
+        "chr1_110_130": None,
+        "chr1_210_230": "chr1_220_240",
+    }
+
+    # scenario 3
+    with open("tests/data/s3_a.bed", "r") as f:
+        lines = f.readlines()
+        a = ["_".join(l.strip().split("\t")) for l in lines]
+    with open("tests/data/s3_b.bed", "r") as f:
+        lines = f.readlines()
+        b = ["_".join(l.strip().split("\t")) for l in lines]
+
+    conversion_map = scembed.utils.generate_var_conversion_map(a, b)
+    assert conversion_map == {
+        "chr1_10_30": "chr1_20_40",
+        "chr1_110_130": "chr1_100_120",
+        "chr1_210_230": "chr1_220_240",
+    }
 
 
 @pytest.mark.skip

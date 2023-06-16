@@ -125,9 +125,15 @@ class Projector:
 
     def convert_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
         """
-        Converts the conesnsus peak set (.var) attributes of the AnnData object
+        Converts the consensus peak set (.var) attributes of the AnnData object
         to a universe representation. This is done through interval overlap
-        analysis.
+        analysis with bedtools.
+
+        For each region in the `.var` attribute of the AnnData object, we
+        either 1) map it to a region in the universe, or 2) map it to `None`.
+        If it is mapped to `None`, it is not in the universe and will be dropped
+        from the AnnData object. If it is mapped to a region, it will be updated
+        to the region in the universe for downstream analysis.
         """
         # ensure adata has chr, start, and end
         if not all([x in adata.var.columns for x in ["chr", "start", "end"]]):
@@ -152,14 +158,14 @@ class Projector:
         columns_to_keep = []
         for i, row in tqdm(adata.var.iterrows(), total=adata.var.shape[0]):
             region = f"{row['chr']}_{row['start']}_{row['end']}"
-            if region not in _map:
+            if _map[region] is None:
                 columns_to_keep.append(False)
                 continue
 
             # if it is, change the region to the universe region,
             # grab the first for now
             # TODO - this is a simplification, we should be able to handle multiple
-            universe_region = _map[region][0]
+            universe_region = _map[region]
             chr, start, end = universe_region.split("_")
 
             updated_var.at[i, "chr"] = chr
@@ -235,6 +241,7 @@ class Projector:
         plot_kwargs: Dict[str, Any] = {},
         fig_kwargs: Dict[str, Any] = {},
         color_palette: str = "tab20",
+        random_state: int = 42,
     ):
         """
         Visualize the projection of the AnnData object into the model space.
@@ -320,7 +327,7 @@ class Projector:
                 color=color,
                 ax=ax,
                 s=10,
-                alpha=0.4,
+                alpha=1,
                 **plot_kwargs,
             )
 
@@ -338,3 +345,5 @@ class Projector:
 
             # set the title
             ax.set_title(f"Cluster {cluster}")
+
+        return fig, axes
