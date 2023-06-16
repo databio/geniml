@@ -317,28 +317,18 @@ def load_universe_file(path: str) -> List[str]:
 
 def generate_var_conversion_map(
     a: List[str], b: List[str], path_to_bedtools: str = None, fraction: float = 1.0e-9
-) -> Dict[str, List[str]]:
+) -> Dict[str, Union[str, None]]:
     """
-    Find the regions that overlap between two lists of regions using bedtools. for each region in
-    a, if it overlaps a region in b, report region from a and the region from b that it overlapped.
+    Create a conversion map to convert regions from a to b. This is used to convert the
+    consensus peak set of one AnnData object to another.
 
-    i.e. the result of the bedtools operation is a bed file with 6 columns,
-    chr_a\tstart_a\tend_a\tchr_b\tstart_b\tend_b. The first three columns are the region from a, the last three
-    columns are the region from b.
+    For each region in a, we will either find a matching region in b, or None. If a matching
+    region is found, we will store the region in b. If no matching region is found, we will
+    store `None`.
 
-    Where chr_start_end (a) -- Overlaps --> chr_start_end (b)
-
-    This occurs in three steps:
-    1. write both a and b to a temporary file,
-    2. use bedtools to find the overlaps and dump to a temporary file,
-    3. read in the temporary file and parse the results.
-
-    The function returns a dictionary of the form:
-
-    Dict[str, List[str]]
-
-    Where a_region and b_region are strings of the form chr_start_end and any and all regions
-    from a overlap any and all regions from b.
+    Intuitively, think of this as converting `A` --> `B`. If a region in `A` is found in `B`,
+    we will change the region in `A` to the region in `B`. If a region in `A` is not found in
+    `B`, we will drop that region in `A` altogether.
 
     :param List[str] a: the first list of regions
     :param List[str] b: the second list of regions
@@ -348,54 +338,67 @@ def generate_var_conversion_map(
     # write a and b to temp files in cache
     a_file = os.path.join(MODEL_CACHE_DIR, "a.bed")
     b_file = os.path.join(MODEL_CACHE_DIR, "b.bed")
+
+    # write a and b to temp files
     with open(a_file, "w") as f:
         # split each region into chr start end
-        a = [region.split("_") for region in a]
-        a = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in a]
-        f.writelines(a)
-
+        a_parsed = [region.split("_") for region in a]
+        a_parsed = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in a_parsed]
+        f.writelines(a_parsed)
     with open(b_file, "w") as f:
-        b = [region.split("_") for region in b]
-        b = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in b]
-        f.writelines(b)
+        b_parsed = [region.split("_") for region in b]
+        b_parsed = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in b_parsed]
+        f.writelines(b_parsed)
+
+    # sort both files
+    cmd = f"sort -k1,1 -k2,2n {a_file} -o {a_file}"
+    subprocess.run(cmd, shell=True)
+
+    cmd = f"sort -k1,1 -k2,2n {b_file} -o {b_file}"
+    subprocess.run(cmd, shell=True)
 
     # run bedtools
-    if path_to_bedtools is None:
-        path_to_bedtools = DEFAULT_BEDTOOLS_PATH
+    bedtools_cmd = f"intersect -a {a_file} -b {b_file} -wa -wb -f {fraction}"
 
-    overlaps_file = os.path.join(MODEL_CACHE_DIR, "ab_tokens" + ".bed")
+    # add path to bedtools if provided
+    if path_to_bedtools is not None:
+        cmd = f"{path_to_bedtools} {bedtools_cmd}"
+    else:
+        cmd = f"bedtools {bedtools_cmd}"
 
-    with open(overlaps_file, "w") as f_target:
-        cmd = f"{path_to_bedtools} intersect -a {a_file} -b {b_file} -wa -wb -f {fraction}"
-        subprocess.run(cmd, shell=True, stdout=f_target)
+    # target file
+    target_file = os.path.join(MODEL_CACHE_DIR, "olaps.bed")
+    with open(target_file, "w") as f:
+        subprocess.run(cmd, shell=True, stdout=f)
 
-    # read in the and create a dictionary for mapping,
-    # each key is a region from a, each value is a list of regions from b that it overlaps
-    olaps = {}
-    with open(overlaps_file, "r") as f:
-        # create list of tuples
+    # bedtools reports overlaps like this:
+    # chr1 100 200 chr1 150 250
+    # we want to convert this to a map like this:
+    # {chr1_100_200: chr1_150_250}
+    # we will use a dictionary to do this
+    # if a region in A overlaps with multiple regions in B, we will
+    # take the first one. as such we need to check if a region in A
+    # has already been mapped to a region in B
+    conversion_map = dict()
+    with open(target_file, "r") as f:
         for line in f.readlines():
-            line = line.strip()
-            # region_a
-            region_a = line.split("\t")[:3]
-            region_a = "_".join(region_a)
+            line = line.strip().split("\t")
+            a_region = f"{line[0]}_{line[1]}_{line[2]}"
+            b_region = f"{line[3]}_{line[4]}_{line[5]}"
+            if a_region not in conversion_map:
+                conversion_map[a_region] = b_region
 
-            # region_b
-            region_b = line.split("\t")[3:6]
-            region_b = "_".join(region_b)
-
-            # add to dictionary
-            if region_a not in olaps:
-                olaps[region_a] = [region_b]
-            else:
-                olaps[region_a].append(region_b)
+    # add `None` mappings for regions in A that did not overlap with any regions in B
+    for region in a:
+        if region not in conversion_map:
+            conversion_map[region] = None
 
     # remove temp files
     os.remove(a_file)
     os.remove(b_file)
-    os.remove(overlaps_file)
+    os.remove(target_file)
 
-    return olaps
+    return conversion_map
 
 
 # This method should only be used in the Projector. It
