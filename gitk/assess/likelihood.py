@@ -50,6 +50,7 @@ def calc_likelihood_hard(
     empty_start = 0
     res = 0
     e = 0
+    done_chrom = []
     prob_array, cove_array = None, None
     with open(universe) as uni:
         for i in uni:
@@ -61,6 +62,7 @@ def calc_likelihood_hard(
             else:
                 if i[0] != current_chrom:
                     if i[0] in chroms:
+                        done_chrom.append(i[0])
                         model_lh.clear_chrom(current_chrom)
                         if e != 1:
                             res += np.sum(prob_array[empty_start:, 0])
@@ -90,6 +92,19 @@ def calc_likelihood_hard(
                 res += r2
                 empty_start = end
     res += np.sum(prob_array[empty_start:, 0])
+    z = set(chroms).difference(set(done_chrom))
+    z = list(z)
+    for i in z:
+        model_lh.read_chrom_track(i, name)
+        prob_model = model_lh[i]
+        cove_array = read_chromosome_from_bw(
+            os.path.join(
+                coverage_folder, f"{coverage_prefix}_{name}.bw"
+            ),
+            i,
+        )
+        prob_array = LhModel(prob_model[name], cove_array)
+        res += np.sum(prob_array[:, 0])
     return res
 
 
