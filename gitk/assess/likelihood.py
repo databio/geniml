@@ -50,6 +50,7 @@ def calc_likelihood_hard(
     empty_start = 0
     res = 0
     e = 0
+    done_chrom = []
     prob_array, cove_array = None, None
     with open(universe) as uni:
         for i in uni:
@@ -61,6 +62,7 @@ def calc_likelihood_hard(
             else:
                 if i[0] != current_chrom:
                     if i[0] in chroms:
+                        done_chrom.append(i[0])
                         model_lh.clear_chrom(current_chrom)
                         if e != 1:
                             res += np.sum(prob_array[empty_start:, 0])
@@ -90,6 +92,19 @@ def calc_likelihood_hard(
                 res += r2
                 empty_start = end
     res += np.sum(prob_array[empty_start:, 0])
+    z = set(chroms).difference(set(done_chrom))
+    z = list(z)
+    for i in z:
+        model_lh.read_chrom_track(i, name)
+        prob_model = model_lh[i]
+        cove_array = read_chromosome_from_bw(
+            os.path.join(
+                coverage_folder, f"{coverage_prefix}_{name}.bw"
+            ),
+            i,
+        )
+        prob_array = LhModel(prob_model[name], cove_array)
+        res += np.sum(prob_array[:, 0])
     return res
 
 
@@ -222,6 +237,8 @@ def likelihood_flexible_universe(
     check_if_uni_flexible(universe)
     model_lh = ModelLH(model_file)
     chroms = model_lh.chromosomes_list
+    print(chroms)
+    done_chroms = []
     output = []
     e = 0  # number of processed chromosomes
     with open(universe) as uni:
@@ -246,6 +263,7 @@ def likelihood_flexible_universe(
                                 prob_end,
                             )
                         current_chrom = i[0]
+                        done_chroms.append(current_chrom)
                         e += 1
                         model_lh.read_chrom(current_chrom)
                         models_current = model_lh[current_chrom]
@@ -296,4 +314,18 @@ def likelihood_flexible_universe(
             print("saving")
             with open(universe + "_peak_likelihood", "w") as f:
                 f.writelines(output)
+    z = set(chroms).difference(set(done_chroms))
+    z = list(z)
+    for i in z:
+        for name in ["start", "core", "end"]:
+            model_lh.read_chrom_track(i, name)
+            prob_model = model_lh[i]
+            cove_array = read_chromosome_from_bw(
+                os.path.join(
+                    cove_folder, f"{cove_prefix}_{name}.bw"
+                ),
+                i,
+            )
+            prob_array = LhModel(prob_model[name], cove_array)
+            res += np.sum(prob_array[:, 0])
     return res
