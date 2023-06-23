@@ -87,7 +87,6 @@ def meta_preprocessing(meta):
     labels = []
     for l in args.labels.split(","):
         if l in meta.index:
-
             labels.append(l)
     labels.insert(0, "file_name")
     meta = meta[labels]
