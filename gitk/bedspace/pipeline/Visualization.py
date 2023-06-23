@@ -49,7 +49,6 @@ def UMAP_plot(
     plottitle="",
     output_folder="",
 ):
-
     np.random.seed(3)
     dp = 400
 
@@ -203,7 +202,6 @@ search = "target"
 
 
 def Scenario1(path_simfile):
-
     distance = pd.read_csv(file)
     distance.file_label = distance.file_label.str.lower()
     distance.search_term = distance.search_term.str.lower()
@@ -246,7 +244,6 @@ def Scenario1(path_simfile):
     )
 
     for searchterm in training_labels:
-
         nof = len(search_table[search_table.file_label.str.contains(searchterm)])
         df = search_table[
             ["filename", "file_label", "original_label", searchterm]
@@ -292,7 +289,6 @@ search = "target"
 
 
 def Scenario2(path_simfile):
-
     distance = pd.read_csv(file)
     distance.file_label = distance.file_label.str.lower()
     distance.search_term = distance.search_term.str.lower()
@@ -418,7 +414,6 @@ sim = sim.merge(meta_test, left_on="test_name", right_on="file_name").merge(
 sim.score = 1 - sim.score
 
 for test in list(set(sim.test_name)):
-
     df = sim[sim.test_name == test].sort_values(by="score", ascending=False)[
         [
             "test_name",
@@ -436,7 +431,6 @@ for test in list(set(sim.test_name)):
     df.loc[df.original_label_test == df.original_label_train, "color"] = "green"
 
     if len(df[df.color == "green"]) == nof:
-
         df.loc[(df.color != "green"), "color"] = "gray"
 
     plt = df.plot.barh(

@@ -64,7 +64,6 @@ def data_prepration_test(path_file_label, univ):
 
 
 def bed2vec(file_list, universe, model, assembly, source, output_path):
-
     docs = os.path.join(output_path, "documents_{}.txt".format(assembly))
     files = os.path.join(output_path, "filenames_{}.txt".format(assembly))
 
