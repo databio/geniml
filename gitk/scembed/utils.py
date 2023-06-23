@@ -1,10 +1,15 @@
-from enum import Enum
+import os
+import shutil
+import subprocess
+import urllib.request
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from enum import Enum
 from logging import getLogger
 from random import shuffle
-from concurrent.futures import ThreadPoolExecutor
-from typing import Union, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Union
 
+import numpy as np
 import pandas as pd
 import scanpy as sc
 from tqdm import tqdm
@@ -263,4 +268,224 @@ def load_scembed_model(path: str) -> "SCEmbed":
     import pickle
 
     with open(path, "rb") as f:
-        return pickle.load(f)
+        model = pickle.load(f)
+        return model
+
+
+def load_scembed_model_deprecated(path: str) -> "SCEmbed":
+    """
+    Load a scembed model from disk. THIS IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE.
+
+    :param str path: The path to the model.
+    """
+    import pickle
+
+    with open(path, "rb") as f:
+        model = pickle.load(f)
+        return model
+
+
+def check_model_exists_on_hub(registry: str) -> bool:
+    """
+    Check the model hub for the existing model registry. Registry
+    is of the name <namespace>/<model_name>.
+
+    Looks for the existence of model.yaml at {MODEL_HUB_URL}/{registry_name}/model.yaml
+    """
+    # check if model exists in the hub
+    url = f"{MODEL_HUB_URL}/{registry}/model.yaml"
+    cmd = f"curl -s -o /dev/null -w '%{{http_code}}' {url}"
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+    return result.stdout.decode("utf-8") == "200"
+
+
+def download_remote_model(registry: str, path: str, overwrite: bool = True) -> None:
+    """
+    Download a model from the model hub. Overwrites any existing.
+
+    :param str registry: the registry name of the model to download
+    :param str path: the path to download the model to, this is the folder that will contain registry/model.yaml
+    """
+    path_to_model = os.path.join(path, registry)
+    if os.path.exists(path_to_model) and overwrite:
+        _LOGGER.debug("Removing existing model.")
+        shutil.rmtree(path_to_model)
+
+    cmd = f"wget -r -np -nH --cut-dirs=2 -P {path} -l 1 {MODEL_HUB_URL}/{registry}"
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+    if result.returncode != 0:
+        raise ValueError("Could not download model from model-hub.")
+
+
+def load_universe_file(path: str) -> List[str]:
+    """
+    Loads a bed file into a list of regions. Assumes
+    the bed file is of the form chr start end (tab-separated).
+    """
+    with open(path, "r") as f:
+        regions = [line.strip().split("\t") for line in f.readlines()]
+        regions = [f"{r[0]}_{r[1]}_{r[2]}" for r in regions]
+    return regions
+
+
+def generate_var_conversion_map(
+    a: List[str], b: List[str], path_to_bedtools: str = None, fraction: float = 1.0e-9
+) -> Dict[str, List[str]]:
+    """
+    Find the regions that overlap between two lists of regions using bedtools. for each region in
+    a, if it overlaps a region in b, report region from a and the region from b that it overlapped.
+
+    i.e. the result of the bedtools operation is a bed file with 6 columns,
+    chr_a\tstart_a\tend_a\tchr_b\tstart_b\tend_b. The first three columns are the region from a, the last three
+    columns are the region from b.
+
+    Where chr_start_end (a) -- Overlaps --> chr_start_end (b)
+
+    This occurs in three steps:
+    1. write both a and b to a temporary file,
+    2. use bedtools to find the overlaps and dump to a temporary file,
+    3. read in the temporary file and parse the results.
+
+    The function returns a dictionary of the form:
+
+    Dict[str, List[str]]
+
+    Where a_region and b_region are strings of the form chr_start_end and any and all regions
+    from a overlap any and all regions from b.
+
+    :param List[str] a: the first list of regions
+    :param List[str] b: the second list of regions
+    :param str path_to_bedtools: the path to the bedtools executable
+    :param float fraction: the fraction of the region that must overlap to be considered an overlap
+    """
+    # write a and b to temp files in cache
+    a_file = os.path.join(MODEL_CACHE_DIR, "a.bed")
+    b_file = os.path.join(MODEL_CACHE_DIR, "b.bed")
+    with open(a_file, "w") as f:
+        # split each region into chr start end
+        a = [region.split("_") for region in a]
+        a = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in a]
+        f.writelines(a)
+
+    with open(b_file, "w") as f:
+        b = [region.split("_") for region in b]
+        b = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in b]
+        f.writelines(b)
+
+    # run bedtools
+    if path_to_bedtools is None:
+        path_to_bedtools = DEFAULT_BEDTOOLS_PATH
+
+    overlaps_file = os.path.join(MODEL_CACHE_DIR, "ab_tokens" + ".bed")
+
+    with open(overlaps_file, "w") as f_target:
+        cmd = f"{path_to_bedtools} intersect -a {a_file} -b {b_file} -wa -wb -f {fraction}"
+        subprocess.run(cmd, shell=True, stdout=f_target)
+
+    # read in the and create a dictionary for mapping,
+    # each key is a region from a, each value is a list of regions from b that it overlaps
+    olaps = {}
+    with open(overlaps_file, "r") as f:
+        # create list of tuples
+        for line in f.readlines():
+            line = line.strip()
+            # region_a
+            region_a = line.split("\t")[:3]
+            region_a = "_".join(region_a)
+
+            # region_b
+            region_b = line.split("\t")[3:6]
+            region_b = "_".join(region_b)
+
+            # add to dictionary
+            if region_a not in olaps:
+                olaps[region_a] = [region_b]
+            else:
+                olaps[region_a].append(region_b)
+
+    # remove temp files
+    os.remove(a_file)
+    os.remove(b_file)
+    os.remove(overlaps_file)
+
+    return olaps
+
+
+# This method should only be used in the Projector. It
+# assmes that the AnnData.var attribute has chr, start, and end
+def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
+    """
+    Converts an AnnData object to a list of lists of regions. This
+    is done by taking each cell and creating a list of all regions
+    that have a value greater than 0.
+
+    *Note: this method requires that the sc.AnnData object have
+    chr, start, and end in `.var` attributes*
+    """
+    # Extract the arrays for chr, start, and end
+    chr_values = adata.var["chr"].values
+    start_values = adata.var["start"].values
+    end_values = adata.var["end"].values
+
+    # Perform the comparison using numpy operations
+    positive_values = adata.X > 0
+
+    if not isinstance(positive_values, np.ndarray):
+        positive_values = positive_values.toarray()
+
+    regions = []
+    for i in tqdm(range(adata.shape[0]), total=adata.shape[0]):
+        regions.append(
+            [
+                f"{chr_values[j]}_{start_values[j]}_{end_values[j]}"
+                for j in np.where(positive_values[i])[0]
+            ]
+        )
+    return regions
+
+
+def barcode_mtx_peaks_to_anndata(
+    barcodes_path: str,
+    mtx_path: str,
+    peaks_path: str,
+    transpose: bool = True,
+    sparse: bool = True,
+) -> sc.AnnData:
+    """
+    This function will take three files:
+
+    1. a barcodes file (.tsv)
+    2. a matrix file (.mtx)
+    3. a peaks file (.bed)
+
+    And turn them into an AnnData object. It will attach the peaks
+    as a .var attribute (chr, start, end) and the barcodes as a .obs attribute (index)
+
+    :param str barcodes_path: the path to the barcodes file
+    :param str mtx_path: the path to the matrix file
+    :param str peaks_path: the path to the peaks file
+    :param bool transpose: whether or not to transpose the matrix
+    :param bool sparse: whether or not the matrix is sparse
+
+    :return sc.AnnData: an AnnData object
+    """
+    from scipy.io import mmread
+
+    # load the barcodes
+    barcodes = pd.read_csv(barcodes_path, sep="\t", header=None)
+    barcodes.columns = ["barcode"]
+    barcodes.index = barcodes["barcode"]
+
+    # load the mtx
+    mtx = mmread(mtx_path)
+    if transpose:
+        mtx = mtx.T
+
+    # load the peaks
+    peaks = pd.read_csv(peaks_path, sep="\t", header=None)
+    peaks.columns = ["chr", "start", "end"]
+
+    # create the AnnData object
+    adata = sc.AnnData(X=mtx, obs=barcodes, var=peaks)
+
+    return adata

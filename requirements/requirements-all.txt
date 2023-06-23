@@ -11,3 +11,5 @@ seaborn
 tqdm
 umap-learn
 ubiquerg
+yacman
+pydantic

@@ -1,36 +1,17 @@
-import pickle
 import os
+import pickle
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
-import numpy as np
-import time
 import argparse
-from gensim.models import Word2Vec
-import time
 import multiprocessing as mp
-from gitk.eval.utils import load_genomic_embeddings
+import time
+
 import matplotlib.pyplot as plt
+import numpy as np
+from gensim.models import Word2Vec
 from matplotlib.lines import Line2D
 
-
-class Timer:
-    def __init__(self):
-        self.o = time.time()
-
-    def measure(self, p=1):
-        x = (time.time() - self.o) / float(p)
-        x = int(x)
-        if x >= 3600:
-            return "{:.1f}h".format(x / 3600)
-        if x >= 60:
-            return "{}m".format(round(x / 60))
-        return "{}s".format(x)
-
-
-# function calculating the chromosome distance between two regions
-func_rdist = lambda u, v: float(u[1] < v[1]) * max(v[0] - u[1] + 1, 0) + float(
-    u[1] >= v[1]
-) * max(u[0] - v[1] + 1, 0)
+from .utils import Timer, genome_distance, load_genomic_embeddings
 
 
 def get_topk_embed(i, K, embed, dist="cosine"):
@@ -73,7 +54,7 @@ def find_Kneighbors(region_array, index, K):
     right_idx = min(index + K, len(region_array) - 1)
     rdist_arr = []
     for idx in range(left_idx, right_idx + 1):
-        rdist_arr.append(func_rdist(qregion, region_array[idx]))
+        rdist_arr.append(genome_distance(qregion, region_array[idx]))
     rdist_arr = np.array(rdist_arr)
     Kneighbors_idx = np.argsort(rdist_arr)[1 : K + 1]
     Kneighbors_idx = Kneighbors_idx + left_idx
@@ -95,13 +76,13 @@ def calculate_overlap_bins(
     if len(Kindices) == 0:
         return 0
     str_kregions = [
-        "{}:{}-{}".format(chromo, *region_array[k]) for k in Kindices
+        f"{chromo}:{region_array[k][0]}-{region_array[k][1]}" for k in Kindices
     ]  # sorted in ascending order
     _Krdist_global_indices = np.array([region2index[r] for r in str_kregions])
 
     if same_chromo:
         chr_regions = [
-            "{}:{}-{}".format(chromo, *region_array[k])
+            f"{chromo}:{region_array[k][0]}-{region_array[k][1]}"
             for k in range(len(region_array))
         ]
         chr_global_indices = np.array([region2index[r] for r in chr_regions])
@@ -111,7 +92,9 @@ def calculate_overlap_bins(
             [chr_global_indices[i] for i in _Kedist_local_indices]
         )
     else:
-        idx = region2index["{}:{}-{}".format(chromo, *region_array[local_idx])]
+        idx = region2index[
+            f"{chromo}:{region_array[local_idx][0]}-{region_array[local_idx][1]}"
+        ]
         _Kedist_global_indices, _ = get_topk_embed(idx, K, embed_rep, dist)
 
     bin_overlaps = []
@@ -160,7 +143,7 @@ def init_worker(embed_rep, ref_embed, region2index):
     var_dict["region2vec_index"] = region2index
 
 
-def get_snpr(
+def get_npt_score(
     model_path,
     embed_type,
     K,
@@ -175,7 +158,6 @@ def get_snpr(
 
     If num_samples == 0, all regions are used in calculation
     """
-    timer = Timer()
     embed_rep, regions_r2v = load_genomic_embeddings(model_path, embed_type)
 
     region2index = {r: i for i, r in enumerate(regions_r2v)}
@@ -277,26 +259,17 @@ def get_snpr(
                 count = count + 1
     snprs = cal_snpr(avg_ratio, avg_ratio_ref)
 
-    ratio_msg = " ".join(["{:.6f}".format(r) for r in avg_ratio])
-    ratio_ref_msg = " ".join(["{:.6f}".format(r) for r in avg_ratio_ref])
-    snprs_msg = " ".join(["{:.6f}".format(r) for r in snprs])
-    print(model_path)
-
-    # print(
-    #     "[seed={}] K={}\n[{}]: {}\n[Random]: {}\n[SNPR] {}".format(
-    #         seed, K, embed_type, ratio_msg, ratio_ref_msg, snprs_msg
-    #     )
-    # )
+    ratio_msg = " ".join([f"{r:.6f}" for r in avg_ratio])
+    ratio_ref_msg = " ".join([f"{r:.6f}" for r in avg_ratio_ref])
+    snprs_msg = " ".join([f"{r:.6f}" for r in snprs])
     result = {
         "K": K,
-        "AvgENPR": avg_ratio,
-        "AvgRNPR": avg_ratio_ref,
+        "Avg_qNPR": avg_ratio,
+        "Avg_rNPR": avg_ratio_ref,
         "SNPR": snprs,
         "Resolution": resolution,
         "Path": model_path,
     }
-    elapsed_time = timer.measure()
-    print("Elapsed time:", elapsed_time)
     return result
 
 
@@ -315,7 +288,7 @@ def writer_multiprocessing(save_path, num, q):
     return results
 
 
-def get_snpr_batch(
+def get_npt_score_batch(
     batch,
     K,
     num_samples=100,
@@ -325,10 +298,9 @@ def get_snpr_batch(
     dist="cosine",
     save_path=None,
 ):
-    print("Total number of models: {}".format(len(batch)))
     result_list = []
     for index, (path, embed_type) in enumerate(batch):
-        result = get_snpr(
+        result = get_npt_score(
             path, embed_type, K, num_samples, seed, resolution, dist, num_workers
         )
         result_list.append(result)
@@ -337,29 +309,6 @@ def get_snpr_batch(
         with open(save_path, "wb") as f:
             pickle.dump(result_list, f)
     return result_list
-
-
-# def get_snpr_batch(
-#     batch, K, num_samples=100, num_workers=10, seed=0, resolution=10, dist='cosine', save_path=None
-# ):
-#     print("Total number of models: {}".format(len(batch)))
-#     result_list = []
-#     with mp.Pool(
-#         processes=num_workers
-#     ) as pool:
-#         all_processes = []
-#         for index, (path, embed_type) in enumerate(batch):
-#             process = pool.apply_async(
-#                         get_snpr, (path, embed_type, K, num_samples, seed, resolution, dist, 0)
-#                     )
-#             all_processes.append(process)
-#     for process in all_processes:
-#         result_list.append(process.get())
-#     if save_path:
-#         os.makedirs(os.path.dirname(save_path), exist_ok=True)
-#         with open(save_path, "wb") as f:
-#             pickle.dump(result_list, f)
-#     return result_list
 
 
 def npt_eval(
@@ -373,15 +322,13 @@ def npt_eval(
     save_folder=None,
 ):
     results_seeds = []
-    assert resolution < K, "resolution < K"
+    assert resolution <= K, "resolution <= K"
     for seed in range(num_runs):
-        print("----------------Run {}----------------".format(seed))
+        print(f"----------------Run {seed}----------------")
         save_path = (
-            os.path.join(save_folder, "npt_eval_seed{}".format(seed))
-            if save_folder
-            else None
+            os.path.join(save_folder, f"npt_eval_seed{seed}") if save_folder else None
         )
-        result_list = get_snpr_batch(
+        result_list = get_npt_score_batch(
             batch,
             K,
             num_samples=num_samples,
@@ -400,22 +347,12 @@ def npt_eval(
             snpr_results[i].append(result["SNPR"])
             paths[i] = key
     snpr_results = [np.array(v) for v in snpr_results]
-    print(snpr_results[0].shape)
     for i in range(len(batch)):
         snpr_arr = snpr_results[i]
         avg_snprs = snpr_arr.mean(axis=0)
         std_snprs = snpr_arr.std(axis=0)
-        print(
-            "{}\nSNPRs:{}\n".format(
-                paths[i],
-                " ".join(
-                    [
-                        "{:.4f}({:.4f})".format(m, s)
-                        for m, s in zip(avg_snprs, std_snprs)
-                    ]
-                ),
-            )
-        )
+        msg = " ".join([f"{m:.4f}({s:.4f})" for m, s in zip(avg_snprs, std_snprs)])
+        print(f"{paths[i]}\nSNPRs:{msg}\n")
     snpr_results = [(paths[i], snpr_results[i], resolution) for i in range(len(batch))]
     return snpr_results
 

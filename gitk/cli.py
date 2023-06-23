@@ -7,6 +7,8 @@ from ubiquerg import VersionInHelpParser
 from .assess.cli import build_subparser as assess_subparser
 from .eval.cli import build_subparser as eval_subparser
 from .universe.cli import build_mode_parser as universe_subparser
+from .region2vec.cli import build_subparser as region2vec_subparser
+from .tokenization.cli import build_subparser as tokenization_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
 from .bedspace.cli import build_argparser as bedspace_subparser
@@ -37,6 +39,8 @@ def build_argparser():
         "lh": "Make likelihood model",
         "assess-universe": "Assess a universe",
         "scembed": "Embed single-cell data as region vectors",
+        "region2vec": "Train a region2vec model",
+        "tokenize": "Tokenize BED files",
         "eval": "Evaluate a set of region embeddings",
         "bedspace": "Coembed regionsets (bed files) and labels",
     }
@@ -51,6 +55,8 @@ def build_argparser():
     subparsers["assess-universe"] = assess_subparser(subparsers["assess-universe"])
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
+    subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
+    subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
     subparsers["eval"] = eval_subparser(subparsers["eval"])
     subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
 
@@ -150,109 +156,101 @@ def main(test_args=None):
         _LOGGER.info("Running scembed")
         pass
         # scembed_main(test_args)
+
+    if args.command == "region2vec":
+        from .region2vec import region2vec
+
+        region2vec(
+            token_folder=args.token_folder,
+            save_dir=args.save_dir,
+            num_shufflings=args.num_shuffle,
+            num_processes=args.nworkers,
+            embedding_dim=args.embed_dim,
+            context_win_size=args.context_len,
+            save_freq=args.save_freq,
+            resume_path=args.resume,
+            train_alg=args.train_alg,
+            min_count=args.min_count,
+            neg_samples=args.neg_samples,
+            init_lr=args.init_lr,
+            min_lr=args.min_lr,
+            lr_scheduler=args.lr_mode,
+            milestones=args.milestones,
+            seed=args.seed,
+        )
+    if args.command == "tokenize":
+        from .tokenization import hard_tokenization
+
+        hard_tokenization(
+            src_folder=args.data_folder,
+            dst_folder=args.token_folder,
+            universe_file=args.universe,
+            fraction=args.fraction,
+            num_workers=args.nworkers,
+            bedtools_path=args.bedtools_path,
+        )
     if args.command == "eval":
         if args.subcommand == "gdst":
-            from gitk.eval.gdst import get_gds
+            from gitk.eval.gdst import get_gdst_score
 
-            gds = get_gds(args.model_path, args.embed_type, args.num_samples)
-            print(gds)
+            gdst_score = get_gdst_score(
+                args.model_path, args.embed_type, args.num_samples, args.seed
+            )
+            print(gdst_score)
         if args.subcommand == "npt":
-            from gitk.eval.npt import get_snpr
+            from gitk.eval.npt import get_npt_score
 
-            npt = get_snpr(
+            npt_score = get_npt_score(
                 args.model_path,
                 args.embed_type,
                 args.K,
                 args.num_samples,
-                resolution=args.K,
+                args.seed,
+                args.K,
+                num_workers=args.num_workers,
             )
-            print(npt["SNPR"][0])
-        if args.subcommand == "cct-tss":
-            from gitk.eval.cct import get_scctss
+            print(npt_score["SNPR"][0])
+        if args.subcommand == "ctt":
+            from gitk.eval.ctt import get_ctt_score
 
-            scctss = get_scctss(
+            ctt_score = get_ctt_score(
                 args.model_path,
                 args.embed_type,
-                args.save_folder,
-                args.Rscript_path,
-                args.assembly,
-                num_samples=args.num_samples,
-                threshold=args.threshold,
-            )
-            print(scctss)
-
-
-    if args.command == "bedspace":
-        from .bedspace.const import PREPROCESS_CMD, TRAIN_CMD, DISTANCES_CMD, SEARCH_CMD
-
-        _LOGGER.info(f"Subcommand: {args.subcommand}")
-
-        if args.subcommand == PREPROCESS_CMD:
-            from .bedspace.pipeline.preprocess import main as preprocess_main
-
-            _LOGGER.info("Running bedspace preprocess")
-            preprocess_main(
-                args.input, args.metadata, args.universe, args.output, args.labels
+                args.seed,
+                args.num_samples,
+                args.num_workers,
             )
 
-        elif args.subcommand == TRAIN_CMD:
-            from .bedspace.pipeline.train import main as train_main
+            print(ctt_score)
+        if args.subcommand == "rct":
+            from gitk.eval.rct import get_rct_score
 
-            _LOGGER.info("Running bedspace train")
-            train_main(
-                args.path_to_starspace,
-                args.input,
-                args.output,
-                args.num_epochs,
-                args.dim,
-                args.learning_rate,
+            rct_score = get_rct_score(
+                args.model_path,
+                args.embed_type,
+                args.bin_path,
+                args.out_dim,
+                args.cv_num,
+                args.seed,
+                args.num_workers,
             )
+            print(rct_score)
+        if args.subcommand == "bin-gen":
+            from gitk.eval.utils import get_bin_embeddings
+            import glob, pickle
 
-        elif args.subcommand == DISTANCES_CMD:
-            from .bedspace.pipeline.distances import main as distances_main
+            if os.path.exists(args.file_name):
+                print(f"{args.file_name} exists!")
+                return
+            token_files = glob.glob(os.path.join(args.token_folder, "*"))
+            bin_embed = get_bin_embeddings(args.universe, token_files)
+            os.makedirs(os.path.dirname(args.file_name), exist_ok=True)
+            with open(args.file_name, "wb") as f:
+                pickle.dump(bin_embed, f)
+            print(f"binary embeddings saved to {args.file_name}")
 
-            _LOGGER.info("Running bedspace distances")
-            distances_main(
-                args.input,
-                args.metadata,
-                args.universe,
-                args.output,
-                args.labels,
-                args.files,
-                args.threshold,
-            )
+    return
 
-        elif args.subcommand == SEARCH_CMD:
-            from .bedspace.const import SearchType
-            from .bedspace.pipeline.search import run_scenario1 as scenario1
-            from .bedspace.pipeline.search import run_scenario2 as scenario2
-            from .bedspace.pipeline.search import run_scenario3 as scenario3
-
-            if args.type == SearchType.l2r:
-                _LOGGER.info("Running bedspace search (scenario 1)")
-                scenario1(
-                    args.query,
-                    args.distances,
-                    args.num_results,
-                )
-            elif args.type == SearchType.r2l:
-                _LOGGER.info("Running bedspace search (scenario 2)")
-                scenario2(
-                    args.query,
-                    args.distances,
-                    args.num_results,
-                )
-            elif args.type == SearchType.l2l:
-                _LOGGER.info("Running bedspace search (scenario 3)")
-                scenario3(
-                    args.query,
-                    args.distances,
-                    args.num_results,
-                )
-
-        else:
-            # print help for this subcommand
-            _LOGGER.info("Running bedspace help")
 
 
 if __name__ == "__main__":

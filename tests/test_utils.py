@@ -1,9 +1,10 @@
+import logging
 import os
 import sys
+from itertools import chain
+
 import pytest
 import scanpy as sc
-import logging
-from itertools import chain
 
 # add parent directory to path
 sys.path.append("../")
