@@ -8,8 +8,8 @@ import numpy as np
 from numba import njit
 
 from ..utils import natural_chr_sort, timer_func, read_chromosome_from_bw
-from ..hmm.hmm import predictions_to_bed, find_full
-from .build_model import ModelLH
+from .utils import predictions_to_bed, find_full
+from gitk.likelihood.build_model import ModelLH
 
 
 @njit
@@ -93,17 +93,17 @@ def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_ou
     predictions_to_bed(path, chrom, file_out)
 
 
-def main(folder_in, cove_folder, cove_prefix, file_out):
+def ml_universe(model_file, cove_folder, cove_prefix, file_out):
     """
     Make ML flexible universe
-    :param str folder_in: input name with likelihood models
+    :param str model_file: input name with likelihood models
     :param str file_out: output file with the universe
     :param str cove_folder: path to a folder with genome coverage by tracks
     :param str cove_prefix: prefix used in uniwig for creating coverage
     """
     if os.path.isfile(file_out):
         raise Exception(f"File : {file_out} exists")
-    lh_model = ModelLH(folder_in)
+    lh_model = ModelLH(model_file)
     chroms = sorted(lh_model.chromosomes_list, key=cmp_to_key(natural_chr_sort))
     for C in chroms:
         make_ml_flexible_universe(lh_model, cove_folder, cove_prefix, C, file_out)

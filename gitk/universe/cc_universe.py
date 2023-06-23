@@ -7,7 +7,7 @@ from functools import cmp_to_key
 import numpy as np
 import pyBigWig
 
-from ..utils import natural_chr_sort, timer_func
+from gitk.utils import natural_chr_sort, timer_func
 
 
 def get_uni(file, chrom, cutoff=None):
@@ -75,7 +75,7 @@ def marge_filter(file_out, inter_pos, chrom, merge_dist=100, size_flt=1000):
             f.write(f"{chrom}\t{start}\t{end}\n")
 
 
-def main(file, file_out, merge=0, filter_size=0, cutoff=None):
+def cc_universe(cove, cove_prefix, file_out, merge=0, filter_size=0, cutoff=None):
     """
     Creat cut-off universe based on coverage track
     :param str file: path to coverage file without extension
@@ -86,6 +86,7 @@ def main(file, file_out, merge=0, filter_size=0, cutoff=None):
     """
     if os.path.isfile(file_out):
         raise Exception(f"File : {file_out} exists")
+    file = os.path.join(cove, f"{cove_prefix}_core.bw")
     bw_start = pyBigWig.open(file)
     chroms = bw_start.chroms()
     bw_start.close()

@@ -9,6 +9,10 @@ import pandas as pd
 import os
 import numpy as np
 import warnings
+from logging import getLogger
+from ..const import PKG_NAME
+
+_LOGGER = getLogger(PKG_NAME)
 
 
 def run_all_assessment_methods(
@@ -59,6 +63,7 @@ def run_all_assessment_methods(
             "universe&file",
         ]
         asses_results.append(r_overlap)
+        _LOGGER.info("DONE: Overlap")
     if distance_f_t_u:
         r_distance = run_distance(
             raw_data_folder,
@@ -73,6 +78,7 @@ def run_all_assessment_methods(
         )
         r_distance.columns = ["file", "median_dist_file_to_universe"]
         asses_results.append(r_distance)
+        _LOGGER.info("DONE: Distance file to universe")
     if distance_f_t_u_flex:
         r_distance_flex = run_distance(
             raw_data_folder,
@@ -87,6 +93,7 @@ def run_all_assessment_methods(
         )
         r_distance_flex.columns = ["file", "median_dist_file_to_universe_flex"]
         asses_results.append(r_distance_flex)
+        _LOGGER.info("DONE: Flexible distance file to universe")
 
     if distance_u_t_f:
         r_distance_utf = run_distance(
@@ -102,6 +109,7 @@ def run_all_assessment_methods(
         )
         r_distance_utf.columns = ["file", "median_dist_universe_to_file"]
         asses_results.append(r_distance_utf)
+        _LOGGER.info("DONE: Distance universe to file")
     if distance_u_t_f_flex:
         r_distance_utf_flex = run_distance(
             raw_data_folder,
@@ -116,13 +124,22 @@ def run_all_assessment_methods(
         )
         r_distance_utf_flex.columns = ["file", "median_dist_universe_to_file_flex"]
         asses_results.append(r_distance_utf_flex)
+        _LOGGER.info("DONE: Flexible distance universe to file")
+
     df = asses_results[0]
     for i in asses_results[1:]:
         df = pd.merge(df, i, on="file")
     df.to_csv(os.path.join(folder_out, pref + "_data.csv"), index=False)
 
 
-def get_closeness_score(folder, file_list, universe, no_workers, flexible=False):
+def get_rbs(f_t_u, u_t_f):
+    a = 101 / (f_t_u + 100)
+    b = 101 / (u_t_f + 100)
+    rbs = (10 * a + b) / 11
+    return rbs
+
+
+def get_mean_rbs(folder, file_list, universe, no_workers, flexible=False):
     file_to_uni = run_distance(
         folder,
         file_list,
@@ -140,22 +157,24 @@ def get_closeness_score(folder, file_list, universe, no_workers, flexible=False)
         flexible=flexible,
         uni_to_file=True,
     )
-    me = (10 * file_to_uni[1] + uni_to_file[1]) / 11
-    cs = 1001 / (me + 1000) / 1.001
-    return np.mean(cs)
+    # me = (10 * file_to_uni[1] + uni_to_file[1]) / 11
+    rbs = get_rbs(file_to_uni[1], uni_to_file[1])
+    return np.mean(rbs)
 
 
-def get_closeness_score_from_assessment_file(file, cs_each_file=False):
+def get_rbs_from_assessment_file(file, cs_each_file=False, flexible=False):
     df = pd.read_csv(file, index_col=(0))
-    df = df[["median_dist_file_to_universe", "median_dist_universe_to_file"]]
-    df["CS"] = (
-        df["median_dist_universe_to_file"] + 10 * df["median_dist_file_to_universe"]
-    ) / 11
-    df["CS"] = (1001 / (df["CS"] + 1000)) / 1.001
+    if flexible:
+        df["f_t_u"] = df["median_dist_file_to_universe_flex"]
+        df["u_t_f"] = df["median_dist_universe_to_file_flex"]
+    else:
+        df["f_t_u"] = df["median_dist_file_to_universe"]
+        df["u_t_f"] = df["median_dist_universe_to_file"]
+    df["RBS"] = get_rbs(df["f_t_u"], df["u_t_t"])
     if cs_each_file:
         return df
     else:
-        return df["CS"].mean()
+        return df["RBS"].mean()
 
 
 def get_f_10_score(
@@ -248,7 +267,7 @@ def filter_universe(
                 if j[2] - j[1] > min_size:
                     if j[4] > min_coverage:
                         if filter_lh:
-                            if int(j[0]) > lh_cutoff:
+                            if float(j[9].strip("\n")) > lh_cutoff:
                                 uni_flt.write(i)
                         else:
                             uni_flt.write(i)

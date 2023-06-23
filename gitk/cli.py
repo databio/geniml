@@ -1,18 +1,17 @@
-import os.path
 from typing import Dict
 import logmuse
 import sys
-import pandas as pd
 
 from ubiquerg import VersionInHelpParser
 
 from .assess.cli import build_subparser as assess_subparser
 from .eval.cli import build_subparser as eval_subparser
+from .universe.cli import build_mode_parser as universe_subparser
 from .region2vec.cli import build_subparser as region2vec_subparser
 from .tokenization.cli import build_subparser as tokenization_subparser
-from .hmm.cli import build_subparser as hmm_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
+from .bedspace.cli import build_argparser as bedspace_subparser
 
 from ._version import __version__
 
@@ -36,13 +35,14 @@ def build_argparser():
 
     # Individual subcommands
     msg_by_cmd = {
-        "hmm": "Use an HMM to build a consensus peak set.",
-        "lh": "Compute likelihood",
-        "assess": "Assess a universe",
+        "build-universe": "Build a consensus peak set using one of provided model",
+        "lh": "Make likelihood model",
+        "assess-universe": "Assess a universe",
         "scembed": "Embed single-cell data as region vectors",
         "region2vec": "Train a region2vec model",
         "tokenize": "Tokenize BED files",
         "eval": "Evaluate a set of region embeddings",
+        "bedspace": "Coembed regionsets (bed files) and labels",
     }
 
     sp = parser.add_subparsers(dest="command")
@@ -51,13 +51,15 @@ def build_argparser():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
     # build up subparsers for modules
-    subparsers["hmm"] = hmm_subparser(subparsers["hmm"])
-    subparsers["assess"] = assess_subparser(subparsers["assess"])
+    subparsers["build-universe"] = universe_subparser(subparsers["build-universe"])
+    subparsers["assess-universe"] = assess_subparser(subparsers["assess-universe"])
     subparsers["lh"] = likelihood_subparser(subparsers["lh"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
     subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
     subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
     subparsers["eval"] = eval_subparser(subparsers["eval"])
+    subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
+
     return parser
 
 
@@ -76,7 +78,7 @@ def main(test_args=None):
 
     _LOGGER.info(f"Command: {args.command}")
 
-    if args.command == "assess":
+    if args.command == "assess-universe":
         from .assess.assess import run_all_assessment_methods
 
         run_all_assessment_methods(
@@ -95,46 +97,62 @@ def main(test_args=None):
         )
 
     if args.command == "lh":
-        _LOGGER.info(f"Subcommand: {args.subcommand}")
-        if args.subcommand == "build_model":
-            from .likelihood.build_model import main
+        # _LOGGER.info(f"Subcommand: {args.subcommand}")
+        # if args.subcommand == "build_model":
+        from .likelihood.build_model import main
 
-            main(
-                args.model_file,
-                args.coverage_folder,
-                args.coverage_prefix,
-                args.file_no,
-                args.force,
-            )
-
-        if args.subcommand == "universe_hard":
-            from .likelihood.universe_hard import main
-
-            main(
-                args.coverage_file, args.fout, args.merge, args.filter_size, args.cutoff
-            )
-
-        if args.subcommand == "universe_flexible":
-            from .likelihood.universe_flexible import main
-
-            main(
-                args.model_file, args.cov_folder, args.coverage_prefix, args.output_file
-            )
-
-    if args.command == "hmm":
-        from .hmm.hmm import run_hmm_save_bed
-
-        run_hmm_save_bed(
-            coverage_folder=args.cov_folder,
-            out_file=args.out_file,
-            prefix=args.coverage_prefix,
-            normalize=args.not_normalize,
-            save_max_cove=args.save_max_cove,
+        main(
+            args.model_file,
+            args.coverage_folder,
+            args.coverage_prefix,
+            args.file_no,
+            args.force,
         )
 
-    if args.command == "scembed":
-        from .scembed.scembed import main as scembed_main
+    if args.command == "build-universe":
+        _LOGGER.info(f"Subcommand: {args.subcommand}")
+        if args.subcommand == "hmm":
+            from .universe.hmm_universe import hmm_universe
 
+            hmm_universe(
+                coverage_folder=args.coverage_folder,
+                out_file=args.output_file,
+                prefix=args.coverage_prefix,
+                normalize=args.not_normalize,
+                save_max_cove=args.save_max_cove,
+            )
+
+        if args.subcommand == "ml":
+            from .universe.ml_universe import ml_universe
+
+            ml_universe(
+                model_file=args.model_file,
+                cove_folder=args.coverage_folder,
+                cove_prefix=args.coverage_prefix,
+                file_out=args.output_file,
+            )
+
+        if args.subcommand == "cc":
+            from .universe.cc_universe import cc_universe
+
+            cc_universe(
+                cove=args.coverage_folder,
+                cove_prefix=args.coverage_prefix,
+                file_out=args.output_file,
+                merge=args.merge,
+                filter_size=args.filter_size,
+                cutoff=args.cutoff,
+            )
+        if args.subcommand == "ccf":
+            from .universe.ccf_universe import ccf_universe
+
+            ccf_universe(
+                cove=args.coverage_folder,
+                cove_prefix=args.coverage_prefix,
+                file_out=args.output_file,
+            )
+
+    if args.command == "scembed":
         _LOGGER.info("Running scembed")
         pass
         # scembed_main(test_args)
@@ -202,6 +220,7 @@ def main(test_args=None):
                 args.num_samples,
                 args.num_workers,
             )
+
             print(ctt_score)
         if args.subcommand == "rct":
             from gitk.eval.rct import get_rct_score
