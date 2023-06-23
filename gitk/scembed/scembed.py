@@ -1,3 +1,4 @@
+import gzip
 import pickle
 from logging import getLogger
 from typing import Dict, List, Union
@@ -19,7 +20,6 @@ from .utils import (
     remove_regions_below_min_count,
     shuffle_documents,
 )
-
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -91,7 +91,7 @@ class SCEmbed(Word2Vec):
 
         Instead, we will just use pickle to dump the object.
         """
-        with open(filepath, "wb") as f:
+        with gzip.open(filepath, "wb") as f:
             pickle.dump(self, f)
 
     def load_model(self, filepath: str, **kwargs):
@@ -101,8 +101,9 @@ class SCEmbed(Word2Vec):
 
         Instead we will just use pickle to load the object. Override the current object.
         """
-        with open(filepath, "rb") as f:
-            self = pickle.load(f)
+        with gzip.open(filepath, "rb") as f:
+            obj = pickle.load(f)
+            self.__dict__.update(obj.__dict__)
 
     def train(
         self,
@@ -127,6 +128,8 @@ class SCEmbed(Word2Vec):
         :param float min_lr: The minimum learning rate.
         :param Union[str, ScheduleType] lr_schedule: The learning rate schedule to use.
         """
+        # force to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205683978)
+        n_shuffles = 1
 
         if not isinstance(data, sc.AnnData) and not isinstance(data, str):
             raise TypeError(
@@ -201,7 +204,7 @@ class SCEmbed(Word2Vec):
             super().train(
                 self.region_sets,
                 total_examples=len(self.region_sets),
-                epochs=gensim_epochs or 1,  # use the epochs passed in or just one
+                epochs=1,  # for to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205692089)
                 callbacks=self.callbacks,
                 compute_loss=report_loss,
                 start_alpha=current_lr,
@@ -282,7 +285,8 @@ class SCEmbed(Word2Vec):
         for row in list(embeddings_df.iterrows()):
             row_dict = row[1].to_dict()
             new_row_dict = {
-                f"embedding_dim_{i}": row_dict["embedding"][i] for i in range(100)
+                f"embedding_dim_{i}": row_dict["embedding"][i]
+                for i in range(self.vector_size)
             }
             if "id" in row_dict:
                 new_row_dict["id"] = row_dict["id"]

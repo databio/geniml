@@ -1,15 +1,15 @@
+import logging
 import os
 import sys
+from itertools import chain
+
 import pytest
 import scanpy as sc
-import logging
-from itertools import chain
 
 # add parent directory to path
 sys.path.append("../")
 
-from gitk import scembed
-from gitk import utils
+from gitk import scembed, utils
 
 # set to DEBUG to see more info
 logging.basicConfig(level=logging.INFO)
@@ -157,3 +157,18 @@ def test_train_in_chunks(pbmc_data_backed: sc.AnnData):
     assert isinstance(model.region2vec, dict)
     # assert len(model.region2vec) == total_regions
     # ignore for now, since we're not sure if this is correct
+
+
+@pytest.mark.skip(reason="Uses large, local data")
+def test_create_anndata_from_files():
+    folder = "/Users/nathanleroy/Desktop/GSE158398_RAW"
+
+    path_to_barcodes = os.path.join(folder, "lymphneg_barcodes.tsv")
+    path_to_mtx = os.path.join(folder, "lymphneg_matrix.mtx")
+    path_to_peaks = os.path.join(folder, "lymphneg_peaks.bed")
+
+    adata = scembed.utils.barcode_mtx_peaks_to_anndata(
+        path_to_barcodes, path_to_mtx, path_to_peaks
+    )
+
+    assert isinstance(adata, sc.AnnData)
