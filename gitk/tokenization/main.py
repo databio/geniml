@@ -32,7 +32,7 @@ def hard_tokenization_main(
     fraction=1e-9,
     file_list=None,
     num_workers=10,
-    bedtools_path="",
+    bedtools_path="bedtools",
 ):
     timer = utils.Timer()
     start_time = timer.t()
@@ -74,23 +74,13 @@ def hard_tokenization_main(
             f.write(file)
             f.write("\n")
 
-    if bedtools_path == "":
-        # Download bedtools for tokenization
-        bedtools_folder = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "bedtools"
-        )
-        os.makedirs(bedtools_folder, exist_ok=True)
-        bedtools_path = os.path.join(bedtools_folder, "bedtools")
-        if not os.path.isfile(bedtools_path):
-            # Download bedtools
-            bedtool_url = "https://github.com/arq5x/bedtools2/releases/download/v2.30.0/bedtools.static.binary"
-            print(f"Downloading bedtools from \n{bedtool_url}")
-            response = requests.get(bedtool_url)
-            with open(bedtools_path, "wb") as f:
-                f.write(response.content)
-            print(f"bedtools is saved in \n{bedtools_path}")
-            subprocess.run(shlex.split(f"chmod +x {bedtools_path}"))
-            subprocess.run(shlex.split(f"{bedtools_path} --version"))
+    if bedtools_path == "bedtools":
+        try:
+            rval = subprocess.call([bedtools_path, "--version"])
+        except:
+            raise Exception("No bedtools executable")
+        if rval != 0:
+            raise Exception("No bedtools executable")
 
     print(f"Tokenizing {len(file_list)} bed files ...")
 
