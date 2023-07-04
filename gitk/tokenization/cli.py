@@ -16,8 +16,8 @@ def build_subparser(parser):
     parser.add_argument(
         "--bedtools-path",
         type=str,
-        default="",
-        help="Path to the bedtools binary. If not provided, bedtools will be automatically downloaded",
+        default="bedtools",
+        help="Path to the bedtools binary. Default: bedtools. If bedtools does not exists, an exception will be raised",
     )
     parser.add_argument(
         "--fraction",
