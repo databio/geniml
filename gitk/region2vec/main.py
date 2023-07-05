@@ -34,7 +34,8 @@ def region2vec(
     lr_scheduler="linear",  # How to decay the learning rate. Select from linear and milestone
     milestones=[],  # Specify only when lr_scheduler=milestone. At each given epoch, the learning rate will be multiplied by 0.1
     hier_softmax=False,  # Whether to hierarchical softmax
-    seed=0,  # random seed
+    seed=0,  # random seed,
+    update_vocab="once"
 ):
     timer = utils.Timer()
     start_time = timer.t()
@@ -107,7 +108,7 @@ def region2vec(
         lr_mode=lr_scheduler,
         milestones=milestones,
         hier_softmax=hier_softmax,
-        update_vocab="once",
+        update_vocab=update_vocab,
         seed=seed,
     )
     p = multiprocessing.Process(target=region2_train, args=(region2vec_args,))
