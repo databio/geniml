@@ -123,6 +123,12 @@ class Projector:
         else:
             self._load_remote_model(self.path_to_model)
 
+    def summarize(self):
+        """
+        Summarize the model.
+        """
+        print(self.model_config)
+
     def convert_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
         """
         Converts the consensus peak set (.var) attributes of the AnnData object
