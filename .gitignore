@@ -180,3 +180,7 @@ tests/integration/buenrostro2018.model
 examples/scembed/pbmc/
 examples/scembed/buenrostro
 examples/scembed/atlas
+examples/scembed/luecken2021
+
+# vector db stuff
+qdrant_storage/

@@ -13,3 +13,4 @@ umap-learn
 ubiquerg
 yacman
 pydantic
+huggingface_hub
