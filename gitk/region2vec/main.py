@@ -1,7 +1,7 @@
-import numpy as np
-
 import multiprocessing
 import os
+
+import numpy as np
 
 from gitk.region2vec import utils
 from gitk.region2vec.region2vec_train import main as region2_train
@@ -34,7 +34,8 @@ def region2vec(
     lr_scheduler="linear",  # How to decay the learning rate. Select from linear and milestone
     milestones=[],  # Specify only when lr_scheduler=milestone. At each given epoch, the learning rate will be multiplied by 0.1
     hier_softmax=False,  # Whether to hierarchical softmax
-    seed=0,  # random seed
+    seed=0,  # random seed,
+    update_vocab="once"
 ):
     timer = utils.Timer()
     start_time = timer.t()
@@ -53,7 +54,7 @@ def region2vec(
     training_processes = []
     num_sent_processes = min(int(np.ceil(num_processes / 2)), 4)
     nworkers = min(num_shufflings, num_sent_processes)
-    utils.log("num_sent_processes: {}".format(nworkers))
+    utils.log(f"num_sent_processes: {nworkers}")
     if nworkers <= 1:
         sent_gen_args = Namespace(
             tokenization_folder=token_folder,
@@ -107,7 +108,7 @@ def region2vec(
         lr_mode=lr_scheduler,
         milestones=milestones,
         hier_softmax=hier_softmax,
-        update_vocab="once",
+        update_vocab=update_vocab,
         seed=seed,
     )
     p = multiprocessing.Process(target=region2_train, args=(region2vec_args,))
@@ -117,8 +118,4 @@ def region2vec(
         p.join()
     os.remove(file_list_path)
     elapsed_time = timer.t() - start_time
-    print(
-        "[Training] {}/{}".format(
-            utils.time_str(elapsed_time), utils.time_str(timer.t())
-        )
-    )
+    print(f"[Training] {utils.time_str(elapsed_time)}/{utils.time_str(timer.t())}")

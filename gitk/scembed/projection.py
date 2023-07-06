@@ -29,7 +29,7 @@ class Projector:
         """
         Initialize a projector object.
 
-        :param str path_to_model: The path to the model. This can be a local path or a registry name ont he model hub.
+        :param str path_to_model: The path to the model. This can be a local path or a registry name on the model hub.
         :param bool no_cache: If True, will not use the cache directory.
         """
         self.path_to_model = path_to_model

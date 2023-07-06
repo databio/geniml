@@ -1,41 +1,42 @@
-import time
-import sys
-import select
 import os
-import numpy as np
+import select
 import shutil
+import sys
+import time
+
+import numpy as np
 
 
 def prRed(skk):
-    print("\033[91m{}\033[00m".format(skk))
+    print(f"\033[91m{skk}\033[00m")
 
 
 def prGreen(skk):
-    print("\033[92m{}\033[00m".format(skk))
+    print(f"\033[92m{skk}\033[00m")
 
 
 def prYellow(skk):
-    print("\033[93m{}\033[00m".format(skk))
+    print(f"\033[93m{skk}\033[00m")
 
 
 def prLightPurple(skk):
-    print("\033[94m{}\033[00m".format(skk))
+    print(f"\033[94m{skk}\033[00m")
 
 
 def prPurple(skk):
-    print("\033[95m{}\033[00m".format(skk))
+    print(f"\033[95m{skk}\033[00m")
 
 
 def prCyan(skk):
-    print("\033[96m{}\033[00m".format(skk))
+    print(f"\033[96m{skk}\033[00m")
 
 
 def prLightGray(skk):
-    print("\033[97m{}\033[00m".format(skk))
+    print(f"\033[97m{skk}\033[00m")
 
 
 def prBlack(skk):
-    print("\033[98m{}\033[00m".format(skk))
+    print(f"\033[98m{skk}\033[00m")
 
 
 _log_path = None
@@ -59,10 +60,10 @@ class Timer:
 
 def time_str(t):
     if t >= 3600:
-        return "{:.2f}h".format(t / 3600)
+        return f"{t / 3600:.2f}h"
     if t >= 60:
-        return "{:.2f}m".format(t / 60)
-    return "{:.2f}s".format(t)
+        return f"{t / 60:.2f}m"
+    return f"{t:.2f}s"
 
 
 def timed_response(prompt, wait_time, default):
@@ -71,12 +72,12 @@ def timed_response(prompt, wait_time, default):
     if i:
         ans = sys.stdin.readline().strip()
         if ans not in ["y", "n"]:
-            print("\033[91m{}\033[00m".format(default))
+            print(f"\033[91m{default}\033[00m")
             return default
         else:
             return ans
     else:
-        print("\033[91m{}\033[00m".format(default))
+        print(f"\033[91m{default}\033[00m")
         return default
 
 
@@ -120,9 +121,9 @@ class lr_scheduler:
 def ensure_dir(path, default="y"):
     if os.path.exists(path):
         if default == "y":
-            prompt = "\033[91m{} exists,remove?([y]/n):\033[00m ".format(path)
+            prompt = f"\033[91m{path} exists,remove?([y]/n):\033[00m "
         else:
-            prompt = "\033[91m{} exists,remove?(y/[n]):\033[00m ".format(path)
+            prompt = f"\033[91m{path} exists,remove?(y/[n]):\033[00m "
         ans = timed_response(prompt, 5, default)
         if ans != "n":
             shutil.rmtree(path)

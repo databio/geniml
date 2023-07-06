@@ -1,5 +1,7 @@
 import scanpy as sc
 from time import time
+import numpy as np
+import pyBigWig
 
 
 def natural_chr_sort(a, b):
@@ -42,6 +44,7 @@ def read_chromosome_from_bw(file, chrom):
     else:
         cove = bw.values(chrom, 0, chrom_size)
         cove = np.array(cove)
+    cove[np.isnan(cove)] = 0
     return cove.astype(np.uint16)
 
 

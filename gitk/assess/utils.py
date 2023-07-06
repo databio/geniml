@@ -1,12 +1,8 @@
-from subprocess import Popen, PIPE
-import subprocess
-import shlex
 import os
+import shlex
+import subprocess
 import tempfile
-
-
-def help(f):
-    f.write(b"Welcome to geeksforgeeks")
+from subprocess import PIPE, Popen
 
 
 def prep_data(folder, file, tmp_file):
@@ -34,6 +30,14 @@ def check_if_uni_sorted(universe):
     output = subprocess.run(shlex.split(command0))
     if output.returncode:
         raise Exception("Universe not sorted")
+
+
+def check_if_uni_flexible(universe):
+    with open(universe) as u:
+        l = u.readline()
+        l = l.split("\t")
+        if len(l) < 6:
+            raise Exception("Universe is not flexible")
 
 
 def process_line(line):
