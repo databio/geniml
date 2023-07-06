@@ -158,3 +158,13 @@ def test_tokenize_bedfile(tokenizer_from_file: models.HardTokenizer):
     assert tokens is not None
     assert len(tokens) == 9
     assert all([len(t.split("_")) == 3 for t in tokens])
+
+
+def test_tokenize_anndata(adata: sc.AnnData, tokenizer_from_file: models.HardTokenizer):
+    tokens: list[list[str]] = tokenizer_from_file.tokenize(adata)
+    # make sure each token in each cell is inside the universe.bed file
+    for cell in tokens:
+        for token in cell:
+            chr, start, end = token.split("_")
+            token_tuple = (chr, int(start), int(end))
+            assert token_tuple in tokenizer_from_file.universe.universe_set

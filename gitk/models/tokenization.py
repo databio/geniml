@@ -22,7 +22,7 @@ class Universe:
         """
         self._trees: Dict[str, IntervalTree] = dict()
         self._regions = regions
-        self._universe_set = []
+        self._universe_set: list[tuple[str, int, int]] = []
 
         if regions is not None:
             self.build_tree()
@@ -43,7 +43,7 @@ class Universe:
     def universe_set(self):
         return self._universe_set
 
-    def _build_universe_set(self) -> tuple[str, int, int]:
+    def _build_universe_set(self):
         """
         Return the universe as a set of regions in the form (chr, start, end).
         """
@@ -142,7 +142,7 @@ class HardTokenizer(Tokenizer):
         :param path_to_bedtools: The path to the bedtools executable.
         """
         self._regions = regions
-        self._universe = Universe(validate_region_input(regions))
+        self._universe: Universe = Universe(validate_region_input(regions))
 
     @property
     def regions(self):
@@ -160,7 +160,7 @@ class HardTokenizer(Tokenizer):
 
         :return: A list of lists of regions.
         """
-        data = convert_to_universe(data, self._universe.universe_set)
+        data = convert_to_universe(data, self._universe)
         region_sets = anndata_to_regionsets(data)
         return region_sets
 
