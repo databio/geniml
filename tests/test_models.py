@@ -3,6 +3,7 @@ import sys
 
 import pytest
 import scanpy as sc
+import numpy as np
 
 # add parent directory to path
 sys.path.append("../")
@@ -12,7 +13,7 @@ from gitk import models
 
 @pytest.fixture
 def adata():
-    return sc.read_h5ad("tests/data/buenrostro.h5ad")
+    return sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
 
 
 @pytest.fixture
@@ -168,3 +169,29 @@ def test_tokenize_anndata(adata: sc.AnnData, tokenizer_from_file: models.HardTok
             chr, start, end = token.split("_")
             token_tuple = (chr, int(start), int(end))
             assert token_tuple in tokenizer_from_file.universe.universe_set
+
+
+def test_init_pretrained_model(
+    pretrained_model: models.PretrainedScembedModel,
+):
+    # assert that the model was created
+    assert pretrained_model is not None
+
+    # assert that the tokenizer was created
+    assert pretrained_model.tokenizer is not None
+
+    # assert that the model was created
+    assert pretrained_model.model is not None
+
+
+def test_encode_anndata(
+    adata: sc.AnnData, pretrained_model: models.PretrainedScembedModel
+):
+    # encode the anndata
+    encoded = pretrained_model.encode(adata)
+
+    # assert that the encoded object is a numpy array
+    assert isinstance(encoded, np.ndarray)
+
+    # assert that the encoded object has the correct shape
+    assert encoded.shape == (adata.n_obs, 100)
