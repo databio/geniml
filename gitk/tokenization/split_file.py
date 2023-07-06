@@ -1,5 +1,5 @@
-import os
 import argparse
+import os
 
 
 def get_file_rows(file_path):
@@ -41,7 +41,7 @@ def split_file(file_path, dest_folder, num_parts):
         num_arr = [num_per_file] * (num_parts - 1) + [last_file_num]
         pos = 0
         for index in range(num_parts):
-            fname = os.path.join(dest_folder, "split_{}.txt".format(index))
+            fname = os.path.join(dest_folder, f"split_{index}.txt")
             with open(fname, "w") as fout:
                 for _ in range(num_arr[index]):
                     fout.write(list_arr[pos])
@@ -52,9 +52,16 @@ def split_file(file_path, dest_folder, num_parts):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--file_path", default="")
-    parser.add_argument("--dest_folder", default="")
-    parser.add_argument("--num_parts", type=int, default=5)
+    parser.add_argument("--file-path", default="", help="path to a file list")
+    parser.add_argument(
+        "--dest-folder", default="", help="where to store the split files"
+    )
+    parser.add_argument(
+        "--num-parts",
+        type=int,
+        default=5,
+        help="split the original file list to the specified parts",
+    )
     args = parser.parse_args()
 
     split_file(args.file_path, args.dest_folder, args.num_parts)
