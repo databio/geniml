@@ -1,15 +1,124 @@
-from typing import List, Union
+from typing import List, Union, Dict
 
 import scanpy as sc
 import os
 
-from .const import DEFAULT_PATH_TO_BEDTOOLS, UNIVERSE_FILE_NAME
+from intervaltree import IntervalTree
+
 from .utils import (
-    make_cache_dir,
-    get_cache_dir,
+    validate_region_input,
     convert_to_universe,
     anndata_to_regionsets,
 )
+
+
+class Universe:
+    def __init__(self, regions: Union[str, List[str]]):
+        """
+        Create a new Universe.
+
+        :param regions: The regions to use for tokenization. This can be thought of as a vocabulary.
+                        This can be either a list of regions or a path to a BED file containing regions.
+        """
+        self._trees: Dict[str, IntervalTree] = dict()
+        self._regions = regions
+        self._universe_set = []
+
+        if regions is not None:
+            self.build_tree()
+            self._build_universe_set()
+
+    def get_tree(self, tree: str):
+        return self._trees[tree]
+
+    @property
+    def trees(self):
+        return self._trees
+
+    @property
+    def regions(self):
+        return self._regions
+
+    @property
+    def universe_set(self):
+        return self._universe_set
+
+    def _build_universe_set(self) -> tuple[str, int, int]:
+        """
+        Return the universe as a set of regions in the form (chr, start, end).
+        """
+        universe = []
+        for tree in self._trees:
+            for interval in self._trees[tree]:
+                universe.append((tree, interval.begin, interval.end))
+        self._universe_set = universe
+
+    def build_tree(self, regions: str = None):
+        """
+        Builds the interval tree from the regions. The tree is a dictionary that maps chromosomes to
+        interval trees.
+
+        We read in the regions (either from memory or from a BED file) and convert them to an
+        interval tree.
+        """
+        regions = validate_region_input(regions or self._regions)
+
+        # build trees
+        for region in regions:
+            chr, start, end = region
+            start = int(start)
+            end = int(end)
+            if chr not in self._trees:
+                self._trees[chr] = IntervalTree()
+            self._trees[chr][start:end] = f"{chr}_{start}_{end}"
+
+    def query(
+        self,
+        regions: Union[
+            str, List[str], List[tuple[str, int, int]], tuple[str, int, int]
+        ],
+    ):
+        """
+        Query the interval tree for the given regions.
+
+        :param regions: The regions to query for. this can be either a bed file,
+                        a list of regions (chr_start_end), or a list of tuples of chr, start, end.
+        """
+        # validate input
+        if isinstance(regions, tuple):
+            regions = [regions]
+        regions = validate_region_input(regions)
+
+        overlapping_regions = []
+        for region in regions:
+            chr, start, end = region
+            start = int(start)
+            end = int(end)
+            if chr not in self._trees:
+                continue
+            overlaps = self._trees[chr][start:end]
+            for overlap in overlaps:
+                overlapping_regions.append((chr, overlap.begin, overlap.end))
+        return overlapping_regions
+
+    def __contains__(self, item: tuple[str, int, int]):
+        # ensure item is a tuple of chr, start, end
+        if not ((isinstance(item, tuple) or isinstance(item, list)) and len(item) == 3):
+            raise ValueError(
+                "The item to check for must be a tuple of chr, start, end."
+            )
+
+        chr, start, end = item
+        start = int(start)
+        end = int(end)
+        if chr not in self._trees:
+            return False
+        overlaps = self._trees[chr][start:end]
+        return len(overlaps) > 0
+
+    def __iter__(self):
+        for tree in self._trees:
+            yield self._trees[tree]
 
 
 class Tokenizer:
@@ -24,7 +133,6 @@ class HardTokenizer(Tokenizer):
     def __init__(
         self,
         regions: Union[List[str], str],
-        path_to_bedtools: str = DEFAULT_PATH_TO_BEDTOOLS,
     ):
         """
         Create a new HardTokenizer.
@@ -33,57 +141,18 @@ class HardTokenizer(Tokenizer):
                         This can be either a list of regions or a path to a BED file containing regions.
         :param path_to_bedtools: The path to the bedtools executable.
         """
-        self.regions = regions
-        self.path_to_bedtools = path_to_bedtools
+        self._regions = regions
+        self._universe = Universe(validate_region_input(regions))
 
-        # write regions to file in cache dir
-        self.__cache_dir = get_cache_dir()
-        self.__regions_file = os.path.join(self.__cache_dir, UNIVERSE_FILE_NAME)
-        self.__write_regions_to_file()
+    @property
+    def regions(self):
+        return self._regions
 
-        make_cache_dir()
+    @property
+    def universe(self):
+        return self._universe
 
-    def __write_regions_to_file(self):
-        """
-        Write regions to file in cache dir. This can take one of two forms:
-        1. A list of regions.
-        2. A path to a BED file containing regions.
-
-        If the regions are a list, they are written to a file in the cache dir.
-        If the regions are a path to a BED file, the file is copied to the cache dir.
-
-        :raises FileNotFoundError: If the path to the BED file does not exist.
-        """
-        # check for path to file
-        if isinstance(self.regions, str):
-            # check if file exists
-            if not os.path.exists(self.regions):
-                raise FileNotFoundError(
-                    f"Could not find file {self.regions} containing regions."
-                )
-            # copy file to cache dir
-            os.system(f"cp {self.regions} {self.__regions_file}")
-
-        # else, we are going to write the regions to a file
-        # verify that the regions are a list, should be in the form chr_start_end
-        elif isinstance(self.regions, list):
-            if not all(
-                [
-                    isinstance(region, str) and len(region.split("_")) == 3
-                    for region in self.regions
-                ]
-            ):
-                raise ValueError(
-                    "Regions must be a list of strings in the form chr_start_end."
-                )
-            # write regions to file
-            with open(self.__regions_file, "w") as f:
-                # split each region into chr, start, end
-                for region in self.regions:
-                    chr, start, end = region.split("_")
-                    f.write(f"{chr}\t{start}\t{end}\n")
-
-    def __tokenize_anndata(self, data: sc.AnnData) -> List[List[str]]:
+    def _tokenize_anndata(self, data: sc.AnnData) -> List[List[str]]:
         """
         Tokenize an anndata object into a list of lists of regions.
 
@@ -91,11 +160,11 @@ class HardTokenizer(Tokenizer):
 
         :return: A list of lists of regions.
         """
-        data = convert_to_universe(data, self.__regions_file)
+        data = convert_to_universe(data, self._universe.universe_set)
         region_sets = anndata_to_regionsets(data)
         return region_sets
 
-    def __tokenize_bed_file(self, data: str, fraction: float = 1e-9) -> List[str]:
+    def _tokenize_bed_file(self, data: str, fraction: float = 1e-9) -> List[str]:
         """
         Tokenize a BED file into a list of lists of regions.
 
@@ -103,33 +172,20 @@ class HardTokenizer(Tokenizer):
 
         :return: A list of lists of regions.
         """
-        # perform overlap analysis with bedtools
-        os.system(
-            f"{self.path_to_bedtools} intersect -a {data} -b {self.__regions_file} -wa -wb > {self.__cache_dir}/overlaps.bed"
-        )
-        # read in overlaps
-        overlaps = []
-        with open(f"{self.__cache_dir}/overlaps.bed", "r") as f:
-            for line in f:
-                line = line.strip().split("\t")
-                # join chr, start, end with _
-                region = "_".join(line[0:3])
-                overlaps.append(region)
+        regions = validate_region_input(data)
+        tokens = [
+            "_".join([str(h) for h in hit]) for hit in self._universe.query(regions)
+        ]
+        return tokens
 
-        return overlaps
-
-    def __tokenize_list(self, data: List[str]) -> List[List[str]]:
+    def _tokenize_list(self, data: List[str]) -> List[List[str]]:
         """
         Tokenize a list of regions into a list of lists of regions.
         """
-        # write to bed file, and perform __tokenize_bed_file
-        with open(f"{self.__cache_dir}/regions.bed", "w") as f:
-            for region in data:
-                # split region into chr, start, end
-                chr, start, end = region.split("_")
-                f.write(f"{chr}\t{start}\t{end}\n")
-
-        return self.__tokenize_bed_file(f"{self.__cache_dir}/regions.bed")
+        regions = validate_region_input(data)
+        hits = [h[0] for h in self._universe.query(regions)]
+        tokens = ["_".join(hit) for hit in hits]
+        return tokens
 
     def tokenize(
         self, data: Union[sc.AnnData, str, List[str]]
@@ -150,16 +206,16 @@ class HardTokenizer(Tokenizer):
         """
         # check if data is anndata object
         if isinstance(data, sc.AnnData):
-            return self.__tokenize_anndata(data)
+            return self._tokenize_anndata(data)
         # check if data is a path to a BED file
         elif isinstance(data, str):
             # ensure that the file exists
             if not os.path.exists(data):
                 raise FileNotFoundError(f"Could not find file {data}.")
-            return self.__tokenize_bed_file(data)
+            return self._tokenize_bed_file(data)
         # check if data is a list of regions
         elif isinstance(data, list):
-            return self.__tokenize_list(data)
+            return self._tokenize_list(data)
         # else, raise error
         else:
             raise ValueError(
