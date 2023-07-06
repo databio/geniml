@@ -476,3 +476,11 @@ class SCEmbed(Word2Vec):
         # attach embeddings to the AnnData object
         self.data.obs["embedding"] = cell_embeddings
         return self.data
+
+    def __call__(self, region: str) -> np.ndarray:
+        """
+        Get the embedding for a given region.
+
+        :param str region: the region to get the embedding for
+        """
+        return self.get_embedding(region)
