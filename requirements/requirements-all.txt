@@ -14,3 +14,4 @@ ubiquerg
 yacman
 pydantic
 huggingface_hub
+intervaltree

@@ -1,11 +1,13 @@
 import os
 import subprocess
-from typing import List, Dict, Union
+from typing import List, Dict, Union, TYPE_CHECKING
 
 import numpy as np
 import scanpy as sc
 from tqdm import tqdm
 
+if TYPE_CHECKING:
+    from .tokenization import Universe
 from .const import CACHE_DIR
 
 
@@ -34,8 +36,56 @@ def make_cache_dir():
         os.mkdir(_cache_dir)
 
 
+def validate_region_input(
+    regions: Union[str, List[str], List[tuple[str]]]
+) -> List[tuple[str, int, int]]:
+    """
+    Validate the input for the regions. this universe accepts a lot of forms of input,
+    so we need to check what the user has passed. It also standardizes the input to a list
+    of tuples of chr, start, end.
+
+    Users are allowed to pass a list of regions, a list of tuples with chr, start, and end, or
+    a path to a BED file.
+
+    :param regions: The regions to use for tokenization. This can be thought of as a vocabulary.
+                    This can be either a list of regions or a path to a BED file containing regions.
+    :return A list of tuples of chr, start, end.
+    """
+    # check for bedfile
+    if isinstance(regions, str):
+        # ensure that the file exists
+        if not os.path.exists(regions):
+            raise FileNotFoundError(
+                f"Could not find file {regions} containing regions."
+            )
+        file = regions  # rename for clarity
+        regions = []
+        with open(file, "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                regions.append(tuple(line.strip().split("\t")))
+        return regions
+
+    # check for list of chr_start_end strings
+    elif isinstance(regions, list) and all([isinstance(r, str) for r in regions]):
+        regions = [tuple(r.split("_")) for r in regions]
+        return regions
+
+    # check for list of tuples of chr, start, end
+    elif isinstance(regions, list) and all(
+        [(isinstance(r, tuple) or isinstance(r, list)) and len(r) == 3 for r in regions]
+    ):
+        return regions
+    else:
+        raise ValueError(
+            "The regions must be either a list of regions or a path to a BED file containing regions."
+        )
+
+
 def generate_var_conversion_map(
-    a: List[str], b: List[str], path_to_bedtools: str = None, fraction: float = 1.0e-9
+    a: List[tuple[str, int, int]],
+    b: "Universe",
+    fraction: float = 1.0e-9,
 ) -> Dict[str, Union[str, None]]:
     """
     Create a conversion map to convert regions from a to b. This is used to convert the
@@ -49,78 +99,31 @@ def generate_var_conversion_map(
     we will change the region in `A` to the region in `B`. If a region in `A` is not found in
     `B`, we will drop that region in `A` altogether.
 
-    :param List[str] a: the first list of regions
-    :param List[str] b: the second list of regions
-    :param str path_to_bedtools: the path to the bedtools executable
+    :param List[tuple[str, int, int]] a: the first list of regions
+    :param Universe: the second list of regions as a Universe object
     :param float fraction: the fraction of the region that must overlap to be considered an overlap
     """
-    # write a and b to temp files in cache
-    a_file = os.path.join(get_cache_dir(), "a.bed")
-    b_file = os.path.join(get_cache_dir(), "b.bed")
 
-    # write a and b to temp files
-    with open(a_file, "w") as f:
-        # split each region into chr start end
-        a_parsed = [region.split("_") for region in a]
-        a_parsed = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in a_parsed]
-        f.writelines(a_parsed)
-    with open(b_file, "w") as f:
-        b_parsed = [region.split("_") for region in b]
-        b_parsed = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in b_parsed]
-        f.writelines(b_parsed)
-
-    # sort both files
-    cmd = f"sort -k1,1 -k2,2n {a_file} -o {a_file}"
-    subprocess.run(cmd, shell=True)
-
-    cmd = f"sort -k1,1 -k2,2n {b_file} -o {b_file}"
-    subprocess.run(cmd, shell=True)
-
-    # run bedtools
-    bedtools_cmd = f"intersect -a {a_file} -b {b_file} -wa -wb -f {fraction}"
-
-    # add path to bedtools if provided
-    if path_to_bedtools is not None:
-        cmd = f"{path_to_bedtools} {bedtools_cmd}"
-    else:
-        cmd = f"bedtools {bedtools_cmd}"
-
-    # target file
-    target_file = os.path.join(get_cache_dir(), "olaps.bed")
-    with open(target_file, "w") as f:
-        subprocess.run(cmd, shell=True, stdout=f)
-
-    # bedtools reports overlaps like this:
-    # chr1 100 200 chr1 150 250
-    # we want to convert this to a map like this:
-    # {chr1_100_200: chr1_150_250}
-    # we will use a dictionary to do this
-    # if a region in A overlaps with multiple regions in B, we will
-    # take the first one. as such we need to check if a region in A
-    # has already been mapped to a region in B
     conversion_map = dict()
-    with open(target_file, "r") as f:
-        for line in f.readlines():
-            line = line.strip().split("\t")
-            a_region = f"{line[0]}_{line[1]}_{line[2]}"
-            b_region = f"{line[3]}_{line[4]}_{line[5]}"
-            if a_region not in conversion_map:
-                conversion_map[a_region] = b_region
 
-    # add `None` mappings for regions in A that did not overlap with any regions in B
-    for region in a:
-        if region not in conversion_map:
-            conversion_map[region] = None
-
-    # remove temp files
-    os.remove(a_file)
-    os.remove(b_file)
-    os.remove(target_file)
+    for region in tqdm(a, total=len(a)):
+        overlaps = b.query(region)
+        region_str = f"{region[0]}_{region[1]}_{region[2]}"
+        if len(overlaps) > 0:
+            olap = overlaps[
+                0
+            ]  # take the first overlap for now, we can change this later
+            olap_str = f"{olap[0]}_{olap[1]}_{olap[2]}"
+            conversion_map[region_str] = olap_str
+        else:
+            conversion_map[region_str] = None
 
     return conversion_map
 
 
-def convert_to_universe(adata: sc.AnnData, universe_file: str) -> sc.AnnData:
+def convert_to_universe(
+    adata: sc.AnnData, universe_set: List[tuple[str, int, int]]
+) -> sc.AnnData:
     """
     Converts the consensus peak set (.var) attributes of the AnnData object
     to a universe representation. This is done through interval overlap
@@ -137,13 +140,7 @@ def convert_to_universe(adata: sc.AnnData, universe_file: str) -> sc.AnnData:
         raise ValueError(
             "AnnData object must have `chr`, `start`, and `end` columns in .var"
         )
-
-    # read in universe from file into universe_set
-    universe_set = []
-    with open(universe_file, "r") as f:
-        for line in f.readlines():
-            line = line.strip().split("\t")
-            universe_set.append(f"{line[0]}_{line[1]}_{line[2]}")
+    universe_set = [f"{region[0]}_{region[1]}_{region[2]}" for region in universe_set]
 
     # create list of regions from adata
     query_set: List[str] = adata.var.apply(
