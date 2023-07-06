@@ -31,6 +31,7 @@ setup(
         "gitk.universe",
         "gitk.likelihood",
         "gitk.scembed",
+        "gitk.models",
         "gitk.bedspace",
     ],
     version=version,

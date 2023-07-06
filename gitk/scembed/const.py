@@ -30,3 +30,7 @@ MODEL_HUB_URL = "http://big.databio.org/scembed/models"
 MODEL_CONFIG_FILE_NAME = "model.yaml"
 
 DEFAULT_BEDTOOLS_PATH = "bedtools"
+
+DEFAULT_MODEL_EXPORT_FILE_NAME = "weights.pkl"
+DEFAULT_UNIVERSE_EXPORT_FILE_NAME = "universe.bed"
+DEFAULT_MODEL_CONFIG_FILE_NAME = "model.yaml"
