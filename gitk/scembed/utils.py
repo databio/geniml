@@ -402,8 +402,6 @@ def generate_var_conversion_map(
     return conversion_map
 
 
-# This method should only be used in the Projector. It
-# assmes that the AnnData.var attribute has chr, start, and end
 def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
     """
     Converts an AnnData object to a list of lists of regions. This

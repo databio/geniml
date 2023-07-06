@@ -2,6 +2,7 @@ from typing import Union
 
 import scanpy as sc
 import numpy as np
+from tqdm import tqdm
 from huggingface_hub import hf_hub_download
 
 from .. import scembed
@@ -79,7 +80,7 @@ class PretrainedScembedModel:
         tokenized = self._tokenizer.tokenize(data)
 
         embeddings = []
-        for region_set in tokenized:
+        for region_set in tqdm(tokenized, total=len(tokenized)):
             if len(region_set) == 0:
                 raise ValueError(
                     "Encountered empty region set. Please check your input."
