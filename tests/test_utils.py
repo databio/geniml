@@ -1,7 +1,5 @@
 import logging
-import os
 import sys
-from itertools import chain
 
 import pytest
 import scanpy as sc

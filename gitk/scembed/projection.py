@@ -1,9 +1,12 @@
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import numpy as np
 import scanpy as sc
+import seaborn as sns
+import matplotlib.pyplot as plt
+import umap
 import yacman
 from tqdm import tqdm
 
@@ -120,11 +123,23 @@ class Projector:
         else:
             self._load_remote_model(self.path_to_model)
 
+    def summarize(self):
+        """
+        Summarize the model.
+        """
+        print(self.model_config)
+
     def convert_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
         """
-        Converts the conesnsus peak set (.var) attributes of the AnnData object
+        Converts the consensus peak set (.var) attributes of the AnnData object
         to a universe representation. This is done through interval overlap
-        analysis.
+        analysis with bedtools.
+
+        For each region in the `.var` attribute of the AnnData object, we
+        either 1) map it to a region in the universe, or 2) map it to `None`.
+        If it is mapped to `None`, it is not in the universe and will be dropped
+        from the AnnData object. If it is mapped to a region, it will be updated
+        to the region in the universe for downstream analysis.
         """
         # ensure adata has chr, start, and end
         if not all([x in adata.var.columns for x in ["chr", "start", "end"]]):
@@ -149,14 +164,14 @@ class Projector:
         columns_to_keep = []
         for i, row in tqdm(adata.var.iterrows(), total=adata.var.shape[0]):
             region = f"{row['chr']}_{row['start']}_{row['end']}"
-            if region not in _map:
+            if _map[region] is None:
                 columns_to_keep.append(False)
                 continue
 
             # if it is, change the region to the universe region,
             # grab the first for now
             # TODO - this is a simplification, we should be able to handle multiple
-            universe_region = _map[region][0]
+            universe_region = _map[region]
             chr, start, end = universe_region.split("_")
 
             updated_var.at[i, "chr"] = chr
@@ -221,3 +236,120 @@ class Projector:
 
         adata.obsm[key_added] = np.array(cell_embeddings)
         return adata
+
+    def visualize_projection(
+        self,
+        universe: sc.AnnData,
+        adata: sc.AnnData,
+        embedding_key: str = "embedding",
+        cluster_key: str = "leiden",
+        n_rows: int = 2,
+        plot_kwargs: Dict[str, Any] = {},
+        fig_kwargs: Dict[str, Any] = {},
+        color_palette: str = "tab20",
+        random_state: int = 42,
+    ):
+        """
+        Visualize the projection of the AnnData object into the model space.
+
+        This requires that we have the original data the universe was trained on. In adition to that,
+        we require that embeddings are attached to these sc.AnnData objects.  A small
+        limitation that hopefully future versions will remove.
+
+        :param universe: AnnData object of the universe
+        :param adata: AnnData object to project
+        :param embedding_key: Key in the .obsm attribute of the AnnData object that contains
+                              the embedding
+        :param cluster_key: Key in the .obs attribute of the universe that contains the
+                            cluster information
+        :param cluster_colors: Dictionary mapping cluster names to colors
+        :param n_rows: Number of rows to use in the visualization (defaults to 2, but can be overridden if there are many clusters)
+        :param n_cols: Number of columns to use in the visualization (defaults to 2, but can be overridden if there are many clusters)
+        :param plot_kwargs: Additional keyword arguments to pass to the plot function of seaborn
+        """
+        # run umap on the universe
+        _LOGGER.info("Running UMAP on the universe")
+        reducer = umap.UMAP(n_components=2, random_state=random_state)
+        universe.obsm["X_umap"] = reducer.fit_transform(universe.obsm[embedding_key])
+        universe.obsm["UMAP1"] = universe.obsm["X_umap"][:, 0]
+        universe.obsm["UMAP2"] = universe.obsm["X_umap"][:, 1]
+
+        # fit the adata to the universe umap
+        _LOGGER.info("Fitting the adata to the universe UMAP")
+        adata.obsm["X_umap"] = reducer.transform(adata.obsm[embedding_key])
+        adata.obsm["UMAP1"] = adata.obsm["X_umap"][:, 0]
+        adata.obsm["UMAP2"] = adata.obsm["X_umap"][:, 1]
+
+        # check for cluster key
+        if cluster_key not in adata.obs.columns:
+            raise ValueError(
+                f"AnnData object must have `{cluster_key}` in .obs to visualize"
+            )
+
+        # get dimensions of the plot
+        n_clusters = len(adata.obs[cluster_key].unique())
+        n_cols = int(np.ceil(n_clusters / n_rows))
+
+        fig, axes = plt.subplots(
+            n_rows, n_cols, figsize=(n_cols * 5, n_rows * 5), **fig_kwargs
+        )
+        fig.tight_layout(pad=3.0)
+
+        # get cluster colors - color for each cluster
+        cluster_colors = {
+            cluster: color
+            for cluster, color in zip(
+                adata.obs[cluster_key].unique(), sns.color_palette(color_palette)
+            )
+        }
+
+        # iterate over the clusters and plot accordingly
+        for i, cluster in enumerate(adata.obs["leiden"].unique()):
+            # get the axis to plot on
+            ax_row = i // n_cols
+            ax_col = i % n_cols
+            ax = fig.axes[ax_row * n_cols + ax_col]
+
+            # get color
+            color = cluster_colors[cluster]
+
+            # plot the universe
+            sns.scatterplot(
+                data=universe.obsm,
+                x="UMAP1",
+                y="UMAP2",
+                color="gray",
+                ax=ax,
+                s=10,
+                alpha=0.8,
+                **plot_kwargs,
+            )
+
+            # plot the cluster on top
+            sns.scatterplot(
+                data=adata[adata.obs["leiden"] == cluster].obsm,
+                x="UMAP1",
+                y="UMAP2",
+                color=color,
+                ax=ax,
+                s=10,
+                alpha=1,
+                **plot_kwargs,
+            )
+
+            # add legend to plot showing gray universe + colored cluster
+            ax.legend(
+                [
+                    "Universe",
+                    cluster,
+                ],
+                frameon=False,
+                bbox_to_anchor=(0.5, -0.15),
+                loc="upper center",
+                ncol=2,
+            )
+
+            # set the title
+            ax.set_title(f"Cluster {cluster}")
+
+        return fig, axes
