@@ -31,6 +31,7 @@ setup(
         "gitk.hmm",
         "gitk.likelihood",
         "gitk.scembed",
+        "gitk.models",
     ],
     version=version,
     long_description=long_description,
