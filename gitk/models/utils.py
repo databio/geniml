@@ -121,9 +121,7 @@ def generate_var_conversion_map(
     return conversion_map
 
 
-def convert_to_universe(
-    adata: sc.AnnData, universe_set: List[tuple[str, int, int]]
-) -> sc.AnnData:
+def convert_to_universe(adata: sc.AnnData, universe: "Universe") -> sc.AnnData:
     """
     Converts the consensus peak set (.var) attributes of the AnnData object
     to a universe representation. This is done through interval overlap
@@ -140,15 +138,14 @@ def convert_to_universe(
         raise ValueError(
             "AnnData object must have `chr`, `start`, and `end` columns in .var"
         )
-    universe_set = [f"{region[0]}_{region[1]}_{region[2]}" for region in universe_set]
 
     # create list of regions from adata
-    query_set: List[str] = adata.var.apply(
-        lambda x: f"{x['chr']}_{x['start']}_{x['end']}", axis=1
+    query_set: List[tuple[str, int, int]] = adata.var.apply(
+        lambda x: (x["chr"], int(x["start"]), int(x["end"])), axis=1
     ).tolist()
 
     # generate conversion map
-    _map = generate_var_conversion_map(query_set, universe_set)
+    _map = generate_var_conversion_map(query_set, universe)
 
     # create a new DataFrame with the updated values
     updated_var = adata.var.copy()
