@@ -100,16 +100,19 @@ class SCEmbed(Word2Vec):
     def export_model(
         self,
         out_path: str,
-        model_config_name: str = DEFAULT_MODEL_CONFIG_FILE_NAME,
         model_export_name: str = DEFAULT_MODEL_EXPORT_FILE_NAME,
         universe_file_name: str = DEFAULT_UNIVERSE_EXPORT_FILE_NAME,
-        **config_kwargs,
     ):
         """
-        This function will do a full export of the model. This includes three files:
-        1. the actual pickled `.model` file
-        2. the `yaml` config file with metadata
-        3. the universe `.bed` file that determines the universe of regions
+        This function will do a full export of the model. This includes two files:
+            1. the actual pickled `.model` file
+            2. the universe `.bed` file that determines the universe of regions
+
+        The result of this function can be directly uploaded to huggingface, to share with the world.
+
+        :param str out_path: The path to the directory to save the model to.
+        :param str model_export_name: The name of the model file to save - it is not recommended to change this.
+        :param str universe_file_name: The name of the universe file to save - it is not recommended to change this.
         """
         if not os.path.exists(out_path):
             os.makedirs(out_path)
@@ -122,15 +125,6 @@ class SCEmbed(Word2Vec):
             for region in self.region2vec:
                 chr, start, end = region.split("_")
                 f.write(f"{chr}\t{start}\t{end}\n")
-
-        config_dict = create_model_info_dict(
-            path_to_weights=model_export_name,
-            path_to_universe=universe_file_name,
-            **config_kwargs,
-        )
-
-        with open(os.path.join(out_path, model_config_name), "w") as f:
-            yaml.dump({"model": config_dict}, f)
 
     def load_model(self, filepath: str, **kwargs):
         """
@@ -259,65 +253,6 @@ class SCEmbed(Word2Vec):
         # create a mapping from region to vector
         for word in regions:
             self.region2vec[word] = self.wv[word]
-
-    # this is here for testing and debugging
-    def train_legacy(
-        self,
-        data: Union[sc.AnnData, str],
-        epochs: int = DEFAULT_EPOCHS,  # training cycles
-        n_shuffles: int = DEAFULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
-        gensim_epochs: Union[int, None] = DEFAULT_GENSIM_EPOCHS,
-        report_loss: bool = True,
-        lr: float = DEFAULT_INIT_LR,
-        min_lr: float = DEFAULT_MIN_LR,
-        lr_schedule: Union[str, ScheduleType] = "linear",
-    ):
-        self.trained = True
-        if report_loss:
-            self.callbacks.append(ReportLossCallback())
-
-        lr_scheduler = LearningRateScheduler(
-            init_lr=lr, min_lr=min_lr, type=lr_schedule, n_epochs=epochs
-        )
-
-        region_sets = convert_anndata_to_documents(data, self.use_default_region_names)
-
-        _LOGGER.info("Training starting.")
-
-        for shuffle_num in range(epochs):
-            # update current values
-            current_lr = lr_scheduler.get_lr()
-            current_loss = self.get_latest_training_loss()
-
-            # update user
-            _LOGGER.info(
-                f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}"
-            )
-            _LOGGER.info("Shuffling documents.")
-
-            # shuffle regions
-            self.region_sets = shuffle_documents(region_sets, n_shuffles=n_shuffles)
-
-            # update vocab and train
-            super().build_vocab(region_sets, update=True if shuffle_num > 0 else False)
-            super().train(
-                self.region_sets,
-                total_examples=len(region_sets),
-                epochs=gensim_epochs or 1,  # use the epochs passed in or just one
-                callbacks=self.callbacks,
-                compute_loss=report_loss,
-                start_alpha=current_lr,
-            )
-
-            # update learning rates
-            lr_scheduler.update()
-
-            # once training is complete, create a region to vector mapping
-            regions = list(self.wv.key_to_index.keys())
-
-            # create a mapping from region to vector
-            for word in regions:
-                self.region2vec[word] = self.wv[word]
 
     def get_embedding(self, region: str) -> np.ndarray:
         """
