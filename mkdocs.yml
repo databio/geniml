@@ -8,13 +8,15 @@ nav:
   - Getting Started: 
     - Introduction: README.md
   - Modules:
+    - Assess universe: modules/assess_universe.md
     - BEDSpace: modules/bedspace.md
+    - Evaluate embeddings: modules/evaluation.md
     - Region2Vec: modules/region2vec.md
-    - scEmbed: modules/scembed.md
+    - Single-cell embeddings: modules/scembed.md
     - Tokenization: modules/tokenization.md
-    - Universe: modules/universe.md
+    - Create universe: modules/create_universe.md
   - How-to guides:    
-    - Create consensus peaks: tutorials/consensus-peaks.md
+    - Create consensus peaks: tutorials/create-consensus-peaks.md
   - Reference:
     - API: autodoc_build/gitk.md
     - Support: support.md
