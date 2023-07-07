@@ -2,7 +2,7 @@
 
 ## Introduction
 
-`gitk` is a suite of tools for applying machine learning approaches to genomic interval data. It is organized as a set of modules that provide related functions, such as building HMMs, assessing genomic interval universes, calculating likelihoods of consensus genomic interval sets, and computing single-cell clusters.
+`gitk` is a suite of tools for applying machine learning approaches to genomic interval data. For example, it can do things like building HMMs, assessing genomic interval universes, calculating likelihoods of consensus genomic interval sets, and computing single-cell clusters. It also provides a variety of other useful ancillary tools for working with genomic intervals to support these functions.
 
 ## Install
 
@@ -10,34 +10,6 @@
 pip install --user --upgrade .
 ```
 
-## gitk modules
+## Modules
 
-- [gitk/hmm](gitk/hmm) - Building HMMs
-- [gitk/bedspace](bedspace/bedspace.md) - BEDSpace
-- [gitk/region2vec](region2vec/region2vec.md) - region2vec
-- [gitk/assess](gitk/assess) - Assess universe fit
-- [gitk/likelihood](gitk/likelihood) - Calculate likelihood of universe
-- [gitk/scembed](gitk/scembed) - Compute single-cell clusters from a cell-feature matrix using Word2Vec
-
-## Using modules from Python
-
-This repo is divided into modules. Each module should be written in a way that it provides utility as a Python library. For example, you can call functions in the `hmm` module like this:
-
-```
-import gitk
-
-gitk.hmm.function()
-```
-
-## Command-line interfaces
-
-In addition to being importable from Python, *some* modules also provide a CLI. For these, developers provide a subcommand for CLI use. The root `gitk` package provides a generalized command-line interface with the command `gitk`. The modules that provide CLIs then correspond to CLI commands, *e.g* `gitk hmm` or `gitk likelihood`, with the corresponding code contained within a sub-folder named after the model:
-
-```
-gitk <module> ...
-```
-
-This is implemented within each module folder with:
-
-- `gitk/<module>/cli.py` - defines the command-line interface and provides a subparser for this module's CLI command.
-
+`gitk` is organized into modules. You can read the list of functions by module, or proceed to the how-to guides, using the menu bar on the left. 

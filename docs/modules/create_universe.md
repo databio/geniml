@@ -1,8 +1,14 @@
-# hmm module
+# The universe module
 
 ## Introduction
 
-This module will use an HMM to create a flexible segment universe, given an input of several bed files.
+This module provides multiple ways to build a genomic region universe 
+
+
+
+## Method 1: HMM
+
+This will use an HMM to create a flexible segment universe, given an input of several bed files.
 
 ## How to use
 
