@@ -164,9 +164,7 @@ class SCEmbed(Word2Vec):
         n_shuffles = 1
 
         if not isinstance(data, sc.AnnData) and not isinstance(data, str):
-            raise TypeError(
-                f"Data must be of type AnnData or str, not {type(data).__name__}"
-            )
+            raise TypeError(f"Data must be of type AnnData or str, not {type(data).__name__}")
 
         # if the data is a string, assume it is a filepath
         if isinstance(data, str):
@@ -188,15 +186,11 @@ class SCEmbed(Word2Vec):
         # this lets users save any metadata they want
         # which can get mapped back to the embeddings
         self.obs = data.obs
-        self.region_sets = convert_anndata_to_documents(
-            data, self.use_default_region_names
-        )
+        self.region_sets = convert_anndata_to_documents(data, self.use_default_region_names)
 
         # remove any regions that dont satisfy the min count
         _LOGGER.info("Removing regions that don't satisfy min count.")
-        self.region_sets = remove_regions_below_min_count(
-            self.region_sets, self.min_count
-        )
+        self.region_sets = remove_regions_below_min_count(self.region_sets, self.min_count)
 
         if report_loss:
             self.callbacks.append(ReportLossCallback())
@@ -222,15 +216,11 @@ class SCEmbed(Word2Vec):
             current_loss = self.get_latest_training_loss()
 
             # update user
-            _LOGGER.info(
-                f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}"
-            )
+            _LOGGER.info(f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}")
             _LOGGER.info("Shuffling documents.")
 
             # shuffle regions
-            self.region_sets = shuffle_documents(
-                self.region_sets, n_shuffles=n_shuffles
-            )
+            self.region_sets = shuffle_documents(self.region_sets, n_shuffles=n_shuffles)
 
             # train the model on one iteration
             super().train(
@@ -297,7 +287,8 @@ class SCEmbed(Word2Vec):
         cell_embeddings = []
         for cell in tqdm(self.region_sets, total=len(self.region_sets)):
             cell_embedding = np.mean(
-                [self.get_embedding(r) for r in cell if r in self.region2vec], axis=0
+                [self.get_embedding(r) for r in cell if r in self.region2vec],
+                axis=0,
             )
             cell_embeddings.append(cell_embedding)
 
@@ -325,7 +316,8 @@ class SCEmbed(Word2Vec):
         cell_embeddings = []
         for cell in tqdm(self.region_sets, total=len(self.region_sets)):
             cell_embedding = np.mean(
-                [self.get_embedding(r) for r in cell if r in self.region2vec], axis=0
+                [self.get_embedding(r) for r in cell if r in self.region2vec],
+                axis=0,
             )
             cell_embeddings.append(cell_embedding)
 
@@ -356,7 +348,8 @@ class SCEmbed(Word2Vec):
         cell_embeddings = []
         for cell in tqdm(self.region_sets, total=len(self.region_sets)):
             cell_embedding = np.mean(
-                [self.get_embedding(r) for r in cell if r in self.region2vec], axis=0
+                [self.get_embedding(r) for r in cell if r in self.region2vec],
+                axis=0,
             )
             cell_embeddings.append(cell_embedding)
 
@@ -380,8 +373,7 @@ class SCEmbed(Word2Vec):
         for row in list(embeddings_df.iterrows()):
             row_dict = row[1].to_dict()
             new_row_dict = {
-                f"embedding_dim_{i}": row_dict["embedding"][i]
-                for i in range(self.vector_size)
+                f"embedding_dim_{i}": row_dict["embedding"][i] for i in range(self.vector_size)
             }
             if "id" in row_dict:
                 new_row_dict["id"] = row_dict["id"]

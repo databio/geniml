@@ -35,7 +35,7 @@ def region2vec(
     milestones=[],  # Specify only when lr_scheduler=milestone. At each given epoch, the learning rate will be multiplied by 0.1
     hier_softmax=False,  # Whether to hierarchical softmax
     seed=0,  # random seed,
-    update_vocab="once"
+    update_vocab="once",
 ):
     timer = utils.Timer()
     start_time = timer.t()

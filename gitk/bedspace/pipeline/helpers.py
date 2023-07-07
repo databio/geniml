@@ -10,9 +10,7 @@ import pybedtools
 def data_prepration(path_file_label: str, univ: str):
     path_file_label = path_file_label.split(",")
     path_file = path_file_label[0]
-    labels = " ".join(
-        ["__label__" + label for label in path_file_label[1:] if label != ""]
-    )
+    labels = " ".join(["__label__" + label for label in path_file_label[1:] if label != ""])
     if os.path.exists(path_file):
         try:
             df = pybedtools.BedTool(path_file)
@@ -28,7 +26,10 @@ def data_prepration(path_file_label: str, univ: str):
                 + "_"
                 + file_regions["end"].astype(str)
             )
-            return [path_file, " ".join(list(file_regions["region"])) + " " + labels]
+            return [
+                path_file,
+                " ".join(list(file_regions["region"])) + " " + labels,
+            ]
         except Exception:
             print("Error in reading file: ", path_file)
             return [path_file, " "]
@@ -68,7 +69,8 @@ def bed2vec(file_list, universe, model, assembly, source, output_path):
     files = os.path.join(output_path, "filenames_{}.txt".format(assembly))
 
     doc_embed = os.path.join(
-        output_path, "{}_starspace_embed_{}_{}.txt".format(source, assembly, source)
+        output_path,
+        "{}_starspace_embed_{}_{}.txt".format(source, assembly, source),
     )
 
     documents = []

@@ -37,7 +37,8 @@ def pretrained_model():
 
 
 def test_init_tokenizers(
-    tokenizer_from_file: models.HardTokenizer, tokenizer_from_list: models.HardTokenizer
+    tokenizer_from_file: models.HardTokenizer,
+    tokenizer_from_list: models.HardTokenizer,
 ):
     # assert that the tokenizers were created
     assert tokenizer_from_file is not None
@@ -184,9 +185,7 @@ def test_init_pretrained_model(
     assert pretrained_model.model is not None
 
 
-def test_encode_anndata(
-    adata: sc.AnnData, pretrained_model: models.PretrainedScembedModel
-):
+def test_encode_anndata(adata: sc.AnnData, pretrained_model: models.PretrainedScembedModel):
     # encode the anndata
     encoded = pretrained_model.encode(adata)
 

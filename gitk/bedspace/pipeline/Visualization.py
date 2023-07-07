@@ -23,12 +23,8 @@ label_prefix = "__label__"
 def label_preprocessing(path_label_embedding, label_prefix, common_labels=[]):
     labels = []
     label_vectors = []
-    label_embedding = pd.read_csv(
-        path_label_embedding, sep="\t", header=None, skiprows=1
-    )
-    vectors = label_embedding[
-        label_embedding[0].str.contains(label_prefix)
-    ]  # .reset_index()
+    label_embedding = pd.read_csv(path_label_embedding, sep="\t", header=None, skiprows=1)
+    vectors = label_embedding[label_embedding[0].str.contains(label_prefix)]  # .reset_index()
 
     vectors[0] = vectors[0].str.replace(label_prefix, "")
 
@@ -107,7 +103,11 @@ def UMAP_plot(
 
     for i, txt in enumerate(list(ump_data[title])):
         fig.annotate(
-            txt, (ump_data.iloc[i]["UMAP 1"] - 0.05, ump_data.iloc[i]["UMAP 2"] + 0.05)
+            txt,
+            (
+                ump_data.iloc[i]["UMAP 1"] - 0.05,
+                ump_data.iloc[i]["UMAP 2"] + 0.05,
+            ),
         )
     #     plt.legend(loc='upper right', )
 
@@ -214,9 +214,7 @@ def Scenario1(path_simfile):
         search_table,
         on="filename",
     ).drop_duplicates()
-    search_table = search_table.merge(
-        meta_test, left_on="filename", right_on="file_name"
-    )
+    search_table = search_table.merge(meta_test, left_on="filename", right_on="file_name")
 
     if search == "cell":
         ind = 0
@@ -236,18 +234,14 @@ def Scenario1(path_simfile):
         np.min([ind, len_targets])
     ]
 
-    search_table = search_table[
-        ["filename", "file_label", "original_label"] + (training_labels)
-    ]
-    search_table["predicted_label"] = search_table[list(search_table)[3:]].idxmin(
-        axis=1
-    )
+    search_table = search_table[["filename", "file_label", "original_label"] + (training_labels)]
+    search_table["predicted_label"] = search_table[list(search_table)[3:]].idxmin(axis=1)
 
     for searchterm in training_labels:
         nof = len(search_table[search_table.file_label.str.contains(searchterm)])
-        df = search_table[
-            ["filename", "file_label", "original_label", searchterm]
-        ].sort_values(by=[searchterm])[0:10]
+        df = search_table[["filename", "file_label", "original_label", searchterm]].sort_values(
+            by=[searchterm]
+        )[0:10]
         df = df.sort_values(by=[searchterm], ascending=False)
 
         df["color"] = "gray"
@@ -270,9 +264,7 @@ def Scenario1(path_simfile):
         plt.axis(xmin=0.5, xmax=1.01)
 
         plt.figure.savefig(
-            "../outputs/bedembed_output/figures/S1/{}_nof{}.svg".format(
-                searchterm, nof
-            ),
+            "../outputs/bedembed_output/figures/S1/{}_nof{}.svg".format(searchterm, nof),
             format="svg",
             bbox_inches="tight",
         )
@@ -296,9 +288,7 @@ def Scenario2(path_simfile):
     search_table = pd.pivot_table(
         distance, values="score", index=["filename"], columns=["search_term"]
     ).reset_index()
-    search_table = search_table.merge(
-        meta_test, left_on="filename", right_on="file_name"
-    )
+    search_table = search_table.merge(meta_test, left_on="filename", right_on="file_name")
     search_table = pd.merge(
         distance[["filename", "file_label"]].drop_duplicates(),
         search_table,
@@ -320,12 +310,8 @@ def Scenario2(path_simfile):
         np.min([ind, len_targets])
     ]
 
-    search_table = search_table[
-        ["filename", "file_label", "original_label"] + (training_labels)
-    ]
-    search_table["predicted_label"] = search_table[list(search_table)[3:]].idxmin(
-        axis=1
-    )
+    search_table = search_table[["filename", "file_label", "original_label"] + (training_labels)]
+    search_table["predicted_label"] = search_table[list(search_table)[3:]].idxmin(axis=1)
 
     i = 0
     b = search_table
@@ -349,13 +335,16 @@ def Scenario2(path_simfile):
         i += 1
 
     X = pd.DataFrame(all_weights).rename(
-        columns={0: "Filename", 1: "Filelabel", 2: "AllLabels", 3: "Distance_score"}
+        columns={
+            0: "Filename",
+            1: "Filelabel",
+            2: "AllLabels",
+            3: "Distance_score",
+        }
     )
 
     for file in list(set(X.Filename)):
-        df = X[X.Filename == file].sort_values(by=["Distance_score"], ascending=False)[
-            0:10
-        ]
+        df = X[X.Filename == file].sort_values(by=["Distance_score"], ascending=False)[0:10]
         df = df.sort_values(by=["Distance_score"], ascending=True)
         df["color"] = "green"
         plt = df.plot.barh(
@@ -390,9 +379,7 @@ meta_test["original_label_test"] = meta_test["target"] + " " + meta_test["cell_t
 meta_train = (pd.read_csv(path_meta + "tests/test_file_meta.csv"))[
     ["file_name", "cell_type", "target"]
 ]
-meta_train["original_label_train"] = (
-    meta_train["target"] + " " + meta_train["cell_type"]
-)
+meta_train["original_label_train"] = meta_train["target"] + " " + meta_train["cell_type"]
 meta_test.file_name = "/project/shefflab/data/encode/" + meta_test.file_name
 meta_train.file_name = "/project/shefflab/data/encode/" + meta_train.file_name
 
@@ -408,7 +395,10 @@ sim[["test_name", "test_label_cell", "test_label_target"]] = sim.test_file.str.s
 )[[0, 1, 2]]
 
 sim = sim.merge(meta_test, left_on="test_name", right_on="file_name").merge(
-    meta_train, left_on="train_name", right_on="file_name", suffixes=("_test", "_train")
+    meta_train,
+    left_on="train_name",
+    right_on="file_name",
+    suffixes=("_test", "_train"),
 )  #
 
 sim.score = 1 - sim.score
@@ -443,9 +433,7 @@ for test in list(set(sim.test_name)):
     plt.axis(xmin=0.7, xmax=1.01)
 
     plt.figure.savefig(
-        "../outputs/bedembed_output/figures/S3/{}_nof{}.svg".format(
-            test.split("/")[-1], nof
-        ),
+        "../outputs/bedembed_output/figures/S3/{}_nof{}.svg".format(test.split("/")[-1], nof),
         format="svg",
         bbox_inches="tight",
     )

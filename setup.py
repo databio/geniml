@@ -60,5 +60,5 @@ setup(
     include_package_data=True,
     url="http://giss.databio.org",
     author="Nathan Sheffield",
-    **extra
+    **extra,
 )

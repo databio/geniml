@@ -6,13 +6,17 @@ def build_subparser(parser):
     """
 
     parser.add_argument(
-        "--model-file", help="path to file with lh model", required=True, type=str
+        "--model-file",
+        help="path to file with lh model",
+        required=True,
+        type=str,
     )
+    parser.add_argument("--file-no", help="number of files used to make the model", type=int)
     parser.add_argument(
-        "--file-no", help="number of files used to make the model", type=int
-    )
-    parser.add_argument(
-        "--coverage-folder", help="path to coverage folder", required=True, type=str
+        "--coverage-folder",
+        help="path to coverage folder",
+        required=True,
+        type=str,
     )
     parser.add_argument(
         "--coverage-prefix",

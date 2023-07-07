@@ -66,15 +66,9 @@ def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_ou
     """
     model_lh.read_chrom(chrom)
     chrom_model = model_lh[chrom]
-    start = read_chromosome_from_bw(
-        os.path.join(cove_folder, f"{cove_prefix}_start.bw"), chrom
-    )
-    core = read_chromosome_from_bw(
-        os.path.join(cove_folder, f"{cove_prefix}_core.bw"), chrom
-    )
-    end = read_chromosome_from_bw(
-        os.path.join(cove_folder, f"{cove_prefix}_end.bw"), chrom
-    )
+    start = read_chromosome_from_bw(os.path.join(cove_folder, f"{cove_prefix}_start.bw"), chrom)
+    core = read_chromosome_from_bw(os.path.join(cove_folder, f"{cove_prefix}_core.bw"), chrom)
+    end = read_chromosome_from_bw(os.path.join(cove_folder, f"{cove_prefix}_end.bw"), chrom)
     cove = np.zeros((len(start), 3), dtype=np.uint16)
     cove[:, 0] = start
     cove[:, 1] = core

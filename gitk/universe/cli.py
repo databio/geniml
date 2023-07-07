@@ -17,9 +17,7 @@ def build_subparser_hmm(parser):
 
 def build_subparser_ml(parser):
     parser = build_subparser(parser)
-    parser.add_argument(
-        "--model-file", help="path to lh model file", required=True, type=str
-    )
+    parser.add_argument("--model-file", help="path to lh model file", required=True, type=str)
     return parser
 
 
@@ -37,16 +35,17 @@ def build_subparser_cc(parser):
         default=0,
         type=int,
     )
-    parser.add_argument(
-        "--cutoff", help="cutoff value used for making universe", type=int
-    )
+    parser.add_argument("--cutoff", help="cutoff value used for making universe", type=int)
 
     return parser
 
 
 def build_subparser(parser):
     parser.add_argument(
-        "--output-file", help="path to output, universe file", required=True, type=str
+        "--output-file",
+        help="path to output, universe file",
+        required=True,
+        type=str,
     )
     parser.add_argument(
         "--coverage-folder",

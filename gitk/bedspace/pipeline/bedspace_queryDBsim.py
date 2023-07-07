@@ -60,9 +60,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
         value_name="score",
     )
     scaler = MinMaxScaler()
-    file_distance["score"] = scaler.fit_transform(
-        np.array(file_distance["score"]).reshape(-1, 1)
-    )
+    file_distance["score"] = scaler.fit_transform(np.array(file_distance["score"]).reshape(-1, 1))
     return file_distance
 
 
@@ -164,13 +162,9 @@ def main():
     # define file path
     model = os.path.join(args.output_path, "starspace_model_{}".format(assembly))
 
-    dist = os.path.join(
-        args.output_path, "query_db_similarity_score_{}.csv".format(assembly)
-    )
+    dist = os.path.join(args.output_path, "query_db_similarity_score_{}.csv".format(assembly))
 
-    doc_embed_dB = bed2vec(
-        file_list_db, universe, model, assembly, "DB", args.output_path
-    )
+    doc_embed_dB = bed2vec(file_list_db, universe, model, assembly, "DB", args.output_path)
 
     db_vectors = data_preprocessing(doc_embed_dB)
 

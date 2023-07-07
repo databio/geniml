@@ -55,13 +55,9 @@ def distance_to_closest_region(
     """
     if flexible:
         if uni_to_file:
-            dist_to_db_que = [
-                flexible_distance_between_two_regions(i, j[0]) for j in db_queue
-            ]
+            dist_to_db_que = [flexible_distance_between_two_regions(i, j[0]) for j in db_queue]
         else:
-            dist_to_db_que = [
-                flexible_distance_between_two_regions(j, i[0]) for j in db_queue
-            ]
+            dist_to_db_que = [flexible_distance_between_two_regions(j, i[0]) for j in db_queue]
     else:
         dist_to_db_que = [distance_between_two_regions(j, i[0]) for j in db_queue]
     min_pos = np.argmin(dist_to_db_que)
@@ -77,13 +73,9 @@ def distance_to_closest_region(
         db_queue[-1] = pos
         if flexible:
             if uni_to_file:
-                dist_to_db_que = [
-                    flexible_distance_between_two_regions(i, j[0]) for j in db_queue
-                ]
+                dist_to_db_que = [flexible_distance_between_two_regions(i, j[0]) for j in db_queue]
             else:
-                dist_to_db_que = [
-                    flexible_distance_between_two_regions(j, i[0]) for j in db_queue
-                ]
+                dist_to_db_que = [flexible_distance_between_two_regions(j, i[0]) for j in db_queue]
         else:
             dist_to_db_que = [distance_between_two_regions(j, i[0]) for j in db_queue]
         min_pos = np.argmin(dist_to_db_que)
@@ -305,7 +297,14 @@ def run_distance(
     if no_workers <= 1:
         for i in files:
             r = calc_distance_between_two_files(
-                universe, folder, i, flexible, save_each, folder_out, pref, uni_to_file
+                universe,
+                folder,
+                i,
+                flexible,
+                save_each,
+                folder_out,
+                pref,
+                uni_to_file,
             )
             res.append(r)
     else:

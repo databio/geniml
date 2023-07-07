@@ -133,9 +133,7 @@ label_prefix = "__label__"
 # StarSpace Parameters
 universe = pybedtools.BedTool(args.univ_path)
 # define file path
-train_files = os.path.join(
-    args.output_path, "documents_file_{}.txt".format(args.genome)
-)
+train_files = os.path.join(args.output_path, "documents_file_{}.txt".format(args.genome))
 model = os.path.join(args.output_path, "starspace_model_{}".format(args.genome))
 
 
@@ -156,10 +154,7 @@ def main():
     with Pool(n_process) as p:
         trained_documents = p.starmap(
             data_prepration,
-            [
-                (x, universe)
-                for x in file_list[args.start_line : args.start_line + args.no_files]
-            ],
+            [(x, universe) for x in file_list[args.start_line : args.start_line + args.no_files]],
         )
         p.close()
         p.join()

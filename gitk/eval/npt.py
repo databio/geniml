@@ -82,19 +82,14 @@ def calculate_overlap_bins(
 
     if same_chromo:
         chr_regions = [
-            f"{chromo}:{region_array[k][0]}-{region_array[k][1]}"
-            for k in range(len(region_array))
+            f"{chromo}:{region_array[k][0]}-{region_array[k][1]}" for k in range(len(region_array))
         ]
         chr_global_indices = np.array([region2index[r] for r in chr_regions])
         chr_embeds = embed_rep[chr_global_indices]
         _Kedist_local_indices, _ = get_topk_embed(local_idx, K, chr_embeds, dist)
-        _Kedist_global_indices = np.array(
-            [chr_global_indices[i] for i in _Kedist_local_indices]
-        )
+        _Kedist_global_indices = np.array([chr_global_indices[i] for i in _Kedist_local_indices])
     else:
-        idx = region2index[
-            f"{chromo}:{region_array[local_idx][0]}-{region_array[local_idx][1]}"
-        ]
+        idx = region2index[f"{chromo}:{region_array[local_idx][0]}-{region_array[local_idx][1]}"]
         _Kedist_global_indices, _ = get_topk_embed(idx, K, embed_rep, dist)
 
     bin_overlaps = []
@@ -205,7 +200,8 @@ def get_npt_score(
                     indexes = list(range(len(region_array)))
                 else:
                     num = min(
-                        len(region_array), round(num_samples * chromo_ratios[chromo])
+                        len(region_array),
+                        round(num_samples * chromo_ratios[chromo]),
                     )
                     indexes = np.random.permutation(len(region_array))[0:num]
                 for i in indexes:
@@ -215,15 +211,21 @@ def get_npt_score(
                     )
                     process_random = pool.apply_async(
                         worker_func,
-                        (i, K, chromo, region_array, "random", resolution, dist),
+                        (
+                            i,
+                            K,
+                            chromo,
+                            region_array,
+                            "random",
+                            resolution,
+                            dist,
+                        ),
                     )
                     all_processes.append((process_embed, process_random))
 
             for i, (process_embed, process_random) in enumerate(all_processes):
                 avg_ratio = (avg_ratio * count + process_embed.get()) / (count + 1)
-                avg_ratio_ref = (avg_ratio_ref * count + process_random.get()) / (
-                    count + 1
-                )
+                avg_ratio_ref = (avg_ratio_ref * count + process_random.get()) / (count + 1)
                 count = count + 1
     else:
         for chromo in chromo_regions:
@@ -231,7 +233,10 @@ def get_npt_score(
             if num_samples == 0:  # exhaustive
                 indexes = list(range(len(region_array)))
             else:
-                num = min(len(region_array), round(num_samples * chromo_ratios[chromo]))
+                num = min(
+                    len(region_array),
+                    round(num_samples * chromo_ratios[chromo]),
+                )
                 indexes = np.random.permutation(len(region_array))[0:num]
             for i in indexes:
                 nprs_embed = calculate_overlap_bins(
@@ -301,7 +306,14 @@ def get_npt_score_batch(
     result_list = []
     for index, (path, embed_type) in enumerate(batch):
         result = get_npt_score(
-            path, embed_type, K, num_samples, seed, resolution, dist, num_workers
+            path,
+            embed_type,
+            K,
+            num_samples,
+            seed,
+            resolution,
+            dist,
+            num_workers,
         )
         result_list.append(result)
     if save_path:
@@ -325,9 +337,7 @@ def npt_eval(
     assert resolution <= K, "resolution <= K"
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")
-        save_path = (
-            os.path.join(save_folder, f"npt_eval_seed{seed}") if save_folder else None
-        )
+        save_path = os.path.join(save_folder, f"npt_eval_seed{seed}") if save_folder else None
         result_list = get_npt_score_batch(
             batch,
             K,
@@ -374,9 +384,7 @@ def get_npt_results(save_paths):
 
 
 def snpr_plot(snpr_data, row_labels=None, legend_pos=(0.25, 0.6), filename=None):
-    snpr_vals = [
-        (k, v.sum(axis=1).mean(), v.sum(axis=1).std()) for k, v, res in snpr_data
-    ]
+    snpr_vals = [(k, v.sum(axis=1).mean(), v.sum(axis=1).std()) for k, v, res in snpr_data]
     cmap = plt.get_cmap("Set1")
     cmaplist = [cmap(i) for i in range(9)]
     if row_labels is None:
@@ -404,7 +412,11 @@ def snpr_plot(snpr_data, row_labels=None, legend_pos=(0.25, 0.6), filename=None)
     )
     ax.set_ylabel("SNPR")
     _ = plt.setp(
-        ax.get_xticklabels(), rotation=-15, ha="left", va="top", rotation_mode="anchor"
+        ax.get_xticklabels(),
+        rotation=-15,
+        ha="left",
+        va="top",
+        rotation_mode="anchor",
     )
     patches = [
         Line2D(

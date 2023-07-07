@@ -32,7 +32,10 @@ def build_subparser(parser):
         action="store_true",
     )
     parser.add_argument(
-        "--raw-data-folder", help="folder with raw data", type=str, required=True
+        "--raw-data-folder",
+        help="folder with raw data",
+        type=str,
+        required=True,
     )
     parser.add_argument(
         "--file-list",
@@ -42,16 +45,17 @@ def build_subparser(parser):
     )
     parser.add_argument("--universe", help="universe file", type=str, required=True)
     parser.add_argument(
-        "--no-workers", help="number of core that should be used", default=4, type=int
+        "--no-workers",
+        help="number of core that should be used",
+        default=4,
+        type=int,
     )
     parser.add_argument(
         "--save-to-file",
         help="if save statistics for each BED file to a file",
         action="store_true",
     )
-    parser.add_argument(
-        "--folder-out", help="folder to which save the statistic", type=str
-    )
+    parser.add_argument("--folder-out", help="folder to which save the statistic", type=str)
     parser.add_argument("--pref", help="statistic file prefix", type=str)
 
     parser.add_argument(

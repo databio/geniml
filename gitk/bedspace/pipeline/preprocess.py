@@ -13,9 +13,7 @@ _LOGGER = logging.getLogger(PKG_NAME)
 def data_prepration(path_file_label: str, univ):
     path_file_label = path_file_label.split(",")
     path_file = path_file_label[0]
-    labels = " ".join(
-        ["__label__" + label for label in path_file_label[1:] if label != ""]
-    )
+    labels = " ".join(["__label__" + label for label in path_file_label[1:] if label != ""])
 
     if os.path.exists(path_file):
         try:
@@ -33,7 +31,10 @@ def data_prepration(path_file_label: str, univ):
                 + "_"
                 + file_regions["end"].astype(str)
             )
-            return [path_file, " ".join(list(file_regions["region"])) + " " + labels]
+            return [
+                path_file,
+                " ".join(list(file_regions["region"])) + " " + labels,
+            ]
         except Exception:
             print("Error in reading file: ", path_file)
             return [path_file, " "]

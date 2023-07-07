@@ -74,9 +74,7 @@ class Annotator:
         scembed_cell_type_preds = []
 
         # use qdrant and a simple KNN approach to attach cell types to the embeddings
-        for embedding in tqdm(
-            adata.obsm["embedding"], total=len(adata.obsm["embedding"])
-        ):
+        for embedding in tqdm(adata.obsm["embedding"], total=len(adata.obsm["embedding"])):
             results = self._annotation_server.search(
                 collection_name=self.collection_name,
                 query_vector=embedding,

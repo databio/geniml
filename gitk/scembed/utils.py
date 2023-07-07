@@ -145,7 +145,9 @@ def shuffle_documents(
         shuffled_documents = list(
             tqdm(
                 executor.map(
-                    shuffle_list, shuffled_documents, [n_shuffles] * len(documents)
+                    shuffle_list,
+                    shuffled_documents,
+                    [n_shuffles] * len(documents),
                 ),
                 total=len(documents),
             )
@@ -171,8 +173,7 @@ def remove_regions_below_min_count(
 
     # remove any regions that dont satisfy the min count
     region_sets = [
-        [r for r in region_set if region_counts[r] >= min_count]
-        for region_set in region_sets
+        [r for r in region_set if region_counts[r] >= min_count] for region_set in region_sets
     ]
 
     return region_sets
@@ -198,8 +199,7 @@ def extract_region_list(region_df: pd.DataFrame) -> List[str]:
     """
     _LOGGER.info("Extracting region list from matrix.")
     regions = [
-        f"{row[CHR_KEY]}_{row[START_KEY]}_{row[END_KEY]}"
-        for _, row in region_df.iterrows()
+        f"{row[CHR_KEY]}_{row[START_KEY]}_{row[END_KEY]}" for _, row in region_df.iterrows()
     ]
     return regions
 
@@ -317,7 +317,10 @@ def load_universe_file(path: str) -> List[str]:
 
 
 def generate_var_conversion_map(
-    a: List[str], b: List[str], path_to_bedtools: str = None, fraction: float = 1.0e-9
+    a: List[str],
+    b: List[str],
+    path_to_bedtools: str = None,
+    fraction: float = 1.0e-9,
 ) -> Dict[str, Union[str, None]]:
     """
     Create a conversion map to convert regions from a to b. This is used to convert the

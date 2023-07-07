@@ -15,7 +15,12 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 
 from .const import *
-from .utils import Timer, cosine_distance, genome_distance, load_genomic_embeddings
+from .utils import (
+    Timer,
+    cosine_distance,
+    genome_distance,
+    load_genomic_embeddings,
+)
 
 
 def explained_variance(bin_path, dim):
@@ -93,9 +98,7 @@ def ctt_eval(
     results_seeds = []
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")
-        save_path = (
-            os.path.join(save_folder, f"ctt_eval_seed{seed}") if save_folder else None
-        )
+        save_path = os.path.join(save_folder, f"ctt_eval_seed{seed}") if save_folder else None
         result_list = get_ctt_batch(batch, seed, num_data, save_path, num_workers)
         results_seeds.append(result_list)
 

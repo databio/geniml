@@ -132,17 +132,13 @@ class ModelLH:
         """
         if os.path.exists(self.name):
             if not force:
-                print(
-                    "Model already exists. If you want to overwrite it use force argument"
-                )
+                print("Model already exists. If you want to overwrite it use force argument")
                 return
             else:
                 print("Overwriting existing model")
         tar_arch = tarfile.open(self.name, "w")
         temp_dir = tempfile.TemporaryDirectory()
-        bw_start = pyBigWig.open(
-            os.path.join(coverage_folder, f"{coverage_prefix}_start.bw")
-        )
+        bw_start = pyBigWig.open(os.path.join(coverage_folder, f"{coverage_prefix}_start.bw"))
         chroms = bw_start.chroms()
         bw_start.close()
         self.chromosomes_list = [i for i in chroms if chroms[i] != 0]

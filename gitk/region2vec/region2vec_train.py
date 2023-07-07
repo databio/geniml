@@ -13,9 +13,7 @@ from gensim.models.word2vec import LineSentence
 from . import utils
 from .const import *
 
-logging.basicConfig(
-    format="%(asctime)s : %(levelname)s : %(message)s", level=logging.ERROR
-)
+logging.basicConfig(format="%(asctime)s : %(levelname)s : %(message)s", level=logging.ERROR)
 
 
 def find_dataset(data_folder):
@@ -39,9 +37,7 @@ def main(args):
     data_folder = os.path.join(
         save_dir, "shuffled_datasets"
     )  # shuffled datasets are stored in the shuffled_datasets folder
-    model_dir = os.path.join(
-        save_dir, "models"
-    )  # model snapshots are stored in the models folder
+    model_dir = os.path.join(save_dir, "models")  # model snapshots are stored in the models folder
     os.makedirs(save_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
     utils.set_log_path(save_dir)  # specify the path to the log file
@@ -58,9 +54,7 @@ def main(args):
         msg_model += "hierarchical softmax\033[00m"
     else:
         hs = 0
-        msg_model += (
-            f"negative sampling with {args.neg_samples} negative samples\033[00m"
-        )
+        msg_model += f"negative sampling with {args.neg_samples} negative samples\033[00m"
     if not os.path.exists(args.resume):
         vocab_update = False
         model = Word2Vec(
@@ -90,7 +84,11 @@ def main(args):
         lr_info = {"freq": 1}
 
     lr_scheduler = utils.lr_scheduler(
-        args.init_lr, args.min_lr, args.num_shuffle, lr_info=lr_info, mode=args.lr_mode
+        args.init_lr,
+        args.min_lr,
+        args.num_shuffle,
+        lr_info=lr_info,
+        mode=args.lr_mode,
     )
 
     run_timer = utils.Timer()
@@ -103,9 +101,7 @@ def main(args):
     sentences = LineSentence(dset)  # create sentence iterator
     model.build_vocab(sentences, update=vocab_update)  # prepare the model vocabulary
     cur_time = datetime.datetime.now().strftime("%x-%X")
-    utils.log(
-        f"[{cur_time}]\033[93m Vocabulary size is {len(model.wv.index_to_key)}\033[00m"
-    )
+    utils.log(f"[{cur_time}]\033[93m Vocabulary size is {len(model.wv.index_to_key)}\033[00m")
     build_vocab_time = run_timer.t()
     min_loss = 1.0e100
 
@@ -154,9 +150,7 @@ def main(args):
 
     elasped_time = run_timer.t()
     cur_time = datetime.datetime.now().strftime("%x-%X")
-    utils.log(
-        f"[{cur_time}] Training finished, training Time {utils.time_str(elasped_time)}"
-    )
+    utils.log(f"[{cur_time}] Training finished, training Time {utils.time_str(elasped_time)}")
     # remove intermediate datasets
     os.system(f"rm -rf {data_folder}")  # remove the generated shuffled datasets
 
@@ -168,15 +162,13 @@ if __name__ == "__main__":
     parser.add_argument("--context-len", type=int, help="window size")
     parser.add_argument("--nworkers", type=int, help="number of workers")
     parser.add_argument("--save-freq", type=int, default=0, help="save frequency")
-    parser.add_argument(
-        "--save-dir", help="path to the folder that saves the training result"
-    )
+    parser.add_argument("--save-dir", help="path to the folder that saves the training result")
     parser.add_argument("--resume", help="path to a saved model")
+    parser.add_argument("--train-alg", help="training algorithm, select from [cbow, skip-gram]")
     parser.add_argument(
-        "--train-alg", help="training algorithm, select from [cbow, skip-gram]"
-    )
-    parser.add_argument(
-        "--min-count", type=int, help="threshold of pruning the internal vocabulary"
+        "--min-count",
+        type=int,
+        help="threshold of pruning the internal vocabulary",
     )
     parser.add_argument(
         "--neg-samples",

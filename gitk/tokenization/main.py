@@ -114,9 +114,7 @@ def hard_tokenization_main(
             )
             args_arr.append(tokenization_args)
         with multiprocessing.Pool(nworkers) as pool:
-            processes = [
-                pool.apply_async(hard_tokenization, args=(param,)) for param in args_arr
-            ]
+            processes = [pool.apply_async(hard_tokenization, args=(param,)) for param in args_arr]
             results = [r.get() for r in processes]
         # move tokenized files in different folders to expr_tokens
         shutil.rmtree(dest_folder)
@@ -124,7 +122,8 @@ def hard_tokenization_main(
             allfiles = os.listdir(param.token_folder)
             for f in allfiles:
                 shutil.move(
-                    os.path.join(param.token_folder, f), os.path.join(dst_folder, f)
+                    os.path.join(param.token_folder, f),
+                    os.path.join(dst_folder, f),
                 )
             shutil.rmtree(param.token_folder)
     os.remove(file_list_path)

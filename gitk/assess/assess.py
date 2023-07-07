@@ -122,7 +122,10 @@ def run_all_assessment_methods(
             save_each,
             True,
         )
-        r_distance_utf_flex.columns = ["file", "median_dist_universe_to_file_flex"]
+        r_distance_utf_flex.columns = [
+            "file",
+            "median_dist_universe_to_file_flex",
+        ]
         asses_results.append(r_distance_utf_flex)
         _LOGGER.info("DONE: Flexible distance universe to file")
 
@@ -251,13 +254,9 @@ def filter_universe(
             if not cove_prefix:
                 miss_args.append("cove_prefix")
             raise ValueError(
-                "Missing {} for peak likelihood calculations.".format(
-                    ",".join(miss_args)
-                )
+                "Missing {} for peak likelihood calculations.".format(",".join(miss_args))
             )
-        likelihood_flexible_universe(
-            model_file, universe, cove_folder, cove_prefix, True
-        )
+        likelihood_flexible_universe(model_file, universe, cove_folder, cove_prefix, True)
         universe = universe + "_peak_likelihood"
     with open(universe) as uni:
         with open(universe_filtered, "w+") as uni_flt:

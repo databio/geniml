@@ -53,9 +53,7 @@ def split_file(file_path, dest_folder, num_parts):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--file-path", default="", help="path to a file list")
-    parser.add_argument(
-        "--dest-folder", default="", help="where to store the split files"
-    )
+    parser.add_argument("--dest-folder", default="", help="where to store the split files")
     parser.add_argument(
         "--num-parts",
         type=int,

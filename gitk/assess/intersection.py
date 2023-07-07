@@ -124,7 +124,10 @@ def calc_diff_intersection(db, folder, query):
     only_in_d, only_in_q, overlap = 0, 0, 0
     inside_d, inside_q = False, False  # inside a region
     not_end_d, not_end_q = True, True  # if there are regions to process
-    waiting_d, waiting_q = False, False  # if waiting for the other file to finish chrom
+    waiting_d, waiting_q = (
+        False,
+        False,
+    )  # if waiting for the other file to finish chrom
     lines_q = tempfile.NamedTemporaryFile()
     prep_data(folder, query, lines_q)
     if os.stat(lines_q.name).st_size == 0:
@@ -164,11 +167,25 @@ def calc_diff_intersection(db, folder, query):
             start_q,
         ) = regions_stats
         new_d = read_in_new_line(
-            pos_d, start_d, chrom_d, inside_d, waiting_d, lines_db, c_chrom, not_end_d
+            pos_d,
+            start_d,
+            chrom_d,
+            inside_d,
+            waiting_d,
+            lines_db,
+            c_chrom,
+            not_end_d,
         )
         (pos_d, start_d, chrom_d, waiting_d, not_end_d) = new_d
         new_q = read_in_new_line(
-            pos_q, start_q, chrom_q, inside_q, waiting_q, lines_q, c_chrom, not_end_q
+            pos_q,
+            start_q,
+            chrom_q,
+            inside_q,
+            waiting_q,
+            lines_q,
+            c_chrom,
+            not_end_q,
         )
         (pos_q, start_q, chrom_q, waiting_q, not_end_q) = new_q
         if waiting_d or waiting_q:

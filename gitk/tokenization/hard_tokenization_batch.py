@@ -6,9 +6,7 @@ import subprocess
 from gitk.tokenization import utils
 
 
-def bedtool_tokenization(
-    f, bedtool_path, data_folder, target_folder, universe, fraction
-):
+def bedtool_tokenization(f, bedtool_path, data_folder, target_folder, universe, fraction):
     fname = os.path.join(data_folder, f)
     temp = os.path.join(target_folder, f + "_sorted")
     target = os.path.join(target_folder, f)
@@ -16,17 +14,13 @@ def bedtool_tokenization(
         subprocess.run(shlex.split(f"sort -k1,1V -k2,2n {fname}"), stdout=f_temp)
     with open(target, "w") as f_target:
         subprocess.run(
-            shlex.split(
-                f"{bedtool_path} intersect -a {universe} -b {temp} -u -f {fraction} "
-            ),
+            shlex.split(f"{bedtool_path} intersect -a {universe} -b {temp} -u -f {fraction} "),
             stdout=f_target,
         )
     os.remove(temp)
 
 
-def generate_tokens(
-    raw_data_folder, token_folder, universe, file_list, bedtool, fraction
-):
+def generate_tokens(raw_data_folder, token_folder, universe, file_list, bedtool, fraction):
     """
     Perform hard tokenization on the bed files
     """
@@ -60,9 +54,7 @@ def generate_tokens(
         os.makedirs(token_folder)
         not_covered = all_set
     for f in not_covered:
-        bedtool_tokenization(
-            f, bedtool, raw_data_folder, token_folder, universe, fraction
-        )
+        bedtool_tokenization(f, bedtool, raw_data_folder, token_folder, universe, fraction)
     return 0
 
 

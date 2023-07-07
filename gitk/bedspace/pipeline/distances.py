@@ -96,9 +96,7 @@ def label_preprocessing(path_word_embedding, label_prefix):
     labels = []
     label_vectors = []
     word_embedding = pd.read_csv(path_word_embedding, sep="\t", header=None)
-    vectors = word_embedding[
-        word_embedding[0].str.contains(label_prefix)
-    ]  # .reset_index()
+    vectors = word_embedding[word_embedding[0].str.contains(label_prefix)]  # .reset_index()
     for l in range(len(vectors)):
         label_vectors.append((list(vectors.iloc[l])[1:]))
         labels.append(list(vectors.iloc[l])[0].replace(label_prefix, ""))
@@ -111,9 +109,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
     distance_matrix = distance.cdist(X_files, X_labels, "cosine")
     df_distance_matrix = pd.DataFrame(distance_matrix)
     df_distance_matrix.columns = y_labels
-    df_distance_matrix["file_label"] = [
-        y_files[i].split(",")[1] for i in range(len(y_files))
-    ]
+    df_distance_matrix["file_label"] = [y_files[i].split(",")[1] for i in range(len(y_files))]
     file_distance = pd.melt(
         df_distance_matrix,
         id_vars="file_label",
@@ -121,9 +117,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
         value_name="score",
     )
     scaler = MinMaxScaler()
-    file_distance["score"] = scaler.fit_transform(
-        np.array(file_distance["score"]).reshape(-1, 1)
-    )
+    file_distance["score"] = scaler.fit_transform(np.array(file_distance["score"]).reshape(-1, 1))
     return file_distance
 
 
@@ -141,9 +135,7 @@ def calculate_distance_qc(X_files, X_labels, y_files, y_labels):
         value_name="score",
     )
     scaler = MinMaxScaler()
-    file_distance["score"] = scaler.fit_transform(
-        np.array(file_distance["score"]).reshape(-1, 1)
-    )
+    file_distance["score"] = scaler.fit_transform(np.array(file_distance["score"]).reshape(-1, 1))
     return file_distance
 
 
@@ -206,17 +198,15 @@ def main(
 
     df_similarity = calculate_distance(Xs, embedding_labels, file_list, labels_l)
 
-    df_similarity["filename"] = [
-        file_list[i].split(",")[0] for i in range(len(file_list))
-    ] * len(labels_l)
+    df_similarity["filename"] = [file_list[i].split(",")[0] for i in range(len(file_list))] * len(
+        labels_l
+    )
 
     df_similarity = df_similarity[["filename", "file_label", "search_term", "score"]]
 
     # filter res by dist threshold
 
-    df_similarity = df_similarity[df_similarity["score"] > threshold].reset_index(
-        drop=True
-    )
+    df_similarity = df_similarity[df_similarity["score"] > threshold].reset_index(drop=True)
 
     df_similarity["score"] = 1 - df_similarity["score"]
 
@@ -229,9 +219,7 @@ def main(
 
     distance_file_path_rr = os.path.join(output, "similarity_score_rr.csv")
 
-    doc_embed_dB = bed2vec(
-        file_list_db, universe, input, "DB", temp_path, path_to_starsapce
-    )
+    doc_embed_dB = bed2vec(file_list_db, universe, input, "DB", temp_path, path_to_starsapce)
 
     db_vectors = data_preprocessing(doc_embed_dB)
 
@@ -241,9 +229,7 @@ def main(
 
     query_vectors = data_preprocessing(doc_embed_query)
 
-    df_similarity = calculate_distance_qc(
-        db_vectors, query_vectors, file_list_db, file_list_query
-    )
+    df_similarity = calculate_distance_qc(db_vectors, query_vectors, file_list_db, file_list_query)
 
     df_similarity = df_similarity[["db_file", "test_file", "score"]]
 

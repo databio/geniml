@@ -67,9 +67,7 @@ class PretrainedScembedModel:
         """
         return scembed.utils.load_scembed_model(path)
 
-    def encode(
-        self, data: Union[str, list[tuple[str, int, int]], sc.AnnData]
-    ) -> np.ndarray:
+    def encode(self, data: Union[str, list[tuple[str, int, int]], sc.AnnData]) -> np.ndarray:
         """
         Encode region sets data using the pretrained model.
         """
@@ -82,9 +80,7 @@ class PretrainedScembedModel:
         embeddings = []
         for region_set in tqdm(tokenized, total=len(tokenized)):
             if len(region_set) == 0:
-                raise ValueError(
-                    "Encountered empty region set. Please check your input."
-                )
+                raise ValueError("Encountered empty region set. Please check your input.")
             # compute embeddings using average pooling of all region embeddings
             embedding = np.mean(
                 [

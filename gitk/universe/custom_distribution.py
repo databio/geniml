@@ -208,9 +208,7 @@ class BetaHMM(BaseHMM):
         if self.beta_.shape != (self.n_components, n_features):
             raise ValueError("beta_ must have shape (n_components, n_features)")
         if self.alfa_.shape != self.beta_.shape:
-            raise ValueError(
-                "alfa_ and beta_ must have the same shape (n_components, n_features)"
-            )
+            raise ValueError("alfa_ and beta_ must have the same shape (n_components, n_features)")
         self.n_features = n_features
 
     def _generate_sample_from_state(self, state, random_state):
@@ -218,10 +216,7 @@ class BetaHMM(BaseHMM):
 
     def _compute_log_likelihood(self, X):
         return np.array(
-            [
-                np.sum(beta.logpdf(X, a, b), axis=1)
-                for a, b in zip(self.alfa_, self.beta_)
-            ]
+            [np.sum(beta.logpdf(X, a, b), axis=1) for a, b in zip(self.alfa_, self.beta_)]
         ).T
 
     def _compute_likelihood(self, X):

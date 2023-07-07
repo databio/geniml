@@ -56,9 +56,7 @@ def save_regions(inter_pos, chrom, bedname, track):
             if res != "empty":
                 save_start_e, save_end_s, save_start_s, save_end_e = res
                 save_end_e = save_end_e + [end_e]
-                for a, b, c, d in zip(
-                    save_start_e, save_end_s, save_start_s, save_end_e
-                ):
+                for a, b, c, d in zip(save_start_e, save_end_s, save_start_s, save_end_e):
                     if a != b:
                         val = 0
                         li = line.format(
