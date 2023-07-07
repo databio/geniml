@@ -141,7 +141,7 @@ class SCEmbed(Word2Vec):
         self,
         data: Union[sc.AnnData, str],
         epochs: int = DEFAULT_EPOCHS,  # training cycles
-        n_shuffles: int = DEAFULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
+        n_shuffles: int = DEFAULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
         gensim_epochs: Union[int, None] = DEFAULT_GENSIM_EPOCHS,
         report_loss: bool = True,
         lr: float = DEFAULT_INIT_LR,
