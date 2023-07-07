@@ -26,3 +26,11 @@ gitk <module> ...
 This is implemented within each module folder with:
 
 - `gitk/<module>/cli.py` - defines the command-line interface and provides a subparser for this module's CLI command.
+
+## How to add a new module
+
+To add a new module, you need to:
+
+1. create a subfolder (under `gitk/`) with your module name.
+2. Add the module to list of packages in `setup.py`.
+3. If it makes sense to have a CLI for this module, implement it in `gitk/<module_name>/cli.py`. Link this into the main cli by putting it under an appropriate command name following the pattern for other modules in `gitk/cli.py`.
