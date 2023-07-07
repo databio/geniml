@@ -20,7 +20,7 @@ def build_argparser():
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return argparse.ArgumentParser: Argument parser
     """
 
     banner = "%(prog)s - Genomic Interval toolkit"

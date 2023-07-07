@@ -2,7 +2,7 @@ def build_subparser(parser):
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return argparse.ArgumentParser: Argument parser
     """
     parser.add_argument(
         "--data-folder",

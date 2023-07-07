@@ -2,7 +2,7 @@ def build_subparser(parser):
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return argparse.ArgumentParser: Argument parser
     """
     parser.add_argument("--token-folder", type=str, help="path to tokenized files")
     parser.add_argument("--num-shuffle", type=int, help="number of shufflings/training epochs")

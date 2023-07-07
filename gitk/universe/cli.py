@@ -41,6 +41,9 @@ def build_subparser_cc(parser):
 
 
 def build_subparser(parser):
+    """
+    Parse command-line arguments passed to the pipeline.
+    """
     parser.add_argument(
         "--output-file",
         help="path to output, universe file",

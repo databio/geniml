@@ -1,8 +1,6 @@
 def build_subparser(parser):
     """
     Builds argument parser.
-
-    :return argparse.ArgumentParser
     """
 
     parser.add_argument(
