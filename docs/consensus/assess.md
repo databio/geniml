@@ -30,7 +30,7 @@ containing file name and results of chosen metrics
 First test checks how much of our file is present in the universe and how much 
 additional information is present in the univers. We can check that by adding ```--overlap``` to ```gitk assess ...```. In the result files it will output columns with: number of bp in univers but not in file, number of bp in file but not the univers, and number of bp both in univers and file
 
-We can also us it directly in python:
+We can also use it directly in python:
 
 ```
 from gitk.assess.intersection import run_intersection

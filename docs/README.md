@@ -2,7 +2,7 @@
 
 ## Introduction
 
-`gitk` is a suite of tools for apply machine learning approaches to genomic interval data. It is organized as a set of modules that provide related functions, such as building HMMs, assessing genomic interval universes, calculating likelihoods of consensus genomic interval sets, and computing single-cell clusters.
+`gitk` is a suite of tools for applying machine learning approaches to genomic interval data. It is organized as a set of modules that provide related functions, such as building HMMs, assessing genomic interval universes, calculating likelihoods of consensus genomic interval sets, and computing single-cell clusters.
 
 ## Install
 
