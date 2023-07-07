@@ -1,10 +1,11 @@
-# How to assess universe fit to collection of files?
-Given a universe it is important to assess it fit to collection of data. 
-We will use here universes produced [eriler](consensus-peaks.md). We can do it both from CLI and directly in python script. Both overlap and distance based assessments can be run using: ```gitk assess ...``` with appropriate flags that can be combined.
+# How to assess universe fit to collection of BED files
+
+Given a collection of genomic interval sets, and a proposed universe, we would like to assess how well the fits the genomic interval sets.
+We will use universes produced [earlier](consensus-peaks.md). We can assess fit either from CLI, or from within Python. Both overlap and distance based assessments can be run using: `gitk assess ...` with appropriate flags.
 
 ```
- gitk assess --assessmnet-method1 \
-             --assessmnet-method2 \
+ gitk assess --assessment-method1 \
+             --assessment-method2 \
              --...
              --raw-data-folder tests/consesnus/raw/\
              --file-list tests/consesnus/file_list.txt \
