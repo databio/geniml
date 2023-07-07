@@ -1,7 +1,10 @@
 # How to assess universe fit to collection of BED files
 
 Given a collection of genomic interval sets, and a proposed universe, we would like to assess how well the fits the genomic interval sets.
-We will use universes produced [earlier](consensus-peaks.md). We can assess fit either from CLI, or from within Python. Both overlap and distance based assessments can be run using: `gitk assess ...` with appropriate flags.
+We will use universes produced [earlier](consensus-peaks.md). This module provides several complementary methods to assess fit.
+
+
+We can assess fit either from CLI, or from within Python. Both overlap and distance based assessments can be run using: `gitk assess ...` with appropriate flags.
 
 ```
  gitk assess --assessment-method1 \
@@ -27,11 +30,11 @@ containing file name and results of chosen metrics
 - ``--no-workers``, takes the number of workers that should be used
 - ``--save-each``, is a flag that specifies whether to save between the closest peaks to file
 
-## Base-level  overlap measure
-First test checks how much of our file is present in the universe and how much 
-additional information is present in the univers. We can check that by adding ```--overlap``` to ```gitk assess ...```. In the result files it will output columns with: number of bp in univers but not in file, number of bp in file but not the univers, and number of bp both in univers and file
+## Base-level overlap measure
 
-We can also use it directly in python:
+First test checks how much of our file is present in the universe and how much additional information is present in the universe. We can check that by adding ```--overlap``` to ```gitk assess ...```. In the result files it will output columns with: number of bp in universe but not in file, number of bp in file but not the universe, and number of bp both in universe and file.
+
+We can also use it directly from Python like this:
 
 ```
 from gitk.assess.intersection import run_intersection
@@ -41,7 +44,8 @@ run_intersection("test/consesnus/raw/",
                         "tests/consenus/universe/universe.bed",
                         no_workers=1)
 ```
-or we can calculate F10 score of the universe using:
+
+Or, we can calculate F10 score of the universe using:
 
 ```
 from gitk.assess.intersection import get_f_10_score
@@ -53,7 +57,8 @@ get_f_10_score("test/consesnus/raw/",
 ```
 
 ## Region boundary distance measure
-Next, we can calculate the distance between query and universe. To do tat we can choose from :
+
+Next, we can calculate the distance between query and universe. To do that we can choose from :
  - ```distance``` - calculates distance from region in query to the nearest region in the universe
  - ```distance-universe-to-file```- calculates distance from region in query to the nearest region in the universe accounting for universe flexibility
  - ```distance-flexible``` - calculates distance from region in universe to the nearest region in the query
