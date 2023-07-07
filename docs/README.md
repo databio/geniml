@@ -13,6 +13,8 @@ pip install --user --upgrade .
 ## gitk modules
 
 - [gitk/hmm](gitk/hmm) - Building HMMs
+- [gitk/bedspace](bedspace/bedspace.md) - BEDSpace
+- [gitk/region2vec](region2vec/region2vec.md) - region2vec
 - [gitk/assess](gitk/assess) - Assess universe fit
 - [gitk/likelihood](gitk/likelihood) - Calculate likelihood of universe
 - [gitk/scembed](gitk/scembed) - Compute single-cell clusters from a cell-feature matrix using Word2Vec

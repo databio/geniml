@@ -3,11 +3,8 @@
 `bedspace` uses the StarSpace method (Wu et al., 2018) to jointly embed genomic interval regions sets with associated metadata into a shared latent embedding space. This facilitates fast search and retrieval of similar region sets and their associated metadata.
 
 ## Installation
-`bedspace` is a part of the `gitk` package, which can be installed from PyPI using `pip install gitk`. To ensure that everything is working correctly, run the following command:
 
-```
-python -c "from gitk import bedspace"
-```
+`bedspace` comes installed as a module of `gitk`. To ensure that everything is working correctly, run: `python -c "from gitk import bedspace"`.
 
 ## Usage
 There are four main commands in `bedspace`:

@@ -1,4 +1,5 @@
 # scEmbed
+
 `scEmbed` is a single-cell implementation of `Region2Vec`: a method to represent genomic region sets as vectors, or embeddings, using an adapted word2vec approach. `scEmbed` allows for dimensionality reduction and feature selection of single-cell ATAC-seq data; a notoriously sparse and high-dimensional data type. We intend for `scEmbed` to be used with the [`scanpy`](https://scanpy.readthedocs.io/en/stable/) package. As such, it natively accepts `AnnData` objects as input and returns `AnnData` objects as output.
 
 ## Installation
