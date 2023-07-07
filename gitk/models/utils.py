@@ -49,7 +49,7 @@ def validate_region_input(
 
     :param regions: The regions to use for tokenization. This can be thought of as a vocabulary.
                     This can be either a list of regions or a path to a BED file containing regions.
-    :return A list of tuples of chr, start, end.
+    :return list: A list of tuples of chr, start, end.
     """
     # check for bedfile
     if isinstance(regions, str):

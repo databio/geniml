@@ -31,5 +31,5 @@ plugins:
       jupyter_source: "docs_jupyter"
       jupyter_build: "docs_jupyter/build"
       autodoc_package: "gitk"
-      no_top_level: true
+      no_top_level: false
   - search

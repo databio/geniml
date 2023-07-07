@@ -2,7 +2,7 @@ def build_subparser_gdst(parser):
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return argparse.ArgumentParser: Argument parser
     """
 
     parser.add_argument(
@@ -32,7 +32,7 @@ def build_subparser_npt(parser):
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return argparse.ArgumentParser: Argument parser
     """
     parser.add_argument(
         "--model-path",
@@ -67,7 +67,7 @@ def build_subparser_ctt(parser):
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return argparse.ArgumentParser: Argument parser
     """
     parser.add_argument(
         "--model-path",
@@ -103,7 +103,7 @@ def build_subparser_rct(parser):
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return argparse.ArgumentParser: Argument parser
     """
     parser.add_argument(
         "--model-path",
@@ -156,7 +156,7 @@ def build_subparser_bingen(parser):
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser
+    :return argparse.ArgumentParser: Argument parser
     """
     parser.add_argument(
         "--universe",
