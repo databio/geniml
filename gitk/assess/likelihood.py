@@ -98,9 +98,7 @@ def calc_likelihood_hard(
         model_lh.read_chrom_track(i, name)
         prob_model = model_lh[i]
         cove_array = read_chromosome_from_bw(
-            os.path.join(
-                coverage_folder, f"{coverage_prefix}_{name}.bw"
-            ),
+            os.path.join(coverage_folder, f"{coverage_prefix}_{name}.bw"),
             i,
         )
         prob_array = LhModel(prob_model[name], cove_array)
@@ -237,7 +235,6 @@ def likelihood_flexible_universe(
     check_if_uni_flexible(universe)
     model_lh = ModelLH(model_file)
     chroms = model_lh.chromosomes_list
-    print(chroms)
     done_chroms = []
     output = []
     e = 0  # number of processed chromosomes
@@ -321,9 +318,7 @@ def likelihood_flexible_universe(
             model_lh.read_chrom_track(i, name)
             prob_model = model_lh[i]
             cove_array = read_chromosome_from_bw(
-                os.path.join(
-                    cove_folder, f"{cove_prefix}_{name}.bw"
-                ),
+                os.path.join(cove_folder, f"{cove_prefix}_{name}.bw"),
                 i,
             )
             prob_array = LhModel(prob_model[name], cove_array)
