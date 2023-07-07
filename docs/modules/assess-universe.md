@@ -1,6 +1,6 @@
 # How to assess universe fit to collection of BED files
 
-Given a collection of genomic interval sets, and a proposed universe, we would like to assess how well the fits the genomic interval sets.
+Given a collection of genomic interval sets, and a proposed universe, we would like to assess how well the universe fits the genomic interval sets.
 We will use universes produced [earlier](consensus-peaks.md). This module provides several complementary methods to assess fit.
 
 
