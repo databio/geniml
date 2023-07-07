@@ -15,12 +15,15 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from ..utils import timer_func
-from .utils import Timer, cosine_distance, genome_distance, load_genomic_embeddings
+from .utils import (
+    Timer,
+    cosine_distance,
+    genome_distance,
+    load_genomic_embeddings,
+)
 
 
-def get_rct_score(
-    path, embed_type, bin_path, out_dim=-1, cv_num=5, seed=42, num_workers=10
-):
+def get_rct_score(path, embed_type, bin_path, out_dim=-1, cv_num=5, seed=42, num_workers=10):
     embed_rep, vocab = load_genomic_embeddings(path, embed_type)
     embed_bin, vocab_bin = load_genomic_embeddings(bin_path, "base")
     region2idx = {r: i for i, r in enumerate(vocab)}
@@ -56,20 +59,14 @@ def get_rct_score(
     kf = KFold(n_splits=cv_num, shuffle=True, random_state=seed)
     if num_workers > cv_num:
         num_workers = cv_num
-    score = cross_val_score(
-        model, embed_rep, embed_bin, cv=kf, n_jobs=num_workers, verbose=0
-    )
+    score = cross_val_score(model, embed_rep, embed_bin, cv=kf, n_jobs=num_workers, verbose=0)
     return score.mean()
 
 
-def reconstruction_batch(
-    batch, cv_num, out_dim=-1, seed=42, save_path=None, num_workers=10
-):
+def reconstruction_batch(batch, cv_num, out_dim=-1, seed=42, save_path=None, num_workers=10):
     rct_arr = []
     for path, embed_type, bin_path in batch:
-        score = get_rct_score(
-            path, embed_type, bin_path, out_dim, cv_num, seed, num_workers
-        )
+        score = get_rct_score(path, embed_type, bin_path, out_dim, cv_num, seed, num_workers)
         rct_arr.append((path, score))
     if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -89,12 +86,8 @@ def rct_eval(
     results_seeds = []
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")
-        save_path = (
-            os.path.join(save_folder, f"rct_eval_seed{seed}") if save_folder else None
-        )
-        result_list = reconstruction_batch(
-            batch, cv_num, out_dim, seed, save_path, num_workers
-        )
+        save_path = os.path.join(save_folder, f"rct_eval_seed{seed}") if save_folder else None
+        result_list = reconstruction_batch(batch, cv_num, out_dim, seed, save_path, num_workers)
         results_seeds.append(result_list)
 
     rct_res = [[] for i in range(len(batch))]

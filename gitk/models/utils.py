@@ -55,9 +55,7 @@ def validate_region_input(
     if isinstance(regions, str):
         # ensure that the file exists
         if not os.path.exists(regions):
-            raise FileNotFoundError(
-                f"Could not find file {regions} containing regions."
-            )
+            raise FileNotFoundError(f"Could not find file {regions} containing regions.")
         file = regions  # rename for clarity
         regions = []
         with open(file, "r") as f:
@@ -110,9 +108,7 @@ def generate_var_conversion_map(
         overlaps = b.query(region)
         region_str = f"{region[0]}_{region[1]}_{region[2]}"
         if len(overlaps) > 0:
-            olap = overlaps[
-                0
-            ]  # take the first overlap for now, we can change this later
+            olap = overlaps[0]  # take the first overlap for now, we can change this later
             olap_str = f"{olap[0]}_{olap[1]}_{olap[2]}"
             conversion_map[region_str] = olap_str
         else:
@@ -135,9 +131,7 @@ def convert_to_universe(adata: sc.AnnData, universe: "Universe") -> sc.AnnData:
     """
     # ensure adata has chr, start, and end
     if not all([x in adata.var.columns for x in ["chr", "start", "end"]]):
-        raise ValueError(
-            "AnnData object must have `chr`, `start`, and `end` columns in .var"
-        )
+        raise ValueError("AnnData object must have `chr`, `start`, and `end` columns in .var")
 
     # create list of regions from adata
     query_set: List[tuple[str, int, int]] = adata.var.apply(

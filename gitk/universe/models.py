@@ -60,7 +60,8 @@ class PoissonModel(Model):
         if save_matrix:
             super().save_tras(out_folder)
             np.savetxt(
-                os.path.join(out_folder, "lambdas_matrix.csv"), self.lambdas_matrix
+                os.path.join(out_folder, "lambdas_matrix.csv"),
+                self.lambdas_matrix,
             )
 
         self.model = hmm.PoissonHMM(
@@ -106,7 +107,8 @@ class GaussianModel(Model):
         if save_matrix:
             super().save_tras(out_folder)
             np.savetxt(
-                os.path.join(out_folder, "covars_matrix.csv"), self.covars_matrix
+                os.path.join(out_folder, "covars_matrix.csv"),
+                self.covars_matrix,
             )
             np.savetxt(os.path.join(out_folder, "means_matrix.csv"), self.means_matrix)
 
@@ -155,7 +157,8 @@ class NBModel(Model):
         if save_matrix:
             super().save_tras(out_folder)
             np.savetxt(
-                os.path.join(failures_matrix, "failures_matrix.csv"), self.covars_matrix
+                os.path.join(failures_matrix, "failures_matrix.csv"),
+                self.covars_matrix,
             )
             np.savetxt(os.path.join(out_folder, "prob_matrix.csv"), self.prob_matrix)
 

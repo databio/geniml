@@ -53,9 +53,7 @@ def label_preprocessing(path_word_embedding, label_prefix):
     labels = []
     label_vectors = []
     word_embedding = pd.read_csv(path_word_embedding, sep="\t", header=None)
-    vectors = word_embedding[
-        word_embedding[0].str.contains(label_prefix)
-    ]  # .reset_index()
+    vectors = word_embedding[word_embedding[0].str.contains(label_prefix)]  # .reset_index()
     for l in range(len(vectors)):
         label_vectors.append((list(vectors.iloc[l])[1:]))
         labels.append(list(vectors.iloc[l])[0].replace(label_prefix, ""))
@@ -76,9 +74,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels):
         value_name="score",
     )
     scaler = MinMaxScaler()
-    file_distance["score"] = scaler.fit_transform(
-        np.array(file_distance["score"]).reshape(-1, 1)
-    )
+    file_distance["score"] = scaler.fit_transform(np.array(file_distance["score"]).reshape(-1, 1))
     return file_distance
 
 
@@ -157,14 +153,10 @@ def main():
 
     # define file path
     model = os.path.join(args.output_path, "starspace_model_{}".format(assembly))
-    label_embed = os.path.join(
-        args.output_path, "starspace_model_{}.tsv".format(assembly)
-    )
+    label_embed = os.path.join(args.output_path, "starspace_model_{}.tsv".format(assembly))
     docs = os.path.join(args.output_path, "documents_{}.txt".format(assembly))
     #     files = os.path.join(args.output_path, "filenames_{}.txt".format(assembly))
-    doc_embed = os.path.join(
-        args.output_path, "train_starspace_embed_{}.txt".format(assembly)
-    )
+    doc_embed = os.path.join(args.output_path, "train_starspace_embed_{}.txt".format(assembly))
     dist = os.path.join(args.output_path, "similarity_score_{}.csv".format(assembly))
 
     embedding_labels, labels = label_preprocessing(label_embed, label_prefix)
@@ -172,9 +164,7 @@ def main():
     # Data prepration
     trained_documents = []
     with Pool(n_process) as p:
-        trained_documents = p.starmap(
-            data_prepration_test, [(x, universe) for x in file_list]
-        )
+        trained_documents = p.starmap(data_prepration_test, [(x, universe) for x in file_list])
         p.close()
         p.join()
     print("Reading files done")
@@ -212,15 +202,11 @@ def main():
 
         df_similarity["filename"] = [file_list[i].split(",")[0]] * len(labels)
 
-        df_similarity = df_similarity[
-            ["filename", "file_label", "search_term", "score"]
-        ]
+        df_similarity = df_similarity[["filename", "file_label", "search_term", "score"]]
 
         # filter res by dist threshold
         thresh = 0.5
-        df_similarity = df_similarity[df_similarity["score"] < thresh].reset_index(
-            drop=True
-        )
+        df_similarity = df_similarity[df_similarity["score"] < thresh].reset_index(drop=True)
 
         if os.path.exists(dist):
             df_similarity.to_csv(dist, header=False, index=None, mode="a")

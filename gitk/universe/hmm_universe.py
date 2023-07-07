@@ -135,7 +135,11 @@ def hmm_universe(
         if chroms[C] > 0:
             pred, m = run_hmm(start, core, end, C, normalize=normalize)
             predictions_to_bed(
-                pred, C, out_file, save_max_cove=save_max_cove, cove_file=core + ".bw"
+                pred,
+                C,
+                out_file,
+                save_max_cove=save_max_cove,
+                cove_file=core + ".bw",
             )
 
 

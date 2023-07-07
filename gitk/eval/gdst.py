@@ -13,7 +13,12 @@ from gensim.models import Word2Vec
 from sklearn.linear_model import LinearRegression
 
 from .const import *
-from .utils import Timer, cosine_distance, genome_distance, load_genomic_embeddings
+from .utils import (
+    Timer,
+    cosine_distance,
+    genome_distance,
+    load_genomic_embeddings,
+)
 
 
 def sample_from_vocab(vocab, num_samples, seed=42):
@@ -135,9 +140,7 @@ def writer_multiprocessing(save_path, num, q):
     return results
 
 
-def get_gdst_score_batch(
-    batch, num_samples=10000, seed=42, save_path=None, num_workers=1
-):
+def get_gdst_score_batch(batch, num_samples=10000, seed=42, save_path=None, num_workers=1):
     if num_workers <= 1:
         gds_arr = []
         for path, embed_type in batch:
@@ -152,9 +155,7 @@ def get_gdst_score_batch(
         manager = mp.Manager()
         queue = manager.Queue()
         with mp.Pool(processes=num_workers) as pool:
-            writer = pool.apply_async(
-                writer_multiprocessing, (save_path, len(batch), queue)
-            )
+            writer = pool.apply_async(writer_multiprocessing, (save_path, len(batch), queue))
             all_processes = []
             for i, (path, embed_type) in enumerate(batch):
                 process = pool.apply_async(
@@ -180,12 +181,8 @@ def gdst_eval(
     results_seeds = []
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")
-        save_path = (
-            os.path.join(save_folder, f"gdst_eval_seed{seed}") if save_folder else None
-        )
-        result_list = get_gdst_score_batch(
-            batch, num_samples, seed, save_path, num_workers
-        )
+        save_path = os.path.join(save_folder, f"gdst_eval_seed{seed}") if save_folder else None
+        result_list = get_gdst_score_batch(batch, num_samples, seed, save_path, num_workers)
         results_seeds.append(result_list)
 
     gds_res = [[] for i in range(len(batch))]
@@ -198,8 +195,6 @@ def gdst_eval(
     std_gds = [np.array(r).std() for r in gds_res]
     models = [t[0] for t in batch]
     for i in range(len(mean_gds)):
-        print(
-            f"{batch[i][0]}\n GDST score (std): {mean_gds[i]:.4f} ({std_gds[i]:.4f}) \n"
-        )
+        print(f"{batch[i][0]}\n GDST score (std): {mean_gds[i]:.4f} ({std_gds[i]:.4f}) \n")
     gds_arr = [(batch[i][0], gds_res[i]) for i in range(len(batch))]
     return gds_arr

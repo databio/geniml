@@ -74,9 +74,7 @@ class Universe:
 
     def query(
         self,
-        regions: Union[
-            str, List[str], List[tuple[str, int, int]], tuple[str, int, int]
-        ],
+        regions: Union[str, List[str], List[tuple[str, int, int]], tuple[str, int, int]],
     ):
         """
         Query the interval tree for the given regions.
@@ -104,9 +102,7 @@ class Universe:
     def __contains__(self, item: tuple[str, int, int]):
         # ensure item is a tuple of chr, start, end
         if not ((isinstance(item, tuple) or isinstance(item, list)) and len(item) == 3):
-            raise ValueError(
-                "The item to check for must be a tuple of chr, start, end."
-            )
+            raise ValueError("The item to check for must be a tuple of chr, start, end.")
 
         chr, start, end = item
         start = int(start)
@@ -173,9 +169,7 @@ class HardTokenizer(Tokenizer):
         :return: A list of lists of regions.
         """
         regions = validate_region_input(data)
-        tokens = [
-            "_".join([str(h) for h in hit]) for hit in self._universe.query(regions)
-        ]
+        tokens = ["_".join([str(h) for h in hit]) for hit in self._universe.query(regions)]
         return tokens
 
     def _tokenize_list(self, data: List[str]) -> List[List[str]]:

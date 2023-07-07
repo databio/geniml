@@ -71,9 +71,7 @@ def get_pca_embeddings(bin_embed_obj, dim, kwargs={}):
 def get_umap_embeddings(bin_embed_obj, dim, kwargs={}):
     import umap
 
-    embeds = umap.UMAP(n_components=dim, **kwargs).fit_transform(
-        bin_embed_obj.embeddings
-    )
+    embeds = umap.UMAP(n_components=dim, **kwargs).fit_transform(bin_embed_obj.embeddings)
     umap_embed_obj = BaseEmbeddings(embeds, bin_embed_obj.vocab)
     return umap_embed_obj
 

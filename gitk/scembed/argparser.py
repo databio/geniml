@@ -38,8 +38,7 @@ def build_argparser(parser: VersionInHelpParser = None):
         "--noreads",
         dest="noreads",
         default=2,
-        help="Minimum number of reads that overlap a region "
-        "for that region to be included.",
+        help="Minimum number of reads that overlap a region " "for that region to be included.",
     )
 
     parser.add_argument(

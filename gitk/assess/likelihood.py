@@ -71,9 +71,7 @@ def calc_likelihood_hard(
                         model_lh.read_chrom_track(current_chrom, name)
                         prob_model = model_lh[current_chrom]
                         cove_array = read_chromosome_from_bw(
-                            os.path.join(
-                                coverage_folder, f"{coverage_prefix}_{name}.bw"
-                            ),
+                            os.path.join(coverage_folder, f"{coverage_prefix}_{name}.bw"),
                             current_chrom,
                         )
                         prob_array = LhModel(prob_model[name], cove_array)
@@ -126,7 +124,14 @@ def hard_universe_likelihood(model, universe, coverage_folder, coverage_prefix):
         universe, chroms, model_lh, coverage_folder, coverage_prefix, "end", 2
     )
     c = calc_likelihood_hard(
-        universe, chroms, model_lh, coverage_folder, coverage_prefix, "core", 1, 2
+        universe,
+        chroms,
+        model_lh,
+        coverage_folder,
+        coverage_prefix,
+        "core",
+        1,
+        2,
     )
     return sum([s, e, c])
 
@@ -144,7 +149,14 @@ def likelihood_only_core(model_file, universe, coverage_folder, coverage_prefix)
     model_lh = ModelLH(model_file)
     chroms = model_lh.chromosomes_list
     c = calc_likelihood_hard(
-        universe, chroms, model_lh, coverage_folder, coverage_prefix, "core", 1, 2
+        universe,
+        chroms,
+        model_lh,
+        coverage_folder,
+        coverage_prefix,
+        "core",
+        1,
+        2,
     )
     return c
 
@@ -171,9 +183,7 @@ def weigh_livelihood(start, end, model_process, model_cove, model_out, reverse):
     :return float: likelihood of flexible part of the region
     """
     e_w = 1 / (end - start)  # weights for processed model
-    c_w = np.linspace(
-        start=e_w, stop=1, num=(end - start)
-    )  # weights for core in processed region
+    c_w = np.linspace(start=e_w, stop=1, num=(end - start))  # weights for core in processed region
     if reverse:
         c_w = c_w[::-1]
     res = e_w * np.sum(model_process[start:end, 1])
@@ -184,9 +194,7 @@ def weigh_livelihood(start, end, model_process, model_cove, model_out, reverse):
     return res
 
 
-def flexible_peak_likelihood(
-    start_s, start_e, end_s, end_e, model_start, model_cove, model_end
-):
+def flexible_peak_likelihood(start_s, start_e, end_s, end_e, model_start, model_cove, model_end):
     # core part of the peak
     res = np.sum(model_cove[start_e:end_s, 1])
     res += np.sum(model_start[start_e:end_s, 0])
@@ -264,16 +272,10 @@ def likelihood_flexible_universe(
                         e += 1
                         model_lh.read_chrom(current_chrom)
                         models_current = model_lh[current_chrom]
-                        cove_current = read_coverage(
-                            cove_folder, cove_prefix, current_chrom
-                        )
+                        cove_current = read_coverage(cove_folder, cove_prefix, current_chrom)
                         chr_size = len(cove_current["start"])
-                        prob_start = LhModel(
-                            models_current["start"], cove_current["start"]
-                        )
-                        prob_core = LhModel(
-                            models_current["core"], cove_current["core"]
-                        )
+                        prob_start = LhModel(models_current["start"], cove_current["start"])
+                        prob_core = LhModel(models_current["core"], cove_current["core"])
                         prob_end = LhModel(models_current["end"], cove_current["end"])
 
                     else:
@@ -304,9 +306,7 @@ def likelihood_flexible_universe(
                 output.append("{}\t{}\n".format(line.strip("\n"), contribution))
             empty_start = peak_end_e
 
-        res += background_likelihood(
-            empty_start, chr_size, prob_start, prob_core, prob_end
-        )
+        res += background_likelihood(empty_start, chr_size, prob_start, prob_core, prob_end)
         if save_peak_input:
             print("saving")
             with open(universe + "_peak_likelihood", "w") as f:

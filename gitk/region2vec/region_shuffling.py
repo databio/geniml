@@ -103,9 +103,7 @@ def main(args):
             matrix = pickle.load(f)
         dataset = MatrixDataset(matrix)
     pool = args.pool
-    utils.log(
-        f"[{worker_id}] Creating shuffled datasets in \033[93m{DATA_FOLDER}\033[00m"
-    )
+    utils.log(f"[{worker_id}] Creating shuffled datasets in \033[93m{DATA_FOLDER}\033[00m")
 
     for i in range(pool):
         name_used = os.path.join(DATA_FOLDER, f"pool{worker_id}-{i}used")
@@ -161,11 +159,10 @@ if __name__ == "__main__":
     parser.add_argument("--file-list", help="path to a file list")
     parser.add_argument("--tokenization-mode", help="tokenization mode")
     parser.add_argument(
-        "--tokenization-folder", help="path to the folder that saves tokenized regions"
+        "--tokenization-folder",
+        help="path to the folder that saves tokenized regions",
     )
-    parser.add_argument(
-        "--save-dir", help="parent folder to generated shuffled datasets"
-    )
+    parser.add_argument("--save-dir", help="parent folder to generated shuffled datasets")
     parser.add_argument(
         "--pool",
         type=int,
@@ -179,7 +176,10 @@ if __name__ == "__main__":
         help="used in the parallel mode",
     )
     parser.add_argument(
-        "--number", type=int, default=1000, help="number of shuffling the whole dataset"
+        "--number",
+        type=int,
+        default=1000,
+        help="number of shuffling the whole dataset",
     )
 
     args = parser.parse_args()

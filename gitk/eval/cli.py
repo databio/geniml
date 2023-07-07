@@ -11,9 +11,7 @@ def build_subparser_gdst(parser):
         type=str,
         help="path to a Region2Vec model or a Base model",
     )
-    parser.add_argument(
-        "--embed-type", required=True, type=str, help="region2vec or base"
-    )
+    parser.add_argument("--embed-type", required=True, type=str, help="region2vec or base")
     parser.add_argument(
         "--num-samples",
         default=10000,
@@ -42,12 +40,8 @@ def build_subparser_npt(parser):
         type=str,
         help="path to a region2vec model or a Base model",
     )
-    parser.add_argument(
-        "--embed-type", required=True, type=str, help="region2vec or base"
-    )
-    parser.add_argument(
-        "--K", required=True, type=int, help="number of nearest regions"
-    )
+    parser.add_argument("--embed-type", required=True, type=str, help="region2vec or base")
+    parser.add_argument("--K", required=True, type=int, help="number of nearest regions")
     parser.add_argument(
         "--num-samples",
         default=1000,
@@ -81,9 +75,7 @@ def build_subparser_ctt(parser):
         type=str,
         help="path to a region2vec model or a Base model",
     )
-    parser.add_argument(
-        "--embed-type", required=True, type=str, help="region2vec or base"
-    )
+    parser.add_argument("--embed-type", required=True, type=str, help="region2vec or base")
 
     parser.add_argument(
         "--num-samples",

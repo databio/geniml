@@ -32,13 +32,17 @@ def run_scenario1(
     search_table = pd.pivot_table(
         distance, values="score", index=["filename"], columns=["search_term"]
     ).reset_index()
-    df = search_table[["filename", searchterm]].sort_values(
-        by=[searchterm], ascending=False
-    )[0:num_results]
+    df = search_table[["filename", searchterm]].sort_values(by=[searchterm], ascending=False)[
+        0:num_results
+    ]
     df = df.sort_values(by=[searchterm], ascending=True)
     df["color"] = "green"
     plt = df.plot.barh(
-        x="filename", y=searchterm, figsize=(6, 4), fontsize=10, color=list(df["color"])
+        x="filename",
+        y=searchterm,
+        figsize=(6, 4),
+        fontsize=10,
+        color=list(df["color"]),
     )
     plt.set_xlabel("Similarity", fontsize=10)
     plt.set_ylabel("File_name", fontsize=10)
@@ -79,7 +83,11 @@ def run_scenario2(
 
     df["color"] = "green"
     plt = df.plot.barh(
-        x="search_term", y="score", figsize=(6, 4), fontsize=10, color=list(df["color"])
+        x="search_term",
+        y="score",
+        figsize=(6, 4),
+        fontsize=10,
+        color=list(df["color"]),
     )
     plt.set_xlabel("Similarity", fontsize=10)
     plt.set_ylabel("Ranked labels", fontsize=10)
@@ -124,7 +132,11 @@ def run_scenario3(
 
     df["color"] = "green"
     plt = df.plot.barh(
-        x="db_file", y="score", figsize=(6, 4), fontsize=10, color=list(df["color"])
+        x="db_file",
+        y="score",
+        figsize=(6, 4),
+        fontsize=10,
+        color=list(df["color"]),
     )
     plt.set_xlabel("Similarity", fontsize=10)
     plt.set_ylabel("Files in db", fontsize=10)

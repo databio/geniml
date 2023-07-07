@@ -4,7 +4,9 @@ from ._version import __version__
 from .const import *
 
 
-def build_preprocess_argparser(parser: VersionInHelpParser) -> VersionInHelpParser:
+def build_preprocess_argparser(
+    parser: VersionInHelpParser,
+) -> VersionInHelpParser:
     parser.add_argument(
         "-i",
         "--input",
@@ -12,9 +14,7 @@ def build_preprocess_argparser(parser: VersionInHelpParser) -> VersionInHelpPars
         help="Path to input bed files",
     )
 
-    parser.add_argument(
-        "-m", "--metadata", dest="metadata", help="Path to metadata file"
-    )
+    parser.add_argument("-m", "--metadata", dest="metadata", help="Path to metadata file")
 
     parser.add_argument(
         "-u",
@@ -85,7 +85,9 @@ def build_train_argparser(parser: VersionInHelpParser) -> VersionInHelpParser:
     )
 
 
-def build_distance_argparser(parser: VersionInHelpParser) -> VersionInHelpParser:
+def build_distance_argparser(
+    parser: VersionInHelpParser,
+) -> VersionInHelpParser:
     parser.add_argument(
         "-i",
         "--input",
