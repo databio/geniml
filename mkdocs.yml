@@ -8,13 +8,13 @@ nav:
   - Getting Started: 
     - Introduction: README.md
   - Modules:
-    - Assess universe: modules/assess_universe.md
+    - Assess universe: modules/assess-universe.md
     - BEDSpace: modules/bedspace.md
     - Evaluate embeddings: modules/evaluation.md
     - Region2Vec: modules/region2vec.md
     - Single-cell embeddings: modules/scembed.md
     - Tokenization: modules/tokenization.md
-    - Create universe: modules/create_universe.md
+    - Build universe: modules/build-universe.md
   - How-to guides:    
     - Create consensus peaks: tutorials/create-consensus-peaks.md
   - Reference:
