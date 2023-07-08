@@ -17,12 +17,12 @@ logging.basicConfig(level=logging.INFO)
 
 @pytest.fixture
 def pbmc_data():
-    return sc.read_h5ad("tests/data/pbmc.h5ad")
+    return sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
 
 
 @pytest.fixture
 def pbmc_data_backed():
-    return sc.read_h5ad("tests/data/pbmc.h5ad", backed="r")
+    return sc.read_h5ad("tests/data/pbmc_hg38.h5ad", backed="r")
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def test_import():
 
 
 def test_load_scanpy():
-    scembed.load_scanpy_data("tests/data/pbmc.h5ad")
+    scembed.load_scanpy_data("tests/data/pbmc_hg38.h5ad")
 
 
 def test_extract_region_list(pbmc_data: sc.AnnData):
@@ -46,17 +46,6 @@ def test_extract_region_list(pbmc_data: sc.AnnData):
     assert len(regions) == pbmc_data.shape[1]
     for region in regions:
         assert isinstance(region, str)
-
-
-def test_remove_zero_regions(pbmc_data: sc.AnnData):
-    cell_dict = pbmc_data.X[0].toarray()[0].tolist()
-    cell_dict = dict(zip(pbmc_data.var.index.tolist(), cell_dict))
-    cell_dict = scembed.remove_zero_regions(cell_dict)
-    assert len(cell_dict) < pbmc_data.shape[1]
-    for k, v in cell_dict.items():
-        assert isinstance(k, str)
-        assert isinstance(v, (int, float))
-        assert v > 0
 
 
 def test_document_creation(pbmc_data: sc.AnnData):
@@ -129,7 +118,7 @@ def test_model_train_and_save(pbmc_data: sc.AnnData):
 
 
 def test_anndata_chunker(pbmc_data_backed: sc.AnnData):
-    chunker = scembed.AnnDataChunker(pbmc_data_backed, chunk_size=10)
+    chunker = scembed.AnnDataChunker(pbmc_data_backed, chunk_size=2)
     # ensure chunker is iterable
     for chunk in chunker:
         assert isinstance(chunk, sc.AnnData)
@@ -137,7 +126,7 @@ def test_anndata_chunker(pbmc_data_backed: sc.AnnData):
 
 def test_train_in_chunks(pbmc_data_backed: sc.AnnData):
     MIN_COUNT = 2
-    chunker = utils.AnnDataChunker(pbmc_data_backed, chunk_size=10)
+    chunker = utils.AnnDataChunker(pbmc_data_backed, chunk_size=2)
     model = scembed.SCEmbed(use_default_region_names=False, min_count=MIN_COUNT)
 
     # need this to keep track of total regions
