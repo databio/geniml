@@ -108,8 +108,10 @@ class AnnDataChunker:
 
     def __iter__(self):
         for i in range(self.n_chunks):
-            chunk = self.adata[i * self.chunk_size : (i + 1) * self.chunk_size, :]
-            yield chunk.to_memory()
+            # check for shape = 0
+            if self.adata[i * self.chunk_size : (i + 1) * self.chunk_size, :].shape[0] == 0:
+                return
+            yield self.adata[i * self.chunk_size : (i + 1) * self.chunk_size, :]
 
     def __len__(self):
         return self.n_chunks
