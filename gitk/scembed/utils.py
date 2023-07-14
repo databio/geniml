@@ -1,13 +1,12 @@
 import os
 import shutil
 import subprocess
-
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from logging import getLogger
 from random import shuffle
-from typing import TYPE_CHECKING, Dict, List, Union, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -44,6 +43,13 @@ class LearningRateScheduler:
         decay: float = None,
         n_epochs: int = None,
     ):
+        """
+        :param float init_lr: The initial learning rate
+        :param float min_lr: The minimum learning rate
+        :param str type: The type of learning rate schedule to use. Must be one of ['linear', 'exponential'].
+        :param float decay: The decay rate to use. If None, this will be calculated from init_lr and n_epochs.
+        :param int n_epochs: The number of epochs to train for. Only used if decay is None.
+        """
         self.init_lr = init_lr
         self.min_lr = min_lr
         self.n_epochs = n_epochs
@@ -71,10 +77,21 @@ class LearningRateScheduler:
             self.decay = decay
 
     def _update_linear(self, epoch: int):
+        """
+        Update the learning rate using a linear schedule.
+
+        :param int epoch: The current epoch
+        """
+
         lr = self.init_lr - (self.decay * epoch)
         return max(lr, self.min_lr)
 
     def _update_exponential(self, epoch: int):
+        """
+        Update the learning rate using an exponential schedule.
+
+        :param int epoch: The current epoch
+        """
         lr = self.get_lr() * (1 / (1 + self.decay * epoch))
         return max(lr, self.min_lr)
 
@@ -99,8 +116,8 @@ class AnnDataChunker:
         Simple class to chunk an AnnData object into smaller pieces. Useful for
         training on large datasets.
 
-        :param adata: AnnData object to chunk. Must be in backed mode. See: https://scanpy.readthedocs.io/en/stable/generated/scanpy.read_h5ad.html
-        :param chunk_size: Number of cells to include in each chunk
+        :param sc.AnnData adata: AnnData object to chunk. Must be in backed mode. See: https://scanpy.readthedocs.io/en/stable/generated/scanpy.read_h5ad.html
+        :param int chunk_size: Number of cells to include in each chunk
         """
         self.adata = adata
         self.chunk_size = chunk_size
@@ -116,7 +133,12 @@ class AnnDataChunker:
     def __len__(self):
         return self.n_chunks
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int):
+        """
+        Get a chunk of the AnnData object.
+
+        :param int item: The chunk index to get.
+        """
         return self.adata[item * self.chunk_size : (item + 1) * self.chunk_size, :]
 
     def __repr__(self):
@@ -254,8 +276,8 @@ def load_scembed_model(path: str) -> "SCEmbed":
 
     :param str path: The path to the model.
     """
-    import pickle
     import gzip
+    import pickle
 
     with gzip.open(path, "rb") as f:
         model = pickle.load(f)
@@ -275,138 +297,6 @@ def load_scembed_model_deprecated(path: str) -> "SCEmbed":
         return model
 
 
-def check_model_exists_on_hub(registry: str) -> bool:
-    """
-    Check the model hub for the existing model registry. Registry
-    is of the name <namespace>/<model_name>.
-
-    Looks for the existence of model.yaml at {MODEL_HUB_URL}/{registry_name}/model.yaml
-    """
-    # check if model exists in the hub
-    url = f"{MODEL_HUB_URL}/{registry}/model.yaml"
-    cmd = f"curl -s -o /dev/null -w '%{{http_code}}' {url}"
-    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
-    return result.stdout.decode("utf-8") == "200"
-
-
-def download_remote_model(registry: str, path: str, overwrite: bool = True) -> None:
-    """
-    Download a model from the model hub. Overwrites any existing.
-
-    :param str registry: the registry name of the model to download
-    :param str path: the path to download the model to, this is the folder that will contain registry/model.yaml
-    """
-    path_to_model = os.path.join(path, registry)
-    if os.path.exists(path_to_model) and overwrite:
-        _LOGGER.debug("Removing existing model.")
-        shutil.rmtree(path_to_model)
-
-    cmd = f"wget -r -np -nH --cut-dirs=2 -P {path} -l 1 {MODEL_HUB_URL}/{registry}"
-    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
-    if result.returncode != 0:
-        raise ValueError("Could not download model from model-hub.")
-
-
-def load_universe_file(path: str) -> List[str]:
-    """
-    Loads a bed file into a list of regions. Assumes
-    the bed file is of the form chr start end (tab-separated).
-    """
-    with open(path, "r") as f:
-        regions = [line.strip().split("\t") for line in f.readlines()]
-        regions = [f"{r[0]}_{r[1]}_{r[2]}" for r in regions]
-    return regions
-
-
-def generate_var_conversion_map(
-    a: List[str],
-    b: List[str],
-    path_to_bedtools: str = None,
-    fraction: float = 1.0e-9,
-) -> Dict[str, Union[str, None]]:
-    """
-    Create a conversion map to convert regions from a to b. This is used to convert the
-    consensus peak set of one AnnData object to another.
-
-    For each region in a, we will either find a matching region in b, or None. If a matching
-    region is found, we will store the region in b. If no matching region is found, we will
-    store `None`.
-
-    Intuitively, think of this as converting `A` --> `B`. If a region in `A` is found in `B`,
-    we will change the region in `A` to the region in `B`. If a region in `A` is not found in
-    `B`, we will drop that region in `A` altogether.
-
-    :param List[str] a: the first list of regions
-    :param List[str] b: the second list of regions
-    :param str path_to_bedtools: the path to the bedtools executable
-    :param float fraction: the fraction of the region that must overlap to be considered an overlap
-    """
-    # write a and b to temp files in cache
-    a_file = os.path.join(MODEL_CACHE_DIR, "a.bed")
-    b_file = os.path.join(MODEL_CACHE_DIR, "b.bed")
-
-    # write a and b to temp files
-    with open(a_file, "w") as f:
-        # split each region into chr start end
-        a_parsed = [region.split("_") for region in a]
-        a_parsed = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in a_parsed]
-        f.writelines(a_parsed)
-    with open(b_file, "w") as f:
-        b_parsed = [region.split("_") for region in b]
-        b_parsed = [f"{r[0]}\t{r[1]}\t{r[2]}\n" for r in b_parsed]
-        f.writelines(b_parsed)
-
-    # sort both files
-    cmd = f"sort -k1,1 -k2,2n {a_file} -o {a_file}"
-    subprocess.run(cmd, shell=True)
-
-    cmd = f"sort -k1,1 -k2,2n {b_file} -o {b_file}"
-    subprocess.run(cmd, shell=True)
-
-    # run bedtools
-    bedtools_cmd = f"intersect -a {a_file} -b {b_file} -wa -wb -f {fraction}"
-
-    # add path to bedtools if provided
-    if path_to_bedtools is not None:
-        cmd = f"{path_to_bedtools} {bedtools_cmd}"
-    else:
-        cmd = f"bedtools {bedtools_cmd}"
-
-    # target file
-    target_file = os.path.join(MODEL_CACHE_DIR, "olaps.bed")
-    with open(target_file, "w") as f:
-        subprocess.run(cmd, shell=True, stdout=f)
-
-    # bedtools reports overlaps like this:
-    # chr1 100 200 chr1 150 250
-    # we want to convert this to a map like this:
-    # {chr1_100_200: chr1_150_250}
-    # we will use a dictionary to do this
-    # if a region in A overlaps with multiple regions in B, we will
-    # take the first one. as such we need to check if a region in A
-    # has already been mapped to a region in B
-    conversion_map = dict()
-    with open(target_file, "r") as f:
-        for line in f.readlines():
-            line = line.strip().split("\t")
-            a_region = f"{line[0]}_{line[1]}_{line[2]}"
-            b_region = f"{line[3]}_{line[4]}_{line[5]}"
-            if a_region not in conversion_map:
-                conversion_map[a_region] = b_region
-
-    # add `None` mappings for regions in A that did not overlap with any regions in B
-    for region in a:
-        if region not in conversion_map:
-            conversion_map[region] = None
-
-    # remove temp files
-    os.remove(a_file)
-    os.remove(b_file)
-    os.remove(target_file)
-
-    return conversion_map
-
-
 def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
     """
     Converts an AnnData object to a list of lists of regions. This
@@ -415,6 +305,8 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
 
     *Note: this method requires that the sc.AnnData object have
     chr, start, and end in `.var` attributes*
+
+    :param sc.AnnData adata: the AnnData object to convert
     """
     # Extract the arrays for chr, start, and end
     chr_values = adata.var["chr"].values
@@ -483,41 +375,3 @@ def barcode_mtx_peaks_to_anndata(
     adata = sc.AnnData(X=mtx, obs=barcodes, var=peaks)
 
     return adata
-
-
-def create_model_info_dict(
-    path_to_weights: Optional[str] = None,
-    path_to_universe: Optional[str] = None,
-    name: Optional[str] = None,
-    reference: Optional[str] = None,
-    description: Optional[str] = None,
-    tags: Optional[List[str]] = None,
-    datasets: Optional[List[str]] = None,
-    model_parameters: Optional[Dict[str, Union[str, int]]] = None,
-    model_architecture: Optional[str] = None,
-    maintainers: Optional[List[Dict[str, str]]] = None,
-) -> Dict[str, Union[str, List[str], List[Dict[str, Union[str, int]]]]]:
-    model_info = {}
-
-    if path_to_weights:
-        model_info["path_to_weights"] = path_to_weights
-    if path_to_universe:
-        model_info["path_to_universe"] = path_to_universe
-    if name:
-        model_info["name"] = name
-    if reference:
-        model_info["reference"] = reference
-    if description:
-        model_info["description"] = description
-    if tags:
-        model_info["tags"] = tags
-    if datasets:
-        model_info["datasets"] = datasets
-    if model_parameters:
-        model_info["model_parameters"] = model_parameters
-    if model_architecture:
-        model_info["model_architecture"] = model_architecture
-    if maintainers:
-        model_info["maintainers"] = maintainers
-
-    return model_info

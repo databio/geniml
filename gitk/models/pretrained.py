@@ -1,13 +1,13 @@
 from typing import Union
 
-import scanpy as sc
 import numpy as np
-from tqdm import tqdm
+import scanpy as sc
 from huggingface_hub import hf_hub_download
+from tqdm import tqdm
 
 from .. import scembed
-from .tokenization import HardTokenizer
 from .const import MODEL_FILE_NAME, UNIVERSE_FILE_NAME
+from .tokenization import HardTokenizer
 
 
 class PretrainedScembedModel:
@@ -39,9 +39,9 @@ class PretrainedScembedModel:
         Download a pretrained model from the HuggingFace Hub. We need to download
         the actual model + weights, and the universe file.
 
-        :param model: The name of the model to download (this is the same as the repo name).
-        :param model_file_name: The name of the model file - this should almost never be changed.
-        :param universe_file_name: The name of the universe file - this should almost never be changed.
+        :param str model: The name of the model to download (this is the same as the repo name).
+        :param str model_file_name: The name of the model file - this should almost never be changed.
+        :param str universe_file_name: The name of the universe file - this should almost never be changed.
         """
         model_path = hf_hub_download(model, model_file_name, **kwargs)
         universe_path = hf_hub_download(model, universe_file_name, **kwargs)
@@ -62,7 +62,7 @@ class PretrainedScembedModel:
         """
         Load a pretrained model from the HuggingFace Hub.
 
-        :param path: The path to the model.
+        :param str path: The path to the model.
         :return: The loaded model.
         """
         return scembed.utils.load_scembed_model(path)
@@ -70,6 +70,9 @@ class PretrainedScembedModel:
     def encode(self, data: Union[str, list[tuple[str, int, int]], sc.AnnData]) -> np.ndarray:
         """
         Encode region sets data using the pretrained model.
+
+        :param Union[str, list[tuple[str, int, int]], sc.AnnData] data: The data to encode. This can be either a path to a BED file,
+                                                                        a list of regions, or an AnnData object.
         """
         if self._model is None:
             raise ValueError("No model loaded. Please load a model first.")

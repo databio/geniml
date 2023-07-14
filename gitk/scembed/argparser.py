@@ -4,9 +4,12 @@ from ._version import __version__
 from .const import *
 
 
-def build_argparser(parser: VersionInHelpParser = None):
+def build_argparser(parser: VersionInHelpParser = None) -> VersionInHelpParser:
     """
     Parse command-line arguments passed to the pipeline.
+
+    :param VersionInHelpParser parser: an argument parser object (argparse.ArgumentParser)
+    :return: the argument parser object
     """
     # Argument Parsing
     ###########################################################################

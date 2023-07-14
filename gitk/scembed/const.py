@@ -31,3 +31,5 @@ DEFAULT_BEDTOOLS_PATH = "bedtools"
 
 DEFAULT_MODEL_EXPORT_FILE_NAME = "model.bin"
 DEFAULT_UNIVERSE_EXPORT_FILE_NAME = "universe.bed"
+
+PKG_NAME = "scembed"
