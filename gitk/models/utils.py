@@ -1,6 +1,6 @@
 import os
 import subprocess
-from typing import List, Dict, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
 import scanpy as sc
@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 if TYPE_CHECKING:
     from .tokenization import Universe
+
 from .const import CACHE_DIR
 
 

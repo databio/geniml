@@ -1,15 +1,11 @@
-from typing import List, Union, Dict
+import os
+from typing import Dict, List, Union
 
 import scanpy as sc
-import os
-
 from intervaltree import IntervalTree
 
-from .utils import (
-    validate_region_input,
-    convert_to_universe,
-    anndata_to_regionsets,
-)
+from .utils import (anndata_to_regionsets, convert_to_universe,
+                    validate_region_input)
 
 
 class Universe:
@@ -17,7 +13,7 @@ class Universe:
         """
         Create a new Universe.
 
-        :param regions: The regions to use for tokenization. This can be thought of as a vocabulary.
+        :param Union[str, List[str]] regions: The regions to use for tokenization. This can be thought of as a vocabulary.
                         This can be either a list of regions or a path to a BED file containing regions.
         """
         self._trees: Dict[str, IntervalTree] = dict()
@@ -29,6 +25,11 @@ class Universe:
             self._build_universe_set()
 
     def get_tree(self, tree: str):
+        """
+        Get the interval tree for a given chromosome.
+
+        :param str tree: The chromosome to get the tree for.
+        """
         return self._trees[tree]
 
     @property
@@ -60,6 +61,8 @@ class Universe:
 
         We read in the regions (either from memory or from a BED file) and convert them to an
         interval tree.
+
+        :param str regions: The regions to use for tokenization. This can be thought of as a vocabulary.
         """
         regions = validate_region_input(regions or self._regions)
 
@@ -79,8 +82,8 @@ class Universe:
         """
         Query the interval tree for the given regions.
 
-        :param regions: The regions to query for. this can be either a bed file,
-                        a list of regions (chr_start_end), or a list of tuples of chr, start, end.
+        :param Union[str, List[str], List[tuple[str, int, int]], tuple[str, int, int]] regions: The regions to query for. this can be either a bed file,
+                                                                                                a list of regions (chr_start_end), or a list of tuples of chr, start, end.
         """
         # validate input
         if isinstance(regions, tuple):
@@ -100,6 +103,11 @@ class Universe:
         return overlapping_regions
 
     def __contains__(self, item: tuple[str, int, int]):
+        """
+        Check if the given region is in the universe.
+
+        :param tuple[str, int, int] item: The region to check for.
+        """
         # ensure item is a tuple of chr, start, end
         if not ((isinstance(item, tuple) or isinstance(item, list)) and len(item) == 3):
             raise ValueError("The item to check for must be a tuple of chr, start, end.")
@@ -133,9 +141,8 @@ class HardTokenizer(Tokenizer):
         """
         Create a new HardTokenizer.
 
-        :param regions: The regions to use for tokenization. This can be thought of as a vocabulary.
+        :param Union[List[str], str] regions: The regions to use for tokenization. This can be thought of as a vocabulary.
                         This can be either a list of regions or a path to a BED file containing regions.
-        :param path_to_bedtools: The path to the bedtools executable.
         """
         self._regions = regions
         self._universe: Universe = Universe(validate_region_input(regions))
@@ -152,7 +159,7 @@ class HardTokenizer(Tokenizer):
         """
         Tokenize an anndata object into a list of lists of regions.
 
-        :param data: The anndata object to tokenize.
+        :param sc.AnnData data: The anndata object to tokenize.
 
         :return: A list of lists of regions.
         """
@@ -164,7 +171,8 @@ class HardTokenizer(Tokenizer):
         """
         Tokenize a BED file into a list of lists of regions.
 
-        :param data: The path to the BED file to tokenize.
+        :param str data: The path to the BED file to tokenize.
+        :param float fraction: The fraction of the genome to use for tokenization. This is used to subsample the genome.
 
         :return: A list of lists of regions.
         """
@@ -175,6 +183,8 @@ class HardTokenizer(Tokenizer):
     def _tokenize_list(self, data: List[str]) -> List[List[str]]:
         """
         Tokenize a list of regions into a list of lists of regions.
+
+        :param List[str] data: The list of regions to tokenize.
         """
         regions = validate_region_input(data)
         hits = [h[0] for h in self._universe.query(regions)]
@@ -194,7 +204,7 @@ class HardTokenizer(Tokenizer):
         Regardless of the input, we return a list of lists of regions. Each list of regions
         corresponds to a cell.
 
-        :param data: The data to tokenize.
+        :param Union[sc.AnnData, str, List[str]]Union[sc.AnnData, str, List[str]] data: The data to tokenize.
         :raises ValueError: If the data is not one of the three accepted types.
         :return: A list of regions or a list of lists of regions (depending on the input type).
         """
