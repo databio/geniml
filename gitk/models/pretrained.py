@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from .. import scembed
 from .const import MODEL_FILE_NAME, UNIVERSE_FILE_NAME
-from .tokenization import HardTokenizer
+from .atac.tokenization import HardTokenizer
 
 
 class PretrainedScembedModel:
