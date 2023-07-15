@@ -2,10 +2,10 @@ import os
 from typing import Dict, List, Union
 
 import scanpy as sc
+from tqdm import tqdm
 from intervaltree import IntervalTree
 
-from .utils import (anndata_to_regionsets, convert_to_universe,
-                    validate_region_input)
+from ..utils import anndata_to_regionsets, convert_to_universe, validate_region_input
 
 
 class Universe:
@@ -46,7 +46,7 @@ class Universe:
 
     def _build_universe_set(self):
         """
-        Return the universe as a set of regions in the form (chr, start, end).
+        Build the universe as a set of regions in the form (chr, start, end).
         """
         universe = []
         for tree in self._trees:
@@ -67,7 +67,7 @@ class Universe:
         regions = validate_region_input(regions or self._regions)
 
         # build trees
-        for region in regions:
+        for region in tqdm(regions, total=len(regions), desc="Loading universe"):
             chr, start, end = region
             start = int(start)
             end = int(end)
