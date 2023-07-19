@@ -1,7 +1,40 @@
 # How to train a single-cell model with scEmbed
+
 This example walks you through training an `scembed` region2vec model on a single-cell dataset. We start with data preparation, then train the model, and finally use the model to cluster the cells.
 
 For this example we are using the [10x Genomics PBMC 10k dataset](https://www.10xgenomics.com/resources/datasets/10k-human-pbmcs-atac-v2-chromium-controller-2-standard). The dataset contains 10,000 peripheral blood mononuclear cells (PBMCs) from a healthy donor.
+
+
+## Installation
+Simply install the parent package `gitk` from PyPi:
+
+```bash
+pip install gitk
+```
+
+Then import `scEmbed` from `gitk`:
+
+```python
+from gitk.scembed import SCEmbed
+```
+
+## Usage
+`scEmbed` is simple to use. Import your `AnnData` object and pass it to `SCEmbed`. `scEmbed` will work regardless of any `var` or `obs` annotations, but it is recommended that you use `scEmbed` after you have already performed some basic filtering and quality control on your data. Further. If you'd like to maintain information about region embeddings, it is recommended that you attach `chr`, `start`, adn `end` annotations to your `AnnData` object before passing it to `scEmbed`.
+
+```python
+import scanpy as sc
+from gitk.scembed import SCEmbed
+
+adata = sc.read_h5ad("path/to/adata.h5ad")
+
+scEmbed = SCEmbed(adata)
+scEmbed.train(
+    epochs=100,
+)
+
+cell_embeddings = scEmbed.get_cell_embeddings()
+```
+
 
 ## Data preparation
 `scembed` requires that the input data is in the [AnnData](https://anndata.readthedocs.io/en/latest/) format. Moreover, the `.var` attribute of this object must have `chr`, `start`, and `end` values. The reason is two fold: 1) we can track which vectors belong to which genmomic regions, and 2) region vectors are now reusable. We ned three files: 1) The `barcodes.txt` file, 2) the `peaks.bed` file, and 3) the `matrix.mtx` file. These will be used to create the `AnnData` object. To begin, download the data from the 10x Genomics website:
@@ -61,3 +94,4 @@ from gitk.models.tokenizers import HardTokenizer
 tokenizer = HardTokenizer("peaks.bed")
 
 region_sets = tokenizer(adata)
+```
