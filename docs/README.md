@@ -12,4 +12,4 @@ pip install --user --upgrade .
 
 ## Modules
 
-`gitk` is organized into modules. You can read the list of functions by module, or proceed to the how-to guides, using the menu bar on the left. 
+`gitk` is organized into modules. The next section is an overview of each module. You can also proceed to the how-to guides for recipes on how to do specfic tasks. 

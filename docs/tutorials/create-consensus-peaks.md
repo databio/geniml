@@ -4,6 +4,7 @@ We will start with simple example of how to create a consensus peak set from a
 collection of files. Example data can be found in `tests/consenus/raw`. 
 
 ## Data preprocessing
+
 First step of analysis is creating three tracks with genome coverage by peaks,
 their starts and ends. To do that we have to:
 
@@ -14,16 +15,16 @@ their starts and ends. To do that we have to:
     - {prefix}_start.bw - with smoothed coverage of genome by ends
 
 In this tutorial we will use prefix "all" as it is a default prefix in
-```gitk``` module
+`gitk` module
 
 ## Coverage cutoff universe
 
 We will start by making a coverage universe with cutoff that results in maximum 
 likelihood universe. We can do it through CLI:
 
-```
+```console
  gitk build-universe cc --coverage-folder tests/consenus/coverage/ \
-                       --output-file tests/consenus/universe/universe.bed
+                        --output-file tests/consenus/universe/universe.bed
 
 ```  
 
@@ -32,7 +33,7 @@ Where:
 - `--coverage-folder`, takes the path to bigWig file with genome coverage by collection 
 - `--output-file`, takes the path to output file 
 
-Or we can import it directly into python:
+Or we can import it directly into Python:
 
 ```
 from gitk.universe.cc_universe import cc_universe

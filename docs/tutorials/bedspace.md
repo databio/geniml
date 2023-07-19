@@ -1,19 +1,13 @@
-# BEDSpace
-## Overview
-`bedspace` uses the StarSpace method (Wu et al., 2018) to jointly embed genomic interval regions sets with associated metadata into a shared latent embedding space. This facilitates fast search and retrieval of similar region sets and their associated metadata.
+# How to use BEDSpace to jointly embed regions and metadata
 
-## Installation
+## Introduction
 
-`bedspace` comes installed as a module of `gitk`. To ensure that everything is working correctly, run: `python -c "from gitk import bedspace"`.
-
-## Usage
-
-There are four main commands in `bedspace`:
+To ensure that everything is working correctly, run: `python -c "from gitk import bedspace"`. There are four main commands in `bedspace`:
 
 1. `bedspace preprocess`: preprocesses a set of genomic interval regions and their associated metadata into a format that can be used by `bedspace train`.
 2. `bedspace train`: trains a StarSpace model on the preprocessed data.
 3. `bedspace distances`: computes distances between region sets in the trained model and metadata labels.
-4. `bedspace search` searches for the most similar region sets and metadata labels to a given query. Three scenarios for this command are described in the details.
+4. `bedspace search`: searches for the most similar region sets and metadata labels to a given query. Three scenarios for this command are described in the details.
 
 ### `bedspace preprocess`
 The `preprocess` command will prepare a set of region sets and metadata labels for training. This includes things like adding the `__label__` prefix to metadata labels, and converting the region sets into a format that can be used by StarSpace. The command takes in a set of region sets and metadata labels, and outputs a set of preprocessed region sets and metadata labels. The command can be run as follows:

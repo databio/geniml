@@ -1,4 +1,4 @@
-# Region2Vec
+# How to train Region2Vec interval embeddings
 
 `Region2Vec` is an unsupervised method for creating embeddings for genomic regions and region sets from a set of raw BED files. The program will first map all raw regions to a given universe (vocabulary) set. Then, it will construct sentences by concatenating regions from a BED file in random order. The generated sentences will be used for Region2Vec training using word2vec.
 
