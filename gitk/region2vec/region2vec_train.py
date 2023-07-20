@@ -6,6 +6,7 @@ import os
 import pickle
 import random
 import time
+from typing import Union
 
 from gensim.models import Word2Vec
 from gensim.models.word2vec import LineSentence
@@ -16,7 +17,18 @@ from .const import *
 logging.basicConfig(format="%(asctime)s : %(levelname)s : %(message)s", level=logging.ERROR)
 
 
-def find_dataset(data_folder):
+def find_dataset(data_folder: str) -> Union[str, int]:
+    """Finds an available dataset in data_folder.
+
+    Finds an available dataset from a folder specified by data_folder.
+
+    Args:
+        data_folder (str): The path to the folder where datasets are generated.
+
+    Returns:
+        Union[str, int]: -1 when no datasets are found after MAX_WAIT_TIME;
+            otherwise, a path to the found dataset.
+    """
     train_pattern = os.path.join(data_folder, "pool*[0-9]")
     count = 0
     while True:
@@ -32,7 +44,14 @@ def find_dataset(data_folder):
             return dsets[random.randint(0, len(dsets) - 1)]
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
+    """Trains a Region2Vec model using the arguments in args.
+
+    Called internally as a subprocess by region2vec in main.py.
+
+    Args:
+        args (argparse.Namespace): See the definition of ArgumentParser.
+    """
     save_dir = args.save_dir
     data_folder = os.path.join(
         save_dir, "shuffled_datasets"
@@ -101,7 +120,7 @@ def main(args):
     sentences = LineSentence(dset)  # create sentence iterator
     model.build_vocab(sentences, update=vocab_update)  # prepare the model vocabulary
     cur_time = datetime.datetime.now().strftime("%x-%X")
-    utils.log(f"[{cur_time}]\033[93m Vocabulary size is {len(model.wv.index_to_key)}\033[00m")
+    utils.log(f"[{cur_time}] Vocabulary size is {len(model.wv.index_to_key)}")
     build_vocab_time = run_timer.t()
     min_loss = 1.0e100
 
@@ -156,14 +175,23 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Gene Embedding")
-    parser.add_argument("--num-shuffle", type=int, help="number of shuffled datasets")
-    parser.add_argument("--embed-dim", type=int, help="embedding dimension")
-    parser.add_argument("--context-len", type=int, help="window size")
-    parser.add_argument("--nworkers", type=int, help="number of workers")
-    parser.add_argument("--save-freq", type=int, default=0, help="save frequency")
-    parser.add_argument("--save-dir", help="path to the folder that saves the training result")
-    parser.add_argument("--resume", help="path to a saved model")
+    parser = argparse.ArgumentParser(description="Region2Vec training")
+    parser.add_argument(
+        "--num-shuffle", type=int, help="number of shuffled datasets used for training"
+    )
+    parser.add_argument("--embed-dim", type=int, help="dimension of embedding vectors")
+    parser.add_argument("--context-len", type=int, help="length of the moving context window")
+    parser.add_argument(
+        "--nworkers", type=int, help="number of parallel processes used in training"
+    )
+    parser.add_argument(
+        "--save-freq",
+        type=int,
+        default=0,
+        help="save the Region2Vec model after consuming save_freq datasets; use a nonpositive number to disable",
+    )
+    parser.add_argument("--save-dir", help="the folder that saves the Region2Vec model")
+    parser.add_argument("--resume", help="path to a previously trained model")
     parser.add_argument("--train-alg", help="training algorithm, select from [cbow, skip-gram]")
     parser.add_argument(
         "--min-count",

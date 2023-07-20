@@ -14,29 +14,72 @@ class Namespace:
 
 
 def region2vec(
-    token_folder,  # path to the folder of tokenized files
-    save_dir,  # folder to save the training results
-    file_list=None,  # specifies which files from token_folder are used for training
-    data_type="files",
-    mat_path=None,
-    num_shufflings=1000,  # Number of shuffled datasets or number of training epochs
-    num_processes=10,  # Maximum number of parallel processes
-    tokenization_mode="hard",  # tokenization mode
-    embedding_dim=100,  # Dimension of region2vec embeddings
-    context_win_size=5,  # Context window size (half)
-    save_freq=-1,  # Save a model after the given number of training epochs. If -1, then only save the best and latest models
-    resume_path="",  # path to a trained model. If specified, the model will be used to initialize the region2vec embeddings
-    train_alg="cbow",  # select training algorithms ['cbow','skip-gram']
-    min_count=5,  # Threshold for filtering out regions with low frequency
-    neg_samples=5,  # Number of negative samples
-    init_lr=0.025,  # Initial learning rate
-    min_lr=1e-4,  # Minimum learning rate
-    lr_scheduler="linear",  # How to decay the learning rate. Select from linear and milestone
-    milestones=[],  # Specify only when lr_scheduler=milestone. At each given epoch, the learning rate will be multiplied by 0.1
-    hier_softmax=False,  # Whether to hierarchical softmax
-    seed=0,  # random seed,
-    update_vocab="once",
+    token_folder: str,
+    save_dir: str,
+    file_list: list[str] = None,
+    data_type: str = "files",
+    mat_path: str = None,
+    num_shufflings: int = 1000,
+    num_processes: int = 10,
+    tokenization_mode: str = "hard",
+    embedding_dim: int = 100,
+    context_win_size: int = 5,
+    save_freq: int = -1,
+    resume_path: str = "",
+    train_alg: str = "cbow",
+    min_count: int = 5,
+    neg_samples: int = 5,
+    init_lr: float = 0.025,
+    min_lr: float = 1e-4,
+    lr_scheduler: str = "linear",
+    milestones: list[int] = [],
+    hier_softmax: bool = False,
+    seed: int = 0,
+    update_vocab: str = "once",
 ):
+    """Trains a Region2Vec model.
+
+    Starts two subprocesses: one that generates shuffled datasets, and the
+    other consumes the shuffled datasets to train a Region2Vec model.
+
+    Args:
+        token_folder (str): The path to the folder of tokenized files.
+        save_dir (str): The folder that stores the training results.
+        file_list (list[str], optional): Specifies which files from
+            token_folder are used for training. When None, uses all the files
+            in token_folder. Defaults to None.
+        data_type (str, optional): "files" or "matrix". Defaults to "files".
+        mat_path (str, optional): Used only when data_type = "matrix". Defaults
+            to None.
+        num_shufflings (int, optional): Number of shuffled datasets to
+            generate. Defaults to 1000.
+        num_processes (int, optional): Number of processes used. Defaults to 10.
+        tokenization_mode (str, optional): Tokenization mode. Defaults to
+            "hard", i.e., concatenating all regions in a BED files in a random order.
+        embedding_dim (int, optional): Dimension of embedding vectors. Defaults
+            to 100.
+        context_win_size (int, optional): Context window size. Defaults to 5.
+        save_freq (int, optional): Save frequency. Defaults to -1.
+        resume_path (str, optional): Starts with a previously trained model.
+            Defaults to "".
+        train_alg (str, optional): Training algorithm. Defaults to "cbow".
+        min_count (int, optional): Minimum frequency required to keep a region.
+            Defaults to 5.
+        neg_samples (int, optional): Number of negative samples used in
+            training. Defaults to 5.
+        init_lr (float, optional): Initial learning rate. Defaults to 0.025.
+        min_lr (float, optional): Minimum learning rate. Defaults to 1e-4.
+        lr_scheduler (str, optional): Type of the learning rate scheduler.
+            Defaults to "linear".
+        milestones (list[int], optional): Used only when
+            lr_scheduler="milestones". Defaults to [].
+        hier_softmax (bool, optional): Whether to use hierarchical softmax
+            during training. Defaults to False.
+        seed (int, optional): Random seed. Defaults to 0.
+        update_vocab (str, optional): If "every", then updates the vocabulary
+            for each shuffled dataset. Defaults to "once" assuming no new
+            regions occur in shuffled datasets.
+    """
     timer = utils.Timer()
     start_time = timer.t()
     if file_list is None:
