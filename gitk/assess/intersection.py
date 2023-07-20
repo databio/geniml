@@ -28,7 +28,7 @@ def relationship_helper(region_a, region_b, only_in, overlap):
     :param [int, int] region_b: region that starts second
     :param int only_in: number of positions only in a so far
     :param int overlap: number of overlapping so far
-    :return:"""
+    """
     if region_b[0] <= region_a[1]:
         only_in += region_b[0] - region_a[0]
         if region_b[1] <= region_a[1]:
