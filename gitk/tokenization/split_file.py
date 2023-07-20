@@ -2,9 +2,14 @@ import argparse
 import os
 
 
-def get_file_rows(file_path):
-    """
-    Count how many files are included
+def get_file_rows(file_path: str) -> int:
+    """Counts how many files are included.
+
+    Args:
+        file_path (str): The path to a file.
+
+    Returns:
+        int: The number of rows in the file.
     """
     count = 0
     with open(file_path, "r") as f:
@@ -13,13 +18,16 @@ def get_file_rows(file_path):
     return count
 
 
-def split_file(file_path, dest_folder, num_parts):
-    """
-    Split a list of files into a specified non-overlapping batches
+def split_file(file_path: str, dest_folder: str, num_parts: int) -> None:
+    """Splits a list of files into num_parts non-overlapping batches.
 
-    file_path: path to a list of files
-    dest_folder: folder to store file splits
-    num_parts: number of parts needed
+    This is a helper function for tokenization in parallel. The dest_folder
+    must be empty.
+
+    Args:
+        file_path (str): The path to a file with BED file names per row.
+        dest_folder (str): The folder to store splitted file lists.
+        num_parts (int): Number of batches to split.
     """
     if os.path.exists(dest_folder):
         print("Folder exists")

@@ -1,8 +1,6 @@
 def build_subparser_gdst(parser):
     """
-    Builds argument parser.
-
-    :return argparse.ArgumentParser: Argument parser
+    Builds argument parser to support the gdst command line interface (under eval).
     """
 
     parser.add_argument(
@@ -30,9 +28,7 @@ def build_subparser_gdst(parser):
 
 def build_subparser_npt(parser):
     """
-    Builds argument parser.
-
-    :return argparse.ArgumentParser: Argument parser
+    Builds argument parser to support the npt command line interface  (under eval).
     """
     parser.add_argument(
         "--model-path",
@@ -65,9 +61,7 @@ def build_subparser_npt(parser):
 
 def build_subparser_ctt(parser):
     """
-    Builds argument parser.
-
-    :return argparse.ArgumentParser: Argument parser
+    Builds argument parser to support the ctt command line interface  (under eval).
     """
     parser.add_argument(
         "--model-path",
@@ -101,9 +95,7 @@ def build_subparser_ctt(parser):
 
 def build_subparser_rct(parser):
     """
-    Builds argument parser.
-
-    :return argparse.ArgumentParser: Argument parser
+    Builds argument parser to support the rct command line interface  (under eval).
     """
     parser.add_argument(
         "--model-path",
@@ -154,9 +146,7 @@ def build_subparser_rct(parser):
 
 def build_subparser_bingen(parser):
     """
-    Builds argument parser.
-
-    :return argparse.ArgumentParser: Argument parser
+    Builds argument parser to support the bin-gen command line interface  (under eval).
     """
     parser.add_argument(
         "--universe",
@@ -181,6 +171,9 @@ def build_subparser_bingen(parser):
 
 
 def build_subparser(parser):
+    """
+    Builds argument parser to support the eval command line interface.
+    """
     sp = parser.add_subparsers(dest="subcommand")
     msg_by_cmd = {
         "gdst": "Genome distance scaling test",
