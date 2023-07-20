@@ -17,7 +17,7 @@ def get_uni(file, chrom, cutoff=None):
     :param str file: coverage file
     :param str chrom: chromosome to analyse
     :param int cutoff: base pairs with values grater of equal to cut-off can be included in universe
-    :return:"""
+    :return ndarray: vector with universes states; 0 - background, 1- universe"""
     file = pyBigWig.open(file)
     if pyBigWig.numpy:
         track = file.values(chrom, 0, file.chroms(chrom), numpy=True)
@@ -75,10 +75,11 @@ def marge_filter(file_out, inter_pos, chrom, merge_dist=100, size_flt=1000):
             f.write(f"{chrom}\t{start}\t{end}\n")
 
 
-def cc_universe(cove, cove_prefix, file_out, merge=0, filter_size=0, cutoff=None):
+def cc_universe(cove, file_out, cove_prefix="all", merge=0, filter_size=0, cutoff=None):
     """
-    Creat cut-off universe based on coverage track
-    :param str file: path to coverage file without extension
+    Create cut-off coverage universe based on coverage track
+    :param str cove: path to coverage folder
+    :param str cove_prefix: prefix of the coverage file
     :param int merge: regions closer than this value will be merged into one
     :param int filter_size: regions smaller than this value will not be reported
     :param str file_out: output file

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import numpy as np
 from hmmlearn import hmm
