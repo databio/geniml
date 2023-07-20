@@ -8,7 +8,7 @@
 2. Prepare a universe file `universe_file`.
 3. Create a token folder which will be used to store tokenized files `dst_folder`.
 5. Run the following command
-``` 
+``` python
 from gitk.tokenization import hard_tokenization
 from gitk.region2vec import region2vec
 

@@ -237,7 +237,7 @@ def main(test_args=None):
             print(rct_score)
         if args.subcommand == "bin-gen":
             from gitk.eval.utils import get_bin_embeddings
-            import glob, pickle
+            import glob, pickle, os
 
             if os.path.exists(args.file_name):
                 print(f"{args.file_name} exists!")

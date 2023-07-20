@@ -1,10 +1,12 @@
 import os
 import pickle
+from typing import Union
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 import argparse
 import glob
 import multiprocessing as mp
+from multiprocessing.queues import Queue
 import random
 import time
 
@@ -14,14 +16,25 @@ from sklearn.linear_model import LinearRegression
 
 from .const import *
 from .utils import (
-    Timer,
     cosine_distance,
     genome_distance,
     load_genomic_embeddings,
 )
 
 
-def sample_from_vocab(vocab, num_samples, seed=42):
+def sample_from_vocab(vocab: list[str], num_samples: int, seed: int = 42) -> list[str]:
+    """Samples regions from vocab.
+
+    Samples regions proportionally from each chromosome.
+
+    Args:
+        vocab (list[str]): A list of regions.
+        num_samples (int): Number of regions to sample.
+        seed (int, optional): Random seed. Defaults to 42.
+
+    Returns:
+        list[str]: A list of sampled regions.
+    """
     chr_probs = {}
     region_dict = {}
     num_vocab = len(vocab)
@@ -65,44 +78,31 @@ def sample_from_vocab(vocab, num_samples, seed=42):
     return sampled_regions
 
 
-def remap_name(name):
-    return name.split("/")[-3]
-
-
-def convert_position(pos):
-    if pos // 1e6 > 0:
-        return f"{pos / 1e6:.4f} MB"
-    elif pos // 1e3 > 0:
-        return f"{pos / 1e3:.4f} KB"
-    else:
-        return f"{pos:.4f} B"
-
-
-def get_gdst_results(save_paths):
-    with open(save_paths[0], "rb") as f:
-        results = pickle.load(f)
-    num = len(results)
-    gds_res = [[] for i in range(num)]
-    models = ["" for i in range(num)]
-    for path in save_paths:
-        with open(path, "rb") as f:
-            results = pickle.load(f)
-            for i, res in enumerate(results):
-                gds_res[i].append(res[1])
-                models[i] = res[0]
-
-    gds_arr = [(models[i], gds_res[i]) for i in range(num)]
-    return gds_arr
-
-
 def get_gdst_score(
-    path,
-    embed_type,
-    num_samples=10000,
-    seed=42,
-    queue=None,
-    worker_id=None,
-):
+    path: str,
+    embed_type: str,
+    num_samples: int = 10000,
+    seed: int = 42,
+    queue: Queue = None,
+    worker_id: int = None,
+) -> Union[float, tuple[int, str, float]]:
+    """Runs the GDST on a model.
+
+    Args:
+        path (str): The path to a model.
+        embed_type (str): The model type: "region2vec" or "base".
+        num_samples (int, optional): Number of embeddings used for evaluation.
+            Defaults to 10000.
+        seed (int, optional): Random seed. Defaults to 42.
+        queue (Queue, optional): The multiprocessing
+            queue used to store results. Defaults to None.
+        worker_id (int, optional): Worker id. Defaults to None.
+
+    Returns:
+        Union[float, tuple[int, str, float]]: A GDST score when used in a single
+            process; or, a tuple of (worker id, model path, GDST score) when
+            used in multiple processes.
+    """
     embed_rep, vocab = load_genomic_embeddings(path, embed_type)
     regions = sample_from_vocab(vocab, num_samples, seed)
     region2idx = {r: i for i, r in enumerate(vocab)}
@@ -125,7 +125,17 @@ def get_gdst_score(
         return slope
 
 
-def writer_multiprocessing(save_path, num, q):
+def writer_multiprocessing(save_path: str, num: int, q: Queue) -> list[tuple[str, float]]:
+    """Writes results from multiple processes to a list.
+
+    Args:
+        save_path (str): The path to the saved results.
+        num (int): The number of results.
+        q (Queue): A multiprocessing queue.
+
+    Returns:
+        list[tuple[str, float]]: A list of  (model path, GDST score) tuples.
+    """
     results = ["" for i in range(num)]
     while True:
         m = q.get()
@@ -140,7 +150,28 @@ def writer_multiprocessing(save_path, num, q):
     return results
 
 
-def get_gdst_score_batch(batch, num_samples=10000, seed=42, save_path=None, num_workers=1):
+def get_gdst_score_batch(
+    batch: list[tuple[str, str]],
+    num_samples: int = 10000,
+    seed: int = 42,
+    save_path: str = None,
+    num_workers: int = 1,
+) -> list[tuple[str, float]]:
+    """Runs the GDST on a batch of models.
+
+    Args:
+        batch (list[tuple[str, str]]): A list of (model path, model type) tuples.
+        num_samples (int, optional): Number of embeddings used for evaluation.
+            Defaults to 10000.
+        seed (int, optional): Random seed. Defaults to 42.
+        save_path (str, optional): Save the results to save_path. Defaults to
+            None.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 1.
+
+    Returns:
+        list[tuple[str, float]]: A list of (model path, GDST score) tuples.
+    """
     if num_workers <= 1:
         gds_arr = []
         for path, embed_type in batch:
@@ -172,12 +203,28 @@ def get_gdst_score_batch(batch, num_samples=10000, seed=42, save_path=None, num_
 
 
 def gdst_eval(
-    batch,
-    num_runs=20,
-    num_samples=1000,
-    save_folder=None,
-    num_workers=10,
-):
+    batch: list[tuple[str, str]],
+    num_runs: int = 20,
+    num_samples: int = 1000,
+    save_folder: str = None,
+    num_workers: int = 10,
+) -> list[tuple[str, list[float]]]:
+    """Runs the GDST on a batch of models for multiple times.
+
+    Args:
+        batch (list[tuple[str, str]]): A list of (model path, model type) tuples.
+        num_runs (int, optional): Number of runs. Defaults to 20.
+        num_samples (int, optional): Number of embeddings used for evaluation.
+            Defaults to 1000.
+        save_folder (str, optional): Folder to save the results from each run.
+            Defaults to None.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+
+    Returns:
+        list[tuple[str, list[float]]]: A list of (model path, GDST scores from
+            num_runs) tuples.
+    """
     results_seeds = []
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")

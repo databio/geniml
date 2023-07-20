@@ -1,9 +1,5 @@
 def build_subparser(parser):
-    """
-    Builds argument parser.
-
-    :return argparse.ArgumentParser: Argument parser
-    """
+    """Builds an argument parser to support the region2vec command line interface."""
     parser.add_argument("--token-folder", type=str, help="path to tokenized files")
     parser.add_argument("--num-shuffle", type=int, help="number of shufflings/training epochs")
     parser.add_argument("--embed-dim", type=int, help="embedding dimension")

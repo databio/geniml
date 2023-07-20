@@ -1,9 +1,11 @@
 import os
 import pickle
+from typing import Union
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 import argparse
 import multiprocessing as mp
+from multiprocessing.queues import Queue
 import time
 
 import matplotlib.pyplot as plt
@@ -11,13 +13,23 @@ import numpy as np
 from gensim.models import Word2Vec
 from matplotlib.lines import Line2D
 
-from .utils import Timer, genome_distance, load_genomic_embeddings
+from .utils import genome_distance, load_genomic_embeddings
 
 
-def get_topk_embed(i, K, embed, dist="cosine"):
-    """
-    Return the indices for the most similar K regions to the i-th region
-    embed is the embedding matrix for all the regions in the vocabulary of a region2vec model
+def get_topk_embed(
+    i: int, K: int, embed: np.ndarray, dist: str = "cosine"
+) -> tuple[np.ndarray, np.ndarray]:
+    """Gets the nearest K embedding indexes to the i-th embedding.
+
+    Args:
+        i (int): The index for the query embedding.
+        K (int): The number of nearest embeddings to select.
+        embed (np.ndarray): An array of embedding vectors
+        dist (str, optional): The distance function used. Defaults to "cosine".
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: K indexes of nearest embeddings and the
+            corresponding similarities.
     """
     num = len(embed)
     if dist == "cosine":
@@ -39,13 +51,20 @@ def get_topk_embed(i, K, embed, dist="cosine"):
     return indexes, s
 
 
-def find_Kneighbors(region_array, index, K):
-    """
-    region_array must be sorted; all regions are on the same chromosome
-    index is the index for the query region region_array[index]
-    K is the number of nearest neighbors of the query region
+def find_Kneighbors(region_array: list[tuple[str, int, int]], index: int, K: int) -> list[int]:
+    """Finds the indexes of the K nearest regions of a query region on genome.
 
-    return: indices of the K nearest neighbors in region_array
+    region_array must be sorted, and all regions are on the same chromosome.
+
+    Args:
+        region_array (list[tuple[str, int, int]]): A list of (chromosome, start
+            position, end position) tuples.
+        index (int): The index of the query region.
+        K (int): Specifies the number of nearest neighbors of the query region.
+
+    Returns:
+        list[int]: A list of indexes of the K nearest neighbors in
+            region_array.
     """
     if len(region_array) < K:
         K = len(region_array)
@@ -62,16 +81,40 @@ def find_Kneighbors(region_array, index, K):
 
 
 def calculate_overlap_bins(
-    local_idx,
-    K,
-    chromo,
-    region_array,
-    region2index,
-    embed_rep,
-    res=10,
-    dist="cosine",
-    same_chromo=True,
-):
+    local_idx: int,
+    K: int,
+    chromo: str,
+    region_array: list[tuple[str, int, int]],
+    region2index: dict[str, int],
+    embed_rep: np.ndarray,
+    res: int = 10,
+    dist: str = "cosine",
+    same_chromo: bool = True,
+) -> np.ndarray:
+    """Calculates the overlap ratios for a region.
+
+    Calculates the overlap ratios for a region between its K-nearest neighor
+    set obtained using genome distance and its K-nearest neighor set obtained
+    using embedding distance. If res < K, then calculates ratios for size
+    res*1, res*2, ..., min(res*n, K).
+
+    Args:
+        local_idx (int): The local index of a region on its chromosome.
+        K (int): Specifies the number of nearest neighbors.
+        chromo (str): Chromosome.
+        region_array (list[tuple[str, int, int]]): A list of (chromosome, start
+            position, end position) tuples.
+        region2index (dict[str, int]): A dictionary of (region, index).
+        embed_rep (np.ndarray): An array of embedding vectors.
+        res (int, optional): Resolution. Size of neighborhood set. Defaults to
+            10.
+        dist (str, optional): Distance function. Defaults to "cosine".
+        same_chromo (bool, optional): Whether to find nearest neighors on the
+            same chromosome in the embedding space. Defaults to True.
+
+    Returns:
+        np.ndarray: An array of overlap ratios.
+    """
     Kindices = find_Kneighbors(region_array, local_idx, K)
     if len(Kindices) == 0:
         return 0
@@ -105,7 +148,16 @@ def calculate_overlap_bins(
     return np.array(bin_overlaps)
 
 
-def cal_snpr(ratio_embed, ratio_random):
+def cal_snpr(ratio_embed: np.ndarray, ratio_random: np.ndarray) -> np.ndarray:
+    """Calculates SNPR values.
+
+    Args:
+        ratio_embed (np.ndarray): Overlap ratios for query embeddings.
+        ratio_random (np.ndarray): Overlap ratios for random embeddings.
+
+    Returns:
+        np.ndarray: SNPR values.
+    """
     res = np.log10((ratio_embed + 1.0e-10) / (ratio_random + 1.0e-10))
     res = np.maximum(res, 0)
     return res
@@ -114,7 +166,30 @@ def cal_snpr(ratio_embed, ratio_random):
 var_dict = {}
 
 
-def worker_func(i, K, chromo, region_array, embed_type, resolution, dist):
+def worker_func(
+    i: int,
+    K: int,
+    chromo: str,
+    region_array: list[tuple[str, int, int]],
+    embed_type: str,
+    resolution: int,
+    dist: str,
+) -> np.ndarray:
+    """Wrapper for calculate_overlap_bins
+
+    Args:
+        i (int): The local index of a region on its chromosome.
+        K (int): Specifies the number of nearest neighbors.
+        chromo (str): Chromosome.
+        region_array (list[tuple[str, int, int]]): A list of (chromosome, start
+            position, end position) tuples.
+        embed_type (str): Embedding type, "region2vec" or "base".
+        resolution (int): Resolution.
+        dist (str): Distance function.
+
+    Returns:
+        np.ndarray: An array of overlap ratios.
+    """
     if embed_type == "embed":
         embeds = var_dict["embed_rep"]
     elif embed_type == "random":
@@ -132,26 +207,59 @@ def worker_func(i, K, chromo, region_array, embed_type, resolution, dist):
     return nprs
 
 
-def init_worker(embed_rep, ref_embed, region2index):
+def init_worker(
+    embed_rep: np.ndarray, ref_embed: np.ndarray, region2index: dict[str, int]
+) -> None:
+    """Initializes data used by workers.
+
+    Args:
+        embed_rep (np.ndarray): Query embeddings.
+        ref_embed (np.ndarray): Random embeddings.
+        region2index (dict[str, int]): A region to index dictionary.
+    """
     var_dict["embed_rep"] = embed_rep
     var_dict["ref_embed"] = ref_embed
     var_dict["region2vec_index"] = region2index
 
 
 def get_npt_score(
-    model_path,
-    embed_type,
-    K,
-    num_samples=100,
-    seed=0,
-    resolution=10,
-    dist="cosine",
-    num_workers=10,
-):
-    """
-    If sampling > 0, then randomly sample num_samples regions in total (proportional for each chromosome)
+    model_path: str,
+    embed_type: str,
+    K: int,
+    num_samples: int = 100,
+    seed: int = 0,
+    resolution: int = 10,
+    dist: str = "cosine",
+    num_workers: int = 10,
+) -> dict[str, Union[int, np.ndarray, str]]:
+    """Runs the NPT on a mdoel.
 
-    If num_samples == 0, all regions are used in calculation
+    If num_samples > 0, then randomly sample num_samples regions proportional
+    from each chromosome. If num_samples == 0, all regions are used in the
+    test. If K > resolution, then returns an array of NPT scores; otherwise,
+    returns one NPT score.
+
+    Args:
+        model_path (str): The path to a model.
+        embed_type (str):  The model type: "region2vec" or "base".
+        K (int): Specifies the number of nearest neighbors.
+        num_samples (int, optional): Number of embeddings used for evaluation.
+            Defaults to 100.
+        seed (int, optional): Random seed. Defaults to 0.
+        resolution (int, optional): Resolution of a neighborhood set. Defaults
+            to 10.
+        dist (str, optional): Distance function. Defaults to "cosine".
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+
+    Returns:
+        dict[str, Union[int, np.ndarray, str]]: NPT results in a dictionary
+            "K": K,
+            "Avg_qNPR": Average NPR ratios for query embeddings,
+            "Avg_rNPR": Average NPR ratios for random embeddings,,
+            "SNPR": SNPR values,
+            "Resolution": Resolution,
+            "Path": Model path,
     """
     embed_rep, regions_r2v = load_genomic_embeddings(model_path, embed_type)
 
@@ -278,7 +386,17 @@ def get_npt_score(
     return result
 
 
-def writer_multiprocessing(save_path, num, q):
+def writer_multiprocessing(save_path: str, num: int, q: Queue) -> list[tuple[str, float]]:
+    """Writes results from multiple processes to a list.
+
+    Args:
+        save_path (str): The path to the saved results.
+        num (int): The number of results.
+        q (Queue): A multiprocessing queue.
+
+    Returns:
+        list[tuple[str, float]]: A list of (model path, NPT score) tuples.
+    """
     results = [[] for i in range(num)]
     while True:
         m = q.get()
@@ -294,15 +412,35 @@ def writer_multiprocessing(save_path, num, q):
 
 
 def get_npt_score_batch(
-    batch,
-    K,
-    num_samples=100,
-    num_workers=10,
-    seed=0,
-    resolution=10,
-    dist="cosine",
-    save_path=None,
-):
+    batch: list[tuple[str, str]],
+    K: int,
+    num_samples: int = 100,
+    num_workers: int = 10,
+    seed: int = 0,
+    resolution: int = 10,
+    dist: str = "cosine",
+    save_path: str = None,
+) -> list[dict[str, Union[int, np.ndarray, str]]]:
+    """Runs the NPT on a batch of models.
+
+    Args:
+        batch (list[tuple[str, str]]): A list of (model path, model type) tuples.
+        K (int): Specifies the number of nearest neighbors.
+        num_samples (int, optional): Number of embeddings used for evaluation.
+            Defaults to 100.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+        seed (int, optional): Random seed. Defaults to 0.
+        resolution (int, optional): Resolution of a neighborhood set. Defaults
+            to 10.
+        dist (str, optional): Distance function. Defaults to "cosine".
+        save_path (str, optional): Save the results to save_path. Defaults to
+            None.
+
+    Returns:
+        list[dict[str, Union[int, np.ndarray, str]]]: A list of dictionaries of
+            NPT results.
+    """
     result_list = []
     for index, (path, embed_type) in enumerate(batch):
         result = get_npt_score(
@@ -324,15 +462,35 @@ def get_npt_score_batch(
 
 
 def npt_eval(
-    batch,
-    K,
-    num_samples=100,
-    num_workers=10,
-    num_runs=20,
-    resolution=10,
-    dist="cosine",
-    save_folder=None,
-):
+    batch: list[tuple[str, str]],
+    K: int,
+    num_samples: int = 100,
+    num_workers: int = 10,
+    num_runs: int = 20,
+    resolution: int = 10,
+    dist: str = "cosine",
+    save_folder: str = None,
+) -> list[tuple[str, np.ndarray, int]]:
+    """Runs the NPT on a batch of models for multiple times.
+
+    Args:
+        batch (list[tuple[str, str]]): A list of (model path, model type) tuples.
+        K (int): Specifies the number of nearest neighbors.
+        num_samples (int, optional): Number of embeddings used for evaluation.
+            Defaults to 100.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+        num_runs (int, optional): Number of runs. Defaults to 20.
+        resolution (int, optional): Resolution of a neighborhood set.
+            Defaults to 10.
+        dist (str, optional): Distance function. Defaults to "cosine".
+        save_folder (str, optional): Folder to save the results from each run.
+            Defaults to None.
+
+    Returns:
+        list[tuple[str, np.ndarray, int]]: A list of (model path, snprs from
+            num_runs, resoultion) tuples.
+    """
     results_seeds = []
     assert resolution <= K, "resolution <= K"
     for seed in range(num_runs):
@@ -365,80 +523,3 @@ def npt_eval(
         print(f"{paths[i]}\nSNPRs:{msg}\n")
     snpr_results = [(paths[i], snpr_results[i], resolution) for i in range(len(batch))]
     return snpr_results
-
-
-def get_npt_results(save_paths):
-    snpr_results = {}
-    for save_path in save_paths:
-        with open(save_path, "rb") as f:
-            results = pickle.load(f)
-            for result in results:
-                key = result["Path"]
-                resolution = result["Resolution"]
-                if key in snpr_results:
-                    snpr_results[key].append(result["SNPR"])
-                else:
-                    snpr_results[key] = [result["SNPR"]]
-    snpr_results = [(k, np.array(v), resolution) for k, v in snpr_results.items()]
-    return snpr_results
-
-
-def snpr_plot(snpr_data, row_labels=None, legend_pos=(0.25, 0.6), filename=None):
-    snpr_vals = [(k, v.sum(axis=1).mean(), v.sum(axis=1).std()) for k, v, res in snpr_data]
-    cmap = plt.get_cmap("Set1")
-    cmaplist = [cmap(i) for i in range(9)]
-    if row_labels is None:
-        row_labels = [k for k, v, s in snpr_vals]
-    fig, ax = plt.subplots(figsize=(10, 6))
-    mean_snpr_tuple = [(i, r[1]) for i, r in enumerate(snpr_vals)]
-    mean_snpr_tuple = sorted(mean_snpr_tuple, key=lambda x: -x[1])
-    mean_snpr = [t[1] for t in mean_snpr_tuple]
-    indexes = [t[0] for t in mean_snpr_tuple]
-    std_snpr = [snpr_vals[i][2] for i in indexes]
-    row_labels = [row_labels[i] for i in indexes]
-    ax.set_xticks(list(range(1, len(mean_snpr) + 1)))
-    ax.set_xticklabels(row_labels)
-    ax.errorbar(
-        range(1, len(mean_snpr) + 1),
-        mean_snpr,
-        yerr=std_snpr,
-        fmt="o",
-        ms=10,
-        mfc=cmaplist[1],
-        mec=cmaplist[8],
-        ecolor=cmaplist[2],
-        elinewidth=3,
-        capsize=5,
-    )
-    ax.set_ylabel("SNPR")
-    _ = plt.setp(
-        ax.get_xticklabels(),
-        rotation=-15,
-        ha="left",
-        va="top",
-        rotation_mode="anchor",
-    )
-    patches = [
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            linestyle="",
-            color=cmaplist[1],
-            markersize=12,
-            mec=cmaplist[8],
-        ),
-        Line2D([0], [0], color=cmaplist[2], lw=4),
-    ]
-    legend = ax.legend(
-        labels=["SNPR", "SNPR standard deviation"],
-        handles=patches,
-        bbox_to_anchor=legend_pos,
-        loc="center left",
-        borderaxespad=0,
-        fontsize=12,
-        frameon=True,
-    )
-    ax.grid("on")
-    if filename:
-        fig.savefig(filename, bbox_inches="tight")
