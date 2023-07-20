@@ -5,7 +5,7 @@
 ### Create a Base Embedding Object
 
 Given a set of genomic region embeddings `embeddings` and the corresponding regions `vocab`, use `BaseEmbeddings` to create an `base` embedding object.
-```
+```python
 from gitk.eval.utils import BaseEmbeddings
 import pickle
 base_obj =  BaseEmbeddings(embeddings, vocab)

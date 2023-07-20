@@ -16,7 +16,7 @@ This module provides multiple ways to build a genomic region universe. These inc
 
 ## Module `evaluation`
 
-Once a `gitk` region embedding model is trained, we may want to evaluate the embeddings. The `evaluation` module provides several functions for that. These include statistical tests, like the Cluster Tendency Test (CTT) and the Reconstruction Test (RCT), and biological tests, the GEnome Distance Scaling Test (GDST) and the Neighborhood Preserving Test (NPT). These evaluation metrics can be helpful to determine if your models are working well, optimize training parameters, etc.
+Once a `gitk` region embedding model is trained, we may want to evaluate the embeddings. The `evaluation` module provides several functions for that. These include statistical tests, like the Cluster Tendency Test (CTT) and the Reconstruction Test (RCT), and biological tests, the Genome Distance Scaling Test (GDST) and the Neighborhood Preserving Test (NPT). These evaluation metrics can be helpful to determine if your models are working well, optimize training parameters, etc.
 
 ## Module `region2vec`
 

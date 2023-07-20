@@ -26,14 +26,41 @@ class Namespace:
 
 
 def hard_tokenization_main(
-    src_folder,
-    dst_folder,
-    universe_file,
-    fraction=1e-9,
-    file_list=None,
-    num_workers=10,
-    bedtools_path="bedtools",
-):
+    src_folder: str,
+    dst_folder: str,
+    universe_file: str,
+    fraction: float = 1e-9,
+    file_list: list[str] = None,
+    num_workers: int = 10,
+    bedtools_path: str = "bedtools",
+) -> int:
+    """Tokenizes raw BED files in parallel.
+
+    This is the main function for hard tokenization. It uses multiple processes to
+    speed up the tokenization process.
+
+    Args:
+        src_folder (str): The folder where raw BED files reside.
+        dst_folder (str): The foder to store tokenized BED files.
+        universe_file (str): The path to a universe file.
+        fraction (float, optional): A parameter for bedtools.intersect.
+            Defaults to 1e-9.
+        file_list (list[str], optional): A list of files (just names not full
+            paths) that need to be tokenized. Defaults to None and uses all BED
+            files in src_folder.
+        num_workers (int, optional): Number of processes used. Defaults to 10.
+        bedtools_path (str, optional): The path to a bedtools binary. Defaults
+            to "bedtools".
+
+    Raises:
+        Exception: No bedtools executable found
+
+    Returns:
+        int: 0 when the dst_folder folder has incomplete list of tokenized BED
+            files which should be removed first; 1 when the dst_folder folder
+            has the complete tokenized BED files or the tokenization process
+            succeeds.
+    """
     timer = utils.Timer()
     start_time = timer.t()
 
@@ -78,9 +105,9 @@ def hard_tokenization_main(
         try:
             rval = subprocess.call([bedtools_path, "--version"])
         except:
-            raise Exception("No bedtools executable")
+            raise Exception("No bedtools executable found")
         if rval != 0:
-            raise Exception("No bedtools executable")
+            raise Exception("No bedtools executable found")
 
     print(f"Tokenizing {len(file_list)} bed files ...")
 

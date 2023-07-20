@@ -12,22 +12,44 @@ from gitk.region2vec import utils
 
 
 class BEDDataset:
-    def __init__(self, args, file_list):
-        self.links = []
-        self.args = args
-        self.meta_data = dict()
-        self.file2idx = dict()
+    """Wraps a set of BED files in a BEDDataset object.
+
+    Stores the information of a set of BED files.
+    Generates a new dataset with regions shuffled in BED files.
+
+    Attributes:
+        filename_list: A list of BED file names.
+        nfiles: The number of BED files in the BEDdataset object.
+    """
+
+    def __init__(self, file_list: str) -> None:
+        """Initializes a BEDDataset object.
+
+        Args:
+            file_list (str): A file storing a list of BED file names that
+                should be included in the dataset.
+        """
+        self.filename_list = []
         with open(file_list, "r") as f:
             for idx, line in enumerate(f):
                 filename = line.strip()
-                self.links.append(filename)
-                self.file2idx[filename] = idx
+                self.filename_list.append(filename)
 
-        self.nfiles = len(self.links)
+        self.nfiles = len(self.filename_list)
 
-    def regions2sentences_sampling(self, src_path, dst_path):
+    def regions2sentences_sampling(self, src_path: str, dst_path: str) -> None:
+        """Constructs a sentence by sampling regions from a BED file.
+
+        Each region in a BED file has a probability. Constructs a sentence by
+        sampling regions in a BED file based on their probabilities.
+
+        Args:
+            src_path (str): The folder where BED files reside.
+            dst_path (str): The destination file that stores all the generated
+                BED files; each line has regions sampled from a BED file.
+        """
         with open(dst_fname, "w") as fout:
-            for fname in self.links:
+            for fname in self.filename_list:
                 src_fname = os.path.join(src_path, fname)
                 sentence = []
                 probs = []
@@ -49,9 +71,18 @@ class BEDDataset:
                 fout.write(str_sent)
                 fout.write("\n")
 
-    def regions2sentences(self, src_path, dst_path):
+    def regions2sentences(self, src_path: str, dst_path: str) -> None:
+        """Concatenates all regions in a BED file randomly into a sentence.
+
+        This functions is called in the hard tokenization mode.
+
+        Args:
+            src_path (str): The folder where BED files reside.
+            dst_path (str): The destination file that stores all the generated
+                BED files; each line has all the regions from a BED file.
+        """
         with open(dst_path, "w") as f_out:
-            for fname in self.links:
+            for fname in self.filename_list:
                 src_fname = os.path.join(src_path, fname)
                 sentence = []
                 with open(src_fname, "r") as f:
@@ -69,14 +100,36 @@ class BEDDataset:
 
 
 class MatrixDataset:
-    def __init__(self, matrix):
+    """Wraps the binary representation of BED files into a MatrixDataset.
+
+    Stores the information of a set of BED files.
+    Generates a new dataset with regions shuffled in BED files.
+    """
+
+    def __init__(self, matrix: list[list[int]]):
+        """Initializes a MatrixDataset object with matrix.
+
+        Args:
+            matrix (list[list[int]]): The binary representation of BED files.
+                Each row represents a BED file. Each column denotes a region.
+                Each element denotes the presence (1) or absence (0) of a
+                region in a BED file.
+        """
         self.mat = [[] for i in range(len(matrix))]
         for i in range(len(matrix)):
             for j in range(len(matrix[i])):
                 if matrix[i][j] != 0:
                     self.mat[i].append(j)
 
-    def regions2sentences(self, dst_path):
+    def regions2sentences(self, dst_path: str) -> None:
+        """Concatenates all regions in a BED file randomly into a sentence.
+
+        This functions is called in the hard tokenization mode.
+
+        Args:
+            dst_path (str): The destination file that stores all the generated
+                BED files; each line has all the regions from a BED file.
+        """
         with open(dst_path, "w") as f_out:
             for i in range(len(self.mat)):
                 sentence = []
@@ -89,7 +142,14 @@ class MatrixDataset:
                     f_out.write("\n")
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
+    """Generates shuffled datasets.
+
+    Called internally as a subprocess by region2vec in main.py.
+
+    Args:
+        args (argparse.Namespace): See the definition of ArgumentParser.
+    """
     DATA_FOLDER = os.path.join(args.save_dir, "shuffled_datasets")
     os.makedirs(DATA_FOLDER, exist_ok=True)
     src_path = args.tokenization_folder
@@ -97,7 +157,7 @@ def main(args):
     random.seed(worker_id)
     np.random.seed(worker_id)
     if args.data_type == "files":
-        dataset = BEDDataset(args, args.file_list)
+        dataset = BEDDataset(args.file_list)
     else:
         with open(args.mat_path, "rb") as f:
             matrix = pickle.load(f)

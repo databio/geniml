@@ -1,6 +1,5 @@
 import os
 import pickle
-from typing import Union
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 import argparse
@@ -16,29 +15,36 @@ from sklearn.neighbors import NearestNeighbors
 
 from .const import *
 from .utils import (
-    Timer,
     cosine_distance,
     genome_distance,
     load_genomic_embeddings,
 )
 
 
-def explained_variance(bin_path, dim):
-    bin_embed, _ = load_genomic_embeddings(bin_path, "base")
-    pca_obj = PCA(n_components=dim).fit(bin_embed)
-    ratio = pca_obj.explained_variance_ratio_.sum()
-    return ratio
-
-
 def get_ctt_score(
-    path,
-    embed_type,
-    seed=42,
-    num_data=10000,
-    num_workers=10,
-):
-    """Implementation of hopkins' test. A score between 0 and 1, a score around 0.5 express a
-    uniform distribution, a score around 0 indicate an evenely spaced distribution, and a score tending to 1 express a high cluster tendency.
+    path: str,
+    embed_type: str,
+    seed: int = 42,
+    num_data: int = 10000,
+    num_workers: int = 10,
+) -> float:
+    """Runs the cluster tendency test (CTT) on a model.
+
+    Args:
+        path (str): The path to a model.
+        embed_type (str): The type of the model: "region2vec" or "base".
+        seed (int, optional): Random seed. Defaults to 42.
+        num_data (int, optional): Number of embeddings used for evaluation.
+            Defaults to 10000.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+
+    Raises:
+        ValueError: The number of samples is too small.
+        ZeroDivisionError: The denominator of the CTT score is zero.
+
+    Returns:
+        float: The CTT score for the model.
     """
     np.random.seed(seed)
     data, vocab = load_genomic_embeddings(path, embed_type)
@@ -49,7 +55,7 @@ def get_ctt_score(
         num = num_ori
     data = data[np.random.choice(num_ori, num)]
     if num < 100:
-        raise Exception(f"Number of samples ({num}) is too small")
+        raise ValueError(f"Number of samples ({num}) is too small")
     num_samples = int(num * CTT_TEST_RATIO)
 
     sel_indexes = np.random.choice(num, num_samples)
@@ -70,12 +76,34 @@ def get_ctt_score(
     y = sum(random_dist_to_nn**2)
 
     if x + y == 0:
-        raise Exception("The denominator of the hopkins statistics is zero")
+        raise ZeroDivisionError("The denominator is zero")
 
     return y / (x + y)
 
 
-def get_ctt_batch(batch, seed=42, num_data=10000, save_path=None, num_workers=10):
+def get_ctt_batch(
+    batch: list[tuple[str, str]],
+    seed: int = 42,
+    num_data: int = 10000,
+    save_path: str = None,
+    num_workers: int = 10,
+) -> list[tuple[str, float]]:
+    """Runs the cluster tendency test (CTT) on a batch of models.
+
+    Args:
+        batch (list[tuple[str, str]]): A list of (model path, model type)
+            tuples. Model type could be "region2vec" or "base".
+        seed (int, optional): Random seed. Defaults to 42.
+        num_data (int, optional): Number of embeddings used for evaluation.
+            Defaults to 10000.
+        save_path (str, optional): Save the results to save_path. Defaults to
+            None.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+
+    Returns:
+        list[tuple[str, float]]: A list of (model path, CTT score) tuples.
+    """
     ctt_arr = []
     for path, embed_type in batch:
         ctt = get_ctt_score(path, embed_type, seed, num_data, num_workers)
@@ -89,12 +117,33 @@ def get_ctt_batch(batch, seed=42, num_data=10000, save_path=None, num_workers=10
 
 
 def ctt_eval(
-    batch,
-    num_runs=20,
-    num_data=10000,
-    save_folder=None,
-    num_workers=10,
-):
+    batch: list[tuple[str, str]],
+    num_runs: int = 20,
+    num_data: int = 10000,
+    save_folder: str = None,
+    num_workers: int = 10,
+) -> list[tuple[str, list[float]]]:
+    """Runs the CTT on a batch of models for multiple times.
+
+    Runs the cluster tendency test (CTT) for a batch of models for num_runs
+    times with different random seeds.
+
+
+    Args:
+        batch (list[tuple[str, str]]): A list of (model path, model type)
+            tuples. Model type could be "region2vec" or "base".
+        num_runs (int, optional): Number of runs. Defaults to 20.
+        num_data (int, optional): Number of embeddings used for evaluation.
+            Defaults to 10000.
+        save_folder (str, optional): Folder to save the results from each run.
+            Defaults to None.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+
+    Returns:
+        list[tuple[str, list[float]]]: A list of (model path, CTT scores from
+            num_runs) tuples.
+    """
     results_seeds = []
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")
