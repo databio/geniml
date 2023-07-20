@@ -1,15 +1,17 @@
+import os
+import warnings
+from logging import getLogger
+
+import numpy as np
+import pandas as pd
+
 from .distance import run_distance
-from .utils import check_if_uni_flexible
 from .intersection import run_intersection
 from .likelihood import (
     hard_universe_likelihood,
     likelihood_flexible_universe,
 )
-import pandas as pd
-import os
-import numpy as np
-import warnings
-from logging import getLogger
+from .utils import check_if_uni_flexible
 from ..const import PKG_NAME
 
 _LOGGER = getLogger(PKG_NAME)
@@ -29,6 +31,21 @@ def run_all_assessment_methods(
     distance_u_t_f=False,
     distance_u_t_f_flex=False,
 ):
+    """
+    Assess universe fit to collection using overlap and distance metrics
+    :param str raw_data_folder: path to raw files from the collection
+    :param str file_list: path to file with list of files in the collection
+    :param str universe: path to universe that is being assessed
+    :param int no_workers: number of workers for multiprocessing
+    :param str folder_out: output folder
+    :param str pref: prefixed used for creating output files
+    :param bool save_each: if save output of distance metrics for each region
+    :param bool overlap: if calculate overlap metrics
+    :param bool distance_f_t_u: if calculate distance from file to universe metrics
+    :param bool distance_f_t_u_flex: if calculate flexible distance from file to universe metrics
+    :param bool distance_u_t_f: if calculate distance from universes to file metrics
+    :param bool distance_u_t_f_flex: if calculate flexible distance from universes to file metrics
+    """
     if not any(
         [
             overlap,
@@ -136,6 +153,9 @@ def run_all_assessment_methods(
 
 
 def get_rbs(f_t_u, u_t_f):
+    """
+    Calculate RBS
+    """
     a = 101 / (f_t_u + 100)
     b = 101 / (u_t_f + 100)
     rbs = (10 * a + b) / 11
@@ -143,6 +163,15 @@ def get_rbs(f_t_u, u_t_f):
 
 
 def get_mean_rbs(folder, file_list, universe, no_workers, flexible=False):
+    """
+    Calculate average RBS of the collection
+    :param str folder: path to folder with the collection
+    :param str file_list: path to file with list of files in the collection
+    :param str universe: path to the universe
+    :param int no_workers: number of workers for multiprocessing
+    :param bool flexible: if to calculate flexible version of the metric
+    :return int: average RBS
+    """
     file_to_uni = run_distance(
         folder,
         file_list,
@@ -160,12 +189,17 @@ def get_mean_rbs(folder, file_list, universe, no_workers, flexible=False):
         flexible=flexible,
         uni_to_file=True,
     )
-    # me = (10 * file_to_uni[1] + uni_to_file[1]) / 11
     rbs = get_rbs(file_to_uni[1], uni_to_file[1])
     return np.mean(rbs)
 
 
 def get_rbs_from_assessment_file(file, cs_each_file=False, flexible=False):
+    """
+    Calculate RBS form file with results of metrics per file
+    :param str file: path to file with assessment results
+    :param bool cs_each_file: if report RBS for each file, not average for the collection
+    :param bool flexible: if use flexible version of the metric
+    """
     df = pd.read_csv(file, index_col=(0))
     if flexible:
         df["f_t_u"] = df["median_dist_file_to_universe_flex"]
@@ -186,6 +220,14 @@ def get_f_10_score(
     universe,
     no_workers,
 ):
+    """
+    Get F10 score for a universes and collection of files
+    :param str folder: path to folder with the collection
+    :param str file_list: path to file with list of files in the collection
+    :param str universe: path to the universe
+    :param int no_workers: number of workers for multiprocessing
+    :return int: average F10 score
+    """
     res = run_intersection(
         folder,
         file_list,
@@ -202,6 +244,11 @@ def get_f_10_score(
 
 
 def get_f_10_score_from_assessment_file(file, f10_each_file=False):
+    """
+    Get F10 score from assessment output file
+    :param str file: path to file with assessment results
+    :param bool f10_each_file: if report F10 for each file, not average for the collection
+    """
     df = pd.read_csv(file, index_col=(0))
     r = df["A&U/A"]
     p = df["A&U/U"]
@@ -216,10 +263,20 @@ def get_likelihood(
     model_file,
     universe,
     cove_folder,
-    cove_prefix,
+    cove_prefix="all",
     flexible=False,
     save_peak_input=False,
 ):
+    """
+    Calculate universe likelihood given collection
+    :param str model_file: path to file with likelihood model
+    :param str universe: path to the universe
+    :param str cove_folder: path to the coverage folder
+    :param str cove_prefix: prefixed used for generating coverage
+    :param bool flexible: if to calculate flexible likelihood
+    :param bool save_peak_input:  if to save likelihood input of each region
+    :return:
+    """
     if flexible:
         lh = likelihood_flexible_universe(
             model_file, universe, cove_folder, cove_prefix, save_peak_input
@@ -243,6 +300,18 @@ def filter_universe(
     cove_prefix=None,
     lh_cutoff=0,
 ):
+    """
+    Filter universe by region size, coverage by collection, likelihood
+    :param str universe: path to input universe
+    :param str universe_filtered: path to output filtered universe
+    :param int min_size: minimum size of the region in the output universe
+    :param int min_coverage: minimum number coverage of universe region by collection
+    :param bool filter_lh: if use likelihood to filter universe
+    :param str model_file: path to collection likelihood model
+    :param str cove_folder: path to folder with coverage tracks
+    :param str cove_prefix: prefixed used for creating tracks
+    :param int lh_cutoff: minimum likelihood input
+    """
     if filter_lh:
         check_if_uni_flexible(universe)
         if not all([model_file, cove_folder, cove_prefix]):
