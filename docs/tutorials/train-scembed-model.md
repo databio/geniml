@@ -86,12 +86,39 @@ model.train(adata, epochs=3) # we recomend increasing this to 100
 Thats it!
 
 ## Clustering the cells
-Now that we have a trained model, we can use it to cluster the cells. To do this, we will use the `predict` method. This method will return a `pandas.DataFrame` with the cell barcodes and their corresponding cluster assignments. We will then add this to the `AnnData` object as a new column in the `.obs` attribute:
+With the model now trained, we can get embeddings of our cells. This occurs in two steps: 1) tokenize the data and 2) encode the cells.
 
+**Tokenize:**
 ```python
 from gitk.models.tokenizers import HardTokenizer
 
-tokenizer = HardTokenizer("peaks.bed")
+tokenizer = HardTokenizer("peaks.bed") # consensus peak set
 
 region_sets = tokenizer(adata)
+```
+
+**Encode:**
+```python
+cell_embeddings = []
+for region_set in region_sets:
+    embedding = np.mean([model(r) for r in region_set if r in model.region2vec, axis=0])
+    cell_embeddings.append(embedding)
+
+cell_embeddings = np.array(cell_embeddings)
+
+adata.obsm['scembed_X'] = cell_embeddings
+```
+
+Now you can use `scanpy` utilities to cluster the cells:
+
+```python
+sc.pp.neighbors(adata, use_rep="scembed_X")
+sc.tl.leiden(adata)
+```
+
+And visualize with UMAP
+
+```python
+sc.tl.umap(adata)
+sc.pl.umap(adata, color="leiden")
 ```
