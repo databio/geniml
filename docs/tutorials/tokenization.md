@@ -3,7 +3,7 @@
 
 For hard tokenization, run
 
-```
+```python
 from gitk.tokenization import hard_tokenization
 
 src_folder = '/path/to/raw/bed/files/'
