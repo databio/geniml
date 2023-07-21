@@ -2,22 +2,36 @@ import argparse
 import glob
 import json
 import multiprocessing
+import numpy as np
 import os
 import random
+import requests
 import shlex
 import shutil
 import subprocess
 import sys
-from queue import Queue
-
-import numpy as np
-import requests
 import yaml
+
+from abc import ABC, abstractmethod
+from queue import Queue
 
 import gitk.region2vec.utils as utils
 from gitk.tokenization.split_file import split_file
-
 from .hard_tokenization_batch import main as hard_tokenization
+from ..io import RegionSet, RegionSetCollection
+
+# Should a tokenizer *hold* a universe, or take one as a parameter? Or both?
+class Tokenizer(ABC):
+    """Abstract class representing a tokenizer function"""
+
+    @abstractmethod
+    def tokenize(self, region_set: RegionSet, universe: RegionSet = None) -> RegionSet:
+        """Tokenize a RegionSet"""
+        raise NotImplementedError
+
+    def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:
+        """Tokenize a RegionSetCollection"""
+        raise NotImplementedError
 
 
 class Namespace:
