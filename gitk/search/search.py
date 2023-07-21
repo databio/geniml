@@ -1,19 +1,84 @@
 from abc import ABC, abstractmethod
 
+
+# Should a tokenizer *hold* a universe, or take one as a parameter? Or both?
+class Tokenizer(ABC):
+    """ Class representing a tokenizer function """
+    @abstractmethod
+    def tokenize(self, region_set: RegionSet, universe:RegionSet=None) -> TokenizedRegionSet:
+        """ Tokenize a RegionSet """
+        raise NotImplementedError
+
+    def tokenize_rsc(self, rsc: RegionSetCollection) -> TokenizedRegionSetCollection:
+        """ Tokenize a RegionSetCollection """
+        raise NotImplementedError
+
+
 # A class representing an ExtendedModel, which is a 3-part object consisting of
 # a model, a universe/vocabulary, and a tokenizer
+# TODO: Move this outside of the search module
+# from gitk.models? import TUM
 class TUM(object):
+    model: Model
+    universe: RegionSet
+    tokenizer: Tokenizer
+
     def __init__(self, model, universe, tokenizer):
-        self.model = model
+
+# TODO: This belongs somewhere else
+class RegionSet(object):
+    def __init__(self, path):
+        with open(path, 'r') as f:
+            self.regions = [Region(line) for line in f] 
+
+# TODO: This belongs somewhere else; does it even make sense?
+class TokenizedRegionSet(object):
+    """ Represents a tokenized region set """
+    def __init__(self, tokens:np.ndarray, universe: RegionSet):
+        self.tokens = tokens
         self.universe = universe
-        self.tokenizer = tokenizer
+
+
+# Write a class representing a collection of RegionSets
+# TODO: This shouldn't read in the actual files, it should just represent the files and use lazy loading
+class RegionSetCollection(object):
+    """ Represents a collection of RegionSets """
+    def __init__(self, region_sets: List[RegionSet] =None, file_globs: List[str] = None):
+        if region_sets:
+            self.region_sets = region_sets
+        elif file_globs:
+            self.region_sets = []
+            for glob in file_globs:
+                self.region_sets.extend([RegionSet(path) for path in glob.glob(glob)])
+
+    def __getitem__(self, key):
+        return self.region_sets[key]
+
+    def __len__(self):
+        return len(self.region_sets)
+
+
+class BEDEmbedTUM(TUM):
+    """ A TUM that uses BED files as input """
+    def __init__(self, model, universe, tokenizer):
+        super().__init__(model, universe, tokenizer)
+
+    def embed(self, region_set: RegionSet) -> np.ndarray:
+        """ Embed a region set using the model """
+
 
 # allow backends to be either a qdrant server or a local in-memory NMS index
 # this allows us to use the same interface for both
 class EmSearchBackend(ABC) :
     """ An abstract class representing back-ends for Embedding Search """
-    def __init__(self, embeddings: np.ndarray, labels: list) -> None:
-        pass
+    def __init__(self, embeddings: np.ndarray = None, labels: list = None) -> None:
+        if embeddings:
+            self.load(embeddings, labels)
+        
+
+    @abstractmethod
+    def load(self, embeddings: np.ndarray, labels: list) -> None:
+        raise NotImplementedError
 
     @abstractmethod
     def search(self, query: np.ndarray, k: int) -> List[Tuple[int, float]]:
@@ -48,28 +113,29 @@ class QdrantBackend(EmSearchBackend):
 
 class HNSWBackend(EmSearchBackend):
     """ A search backend that uses a local HNSW index to store and search embeddings """
+    idx: hnswlib.Index
     def __init__(self, embeddings: np.ndarray, labels: list, metadata: dict = None) -> None:
         self.labels = labels
         self.metadata = metadata
 
         # create an HNSW index for the embeddings
         dim = embeddings.shape[1]
-        self.p = hnswlib.Index(space = 'l2', dim = dim) # possible options are l2, cosine or ip
-        self.p.init_index(max_elements = len(embeddings), ef_construction = 200, M = 16)
-        self.p.add_items(embeddings, labels)
+        self.idx = hnswlib.Index(space = 'l2', dim = dim) # possible options are l2, cosine or ip
+        self.idx.init_index(max_elements = len(embeddings), ef_construction = 200, M = 16)
+        self.idx.add_items(embeddings, labels)
 
     def search(self, query: np.ndarray, k: int) -> List[Tuple[int, float]]:
-        return self.p.knn_query(query, k)
+        return self.idx.knn_query(query, k)
 
     def __len__(self) -> int:
-        return p.element_count()
+        return idx.element_count()
 
     def __getitem__(self, key) -> np.ndarray:
         if metadata:
             ret = metadata[key]
         else:
             ret = {}
-        ret['embedding'] = p.get_items([key])[0]
+        ret['embedding'] = self.idx.get_items([key])[0]
         return ret
         
     def __str__(self):
@@ -127,17 +193,6 @@ class BEDSpaceSearchInterface(object):
         region_set_embedding = self.get_region_set_embedding(tokenized_region_set)
         return region_set_embedding
 
-class RegionSet(object):
-    def __init__(self, path):
-        with open(path, 'r') as f:
-            self.regions = [Region(line) for line in f] 
-
-class TokenizedRegionSet(object):
-    """ Represents a tokenized region set """
-    def __init__(self, tokens:np.ndarray, universe: RegionSet):
-        self.tokens = tokens
-        self.universe = universe
-
 
 # Demo of how to use the BEDspace search interface
 
@@ -155,3 +210,34 @@ suggested_labels = BBSI.search_labels_by_region_set(region_set, k=15)
 path_to_bed_file = "path/to/bed/file.bed"
 region_set = RegionSet(path_to_bed_file)
 BBSI.search_region_sets_by_region_set(region_set, k=10)
+
+
+
+
+class BEDbaseSearchInterface(object):
+    def __init__(self, tum: BEDEmbedTUM, region_set_backend: EmSearchBackend):
+        self.tum = tum
+        self.region_set_backend = search_backend
+    
+    def nlsearch(self, query: str), k: int = 10) -> embeddings:
+        """ Given an input natural lange, suggest region sets """
+
+        # first, get the embedding of the query string
+        query_embedding = self.tum.embed(query)
+        # then, use the query embedding to predict the region set embedding
+        region_set_embedding = self.tum.str_to_region_set(query_embedding)
+        # finally, use the region set embedding to search for similar region sets
+        return self.region_set_backend.search(region_set_embedding, k)
+
+
+# Example of how to use the BEDbase search interface
+
+betum = BEDEmbedTUM(RSC, universe, tokenizer)
+embeddings = betum.compute_embeddings()
+BBSI = BEDbaseSearchInterface(betum, embeddings) # ???
+
+# Do we need an EmbeddingSet class?
+class EmbeddingSet(object):
+    """ Represents embeddings and labels """
+    embeddings: np.ndarray
+    labels: list
