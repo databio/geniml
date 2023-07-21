@@ -11,6 +11,7 @@ import numpy as np
 from gitk.region2vec import utils
 from typing import List
 
+
 class BEDDataset:
     """Wraps a set of BED files in a BEDDataset object.
 
