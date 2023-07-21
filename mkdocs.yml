@@ -7,15 +7,15 @@ pypi_name: gitk
 nav:
   - Getting Started: 
     - Introduction: README.md
-  - Modules:
-    - Assess universe: modules/assess-universe.md
-    - BEDSpace: modules/bedspace.md
-    - Evaluate embeddings: modules/evaluation.md
-    - Region2Vec: modules/region2vec.md
-    - Single-cell embeddings: modules/scembed.md
-    - Tokenization: modules/tokenization.md
-    - Build universe: modules/build-universe.md
+    - Module overviews: modules.md
   - How-to guides:    
+    - Assess universe fit: tutorials/assess-universe.md
+    - Search intervals with BEDSpace: tutorials/bedspace.md
+    - Evaluate embeddings: tutorials/evaluation.md
+    - Train region2vec embeddings: tutorials/region2vec.md
+    - Train single-cell embeddings: tutorials/train-scembed-model.md
+    - Tokenize a BED file: tutorials/tokenization.md
+    - Build universe: tutorials/build-universe.md
     - Create consensus peaks: tutorials/create-consensus-peaks.md
   - Reference:
     - API: autodoc_build/gitk.md

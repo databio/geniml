@@ -3,10 +3,27 @@ import os
 import shlex
 import subprocess
 
-from gitk.tokenization import utils
+from gitk.region2vec import utils
 
 
-def bedtool_tokenization(f, bedtool_path, data_folder, target_folder, universe, fraction):
+def bedtools_tokenization(
+    f: str,
+    bedtools_path: str,
+    data_folder: str,
+    target_folder: str,
+    universe: str,
+    fraction: float,
+) -> None:
+    """Uses bedtools to tokenize a raw BED file.
+
+    Args:
+        f (str): File name.
+        bedtools_path (str): Path to a bedtools binary.
+        data_folder (str): The folder where raw BED files reside.
+        target_folder (str): The folder that stores tokenized BED files.
+        universe (str): Path to a universe file.
+        fraction (float): A parameter for bedtools.intersect.
+    """
     fname = os.path.join(data_folder, f)
     temp = os.path.join(target_folder, f + "_sorted")
     target = os.path.join(target_folder, f)
@@ -14,15 +31,34 @@ def bedtool_tokenization(f, bedtool_path, data_folder, target_folder, universe, 
         subprocess.run(shlex.split(f"sort -k1,1V -k2,2n {fname}"), stdout=f_temp)
     with open(target, "w") as f_target:
         subprocess.run(
-            shlex.split(f"{bedtool_path} intersect -a {universe} -b {temp} -u -f {fraction} "),
+            shlex.split(f"{bedtools_path} intersect -a {universe} -b {temp} -u -f {fraction} "),
             stdout=f_target,
         )
     os.remove(temp)
 
 
-def generate_tokens(raw_data_folder, token_folder, universe, file_list, bedtool, fraction):
-    """
-    Perform hard tokenization on the bed files
+def generate_tokens(
+    raw_data_folder: str,
+    token_folder: str,
+    universe: str,
+    file_list: str,
+    bedtools: str,
+    fraction: float,
+) -> None:
+    """Tokenizes raw BED files specified by file_list.
+
+    Tokenizes raw BED files specified by file_list. First, checks existing files
+    in token_folder. If token_folder has all the tokenized BED files, then does
+    nothing. Otherwise, tokenizes raw BED files that are in file_list but not
+    in token_folder.
+
+    Args:
+        raw_data_folder (str): The foder where raw BED files reside.
+        token_folder (str): The folder to store tokenized BED files.
+        universe (str): The path to a universe file.
+        file_list (str): The path to a file which contains selected BED files per row.
+        bedtools (str): The path to a bedtools binary.
+        fraction (float): A parameter for bedtools.intersect.
     """
     usize = 0
     with open(universe, "r") as f:
@@ -44,7 +80,7 @@ def generate_tokens(raw_data_folder, token_folder, universe, file_list, bedtool,
         number = len(not_covered)
         if number == 0:
             print(f"Use the existing folder {token_folder}", flush=True)
-            return 0
+            return
         else:
             print(
                 f"Folder {token_folder} exists with {number} files not processed. Continue...",
@@ -54,14 +90,21 @@ def generate_tokens(raw_data_folder, token_folder, universe, file_list, bedtool,
         os.makedirs(token_folder)
         not_covered = all_set
     for f in not_covered:
-        bedtool_tokenization(f, bedtool, raw_data_folder, token_folder, universe, fraction)
-    return 0
+        bedtools_tokenization(f, bedtools, raw_data_folder, token_folder, universe, fraction)
 
 
-def main(args):
+def main(args: argparse.Namespace):
+    """Generates tokenized BED files.
+
+    Calls generate_tokens using the arguments in args. Prints status
+    information.
+
+    Args:
+        args (argparse.Namespace): See the definition of the ArgumentParser.
+    """
     local_timer = utils.Timer()
     print(f"Entering hard tokenization. Results stored in {args.token_folder}")
-    status = generate_tokens(
+    generate_tokens(
         args.data_folder,
         args.token_folder,
         args.universe,
@@ -69,8 +112,6 @@ def main(args):
         args.bedtools_path,
         args.fraction,
     )
-    if status < 0:
-        return
     tokenization_time = local_timer.t()
     print(f"Hard tokenization takes {utils.time_str(tokenization_time)}")
 

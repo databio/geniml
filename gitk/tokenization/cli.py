@@ -1,9 +1,5 @@
 def build_subparser(parser):
-    """
-    Builds argument parser.
-
-    :return argparse.ArgumentParser: Argument parser
-    """
+    """Builds an argument parser to support the tokenize command line interface."""
     parser.add_argument(
         "--data-folder",
         type=str,

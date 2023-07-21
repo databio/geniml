@@ -31,6 +31,8 @@ setup(
         "gitk.eval",
         "gitk.likelihood",
         "gitk.models",
+        "gitk.models.atac",
+        "gitk.models.rna",
         "gitk.region2vec",
         "gitk.scembed",
         "gitk.tokenization",

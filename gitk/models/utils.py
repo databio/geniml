@@ -1,13 +1,13 @@
 import os
-import subprocess
-from typing import List, Dict, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
 import scanpy as sc
 from tqdm import tqdm
 
 if TYPE_CHECKING:
-    from .tokenization import Universe
+    from .atac.tokenization import Universe
+
 from .const import CACHE_DIR
 
 
@@ -104,7 +104,7 @@ def generate_var_conversion_map(
 
     conversion_map = dict()
 
-    for region in tqdm(a, total=len(a)):
+    for region in tqdm(a, total=len(a), desc="Generating conversion map"):
         overlaps = b.query(region)
         region_str = f"{region[0]}_{region[1]}_{region[2]}"
         if len(overlaps) > 0:
@@ -119,55 +119,51 @@ def generate_var_conversion_map(
 
 def convert_to_universe(adata: sc.AnnData, universe: "Universe") -> sc.AnnData:
     """
-    Converts the consensus peak set (.var) attributes of the AnnData object
-    to a universe representation. This is done through interval overlap
-    analysis with bedtools.
+    Convert an AnnData object to a new universe. This is useful for converting the consensus
+    peak set of one AnnData object to another. This is usually used as a preprocessing step
+    before tokenization.
 
-    For each region in the `.var` attribute of the AnnData object, we
-    either 1) map it to a region in the universe, or 2) map it to `None`.
-    If it is mapped to `None`, it is not in the universe and will be dropped
-    from the AnnData object. If it is mapped to a region, it will be updated
-    to the region in the universe for downstream analysis.
+    This function is already pretty optimized. To speed it up even more, we could use
+    multiprocessing to parallelize the conversion. Or, we could use Rust library to speed
+    up the conversion. However, this is not necessary at the moment.
+
+    :param adata: the AnnData object to convert
+    :param Universe universe: the universe to convert to
+    :return: the converted AnnData object
     """
     # ensure adata has chr, start, and end
     if not all([x in adata.var.columns for x in ["chr", "start", "end"]]):
         raise ValueError("AnnData object must have `chr`, `start`, and `end` columns in .var")
 
     # create list of regions from adata
-    query_set: List[tuple[str, int, int]] = adata.var.apply(
-        lambda x: (x["chr"], int(x["start"]), int(x["end"])), axis=1
-    ).tolist()
+    adata.var["region"] = (
+        adata.var["chr"].astype(str)
+        + "_"
+        + adata.var["start"].astype(str)
+        + "_"
+        + adata.var["end"].astype(str)
+    )
+    query_set: List[tuple[str, int, int]] = list(
+        zip(adata.var["chr"], adata.var["start"].astype(int), adata.var["end"].astype(int))
+    )
 
     # generate conversion map
     _map = generate_var_conversion_map(query_set, universe)
 
-    # create a new DataFrame with the updated values
-    updated_var = adata.var.copy()
+    # map regions to new universe
+    adata.var["new_region"] = adata.var["region"].map(_map)
 
-    # find the regions that overlap with the universe
-    # use dynamic programming to create a boolean mask of columns to keep
-    columns_to_keep = []
-    for i, row in tqdm(adata.var.iterrows(), total=adata.var.shape[0]):
-        region = f"{row['chr']}_{row['start']}_{row['end']}"
-        if _map[region] is None:
-            columns_to_keep.append(False)
-            continue
+    # drop rows where new_region is None
+    adata.var.dropna(subset=["new_region"], inplace=True)
 
-        # if it is, change the region to the universe region,
-        # grab the first for now
-        # TODO - this is a simplification, we should be able to handle multiple
-        universe_region = _map[region]
-        chr, start, end = universe_region.split("_")
+    # split new_region into chr, start, end
+    adata.var[["chr", "start", "end"]] = adata.var["new_region"].str.split("_", expand=True)
 
-        updated_var.at[i, "chr"] = chr
-        updated_var.at[i, "start"] = start
-        updated_var.at[i, "end"] = end
+    # drop 'region' and 'new_region' columns
+    adata.var.drop(columns=["region", "new_region"], inplace=True)
 
-        columns_to_keep.append(True)
-
-    # update adata with the new DataFrame and filtered columns
-    adata = adata[:, columns_to_keep]
-    adata.var = updated_var[columns_to_keep]
+    # update adata with the new DataFrame
+    adata = adata[:, adata.var.index]
 
     return adata
 
@@ -177,6 +173,10 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
     Converts an AnnData object to a list of lists of regions. This
     is done by taking each cell and creating a list of all regions
     that have a value greater than 0.
+
+    This function is already pretty optimized. To speed this up
+    further we'd have to parallelize it or reach for a lower-level
+    language.
 
     *Note: this method requires that the sc.AnnData object have
     chr, start, and end in `.var` attributes*
@@ -193,7 +193,7 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
         positive_values = positive_values.toarray()
 
     regions = []
-    for i in tqdm(range(adata.shape[0]), total=adata.shape[0]):
+    for i in tqdm(range(adata.shape[0]), total=adata.shape[0], desc="Tokenizing"):
         regions.append(
             [
                 f"{chr_values[j]}_{start_values[j]}_{end_values[j]}"

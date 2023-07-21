@@ -1,28 +1,37 @@
-# Evaluation of Genomic Region Embeddings
+# How to evaluate genomic region embeddings
 
-## Preparations
+## Preparation
+
 ### Create a Base Embedding Object
+
 Given a set of genomic region embeddings `embeddings` and the corresponding regions `vocab`, use `BaseEmbeddings` to create an `base` embedding object.
-```
+```python
 from gitk.eval.utils import BaseEmbeddings
 import pickle
 base_obj =  BaseEmbeddings(embeddings, vocab)
 with open("base_embed.pt", "wb") as f:
     pickle.dump(base_obj, f)
 ```
+
 ### Generate Binary Embeddings
+
 ```python
 from gitk.eval.utils import get_bin_embeddings
 universe_file = "/path/to/universe.bed"
 token_files = ["file1.bed", "file2.bed"]
 bin_embed = get_bin_embeddings(universe_file, token_files)
 ```
+
 Or use command line:
+
 ```bash
 gitk eval bin-gen --universe /path/to/universe.bed --token-folder /path/to/tokenized/folder --file-name bin_embed.pickle
 ```
+
 ## Statistical Tests
+
 ### Cluster Tendency Test (CTT)
+
 CTT analyzes how well a set of region embeddings can be clustered.  CTT score lies between 0 and 1. A larger CTT score indicates a greater tendency for the embeddings being evaluated to have clusters. When the embeddings are uniformly distributed, the score is 0.5. For evenly spaced embeddings, the score approaches 0.
 
 ```python
@@ -66,8 +75,11 @@ gitk eval rct --model-path /path/to/a/region2vec/model/ --embed-type region2vec
 ```
 To change the learning setting, go to the definition of `get_rct_score` in `gitk/eval/rct.py` and change the constructor of `MLPRegressor`.
 
+
 ## Biological Tests
+
 ### Genome Distance Scaling Test (GDST)
+
 GDST calculates a score measuring how much the embedding distance between two regions scales the corresponding genome distance.
 
 ```python
@@ -87,8 +99,8 @@ Or use the command line
 gitk eval gdst --model-path /path/to/a/region2vec/model/ --embed-type region2vec
 ```
 
-
 ### Neighborhood Preserving Test (NPT)
+
 NPT evaluates how significant genomic region embeddings preserve their neighboring regions on the genome against random embeddings. The code output the NPT score for a set of region embeddings. 
 
 ```python
