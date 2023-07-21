@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from ..io import RegionSet
 from ..tokenization import Tokenizer
 
+
 class Model(ABC):
     """Class representing an *actual* model, that is, weights, etc"""
 

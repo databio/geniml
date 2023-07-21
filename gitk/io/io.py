@@ -1,5 +1,6 @@
 from ..utils import *
 
+
 # TODO: This belongs somewhere else
 class RegionSet(object):
     def __init__(self, path):

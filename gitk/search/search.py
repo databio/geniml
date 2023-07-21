@@ -1,4 +1,3 @@
-
 class EmSearchBackend(ABC):
     """
     An abstract class representing Embedding Search Backends. This allows
@@ -84,9 +83,6 @@ class HNSWBackend(EmSearchBackend):
         self = pickle.load(path)
 
 
-
-
-
 class BEDSpaceSearchInterface(object):
     def __init__(self, region_embeddings, label_embeddings, universe, tokenizer):
         self.universe = universe
@@ -148,7 +144,3 @@ suggested_labels = BBSI.search_labels_by_region_set(region_set, k=15)
 path_to_bed_file = "path/to/bed/file.bed"
 region_set = RegionSet(path_to_bed_file)
 BBSI.search_region_sets_by_region_set(region_set, k=10)
-
-
-
-
