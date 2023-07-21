@@ -1,5 +1,5 @@
 from ..utils import *
-
+from typing import List
 
 # TODO: This belongs somewhere else
 class RegionSet(object):
@@ -22,7 +22,7 @@ class TokenizedRegionSet(object):
 class RegionSetCollection(object):
     """Represents a collection of RegionSets"""
 
-    def __init__(self, region_sets: list[RegionSet] = None, file_globs: list[str] = None):
+    def __init__(self, region_sets: List[RegionSet] = None, file_globs: List[str] = None):
         if region_sets:
             self.region_sets = region_sets
         elif file_globs:
