@@ -20,6 +20,7 @@ from gitk.tokenization.split_file import split_file
 from .hard_tokenization_batch import main as hard_tokenization
 from ..io import RegionSet, RegionSetCollection
 
+
 # Should a tokenizer *hold* a universe, or take one as a parameter? Or both?
 class Tokenizer(ABC):
     """Abstract class representing a tokenizer function"""
