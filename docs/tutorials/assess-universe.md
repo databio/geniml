@@ -1,16 +1,18 @@
 # How to assess universe fit to collection of BED files
 
-Given a collection of genomic interval sets, and a proposed universe, we would like to assess how well the universe fits the genomic interval sets.
-We will use universes produced [earlier](consensus-peaks.md). This module provides several complementary methods to assess fit.
+## Introduction
 
+If you have a potential universe file, and a collection of BED files, this module will help you assess the fit of the proposed universe to your collection of BED files. We can assess fit either from CLI, or from within Python.
 
-We can assess fit either from CLI, or from within Python. Both overlap and distance based assessments can be run using: `gitk assess ...` with appropriate flags.
+## Command-line usage
 
-```
+Both overlap and distance based assessments can be run using: `gitk assess ...` with appropriate flags.
+
+```console
  gitk assess --assessment-method1 \
              --assessment-method2 \
              --...
-             --raw-data-folder tests/consesnus/raw/\
+             --raw-data-folder tests/consesnus/raw/ \
              --file-list tests/consesnus/file_list.txt \
              --universe tests/consenus/universe/universe.bed \
              --save-to-file \
@@ -39,9 +41,9 @@ We can also use it directly from Python like this:
 ```
 from gitk.assess.intersection import run_intersection
 
-run_intersection("test/consesnus/raw/",
-                        "tests/consesnus/file_list.txt",
-                        "tests/consenus/universe/universe.bed",
+run_intersection("test/consensus/raw/",
+                        "tests/consensus/file_list.txt",
+                        "tests/consensus/universe/universe.bed",
                         no_workers=1)
 ```
 
@@ -50,9 +52,9 @@ Or, we can calculate F10 score of the universe using:
 ```
 from gitk.assess.intersection import get_f_10_score
 
-get_f_10_score("test/consesnus/raw/",
-               "tests/consesnus/file_list.txt",
-               "tests/consenus/universe/universe.bed",
+get_f_10_score("test/consensus/raw/",
+               "tests/consensus/file_list.txt",
+               "tests/consensus/universe/universe.bed",
                no_workers=1)
 ```
 
@@ -70,9 +72,9 @@ All presented distance measures can be done using python, which will result in m
 ```
 from gitk.assess.distance import run_distance
 
-d_median = run_distance("tests/consesnus/raw",
-                  "tests/consesnus/file_list.txt",
-                  "tests/consesnus/universe/universe.bed",
+d_median = run_distance("tests/consensus/raw",
+                  "tests/consensus/file_list.txt",
+                  "tests/consensus/universe/universe.bed",
                   npool=2)
 ```
 Additionally, we can directly calculate the closeness score using:
@@ -80,9 +82,9 @@ Additionally, we can directly calculate the closeness score using:
 ```
 from gitk.assess.distance import get_closeness_score
 
-closeness_score = get_closeness_score("tests/consesnus/raw",
-                                      "tests/consesnus/file_list.txt",
-                                      "tests/consesnus/universe/universe.bed",
+closeness_score = get_closeness_score("tests/consensus/raw",
+                                      "tests/consensus/file_list.txt",
+                                      "tests/consensus/universe/universe.bed",
                                       no_workers=2)
 ```
 
@@ -96,9 +98,9 @@ either for hard universe:
 ```
 from gitk.assess.likelihood import hard_universe_likelihood
 
-lh_hard = hard_universe_likelihood("tests/consesnus/lh_model.tar",
-                         "tests/consenus/universe/universe.bed",
-                         "tests/consesnus/coverage", "all")
+lh_hard = hard_universe_likelihood("tests/consensus/lh_model.tar",
+                         "tests/consensus/universe/universe.bed",
+                         "tests/consensus/coverage", "all")
 ```
 
 or with taking into account universe flexibility:
@@ -106,7 +108,7 @@ or with taking into account universe flexibility:
 ```
 from gitk.assess.likelihood import likelihood_flexible_universe
 
-lh_flexible = likelihood_flexible_universe("tests/consesnus/lh_model.tar",
-                         "tests/consenus/universe/universe.bed",
-                         "tests/consesnus/coverage", "all")
+lh_flexible = likelihood_flexible_universe("tests/consensus/lh_model.tar",
+                         "tests/consensus/universe/universe.bed",
+                         "tests/consensus/coverage", "all")
 ```

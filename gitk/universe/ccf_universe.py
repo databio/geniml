@@ -10,14 +10,14 @@ import pyBigWig
 from gitk.utils import natural_chr_sort, timer_func
 
 
-def check_if_line_correct(line):
-    line = line.split("\t")
-    if not int(line[1]) < int(line[6]) < int(line[7]) < int(line[2]):
-        print(line)
-        raise Exception("wrong line format")
-
-
 def ana_region(reg, start_s, starts, ends, track_val):
+    """Check how many regions given part of universe contains
+    :param ndarray reg: vector with universes states; 0 - background, 1- boundary, 2- core
+    :param int start_s: start of the part of the universe
+    :param list starts: list of region starts in given part of universe
+    :param list ends: list of region ends in given part of universe
+    :param ndarray track_val: genome coverage by the collection for given part of universe
+    """
     core_s, core_e = [], []
     core_pos = np.argwhere(reg == 2).flatten()
     if len(core_pos) == 0:
@@ -43,6 +43,12 @@ def ana_region(reg, start_s, starts, ends, track_val):
 
 
 def save_regions(inter_pos, chrom, bedname, track):
+    """Save regions from universes to file
+    :param ndarray inter_pos: vector with universes states; 0 - background, 1- boundary, 2- core
+    :param str chrom: chromosome to analyse
+    :param str bedname: output file
+    :param ndarray track: vector with coverage values
+    """
     ind = np.argwhere(inter_pos != 0)
     ind = ind.flatten()
     start_s = ind[0]
@@ -69,7 +75,6 @@ def save_regions(inter_pos, chrom, bedname, track):
                             int(b),
                             "0,0,255",
                         )
-                        check_if_line_correct(li)
                         to_file.append(li)
             start_s = ind[i]
     end_e = ind[-1]
@@ -90,20 +95,17 @@ def save_regions(inter_pos, chrom, bedname, track):
                 int(b),
                 "0,0,255",
             )
-            check_if_line_correct(li)
             to_file.append(li)
     with open(bedname, "a") as f:
         f.writelines(to_file)
 
 
 def get_uni(file, chrom, bedname):
-    """For each position check if coverage is bigger than cut-off;
-    if cut-off not provided calculate value that gives
-    maximum likelihood universe
+    """Build cut-off coverage flexible universes from coverage track
     :param str file: coverage file
     :param str chrom: chromosome to analyse
-    :param int cutoff: base pairs with values grater of equal to cut-off can be included in universe
-    :return:"""
+    :param str bedname: output file
+    """
     file = pyBigWig.open(file)
     if pyBigWig.numpy:
         track = file.values(chrom, 0, file.chroms(chrom), numpy=True)
@@ -132,14 +134,12 @@ def get_uni(file, chrom, bedname):
     save_regions(inter_pos, chrom, bedname, track)
 
 
-def ccf_universe(cove, cove_prefix, file_out):
+def ccf_universe(cove, file_out, cove_prefix="all"):
     """
-    Creat cut-off universe based on coverage track
-    :param str file: path to coverage file without extension
-    :param int merge: regions closer than this value will be merged into one
-    :param int filter_size: regions smaller than this value will not be reported
+    Creat cut-off flexible universe based on coverage track
+    :param str cove: path to coverage folder
     :param str file_out: output file
-    :param int cutoff: base pairs with coverage equal to or greater than this value will be included in the universe
+    :param str cove_prefix: prefixed used for creating signal tracks
     """
     if os.path.isfile(file_out):
         raise Exception(f"File : {file_out} exists")

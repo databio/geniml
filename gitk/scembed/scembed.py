@@ -1,7 +1,6 @@
-import os
 import gzip
+import os
 import pickle
-import yaml
 from logging import getLogger
 from typing import Dict, List, Union
 
@@ -19,7 +18,6 @@ from .utils import (
     LearningRateScheduler,
     ScheduleType,
     convert_anndata_to_documents,
-    create_model_info_dict,
     remove_regions_below_min_count,
     shuffle_documents,
 )
@@ -93,6 +91,9 @@ class SCEmbed(Word2Vec):
         this issue: https://github.com/RaRe-Technologies/gensim/issues/1936
 
         Instead, we will just use pickle to dump the object.
+
+        :param str filepath: The path to save the model to.
+        :param kwargs: Additional arguments to pass to pickle.dump
         """
         with gzip.open(filepath, "wb") as f:
             pickle.dump(self, f)
@@ -132,6 +133,9 @@ class SCEmbed(Word2Vec):
         this issue: https://github.com/RaRe-Technologies/gensim/issues/1936
 
         Instead we will just use pickle to load the object. Override the current object.
+
+        :param str filepath: The path to load the model from.
+        :param kwargs: Additional arguments to pass to pickle.load
         """
         with gzip.open(filepath, "rb") as f:
             obj = pickle.load(f)

@@ -16,14 +16,38 @@ from sklearn.preprocessing import StandardScaler
 
 from ..utils import timer_func
 from .utils import (
-    Timer,
     cosine_distance,
     genome_distance,
     load_genomic_embeddings,
 )
 
 
-def get_rct_score(path, embed_type, bin_path, out_dim=-1, cv_num=5, seed=42, num_workers=10):
+def get_rct_score(
+    path: str,
+    embed_type: str,
+    bin_path: str,
+    out_dim: int = -1,
+    cv_num: int = 5,
+    seed: int = 42,
+    num_workers: int = 10,
+) -> float:
+    """Runs the RCT on a model.
+
+    Args:
+        path (str): The path to a model.
+        embed_type (str): The type of the model: "region2vec" or "base".
+        bin_path (str): The path to a binary embedding model.
+        out_dim (int, optional): Output dimension of a prediction. Defaults to
+            -1, and out_dim is the same as the dimension of a binary embedding.
+        cv_num (int, optional): Number of folds in cross-validation. Defaults
+            to 5.
+        seed (int, optional): Random seed. Defaults to 42.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+
+    Returns:
+        float: the RCT score.
+    """
     embed_rep, vocab = load_genomic_embeddings(path, embed_type)
     embed_bin, vocab_bin = load_genomic_embeddings(bin_path, "base")
     region2idx = {r: i for i, r in enumerate(vocab)}
@@ -63,7 +87,33 @@ def get_rct_score(path, embed_type, bin_path, out_dim=-1, cv_num=5, seed=42, num
     return score.mean()
 
 
-def reconstruction_batch(batch, cv_num, out_dim=-1, seed=42, save_path=None, num_workers=10):
+def reconstruction_batch(
+    batch: list[tuple[str, str, str]],
+    cv_num: int,
+    out_dim: int = -1,
+    seed: int = 42,
+    save_path: str = None,
+    num_workers: int = 10,
+) -> list[tuple[str, float]]:
+    """Runs the RCT on a batch of models.
+
+    Args:
+        batch (list[tuple[str, str, str]]): A list of (model path, model type,
+            binary embedding path) tuples. Model type could be "region2vec" or
+            "base".
+        cv_num (int): Number of folds in cross-validation. Defaults
+            to 5.
+        out_dim (int, optional): Output dimension of a prediction. Defaults to
+            -1, and out_dim is the same as the dimension of a binary embedding.
+        seed (int, optional): Random seed. Defaults to 42.
+        save_path (str, optional): Save the results to save_path. Defaults to
+            None.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+
+    Returns:
+        list[tuple[str, float]]: A list of (model path, RCT score) tuples.
+    """
     rct_arr = []
     for path, embed_type, bin_path in batch:
         score = get_rct_score(path, embed_type, bin_path, out_dim, cv_num, seed, num_workers)
@@ -76,13 +126,33 @@ def reconstruction_batch(batch, cv_num, out_dim=-1, seed=42, save_path=None, num
 
 
 def rct_eval(
-    batch,
-    num_runs=5,
-    cv_num=5,
-    out_dim=-1,
-    save_folder=None,
-    num_workers=10,
-):
+    batch: list[tuple[str, str, str]],
+    num_runs: int = 5,
+    cv_num: int = 5,
+    out_dim: int = -1,
+    save_folder: str = None,
+    num_workers: int = 10,
+) -> list[tuple[str, list[float]]]:
+    """Runs the RCT on a batch of models for multiple times.
+
+    Args:
+        batch (list[tuple[str, str, str]]): A list of (model path, model type,
+            binary embedding path) tuples. Model type could be "region2vec" or
+            "base".
+        num_runs (int, optional): Number of runs. Defaults to 5.
+        cv_num (int, optional): Number of folds in cross-validation.
+            Defaults to 5.
+        out_dim (int, optional): Output dimension of a prediction. Defaults to
+            -1, and out_dim is the same as the dimension of a binary embedding.
+        save_folder (str, optional): Folder to save the results from each run.
+            Defaults to None.
+        num_workers (int, optional): Number of parallel processes used.
+            Defaults to 10.
+
+    Returns:
+        list[tuple[str, list[float]]]: A list of (model path, RCT scores from
+            num_runs) tuples.
+    """
     results_seeds = []
     for seed in range(num_runs):
         print(f"----------------Run {seed}----------------")

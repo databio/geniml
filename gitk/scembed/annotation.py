@@ -1,8 +1,8 @@
 from collections import Counter
-import scanpy as sc
 
-from tqdm import tqdm
+import scanpy as sc
 from qdrant_client import QdrantClient
+from tqdm import tqdm
 
 
 class AnnotationServer(QdrantClient):
@@ -11,10 +11,23 @@ class AnnotationServer(QdrantClient):
         location: str = None,
         url: str = None,
         port: int = None,
+        api_key: str = None,
         collection_name: str = None,
         timeout: float = 10,
     ):
-        super().__init__(location, url=url, port=port, timeout=timeout)
+        """
+        A class for querying a Qdrant server for cell type predictions. This class requires that you have
+        a Qdrant server running with a collection of cell type embeddings. You can create this collection using
+        the `gitk/examples/scembed/load_qdrant.ipynb` script.
+
+        :param str collection_name: The name of the collection to query.
+        :param str location: The location of the Qdrant server. This should be in the format `host:port`.
+        :param str url: The URL of the Qdrant server.
+        :param int port: The port of the Qdrant server.
+        :param str api_key: The API key for the Qdrant server.
+        :param float timeout: The timeout for the Qdrant server.
+        """
+        super().__init__(location, url=url, port=port, api_key=api_key, timeout=timeout)
         self.collection_name = collection_name
 
 
@@ -27,6 +40,18 @@ class Annotator:
         port: int = None,
         timeout: float = 10,
     ):
+        """
+        A class for annotating single cell data with cell type predictions. This class requires that you have
+        a Qdrant server running with a collection of cell type embeddings. You can create this collection using
+        the `gitk/examples/scembed/load_qdrant.ipynb` script.
+
+        :param str collection_name: The name of the collection to query.
+        :param str location: The location of the Qdrant server. This should be in the format `host:port`.
+        :param str url: The URL of the Qdrant server.
+        :param int port: The port of the Qdrant server.
+        :param float timeout: The timeout for the Qdrant server.
+
+        """
         self.collection_name = collection_name
         self.url = url
         self.port = port
@@ -56,6 +81,13 @@ class Annotator:
 
         It is *imperative* that the model used to embed your single cells is the same model used to produce the
         embeddings in the database. Otherwise, the predictions will not be accurate; in fact they will be meaningless.
+
+        :param sc.AnnData adata: The annotated data.
+        :param str embedding_key: The key in `adata.obsm` where the embeddings are stored.
+        :param str key_added: The key in `adata.obs` where the cell type predictions will be stored.
+        :param str cluter_key: The key in `adata.obs` where the cluster labels are stored.
+        :param int knn: The number of nearest neighbors to use when querying the database.
+        :param float score_threshold: The score threshold to use when querying the database.
         """
 
         _temp_key = "putative_cell_type"

@@ -4,7 +4,7 @@ from gitk.models import PretrainedScembedModel
 
 # %%
 # Load the pretrained model
-model = PretrainedScembedModel("nleroy917/luecken2021")
+model = PretrainedScembedModel("databio/luecken2021")
 
 # %%
 # Load the data

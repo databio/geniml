@@ -111,7 +111,7 @@ def hmm_universe(
 ):
     """
     Create HMM based univers from coverage
-    :param coverage_folder: path to folder with coverage files
+    :param str coverage_folder: path to folder with coverage files
     :param str start: start coverage file name
     :param str end: end coverage file name
     :param str core: core coverage file name
