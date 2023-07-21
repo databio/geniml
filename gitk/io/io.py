@@ -1,6 +1,7 @@
 from ..utils import *
 from typing import List
 
+
 # TODO: This belongs somewhere else
 class RegionSet(object):
     def __init__(self, path):

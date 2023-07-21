@@ -5,6 +5,7 @@ import subprocess
 
 from ..region2vec import utils
 
+
 def bedtools_tokenization(
     f: str,
     bedtools_path: str,

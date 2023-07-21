@@ -1,5 +1,5 @@
-
 from . import FileTokenizer
+
 
 class BEDToolsTokenizer(FileTokenizer):
     """A tokenizer that uses bedtools to tokenize BED files"""
@@ -39,15 +39,18 @@ class BEDToolsTokenizer(FileTokenizer):
 
         # get a temporary file path using tempfile
         import templfile
+
         with tempfile.NamedTemporaryFile() as temp_path, open(output_path, "w") as output_file:
             # sort the input file
-            sort_process = subprocess.Popen(shlex.split(f"sort -k1,1V -k2,2n {input_path}"), stdout=temp_path)
+            sort_process = subprocess.Popen(
+                shlex.split(f"sort -k1,1V -k2,2n {input_path}"), stdout=temp_path
+            )
             sort_process.communicate()
             # tokenize the sorted file
             bedtools_process = subprocess.Popen(
-                shlex.split(f"{bedtools_path} intersect -a {universe} -b {temp_path} -u -f {fraction}"),
+                shlex.split(
+                    f"{bedtools_path} intersect -a {universe} -b {temp_path} -u -f {fraction}"
+                ),
                 stdout=output_file,
             )
             bedtools_process.communicate()
-
-
