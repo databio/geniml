@@ -22,7 +22,15 @@ from ..io import RegionSet, RegionSetCollection
 
 
 # Should a tokenizer *hold* a universe, or take one as a parameter? Or both?
+
+
 class Tokenizer(ABC):
+    @abstractmethod
+    def tokenize(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class InMemTokenizer(Tokenizer):
     """Abstract class representing a tokenizer function"""
 
     @abstractmethod
@@ -30,8 +38,21 @@ class Tokenizer(ABC):
         """Tokenize a RegionSet"""
         raise NotImplementedError
 
+    @abstractmethod
     def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:
         """Tokenize a RegionSetCollection"""
+        raise NotImplementedError
+
+
+class FileTokenizer(Tokenizer):
+    """Tokenizer that tokenizes files"""
+
+    @abstractmethod
+    def __init__(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def tokenize(input_globs: list[str], output_folder: str, universe_path: str):
         raise NotImplementedError
 
 
