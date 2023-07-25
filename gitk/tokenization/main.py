@@ -1,27 +1,17 @@
-import argparse
-import glob
-import json
 import multiprocessing
-import numpy as np
 import os
-import random
-import requests
-import shlex
 import shutil
 import subprocess
-import sys
-import yaml
-
 from abc import ABC, abstractmethod
-from queue import Queue
+from typing import List
+
+import numpy as np
 
 import gitk.region2vec.utils as utils
 from gitk.tokenization.split_file import split_file
-from .hard_tokenization_batch import main as hard_tokenization
+
 from ..io import RegionSet, RegionSetCollection
-
-from typing import List
-
+from .hard_tokenization_batch import main as hard_tokenization
 
 # Should a tokenizer *hold* a universe, or take one as a parameter? Or both?
 
