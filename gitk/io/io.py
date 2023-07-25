@@ -1,12 +1,30 @@
 from ..utils import *
 from typing import List
 
+from intervaltree import Interval
+
+
+class Region(Interval):
+    def __new__(cls, chr: str, start: int, stop: int, data=None):
+        return super(Region, cls).__new__(cls, start, stop, data)
+
+    def __init__(self, chr: str, start: int, stop: int, data=None):
+        # no need to call super().__init__() because namedtuple doesn't have __init__()
+        self.chr = chr
+
+    @property
+    def start(self):
+        return self.begin
+
 
 # TODO: This belongs somewhere else
 class RegionSet(object):
     def __init__(self, path):
         with open(path, "r") as f:
-            self.regions = [Region(line) for line in f]
+            lines = f.readlines()
+            for line in lines:
+                chr, start, stop = line.split("\t")
+                self.regions.append(Region(chr, int(start), int(stop)))
 
 
 # TODO: This belongs somewhere else; does it even make sense?
