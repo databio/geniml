@@ -3,17 +3,123 @@ import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple, Union, Dict
 
 import numpy as np
+from tqdm import tqdm
+from intervaltree import IntervalTree
 
 import gitk.region2vec.utils as utils
 from gitk.tokenization.split_file import split_file
 
-from ..io import RegionSet, RegionSetCollection
+from ..io import RegionSet, RegionSetCollection, Region
+from .utils import extract_regions_from_bed_or_list
 from .hard_tokenization_batch import main as hard_tokenization
 
+
 # Should a tokenizer *hold* a universe, or take one as a parameter? Or both?
+class Universe:
+    def __init__(self, regions: Union[str, List[str]]):
+        """
+        Create a new Universe.
+
+        :param Union[str, List[str]] regions: The regions to use for tokenization. This can be thought of as a vocabulary.
+                        This can be either a list of regions or a path to a BED file containing regions.
+        """
+        self._trees: Dict[str, IntervalTree] = dict()
+        self._regions = regions
+        self.total_regions = 0
+
+        if regions is not None:
+            self.build_tree()
+
+    def get_tree(self, tree: str):
+        """
+        Get the interval tree for a given chromosome.
+
+        :param str tree: The chromosome to get the tree for.
+        """
+        return self._trees[tree]
+
+    @property
+    def trees(self):
+        return self._trees
+
+    @property
+    def regions(self):
+        return self._regions
+
+    def build_tree(self, regions: str = None):
+        """
+        Builds the interval tree from the regions. The tree is a dictionary that maps chromosomes to
+        interval trees.
+
+        We read in the regions (either from memory or from a BED file) and convert them to an
+        interval tree.
+
+        :param str regions: The regions to use for tokenization. This can be thought of as a vocabulary.
+        """
+        regions = extract_regions_from_bed_or_list(regions or self._regions)
+
+        # build trees
+        for region in tqdm(regions, total=len(regions), desc="Loading universe"):
+            if region.chr not in self._trees:
+                self._trees[region.chr] = IntervalTree()
+            self._trees[region.chr][
+                region.start : region.end
+            ] = f"{region.chr}_{region.start}_{region.end}"
+
+        # count total regions
+        self.total_regions = sum([len(self._trees[tree]) for tree in self._trees])
+
+    def query(
+        self,
+        regions: Union[str, List[str], List[Region], Region],
+    ):
+        """
+        Query the interval tree for the given regions. That is, find all regions that overlap with the given regions.
+
+        :param Union[str, List[str], List[Region], Region] regions: The regions to query for. this can be either a bed file,
+                                                                                                a list of regions (chr_start_end), or a list of tuples of chr, start, end.
+        """
+        # validate input
+        if isinstance(regions, Region):
+            regions = [regions]
+        regions = extract_regions_from_bed_or_list(regions)
+
+        overlapping_regions = []
+        for region in regions:
+            if region.chr not in self._trees:
+                continue
+            overlaps = self._trees[region.chr][region.start : region.end]
+            for overlap in overlaps:
+                overlapping_regions.append((region.chr, overlap.begin, overlap.end))
+        return overlapping_regions
+
+    def __contains__(self, item: Region):
+        """
+        Check if the given region is in the universe.
+
+        :param Region item: The region to check for.
+        """
+        # ensure item is a tuple of chr, start, end
+        if not isinstance(item, Region):
+            raise ValueError("The item to check for must be a tuple of chr, start, end.")
+
+        if item.chr not in self._trees:
+            return False
+        overlaps = self._trees[item.chr][item.start : item.end]
+        return len(overlaps) > 0
+
+    def __iter__(self):
+        for tree in self._trees:
+            yield self._trees[tree]
+
+    def __len__(self):
+        return self.total_regions
+
+    def __repr__(self):
+        return f"Universe with {len(self)} regions"
 
 
 class Tokenizer(ABC):
