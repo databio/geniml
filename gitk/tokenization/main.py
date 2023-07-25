@@ -19,7 +19,7 @@ from .hard_tokenization_batch import main as hard_tokenization
 
 # Should a tokenizer *hold* a universe, or take one as a parameter? Or both?
 class Universe:
-    def __init__(self, regions: Union[str, List[str]]):
+    def __init__(self, regions: Union[str, List[str], List[Region]]):
         """
         Create a new Universe.
 
@@ -49,7 +49,7 @@ class Universe:
     def regions(self):
         return self._regions
 
-    def build_tree(self, regions: str = None):
+    def build_tree(self, regions: Union[str, List[str], List[Region]] = None):
         """
         Builds the interval tree from the regions. The tree is a dictionary that maps chromosomes to
         interval trees.
@@ -93,7 +93,7 @@ class Universe:
                 continue
             overlaps = self._trees[region.chr][region.start : region.end]
             for overlap in overlaps:
-                overlapping_regions.append((region.chr, overlap.begin, overlap.end))
+                overlapping_regions.append(Region(region.chr, overlap.begin, overlap.end))
         return overlapping_regions
 
     def __contains__(self, item: Region):
@@ -131,12 +131,33 @@ class Tokenizer(ABC):
 class InMemTokenizer(Tokenizer):
     """Abstract class representing a tokenizer function"""
 
-    @abstractmethod
-    def tokenize(self, region_set: RegionSet, universe: RegionSet = None) -> RegionSet:
-        """Tokenize a RegionSet"""
-        raise NotImplementedError
+    def __init__(self, universe: Union[str, Universe] = None):
+        """
+        Create a new InMemTokenizer.
 
-    @abstractmethod
+        You can either pass a Universe object or a path to a BED file containing regions.
+
+        :param Union[str, Universe] universe: The universe to use for tokenization.
+        """
+        if isinstance(universe, str):
+            self.universe = Universe(universe)
+        elif isinstance(universe, Universe):
+            self.universe = universe
+        else:
+            self.universe = None
+
+    def tokenize(self, region_set: Union[str, List[Region]]) -> List[Region]:
+        """
+        Tokenize a RegionSet.
+
+        This is achieved using hard tokenization which is just a query to the universe, or
+        simple overlap detection.
+
+        :param str | List[Region] region_set: The list of regions to tokenize
+        """
+        return self.universe.query(region_set)
+
+    # not sure what this looks like, multiple RegionSets?
     def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:
         """Tokenize a RegionSetCollection"""
         raise NotImplementedError
