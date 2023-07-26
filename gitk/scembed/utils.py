@@ -14,7 +14,7 @@ import scanpy as sc
 from tqdm import tqdm
 
 if TYPE_CHECKING:
-    from .scembed import SCEmbed
+    from .main import SCEmbed
 
 from .const import *
 
