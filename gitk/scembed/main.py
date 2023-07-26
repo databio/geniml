@@ -12,6 +12,8 @@ from gensim.models.callbacks import CallbackAny2Vec
 from numba import config
 from tqdm import tqdm
 
+from ..io import Region
+from ..tokenization import InMemTokenizer, Universe
 from .const import *
 from .exceptions import *
 from .utils import (
@@ -415,3 +417,22 @@ class SCEmbed(Word2Vec):
         :param str region: the region to get the embedding for
         """
         return self.get_embedding(region)
+
+
+#
+# BEGIN V2 of SCEmbed class
+#
+class SCEmbedV2(Word2Vec):
+    def __init__(
+        self,
+        model_path: str = None,
+        tokenizer: InMemTokenizer = None,
+        universe: Union[Universe, str] = None,
+    ):
+        # if model_path is given, download a pretrained model
+        # from the HuggingFace Hub
+        if model_path:
+            self._init_from_huggingface(model_path)
+        else:
+            self.tokenizer = tokenizer or InMemTokenizer()
+            self.universe = universe or Universe()
