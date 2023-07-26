@@ -1,7 +1,8 @@
-from ..utils import *
 from typing import List
 
 from intervaltree import Interval
+
+from ..utils import *
 
 
 class Region(Interval):
