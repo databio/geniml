@@ -22,16 +22,25 @@ class Region(Interval):
 
 # TODO: This belongs somewhere else
 class RegionSet(object):
-    def __init__(self, path: str):
+    def __init__(self, path: str, backed: bool = False):
+        self.backed = backed
+        self.regions: List[Region] = []
         self.path = path
-        with open(path, "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                chr, start, stop = line.split("\t")
-                self.regions.append(Region(chr, int(start), int(stop)))
+        if backed:
+            self.regions = None
+            # https://stackoverflow.com/a/32607817/13175187
+            with open(self.path, "r") as file:
+                self.length = sum(1 for line in file if line.strip())
+        else:
+            with open(path, "r") as f:
+                lines = f.readlines()
+                for line in lines:
+                    chr, start, stop = line.split("\t")
+                    self.regions.append(Region(chr, int(start), int(stop)))
+                self.length = len(self.regions)
 
     def __len__(self):
-        return len(self.regions)
+        return self.length
 
     def __getitem__(self, key):
         return self.regions[key]
@@ -40,7 +49,14 @@ class RegionSet(object):
         return f"RegionSet({self.path})"
 
     def __iter__(self):
-        return iter(self.regions)
+        if self.backed:
+            with open(self.path, "r") as f:
+                for line in f:
+                    chr, start, stop = line.split("\t")
+                    yield Region(chr, int(start), int(stop))
+        else:
+            for region in self.regions:
+                yield region
 
 
 # TODO: This belongs somewhere else; does it even make sense?

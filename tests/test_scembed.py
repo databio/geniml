@@ -9,7 +9,7 @@ import scanpy as sc
 # add parent directory to path
 sys.path.append("../")
 
-from gitk import scembed, utils
+from gitk import scembed
 
 # set to DEBUG to see more info
 logging.basicConfig(level=logging.INFO)
