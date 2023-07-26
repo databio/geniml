@@ -15,7 +15,7 @@ from gitk.tokenization.split_file import split_file
 
 from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization
-from .utils import anndata_to_regionsets, validate_and_standardize_regions
+from .utils import anndata_to_regionsets
 
 
 class Tokenizer(ABC):
@@ -38,9 +38,9 @@ class InMemTokenizer(Tokenizer):
         self._trees: Dict[str, IntervalTree] = dict()
 
         if isinstance(universe, str):
-            self.universe = RegionSet(universe)
+            self.universe = RegionSet(universe)  # load from file
         elif isinstance(universe, RegionSet):
-            self.universe = universe
+            self.universe = universe  # load from memory (probably rare?)
         else:
             self.universe = None
 
@@ -76,7 +76,12 @@ class InMemTokenizer(Tokenizer):
 
         :param str regions: The regions to use for tokenization. This can be thought of as a vocabulary.
         """
-        regions = validate_and_standardize_regions(regions or self.universe.regions)
+        if regions is None:
+            regions = self.universe  # use the universe passed in the constructor
+        elif isinstance(regions, str):
+            regions = RegionSet(regions)  # load from file
+        else:
+            pass  # assume it's a list of regions that was passed in
 
         # build trees
         for region in tqdm(regions, total=len(regions), desc="Adding regions to universe"):
@@ -110,8 +115,10 @@ class InMemTokenizer(Tokenizer):
         # validate input
         if isinstance(regions, Region):
             regions = [regions]
-
-        regions = validate_and_standardize_regions(regions)
+        elif isinstance(regions, str):
+            regions = RegionSet(regions)
+        else:
+            pass
 
         overlapping_regions = []
         for region in regions:
