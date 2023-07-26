@@ -22,12 +22,25 @@ class Region(Interval):
 
 # TODO: This belongs somewhere else
 class RegionSet(object):
-    def __init__(self, path):
+    def __init__(self, path: str):
+        self.path = path
         with open(path, "r") as f:
             lines = f.readlines()
             for line in lines:
                 chr, start, stop = line.split("\t")
                 self.regions.append(Region(chr, int(start), int(stop)))
+
+    def __len__(self):
+        return len(self.regions)
+
+    def __getitem__(self, key):
+        return self.regions[key]
+
+    def __repr__(self):
+        return f"RegionSet({self.path})"
+
+    def __iter__(self):
+        return iter(self.regions)
 
 
 # TODO: This belongs somewhere else; does it even make sense?

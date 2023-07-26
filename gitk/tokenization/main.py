@@ -190,17 +190,17 @@ class Tokenizer(ABC):
 class InMemTokenizer(Tokenizer):
     """Abstract class representing a tokenizer function"""
 
-    def __init__(self, universe: Union[str, Universe] = None):
+    def __init__(self, universe: Union[str, RegionSet] = None):
         """
         Create a new InMemTokenizer.
 
-        You can either pass a Universe object or a path to a BED file containing regions.
+        You can either pass a RegionSet object or a path to a BED file containing regions.
 
-        :param Union[str, Universe] universe: The universe to use for tokenization.
+        :param Union[str, RegionSet] universe: The universe to use for tokenization.
         """
         if isinstance(universe, str):
-            self.universe = Universe(universe)
-        elif isinstance(universe, Universe):
+            self.universe = RegionSet(universe)
+        elif isinstance(universe, RegionSet):
             self.universe = universe
         else:
             self.universe = None
