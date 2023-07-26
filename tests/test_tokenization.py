@@ -35,8 +35,8 @@ def test_region_in_universe(universe_bed_file: str):
     r_is_in1 = Region("chr17", 78_168_158, 78_169_026)
     r_is_in2 = Region(
         "chr2",
-        241_859_589,
-        241_860_443,
+        241_859_569,
+        241_860_423,
     )
     r_is_in3 = Region(
         "chr22",

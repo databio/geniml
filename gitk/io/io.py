@@ -17,7 +17,7 @@ class Region(Interval):
         return self.begin
 
     def __repr__(self):
-        return f"Region({self.chr}, {self.start}, {self.stop})"
+        return f"Region({self.chr}, {self.start}, {self.end})"
 
 
 # TODO: This belongs somewhere else

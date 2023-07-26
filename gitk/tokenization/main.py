@@ -3,9 +3,10 @@ import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Union, Dict
+from typing import List, Union, Dict
 
 import numpy as np
+import scanpy as sc
 from tqdm import tqdm
 from intervaltree import IntervalTree
 
@@ -13,13 +14,17 @@ import gitk.region2vec.utils as utils
 from gitk.tokenization.split_file import split_file
 
 from ..io import RegionSet, RegionSetCollection, Region
-from .utils import extract_regions_from_bed_or_list
+from .utils import (
+    extract_regions_from_bed_or_list,
+    generate_var_conversion_map,
+    anndata_to_regionsets,
+)
 from .hard_tokenization_batch import main as hard_tokenization
 
 
 # Should a tokenizer *hold* a universe, or take one as a parameter? Or both?
 class Universe:
-    def __init__(self, regions: Union[str, List[str], List[Region]]):
+    def __init__(self, regions: Union[str, List[str], List[Region]] = None):
         """
         Create a new Universe.
 
@@ -31,7 +36,7 @@ class Universe:
         self.total_regions = 0
 
         if regions is not None:
-            self.build_tree()
+            self.build_trees()
 
     def get_tree(self, tree: str):
         """
@@ -49,7 +54,13 @@ class Universe:
     def regions(self):
         return self._regions
 
-    def build_tree(self, regions: Union[str, List[str], List[Region]] = None):
+    def add_regions(self, regions: Union[str, List[Region]]):
+        """
+        Add regions to the universe.
+        """
+        self.build_trees(regions)
+
+    def build_trees(self, regions: Union[str, List[Region]] = None):
         """
         Builds the interval tree from the regions. The tree is a dictionary that maps chromosomes to
         interval trees.
@@ -62,7 +73,7 @@ class Universe:
         regions = extract_regions_from_bed_or_list(regions or self._regions)
 
         # build trees
-        for region in tqdm(regions, total=len(regions), desc="Loading universe"):
+        for region in tqdm(regions, total=len(regions), desc="Adding regions to universe"):
             if region.chr not in self._trees:
                 self._trees[region.chr] = IntervalTree()
             self._trees[region.chr][
@@ -74,8 +85,8 @@ class Universe:
 
     def query(
         self,
-        regions: Union[str, List[str], List[Region], Region],
-    ):
+        regions: Union[str, List[Region], Region],
+    ) -> List[Region]:
         """
         Query the interval tree for the given regions. That is, find all regions that overlap with the given regions.
 
@@ -85,6 +96,7 @@ class Universe:
         # validate input
         if isinstance(regions, Region):
             regions = [regions]
+
         regions = extract_regions_from_bed_or_list(regions)
 
         overlapping_regions = []
@@ -95,6 +107,53 @@ class Universe:
             for overlap in overlaps:
                 overlapping_regions.append(Region(region.chr, overlap.begin, overlap.end))
         return overlapping_regions
+
+    def convert_anndata_to_universe(self, adata: sc.AnnData):
+        """
+        Convert an AnnData object to a universe. This is done by
+        inspecting the peaks in the AnnData object and converting
+        them to regions found in the universe.
+
+        :param sc.AnnData adata: The AnnData object to convert.
+        """
+        # ensure adata has chr, start, and end
+        if not all([x in adata.var.columns for x in ["chr", "start", "end"]]):
+            raise ValueError("AnnData object must have `chr`, `start`, and `end` columns in .var")
+
+        # create list of regions from adata
+        adata.var["region"] = (
+            adata.var["chr"].astype(str)
+            + "_"
+            + adata.var["start"].astype(str)
+            + "_"
+            + adata.var["end"].astype(str)
+        )
+        query_set = [
+            Region(x[0], x[1], x[2])
+            for x in list(
+                zip(adata.var["chr"], adata.var["start"].astype(int), adata.var["end"].astype(int))
+            )
+        ]
+
+        # generate conversion map
+        _map = generate_var_conversion_map(query_set, self)
+
+        # map regions to new universe
+        adata.var["new_region"] = adata.var["region"].map(_map)
+
+        # drop rows where new_region is None
+        adata.var.dropna(subset=["new_region"], inplace=True)
+
+        # split new_region into chr, start, end
+        adata.var[["chr", "start", "end"]] = adata.var["new_region"].str.split("_", expand=True)
+
+        # drop 'region' and 'new_region' columns
+        adata.var.drop(columns=["region", "new_region"], inplace=True)
+
+        # update adata with the new DataFrame
+        adata = adata[:, adata.var.index]
+
+        return adata
 
     def __contains__(self, item: Region):
         """
@@ -146,16 +205,31 @@ class InMemTokenizer(Tokenizer):
         else:
             self.universe = None
 
-    def tokenize(self, region_set: Union[str, List[Region]]) -> List[Region]:
+    def fit(self, regions: Union[str, List[Region]]):
+        """
+        Fit the tokenizer to the given regions. This is equivalent to adding regions to the universe.
+        """
+        self.universe.add_regions(regions)
+
+    def tokenize(
+        self, region_set: Union[str, List[Region], sc.AnnData]
+    ) -> Union[List[Region], List[List[Region]]]:
         """
         Tokenize a RegionSet.
 
         This is achieved using hard tokenization which is just a query to the universe, or
         simple overlap detection.
 
-        :param str | List[Region] region_set: The list of regions to tokenize
+        :param str | List[Region] | sc.AnnData region_set: The list of regions to tokenize
         """
-        return self.universe.query(region_set)
+        if isinstance(region_set, sc.AnnData):
+            # step 1 is to convert the AnnData object to the universe
+            self.universe.convert_anndata_to_universe(region_set)
+
+            # step 2 is to convert the AnnData object to a list of lists of regions
+            return anndata_to_regionsets(region_set)
+        else:
+            return self.universe.query(region_set)
 
     # not sure what this looks like, multiple RegionSets?
     def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:

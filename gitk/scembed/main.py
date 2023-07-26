@@ -3,6 +3,7 @@ import os
 import pickle
 from logging import getLogger
 from typing import Dict, List, Union
+from multiprocessing import cpu_count
 
 import numpy as np
 import pandas as pd
@@ -269,147 +270,6 @@ class SCEmbed(Word2Vec):
         """
         return np.array([self.get_embedding(r) for r in regions])
 
-    def region_embeddings(self) -> Dict[str, np.ndarray]:
-        """
-        Get the embeddings for each region in the original AnnData passed in.
-        """
-        if not self.trained:
-            raise ValueError("Model has not been trained yet.")
-
-        # return the key-value dict from the internal model
-        # each key is a region and each value is the embedding
-        return self.region2vec
-
-    def cell_embeddings(self) -> sc.AnnData:
-        """
-        Get the cell embeddings for the original AnnData passed in. This should
-        be called after training is complete. It is only useful for extracting the
-        embeddings for the last chunk of data its seen.
-        """
-        if not self.trained:
-            raise ValueError("Model has not been trained yet.")
-
-        # get the embeddings for each cell
-        cell_embeddings = []
-        for cell in tqdm(self.region_sets, total=len(self.region_sets)):
-            cell_embedding = np.mean(
-                [self.get_embedding(r) for r in cell if r in self.region2vec],
-                axis=0,
-            )
-            cell_embeddings.append(cell_embedding)
-
-        cell_embeddings = np.array(cell_embeddings)
-
-        # attach embeddings to the AnnData object
-        self.data.obsm["embedding"] = cell_embeddings
-        return self.data
-
-    def cell_embeddings(self) -> sc.AnnData:
-        """
-        Get the cell embeddings for the original AnnData passed in. This should
-        be called after training is complete. It is only useful for extracting the
-        embeddings for the last chunk of data its seen.
-        """
-        if not self.trained:
-            raise ValueError("Model has not been trained yet.")
-
-        if self.data is None:
-            raise ValueError(
-                "Data not found. Please pass in an AnnData object to the constructor."
-            )
-
-        # get the embeddings for each cell
-        cell_embeddings = []
-        for cell in tqdm(self.region_sets, total=len(self.region_sets)):
-            cell_embedding = np.mean(
-                [self.get_embedding(r) for r in cell if r in self.region2vec],
-                axis=0,
-            )
-            cell_embeddings.append(cell_embedding)
-
-        cell_embeddings = np.array(cell_embeddings)
-
-        return cell_embeddings
-
-    def attach_cell_embeddings(self, key_added: str = "embedding") -> sc.AnnData:
-        """
-        Get the cell embeddings for the original AnnData passed in. This should
-        be called after training is complete. It is only useful for extracting the
-        embeddings for the last chunk of data its seen.
-
-        :param str key_added: the key to add the embeddings to in the obsm attribute of the AnnData object
-        """
-        if not self.trained:
-            raise ValueError("Model has not been trained yet.")
-
-        if not self.data:
-            raise ValueError(
-                "Data not found. Please pass in an AnnData object to the constructor."
-            )
-
-        if not self.region_sets:
-            self.region_sets = convert_anndata_to_documents(self.data)
-
-        # get the embeddings for each cell
-        cell_embeddings = []
-        for cell in tqdm(self.region_sets, total=len(self.region_sets)):
-            cell_embedding = np.mean(
-                [self.get_embedding(r) for r in cell if r in self.region2vec],
-                axis=0,
-            )
-            cell_embeddings.append(cell_embedding)
-
-        cell_embeddings = np.array(cell_embeddings)
-
-        # attach embeddings to the AnnData object
-        self.data.obsm[key_added] = cell_embeddings
-        return self.data
-
-    def embeddings_to_csv(self, output_path: str):
-        """
-        Save the embeddings to a CSV file.
-
-        :param str output_path: the path to save the embeddings to
-        """
-        embeddings = self.cell_embeddings()
-        embeddings_df = embeddings.obs
-
-        # split the embeddings for each barcode into each dimension and save them
-        parsed_rows = []
-        for row in list(embeddings_df.iterrows()):
-            row_dict = row[1].to_dict()
-            new_row_dict = {
-                f"embedding_dim_{i}": row_dict["embedding"][i] for i in range(self.vector_size)
-            }
-            if "id" in row_dict:
-                new_row_dict["id"] = row_dict["id"]
-            parsed_rows.append(new_row_dict)
-
-        parsed_df = pd.DataFrame(parsed_rows)
-        parsed_df.to_csv(output_path, index=False)
-
-    def anndata_to_embeddings(self, adata: sc.AnnData) -> sc.AnnData:
-        """
-        This function will take an AnnData object and add a column to the obs
-        attribute of the AnnData object that contains the embeddings for each
-        cell.
-
-        It does this by taking the regions for each cell and averaging the
-        embeddings for each region.
-
-        :param sc.AnnData adata: the AnnData object to add the embeddings to
-        :return sc.AnnData: the AnnData object with the embeddings added
-        """
-        region_sets = convert_anndata_to_documents(adata, self.use_default_region_names)
-        cell_embeddings = []
-        for cell in tqdm(region_sets, total=len(region_sets)):
-            cell_embedding = np.mean([self.get_embedding(r) for r in cell], axis=0)
-            cell_embeddings.append(cell_embedding)
-
-        # attach embeddings to the AnnData object
-        self.data.obs["embedding"] = cell_embeddings
-        return self.data
-
     def __call__(self, region: str) -> np.ndarray:
         """
         Get the embedding for a given region.
@@ -428,11 +288,162 @@ class SCEmbedV2(Word2Vec):
         model_path: str = None,
         tokenizer: InMemTokenizer = None,
         universe: Union[Universe, str] = None,
+        **kwargs,
     ):
+        """
+        The SCEmbedV2 class is a subclass of the Word2Vec class from gensim. It is a
+        Region2Vec model that extends the Word2Vec model from gensim.
+
+        :param str model_path: The path to a pretrained model to load.
+        :param InMemTokenizer tokenizer: The tokenizer to use for tokenizing region sets.
+        :param Universe universe: The universe to use for tokenizing region sets.
+        :param kwargs: Additional arguments to pass to the Word2Vec constructor.
+        """
         # if model_path is given, download a pretrained model
         # from the HuggingFace Hub
         if model_path:
             self._init_from_huggingface(model_path)
         else:
-            self.tokenizer = tokenizer or InMemTokenizer()
-            self.universe = universe or Universe()
+            # otherwise, initialize a new model, with a new universe and tokenizer
+            # since the model is untrained, we have no vocabulary yet,
+            # and thus need a fresh tokenizer and universe
+            self.tokenizer = tokenizer or InMemTokenizer(universe or Universe())
+
+        # set the callbacks
+        self.callbacks = kwargs.get("callbacks") or []
+        self.trained = False
+
+        # instantiate the Word2Vec model
+        super().__init__(
+            window=kwargs.get("window_size") or DEFAULT_WINDOW_SIZE,
+            vector_size=kwargs.get("vector_size") or DEFAULT_EMBEDDING_SIZE,
+            min_count=kwargs.get("min_count") or DEFAULT_MIN_COUNT,
+            workers=kwargs.get("threads") or cpu_count() - 2,
+            seed=kwargs.get("seed") or 42,  #
+            callbacks=kwargs.get("callbacks") or [],
+        )
+
+    def _validate_data(self, data: Union[sc.AnnData, str]) -> sc.AnnData:
+        """
+        Validate the data is of the correct type and has the required columns.
+
+        :param sc.AnnData | str data: The AnnData object containing the data to train on (can be path to AnnData).
+
+        :return sc.AnnData: The AnnData object.
+        """
+        if not isinstance(data, sc.AnnData) and not isinstance(data, str):
+            raise TypeError(f"Data must be of type AnnData or str, not {type(data).__name__}")
+
+        # if the data is a string, assume it is a filepath
+        if isinstance(data, str):
+            data = sc.read_h5ad(data)
+
+        # validate the data has the required columns
+        if (
+            not hasattr(data.var, CHR_KEY)
+            or not hasattr(data.var, START_KEY)
+            or not hasattr(data.var, END_KEY)
+        ):
+            raise ValueError(
+                "Data does not have `chr`, `start`, and `end` columns in the `var` attribute. This is required."
+            )
+
+        return data
+
+    def train(
+        self,
+        data: Union[sc.AnnData, str],
+        epochs: int = DEFAULT_EPOCHS,  # training cycles
+        report_loss: bool = True,
+        lr: float = DEFAULT_INIT_LR,
+        min_lr: float = DEFAULT_MIN_LR,
+        lr_schedule: Union[str, ScheduleType] = "linear",
+    ):
+        """
+        Train the model. This is done in two steps: First, we shuffle the documents.
+        Second, we train the model.
+
+        :param sc.AnnData | str data: The AnnData object containing the data to train on (can be path to AnnData).
+        :param int epochs: The number of epochs to train for (note: this is the number of times regions are shuffled, then fed to the model for training).
+        :param bool report_loss: Whether or not to report the loss after each epoch.
+        :param float lr: The initial learning rate.
+        :param float min_lr: The minimum learning rate.
+        :param Union[str, ScheduleType] lr_schedule: The learning rate schedule to use.
+        """
+        # force to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205683978)
+        n_shuffles = 1
+
+        # validate the data coming in
+        data = self._validate_data(data)
+
+        _LOGGER.info("Tokenizing.")
+
+        # extract out the chr, start, end columns
+        chrs = data.var[CHR_KEY].values.tolist()
+        starts = data.var[START_KEY].values.tolist()
+        ends = data.var[END_KEY].values.tolist()
+        regions = [Region(c, int(s), int(e)) for c, s, e in zip(chrs, starts, ends)]
+
+        # fit the tokenizer on the regions
+        self.tokenizer.fit(regions)
+
+        # convert the data to a list of documents
+        region_sets = self.tokenizer.tokenize(data)
+
+        # convert list of lists of regions to list of list of strings of form chr_start_end
+        region_sets = [
+            [r.chr + "_" + str(r.start) + "_" + str(r.end) for r in region_set]
+            for region_set in region_sets
+        ]
+
+        if report_loss:
+            self.callbacks.append(ReportLossCallback())
+
+        # create a learning rate scheduler
+        lr_scheduler = LearningRateScheduler(
+            init_lr=lr, min_lr=min_lr, type=lr_schedule, n_epochs=epochs
+        )
+
+        # train the model using these shuffled documents
+        _LOGGER.info("Training begin.")
+
+        # build up the vocab
+        super().build_vocab(
+            region_sets,
+            update=False if not self.trained else True,
+            min_count=self.min_count,  # this shouldnt be needed but it is
+        )
+
+        for shuffle_num in range(epochs):
+            # update current values
+            current_lr = lr_scheduler.get_lr()
+            current_loss = self.get_latest_training_loss()
+
+            # update user
+            _LOGGER.info(f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}")
+            _LOGGER.info("Shuffling documents.")
+
+            # shuffle regions
+            region_sets = shuffle_documents(region_sets, n_shuffles=n_shuffles)
+
+            # train the model on one iteration
+            super().train(
+                region_sets,
+                total_examples=len(region_sets),
+                epochs=1,  # for to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205692089)
+                callbacks=self.callbacks,
+                compute_loss=report_loss,
+                start_alpha=current_lr,
+            )
+
+            # update learning rates
+            lr_scheduler.update()
+
+            self.trained = True
+
+        # once training is complete, create a region to vector mapping
+        regions = list(self.wv.key_to_index.keys())
+
+        # create a mapping from region to vector
+        for word in regions:
+            self.region2vec[word] = self.wv[word]
