@@ -1,12 +1,9 @@
 import os
-from typing import Union, List, Tuple, Dict, TYPE_CHECKING
+from typing import Union, List
 
 import numpy as np
 import scanpy as sc
 from tqdm import tqdm
-
-if TYPE_CHECKING:
-    from .main import Universe
 from ..io import Region, RegionSet
 
 

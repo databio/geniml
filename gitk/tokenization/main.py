@@ -3,22 +3,19 @@ import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
-from typing import List, Union, Dict
+from typing import Dict, List, Union
 
 import numpy as np
 import scanpy as sc
-from tqdm import tqdm
 from intervaltree import IntervalTree
+from tqdm import tqdm
 
 import gitk.region2vec.utils as utils
 from gitk.tokenization.split_file import split_file
 
-from ..io import RegionSet, RegionSetCollection, Region
-from .utils import (
-    validate_and_standardize_regions,
-    anndata_to_regionsets,
-)
+from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization
+from .utils import anndata_to_regionsets, validate_and_standardize_regions
 
 
 class Tokenizer(ABC):
