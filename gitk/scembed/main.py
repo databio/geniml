@@ -2,19 +2,17 @@ import gzip
 import os
 import pickle
 from logging import getLogger
-from typing import Dict, List, Union
+from typing import List, Union
 from multiprocessing import cpu_count
 
 import numpy as np
-import pandas as pd
 import scanpy as sc
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from numba import config
-from tqdm import tqdm
 
-from ..io import Region
-from ..tokenization import InMemTokenizer, Universe
+from ..io import Region, RegionSet
+from ..tokenization import InMemTokenizer
 from .const import *
 from .exceptions import *
 from .utils import (
@@ -287,7 +285,7 @@ class SCEmbedV2(Word2Vec):
         self,
         model_path: str = None,
         tokenizer: InMemTokenizer = None,
-        universe: Union[Universe, str] = None,
+        universe: Union[RegionSet, str] = None,
         **kwargs,
     ):
         """
@@ -307,7 +305,7 @@ class SCEmbedV2(Word2Vec):
             # otherwise, initialize a new model, with a new universe and tokenizer
             # since the model is untrained, we have no vocabulary yet,
             # and thus need a fresh tokenizer and universe
-            self.tokenizer = tokenizer or InMemTokenizer(universe or Universe())
+            self.tokenizer = tokenizer or InMemTokenizer()
 
         # set other attributes
         self.callbacks = kwargs.get("callbacks") or []
