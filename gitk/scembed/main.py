@@ -309,9 +309,10 @@ class SCEmbedV2(Word2Vec):
             # and thus need a fresh tokenizer and universe
             self.tokenizer = tokenizer or InMemTokenizer(universe or Universe())
 
-        # set the callbacks
+        # set other attributes
         self.callbacks = kwargs.get("callbacks") or []
         self.trained = False
+        self.region2vec = dict()
 
         # instantiate the Word2Vec model
         super().__init__(
@@ -442,8 +443,11 @@ class SCEmbedV2(Word2Vec):
             self.trained = True
 
         # once training is complete, create a region to vector mapping
-        regions = list(self.wv.key_to_index.keys())
+        learned_regions = list(self.wv.key_to_index.keys())
 
         # create a mapping from region to vector
-        for word in regions:
+        for word in learned_regions:
             self.region2vec[word] = self.wv[word]
+
+        def __call__(self):
+            pass
