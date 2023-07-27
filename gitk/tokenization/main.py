@@ -13,7 +13,7 @@ from tqdm import tqdm
 import gitk.region2vec.utils as utils
 from gitk.tokenization.split_file import split_file
 
-from ..io import Region, RegionSet
+from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization
 from .utils import anndata_to_regionsets
 
