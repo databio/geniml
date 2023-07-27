@@ -3,13 +3,14 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
+from huggingface_hub import hf_hub_download
 from numba import config
 
 from ..io import Region, RegionSet
 from ..models import ExModel
 from ..region2vec import Region2Vec
 from ..tokenization import InMemTokenizer
-from .const import CHR_KEY, END_KEY, MODULE_NAME, START_KEY
+from .const import CHR_KEY, END_KEY, MODEL_FILE_NAME, MODULE_NAME, START_KEY, UNIVERSE_FILE_NAME
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -35,19 +36,40 @@ class ScEmbed(ExModel):
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         self.model_path = model_path
-        self.tokenizer: InMemTokenizer = None
         self._model: Region2Vec = None
+        self.tokenizer: InMemTokenizer = None
+
         if model_path is not None:
             self._init_from_huggingface(model_path)
         else:
             self._model = Region2Vec(**kwargs)
             self.tokenizer = InMemTokenizer()
 
-    def _init_from_huggingface(self, model_path: str):
+    def _init_from_huggingface(
+        self,
+        model_path: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        **kwargs,
+    ):
         """
-        Initialize the model from a pre-trained model on huggingface.
+        Download a pretrained model from the HuggingFace Hub. We need to download
+        the actual model + weights, and the universe file.
+
+        :param str model: The name of the model to download (this is the same as the repo name).
+        :param str model_file_name: The name of the model file - this should almost never be changed.
+        :param str universe_file_name: The name of the universe file - this should almost never be changed.
         """
-        raise NotImplementedError
+        model_path = hf_hub_download(model_path, model_file_name, **kwargs)
+        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+
+        # set the paths to the downloaded files
+        self._model_path = model_path
+        self._universe_path = universe_path
+
+        # load the model
+        self._model = Region2Vec.load(model_path)
+        self.tokenizer = InMemTokenizer(universe_path)
 
     def _validate_data(self, data: Union[sc.AnnData, str]) -> sc.AnnData:
         """
