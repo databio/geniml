@@ -4,11 +4,15 @@ from logging import getLogger
 from typing import List, Union
 
 import numpy as np
+from tqdm import tqdm
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
+from huggingface_hub import hf_hub_download
 from numba import config
 
 from ..io import Region, RegionSet
+from ..models import ExModel
+from ..tokenization import InMemTokenizer
 from . import utils
 from .const import *
 from .region2vec_train import main as region2_train
@@ -387,3 +391,161 @@ class Region2Vec(Word2Vec):
 
     def __repr__(self) -> str:
         return f"Region2Vec(window={self.window}, vector_size={self.vector_size})"
+
+
+class Region2VecExModel(ExModel):
+    def __init__(self, model_path: Union[str, None] = None, **kwargs):
+        """
+        Initialize Region2VecExModel.
+
+        :param str model_path: Path to the pre-trained model on huggingface.
+        :param kwargs: Additional keyword arguments to pass to the model.
+        """
+        self.model_path = model_path
+        self._model: Region2Vec = None
+        self.tokenizer: InMemTokenizer = None
+
+        if model_path is not None:
+            self._init_from_huggingface(model_path)
+        else:
+            self._model = Region2Vec(**kwargs)
+            self.tokenizer = InMemTokenizer()
+
+    def from_pretrained(self, model_file_path: str, universe_file_path: str):
+        """
+        Initialize ScEmbed model from pretrained model.
+
+        :param str model_file_path: Path to the pre-trained model.
+        :param str universe_file_path: Path to the universe file.
+        """
+        self._model = Region2Vec.load(model_file_path)
+        self.tokenizer = InMemTokenizer(universe_file_path)
+
+    def _init_from_huggingface(
+        self,
+        model_path: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        **kwargs,
+    ):
+        """
+        Download a pretrained model from the HuggingFace Hub. We need to download
+        the actual model + weights, and the universe file.
+
+        :param str model: The name of the model to download (this is the same as the repo name).
+        :param str model_file_name: The name of the model file - this should almost never be changed.
+        :param str universe_file_name: The name of the universe file - this should almost never be changed.
+        """
+        model_path = hf_hub_download(model_path, model_file_name, **kwargs)
+        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+
+        # set the paths to the downloaded files
+        self._model_path = model_path
+        self._universe_path = universe_path
+
+        # load the model
+        self._model = Region2Vec.load(model_path)
+        self.tokenizer = InMemTokenizer(universe_path)
+
+    def _validate_data(
+        self, data: Union[List[str], List[RegionSet], List[List[Region]]]
+    ) -> List[RegionSet]:
+        """
+        Validate that the user sent in the correct data. this could be one of three things:
+        1. A list of paths to bed files
+        2. A list of RegionSets
+        3. A list of lists of Regions
+
+        :param Union[List[str], List[RegionSet], List[List[Region]]] data: The data to validate.
+        :return: The validated data as a list of RegionSets.
+        """
+        if isinstance(data, list):
+            if len(data) == 0:
+                raise ValueError("Data cannot be empty.")
+            elif isinstance(data[0], str):
+                # we have a list of paths to bed files
+                return [RegionSet(path) for path in data]
+            elif isinstance(data[0], RegionSet):
+                # we have a list of RegionSets
+                return data
+            elif isinstance(data[0], list):
+                # we have a list of lists of Regions
+                return [RegionSet(regions) for regions in data]
+            else:
+                raise TypeError(
+                    f"Data must be of type List[str], List[RegionSet], or List[List[Region]], not {type(data).__name__}"
+                )
+        else:
+            raise TypeError(
+                f"Data must be of type List[str], List[RegionSet], or List[List[Region]], not {type(data).__name__}"
+            )
+
+    def train(self, data: Union[List[str], List[RegionSet], List[List[Region]]], **kwargs):
+        """
+        Train the model.
+
+        :param sc.AnnData data: The AnnData object containing the data to train on (can be path to AnnData).
+        :param kwargs: Keyword arguments to pass to the model training function.
+        """
+        _LOGGER.info("Validating data.")
+        regions = self._validate_data(data)
+
+        _LOGGER.info("Extracting region sets.")
+
+        # fit the tokenizer on the regions
+        self.tokenizer.fit(regions)
+
+        # convert the data to a list of documents
+        region_sets = self.tokenizer.tokenize(data)
+
+        _LOGGER.info("Training begin.")
+        self._model.train(region_sets, **kwargs)
+
+        _LOGGER.info("Training complete.")
+
+    def export(self, path: str):
+        """
+        Export a model for direct upload to the HuggingFace Hub.
+
+        :param str path: The path to save the model to.
+        """
+        model_file_path = os.path.join(path, MODEL_FILE_NAME)
+        universe_file_path = os.path.join(path, UNIVERSE_FILE_NAME)
+
+        # save the model
+        self._model.save(model_file_path)
+
+        # save universe (vocab)
+        with open(universe_file_path, "w") as f:
+            for region in self.tokenizer.universe:
+                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+
+    def upload_to_huggingface(self, model_name: str, token: str = None, **kwargs):
+        """
+        Upload the model to the HuggingFace Hub.
+
+        :param str model_name: The name of the model to upload.
+        :param kwargs: Additional keyword arguments to pass to the upload function.
+        """
+        raise NotImplementedError("This method is not yet implemented.")
+
+    def encode(self, regions: Union[List[Region], RegionSet]) -> np.ndarray:
+        """
+        Encode the data into a latent space.
+
+        :param sc.AnnData adata: The AnnData object containing the data to encode.
+        :return np.ndarray: The encoded data.
+        """
+        # tokenize the data
+        region_sets = self.tokenizer.tokenize(regions)
+
+        # encode the data
+        _LOGGER.info("Encoding data.")
+        enoded_data = []
+        for region_set in tqdm(region_sets, desc="Encoding data", total=len(region_sets)):
+            vector = self._model.forward(region_set)
+            enoded_data.append(vector)
+        return np.array(enoded_data)
+
+    def __call__(self, regions: Union[List[Region], RegionSet]) -> np.ndarray:
+        return self.encode(adata)

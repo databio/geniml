@@ -13,7 +13,7 @@ from tqdm import tqdm
 import gitk.region2vec.utils as utils
 from gitk.tokenization.split_file import split_file
 
-from ..io import Region, RegionSet, RegionSetCollection
+from ..io import Region, RegionSet
 from .hard_tokenization_batch import main as hard_tokenization
 from .utils import anndata_to_regionsets
 
@@ -60,13 +60,20 @@ class InMemTokenizer(Tokenizer):
     def trees(self):
         return self._trees
 
-    def add_regions(self, regions: Union[str, List[Region], RegionSet]):
+    def add_regions(
+        self, regions: Union[str, List[Region], RegionSet, List[RegionSet], List[List[Region]]]
+    ):
         """
         Add regions to the universe.
         """
         self.build_trees(regions)
 
-    def build_trees(self, regions: Union[str, List[Region], RegionSet, None] = None):
+    def build_trees(
+        self,
+        regions: Union[
+            str, List[str], List[Region], RegionSet, List[RegionSet], List[List[Region]]
+        ] = None,
+    ):
         """
         Builds the interval tree from the regions. The tree is a dictionary that maps chromosomes to
         interval trees.
@@ -76,12 +83,29 @@ class InMemTokenizer(Tokenizer):
 
         :param str regions: The regions to use for tokenization. This can be thought of as a vocabulary.
         """
+        # just return if we already have a universe
         if regions is None:
             regions = self.universe  # use the universe passed in the constructor
+        # check for bed file
         elif isinstance(regions, str):
             regions = RegionSet(regions)  # load from file
-        else:
-            pass  # assume it's a list of regions that was passed in
+        # check for list of bed files
+        elif isinstance(regions, list) and isinstance(regions[0], str):
+            regions = []
+            for bedfile in regions:
+                regions.extend([region for region in RegionSet(bedfile)])
+        # check for regionset
+        elif isinstance(regions, RegionSet):
+            pass
+        # check for list of regionsets
+        elif isinstance(regions, list) and isinstance(regions[0], RegionSet):
+            regions = [region for regionset in regions for region in regionset]
+        # check for list of lists of regions
+        elif isinstance(regions, list) and isinstance(regions[0], list):
+            regions = [region for regionlist in regions for region in regionlist]
+        # check for list of regions
+        elif isinstance(regions, list) and isinstance(regions[0], Region):
+            pass
 
         # build trees
         for region in tqdm(regions, total=len(regions), desc="Adding regions to universe"):
@@ -94,7 +118,9 @@ class InMemTokenizer(Tokenizer):
         # count total regions
         self.total_regions = sum([len(self._trees[tree]) for tree in self._trees])
 
-    def fit(self, regions: Union[str, List[Region]]):
+    def fit(
+        self, regions: Union[str, List[Region], RegionSet, List[RegionSet], List[List[Region]]]
+    ):
         """
         Fit the tokenizer to the given regions. This is equivalent to adding regions to the universe.
         """
@@ -215,7 +241,7 @@ class InMemTokenizer(Tokenizer):
         return conversion_map
 
     def tokenize(
-        self, region_set: Union[str, List[Region], sc.AnnData]
+        self, region_set: Union[str, List[Region], RegionSet, sc.AnnData]
     ) -> Union[List[Region], List[List[Region]], List[RegionSet]]:
         """
         Tokenize a RegionSet.

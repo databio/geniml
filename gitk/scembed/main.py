@@ -85,10 +85,8 @@ class ScEmbed(ExModel):
 
     def _validate_data(self, data: Union[sc.AnnData, str]) -> sc.AnnData:
         """
-        Get the cell embeddings for the original AnnData passed in. This should
-        be called after training is complete. It is only useful for extracting the
-        embeddings for the last chunk of data its seen.
-        Validate the data is of the correct type and has the required columns.
+        Validate the data is of the correct type and has the required columns
+
         :param sc.AnnData | str data: The AnnData object containing the data to train on (can be path to AnnData).
         :return sc.AnnData: The AnnData object.
         """
