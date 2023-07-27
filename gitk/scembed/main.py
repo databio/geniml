@@ -1,10 +1,12 @@
+import os
 from logging import getLogger
 from typing import List, Union
 
 import numpy as np
 import scanpy as sc
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, upload_file, login
 from numba import config
+from tqdm import tqdm
 
 from ..io import Region, RegionSet
 from ..models import ExModel
@@ -19,7 +21,7 @@ _LOGGER = getLogger(MODULE_NAME)
 _GENSIM_LOGGER.setLevel("WARNING")
 
 # set the threading layer before any parallel target compilation
-config.THREADING_LAYER = "threadsafe"
+config.THREADING_LAYER = "threadsafe"  # type: ignore
 
 
 class ScEmbed(ExModel):
@@ -28,7 +30,7 @@ class ScEmbed(ExModel):
     extension of Region2Vec.
     """
 
-    def __init__(self, model_path: str = None, **kwargs):
+    def __init__(self, model_path: Union[str, None] = None, **kwargs):
         """
         Initialize ScEmbed model.
 
@@ -44,6 +46,16 @@ class ScEmbed(ExModel):
         else:
             self._model = Region2Vec(**kwargs)
             self.tokenizer = InMemTokenizer()
+
+    def from_pretrained(self, model_file_path: str, universe_file_path: str):
+        """
+        Initialize ScEmbed model from pretrained model.
+
+        :param str model_file_path: Path to the pre-trained model.
+        :param str universe_file_path: Path to the universe file.
+        """
+        self._model = Region2Vec.load(model_file_path)
+        self.tokenizer = InMemTokenizer(universe_file_path)
 
     def _init_from_huggingface(
         self,
@@ -128,5 +140,49 @@ class ScEmbed(ExModel):
 
         _LOGGER.info("Training complete.")
 
-    def __call__(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
-        return self._model(regions)
+    def export(self, path: str):
+        """
+        Export a model for direct upload to the HuggingFace Hub.
+
+        :param str path: The path to save the model to.
+        """
+        model_file_path = os.path.join(path, MODEL_FILE_NAME)
+        universe_file_path = os.path.join(path, UNIVERSE_FILE_NAME)
+
+        # save the model
+        self._model.save(model_file_path)
+
+        # save universe (vocab)
+        with open(universe_file_path, "w") as f:
+            for region in self.tokenizer.universe:
+                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+
+    def upload_to_huggingface(self, model_name: str, token: str = None, **kwargs):
+        """
+        Upload the model to the HuggingFace Hub.
+
+        :param str model_name: The name of the model to upload.
+        :param kwargs: Additional keyword arguments to pass to the upload function.
+        """
+        raise NotImplementedError("This method is not yet implemented.")
+
+    def encode(self, adata: sc.AnnData) -> np.ndarray:
+        """
+        Encode the data into a latent space.
+
+        :param sc.AnnData adata: The AnnData object containing the data to encode.
+        :return np.ndarray: The encoded data.
+        """
+        # tokenize the data
+        region_sets = self.tokenizer.tokenize(adata)
+
+        # encode the data
+        _LOGGER.info("Encoding data.")
+        enoded_data = []
+        for region_set in tqdm(region_sets, desc="Encoding data", total=len(region_sets)):
+            vector = self._model.forward(region_set)
+            enoded_data.append(vector)
+        return np.array(enoded_data)
+
+    def __call__(self, adata: sc.AnnData) -> np.ndarray:
+        return self.encode(adata)
