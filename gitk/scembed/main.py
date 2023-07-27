@@ -285,7 +285,6 @@ class SCEmbedV2(Word2Vec):
         self,
         model_path: str = None,
         tokenizer: InMemTokenizer = None,
-        universe: Union[RegionSet, str] = None,
         **kwargs,
     ):
         """
