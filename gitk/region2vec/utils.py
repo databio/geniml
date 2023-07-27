@@ -1,23 +1,19 @@
+import logging
 import os
 import select
 import shutil
 import sys
 import time
-from typing import Union, Dict, List
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from random import shuffle
-import logging
-import numpy as np
+from typing import Dict, List, Union
 
-from concurrent.futures import ThreadPoolExecutor
+import numpy as np
 from tqdm import tqdm
 
-from ..io import RegionSet, Region
-from .const import (
-    MODULE_NAME,
-    DEFAULT_INIT_LR,
-    DEFAULT_MIN_LR,
-)
+from ..io import Region, RegionSet
+from .const import DEFAULT_INIT_LR, DEFAULT_MIN_LR, MODULE_NAME
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 

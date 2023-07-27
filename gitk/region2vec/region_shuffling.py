@@ -5,11 +5,11 @@ import os
 import pickle
 import random
 import time
+from typing import List
 
 import numpy as np
 
 from gitk.region2vec import utils
-from typing import List
 
 
 class BEDDataset:
