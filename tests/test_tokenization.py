@@ -13,8 +13,13 @@ sys.path.append("../")
 
 
 @pytest.fixture
-def adata():
+def pbmc_data():
     return sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
+
+
+@pytest.fixture
+def pbmc_data_backed():
+    return sc.read_h5ad("tests/data/pbmc_hg38.h5ad", backed="r")
 
 
 @pytest.fixture
@@ -94,3 +99,22 @@ def test_tokenize_list_of_regions(universe_bed_file: str):
     # ensure that the tokens are unqiue from the original regions
     assert len(set(tokens).intersection(set(regions))) == 0
     assert len(tokens) == 10
+
+
+def test_tokenize_anndata(universe_bed_file: str, pbmc_data: sc.AnnData):
+    t = InMemTokenizer(universe_bed_file)
+    assert t is not None
+
+    tokens = t.tokenize(pbmc_data)
+
+    # returns list of regions for each cell
+    assert len(tokens) == pbmc_data.shape[0]
+
+
+def test_tokenize_anndata_backed(universe_bed_file: str, pbmc_data_backed: sc.AnnData):
+    t = InMemTokenizer(universe_bed_file)
+    assert t is not None
+
+    tokens = t.tokenize(pbmc_data_backed)
+
+    assert len(tokens) == pbmc_data_backed.shape[0]
