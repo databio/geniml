@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import scanpy as sc
 from tqdm import tqdm
-from ..io import Region
+from ..io import Region, RegionSet
 
 
 def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
@@ -44,9 +44,11 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
     regions = []
     for i in tqdm(range(adata.shape[0]), total=adata.shape[0], desc="Tokenizing"):
         regions.append(
-            [
-                Region(chr_values[j], start_values[j], end_values[j])
-                for j in np.where(positive_values[i])[0]
-            ]
+            RegionSet(
+                [
+                    Region(chr_values[j], start_values[j], end_values[j])
+                    for j in np.where(positive_values[i])[0]
+                ]
+            )
         )
     return regions

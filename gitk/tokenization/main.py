@@ -216,7 +216,7 @@ class InMemTokenizer(Tokenizer):
 
     def tokenize(
         self, region_set: Union[str, List[Region], sc.AnnData]
-    ) -> Union[List[Region], List[List[Region]]]:
+    ) -> Union[List[Region], List[List[Region]], List[RegionSet]]:
         """
         Tokenize a RegionSet.
 

@@ -1,21 +1,18 @@
 import multiprocessing
 import os
+from logging import getLogger
+from typing import List, Union
 
+import numpy as np
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from numba import config
-from logging import getLogger
 
-import numpy as np
-
+from ..io import Region, RegionSet
 from . import utils
-from ..io import RegionSet, Region
+from .const import *
 from .region2vec_train import main as region2_train
 from .region_shuffling import main as sent_gen
-from .const import *
-
-from typing import List, Union, Dict
-
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
