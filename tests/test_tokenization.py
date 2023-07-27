@@ -5,11 +5,12 @@ import pytest
 import scanpy as sc
 import numpy as np
 
-from gitk.io import Region, RegionSet
-from gitk.tokenization import InMemTokenizer
 
 # add parent directory to path
 sys.path.append("../")
+
+from gitk.io import Region, RegionSet
+from gitk.tokenization import InMemTokenizer
 
 
 @pytest.fixture

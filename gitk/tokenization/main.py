@@ -107,7 +107,8 @@ class InMemTokenizer(Tokenizer):
         elif isinstance(regions, list) and isinstance(regions[0], Region):
             pass
 
-        # build trees
+        # build trees + add regions to universe
+        self.universe = regions
         for region in tqdm(regions, total=len(regions), desc="Adding regions to universe"):
             if region.chr not in self._trees:
                 self._trees[region.chr] = IntervalTree()

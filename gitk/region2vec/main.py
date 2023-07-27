@@ -11,8 +11,8 @@ from huggingface_hub import hf_hub_download
 from numba import config
 
 from ..io import Region, RegionSet
-from ..models import ExModel
-from ..tokenization import InMemTokenizer
+from ..models.main import ExModel
+from ..tokenization.main import InMemTokenizer
 from . import utils
 from .const import *
 from .region2vec_train import main as region2_train

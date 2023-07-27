@@ -1,12 +1,8 @@
-import os
-import sys
-
 import pytest
 import scanpy as sc
 import numpy as np
 
 from gitk.io import Region, RegionSet
-from gitk.tokenization import InMemTokenizer
 
 
 @pytest.fixture
