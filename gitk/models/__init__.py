@@ -1,1 +1,1 @@
-from .models import ExModel
+from .main import ExModel

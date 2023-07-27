@@ -1,6 +1,9 @@
+from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
 from ..io import RegionSet
-from ..tokenization import Tokenizer
+
+if TYPE_CHECKING:
+    from ..tokenization import Tokenizer
 
 
 class Model(ABC):
@@ -18,10 +21,10 @@ class ExModel(ABC):
 
     model: Model
     universe: RegionSet
-    tokenizer: Tokenizer
+    tokenizer: "Tokenizer"
 
     @abstractmethod
     def __init__(
-        self, model: Model = None, universe: RegionSet = None, tokenizer: Tokenizer = None
+        self, model: Model = None, universe: RegionSet = None, tokenizer: "Tokenizer" = None
     ) -> None:
         raise NotImplementedError

@@ -9,7 +9,7 @@ from numba import config
 from tqdm import tqdm
 
 from ..io import Region, RegionSet
-from ..models import ExModel
+from ..models.main import ExModel
 from ..region2vec import Region2Vec
 from ..tokenization import InMemTokenizer
 from .const import CHR_KEY, END_KEY, MODEL_FILE_NAME, MODULE_NAME, START_KEY, UNIVERSE_FILE_NAME
@@ -46,6 +46,14 @@ class ScEmbed(ExModel):
         else:
             self._model = Region2Vec(**kwargs)
             self.tokenizer = InMemTokenizer()
+
+    @property
+    def wv(self):
+        return self._model.wv
+
+    @property
+    def trained(self):
+        return self._model.trained
 
     def from_pretrained(self, model_file_path: str, universe_file_path: str):
         """
@@ -144,6 +152,10 @@ class ScEmbed(ExModel):
 
         :param str path: The path to save the model to.
         """
+        # make folder path if it doesn't exist
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         model_file_path = os.path.join(path, MODEL_FILE_NAME)
         universe_file_path = os.path.join(path, UNIVERSE_FILE_NAME)
 
