@@ -198,25 +198,39 @@ def region2vec(
 
 
 class Region2Vec(Word2Vec):
-    """
-    A class that implements Region2Vec. Region2Vec is a model that learns
-    embedding vectors for genomic regions. It works by by considering each
-    region set as a text document, with each region as a word inside that
-    document.
-    """
-
+    # not needed since self.load() seems to work fine. I am not sure why, though.
     @staticmethod
-    def from_word2vec_model(model, **kwargs):
-        return Region2Vec(
+    def from_word2vec_model(model: Word2Vec, **kwargs):
+        r2v = Region2Vec(
             callbacks=model.callbacks or kwargs.get("callbacks"),
             window_size=model.window,
             vector_size=model.vector_size,
-            min_count=model.vocabulary.min_count,
-            threads=model.trainables.compute_loss,  # assuming it stores thread info
+            min_count=model.min_count,
+            threads=model.workers,  # assuming it stores thread info
             seed=model.random.seed,  # assuming it stores seed
         )
+        # attach the word2vec model to the region2vec model
+        r2v.wv = model.wv
+        return r2v
 
     def __init__(self, **kwargs):
+        """
+        A class that implements Region2Vec. Region2Vec is a model that learns
+        embedding vectors for genomic regions. It works by by considering each
+        region set as a text document, with each region as a word inside that
+        document.
+
+        :param window_size: The size of the window to use for the skip-gram
+            model. Defaults to 5.
+        :param vector_size: The size of the embedding vectors. Defaults to 100.
+        :param min_count: The minimum number of times a region must occur in
+            the dataset to be included in the vocabulary. Defaults to 5.
+        :param threads: The number of threads to use for training. Defaults to
+            the number of CPUs - 2.
+        :param seed: The seed to use for training. Defaults to 42.
+        :param callbacks: A list of callbacks to use for training. Defaults to
+            an empty list.
+        """
         self.trained = False
         self.callbacks = kwargs.get("callbacks") or []
 
@@ -232,7 +246,7 @@ class Region2Vec(Word2Vec):
 
     def train(
         self,
-        data: Union[List[RegionSet], List[List[Region]]],
+        data: Union[List[str], List[RegionSet], List[List[Region]]],
         epochs: int = DEFAULT_EPOCHS,  # training cycles
         n_shuffles: int = DEFAULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
         report_loss: bool = True,
@@ -255,18 +269,28 @@ class Region2Vec(Word2Vec):
         # force to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205683978)
         n_shuffles = 1
 
-        # verify data is str, List[Region], or RegionSet
-        if isinstance(data, str):
-            # load the data
-            data = RegionSet(data)
-        elif isinstance(data, RegionSet):
-            pass
-        elif isinstance(data, list):
-            # assure all elements are Region objects
-            if not all(isinstance(x, Region) for x in data):
-                raise TypeError("If data is a list, all elements must be of type Region.")
+        # verify data is a list of strings, region sets or a list of list of regions
+        if not isinstance(data, list):
+            raise TypeError(
+                f"Data must be a list of strings, RegionSets, or a list of list of Regions. Got {type(data)}."
+            )
         else:
-            raise TypeError(f"Data must be of type AnnData or str, not {type(data).__name__}")
+            # list of strings? files?
+            if all([isinstance(d, str) for d in data]):
+                data = [RegionSet(d) for d in data]
+            # list of RegionSets? Great.
+            elif all([isinstance(d, RegionSet) for d in data]):
+                pass
+            # list of list of Regions? Great.
+            elif all([isinstance(d, list) for d in data]) and all(
+                [isinstance(d[0], Region) for d in data]
+            ):
+                data = [RegionSet(d) for d in data]
+            # something else? error.
+            else:
+                raise TypeError(
+                    f"Data must be a list of strings, RegionSets, or a list of list of Regions. Got {type(data)}."
+                )
 
         if report_loss:
             self.callbacks.append(ReportLossCallback())
@@ -325,17 +349,18 @@ class Region2Vec(Word2Vec):
         super().save(filepath)
 
     @classmethod
-    def load(cls, filepath: str):
+    def load(cls, filepath: str) -> "Region2Vec":
         """
         Load a model from disk. This should return a
         Region2Vec object.
 
         :param str filepath: The path to load the model from.
         """
-        model = super().load(filepath)
-        return cls.from_word2vec_model(model)
+        # I feel like this shouldnt work, but it does?
+        return super().load(filepath)
+        # return cls.from_word2vec_model(model)
 
-    def forward(self, regions: Union[Region, RegionSet, List[Region]]):
+    def forward(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
         """
         Get the embedding vector(s) for a given region or region set.
 
@@ -355,10 +380,13 @@ class Region2Vec(Word2Vec):
                 f"Regions must be of type Region, RegionSet, or list, not {type(regions).__name__}"
             )
 
-    def __call__(self, regions: Union[Region, RegionSet, List[Region]]):
+    def __call__(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
         """
         Get the embedding vector(s) for a given region or region set.
 
         :param Union[Region, RegionSet, List[Region]] regions: The region(s) to get the embedding vector(s) for.
         """
         return self.forward(regions)
+
+    def __repr__(self) -> str:
+        return f"Region2Vec(window={self.window}, vector_size={self.vector_size})"

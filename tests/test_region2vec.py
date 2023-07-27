@@ -1,0 +1,98 @@
+import os
+from typing import List
+
+import pytest
+import numpy as np
+
+from gitk.io import RegionSet
+from gitk.region2vec import Region2Vec, wordify_region, wordify_regions
+
+
+@pytest.fixture
+def bed_file():
+    return "tests/data/to_tokenize.bed"
+
+
+@pytest.fixture
+def regions(bed_file: str):
+    return RegionSet(bed_file)
+
+
+@pytest.fixture
+def region_sets(regions: RegionSet):
+    # split regions into 5 region sets
+    sub_size = len(regions) // 5
+    region_sets = [RegionSet(regions[i * sub_size : (i + 1) * sub_size]) for i in range(5)]
+    return region_sets
+
+
+def test_init_region2vec():
+    model = Region2Vec()
+    assert model is not None
+
+
+def test_wordify_regions(regions: RegionSet):
+    region_words = wordify_regions(regions)
+    assert region_words is not None
+    assert all([isinstance(r, str) for r in region_words])
+    assert all([len(r.split("_")) == 3 for r in region_words])
+
+    region_word = wordify_region(regions[0])
+    assert region_word is not None
+    assert isinstance(region_word, str)
+    assert len(region_word.split("_")) == 3
+
+
+def test_train_region2vec(region_sets: List[RegionSet]):
+    model = Region2Vec(
+        min_count=1,  # for testing, we need to set min_count to 1
+    )
+
+    model.train(region_sets, epochs=100)
+
+    assert model.trained == True
+
+    # make sure all regions in region_sets are in the vocabulary
+    for region_set in region_sets:
+        for region in region_set:
+            region_word = wordify_region(region)
+            assert region_word in model.wv
+            assert isinstance(model(region), np.ndarray)
+            assert isinstance(model.forward(region), np.ndarray)
+
+
+def test_train_from_bed_files(bed_file: str):
+    region_sets = [RegionSet(bed_file) for _ in range(10)]
+    model = Region2Vec(
+        min_count=1,  # for testing, we need to set min_count to 1
+    )
+    model.train(region_sets, epochs=5)
+
+    regions = RegionSet(bed_file)
+    for region in regions:
+        region_word = wordify_region(region)
+        assert region_word in model.wv
+        assert isinstance(model(region), np.ndarray)
+        assert isinstance(model.forward(region), np.ndarray)
+
+
+def test_save_and_load_model(region_sets: RegionSet):
+    model = Region2Vec(
+        min_count=1,  # for testing, we need to set min_count to 1
+    )
+    model.train(region_sets, epochs=100)
+
+    try:
+        model.save("tests/data/test_model.model")
+        assert os.path.exists("tests/data/test_model.model")
+        # load in
+        model_loaded = Region2Vec.load("tests/data/test_model.model")
+        assert model_loaded is not None
+        for region_set in region_sets:
+            for region in region_set:
+                region_word = wordify_region(region)
+                assert region_word in model_loaded.wv
+                assert isinstance(model_loaded(region), np.ndarray)
+                assert isinstance(model_loaded.forward(region), np.ndarray)
+    finally:
+        os.remove("tests/data/test_model.model")
