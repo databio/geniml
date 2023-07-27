@@ -27,7 +27,7 @@ class Tokenizer(ABC):
 class InMemTokenizer(Tokenizer):
     """Abstract class representing a tokenizer function"""
 
-    def __init__(self, universe: Union[str, RegionSet] = None):
+    def __init__(self, universe: Union[str, RegionSet, None] = None):
         """
         Create a new InMemTokenizer.
 
@@ -66,7 +66,7 @@ class InMemTokenizer(Tokenizer):
         """
         self.build_trees(regions)
 
-    def build_trees(self, regions: Union[str, List[Region], RegionSet] = None):
+    def build_trees(self, regions: Union[str, List[Region], RegionSet, None] = None):
         """
         Builds the interval tree from the regions. The tree is a dictionary that maps chromosomes to
         interval trees.

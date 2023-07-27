@@ -38,7 +38,8 @@ class RegionSet(object):
                 with open(regions, "r") as f:
                     lines = f.readlines()
                     for line in lines:
-                        chr, start, stop = line.split("\t")
+                        # some bed files have more than 3 columns, so we just take the first 3
+                        chr, start, stop = line.split("\t")[:3]
                         self.regions.append(Region(chr, int(start), int(stop)))
                     self.length = len(self.regions)
 
@@ -70,7 +71,7 @@ class RegionSet(object):
         if self.backed:
             with open(self.path, "r") as f:
                 for line in f:
-                    chr, start, stop = line.split("\t")
+                    chr, start, stop = line.split("\t")[:3]
                     yield Region(chr, int(start), int(stop))
         else:
             for region in self.regions:
