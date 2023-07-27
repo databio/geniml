@@ -488,17 +488,16 @@ class Region2VecExModel(ExModel):
         :param kwargs: Keyword arguments to pass to the model training function.
         """
         _LOGGER.info("Validating data.")
-        regions = self._validate_data(data)
+        region_sets = self._validate_data(data)
 
         _LOGGER.info("Extracting region sets.")
 
         # fit the tokenizer on the regions
-        self.tokenizer.fit(regions)
-
-        # convert the data to a list of documents
-        region_sets = self.tokenizer.tokenize(data)
+        for region_set in region_sets:
+            self.tokenizer.fit(region_set)
 
         _LOGGER.info("Training begin.")
+
         self._model.train(region_sets, **kwargs)
 
         _LOGGER.info("Training complete.")
@@ -548,4 +547,4 @@ class Region2VecExModel(ExModel):
         return np.array(enoded_data)
 
     def __call__(self, regions: Union[List[Region], RegionSet]) -> np.ndarray:
-        return self.encode(adata)
+        return self.encode(regions)
