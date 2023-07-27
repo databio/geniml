@@ -129,7 +129,7 @@ class InMemTokenizer(Tokenizer):
                 overlapping_regions.append(Region(region.chr, overlap.begin, overlap.end))
         return overlapping_regions
 
-    def convert_anndata_to_universe(self, adata: sc.AnnData) -> None:
+    def convert_anndata_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
         """
         Convert an AnnData object to a universe. This is done by
         inspecting the peaks in the AnnData object and converting
@@ -227,7 +227,7 @@ class InMemTokenizer(Tokenizer):
         """
         if isinstance(region_set, sc.AnnData):
             # step 1 is to convert the AnnData object to the universe
-            self.convert_anndata_to_universe(region_set)
+            region_set = self.convert_anndata_to_universe(region_set)
 
             # step 2 is to convert the AnnData object to a list of lists of regions
             return anndata_to_regionsets(region_set)
