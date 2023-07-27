@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from intervaltree import Interval
 
@@ -23,22 +23,33 @@ class Region(Interval):
 
 # TODO: This belongs somewhere else
 class RegionSet(object):
-    def __init__(self, path: str, backed: bool = False):
-        self.backed = backed
-        self.regions: List[Region] = []
-        self.path = path
-        if backed:
-            self.regions = None
-            # https://stackoverflow.com/a/32607817/13175187
-            with open(self.path, "r") as file:
-                self.length = sum(1 for line in file if line.strip())
+    def __init__(self, regions: Union[str, List[Region]], backed: bool = False):
+        # load from file
+        if isinstance(regions, str):
+            self.backed = backed
+            self.regions: List[Region] = []
+            self.path = regions
+            if backed:
+                self.regions = None
+                # https://stackoverflow.com/a/32607817/13175187
+                with open(self.path, "r") as file:
+                    self.length = sum(1 for line in file if line.strip())
+            else:
+                with open(regions, "r") as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        chr, start, stop = line.split("\t")
+                        self.regions.append(Region(chr, int(start), int(stop)))
+                    self.length = len(self.regions)
+
+        # load from list
+        elif isinstance(regions, list) and all([isinstance(region, Region) for region in regions]):
+            self.backed = False
+            self.path = None
+            self.regions = regions
+            self.length = len(self.regions)
         else:
-            with open(path, "r") as f:
-                lines = f.readlines()
-                for line in lines:
-                    chr, start, stop = line.split("\t")
-                    self.regions.append(Region(chr, int(start), int(stop)))
-                self.length = len(self.regions)
+            raise ValueError(f"regions must be a path to a bed file or a list of Region objects")
 
     def __len__(self):
         return self.length
@@ -47,7 +58,13 @@ class RegionSet(object):
         return self.regions[key]
 
     def __repr__(self):
-        return f"RegionSet({self.path})"
+        if self.path:
+            if self.backed:
+                return f"RegionSet({self.path}, backed=True)"
+            else:
+                return f"RegionSet({self.path})"
+        else:
+            return f"RegionSet(n={self.length})"
 
     def __iter__(self):
         if self.backed:
