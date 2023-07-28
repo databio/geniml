@@ -8,9 +8,9 @@ import scanpy as sc
 # add parent directory to path
 sys.path.append("../")
 
-from gitk.io import Region
+from gitk.io.io import Region
 from gitk.region2vec.utils import wordify_region, wordify_regions
-from gitk.scembed import ScEmbed
+from gitk.scembed.main import ScEmbed
 
 # set to DEBUG to see more info
 logging.basicConfig(level=logging.INFO)
