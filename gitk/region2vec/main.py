@@ -199,21 +199,6 @@ def region2vec(
 
 
 class Region2Vec(Word2Vec):
-    # not needed since self.load() seems to work fine. I am not sure why, though.
-    @staticmethod
-    def from_word2vec_model(model: Word2Vec, **kwargs):
-        r2v = Region2Vec(
-            callbacks=model.callbacks or kwargs.get("callbacks"),
-            window_size=model.window,
-            vector_size=model.vector_size,
-            min_count=model.min_count,
-            threads=model.workers,  # assuming it stores thread info
-            seed=model.random.seed,  # assuming it stores seed
-        )
-        # attach the word2vec model to the region2vec model
-        r2v.wv = model.wv
-        return r2v
-
     def __init__(self, **kwargs):
         """
         A class that implements Region2Vec. Region2Vec is a model that learns
@@ -359,7 +344,6 @@ class Region2Vec(Word2Vec):
         """
         # I feel like this shouldnt work, but it does?
         return super().load(filepath)
-        # return cls.from_word2vec_model(model)
 
     def forward(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
         """
@@ -394,7 +378,7 @@ class Region2Vec(Word2Vec):
 
 
 class Region2VecExModel(ExModel):
-    def __init__(self, model_path: Union[str, None] = None, **kwargs):
+    def __init__(self, model_path: str = None, tokenizer: InMemTokenizer = None, **kwargs):
         """
         Initialize Region2VecExModel.
 
@@ -403,13 +387,13 @@ class Region2VecExModel(ExModel):
         """
         self.model_path = model_path
         self._model: Region2Vec = None
-        self.tokenizer: InMemTokenizer = None
+        self.tokenizer: InMemTokenizer = tokenizer
 
         if model_path is not None:
             self._init_from_huggingface(model_path)
         else:
             self._model = Region2Vec(**kwargs)
-            self.tokenizer = InMemTokenizer()
+            self.tokenizer = tokenizer
 
     @property
     def wv(self):
@@ -421,6 +405,14 @@ class Region2VecExModel(ExModel):
         Return whether or not the model is trained.
         """
         return self._model.trained
+
+    def add_tokenizer_from_universe(self, universe: Union[str, RegionSet]):
+        """
+        Add a universe file to the model.
+
+        :param str universe_file_path: Path to the universe file.
+        """
+        self.tokenizer = InMemTokenizer(universe)
 
     def from_pretrained(self, model_file_path: str, universe_file_path: str):
         """
@@ -510,9 +502,12 @@ class Region2VecExModel(ExModel):
 
         _LOGGER.info("Extracting region sets.")
 
-        # fit the tokenizer on the regions
-        for region_set in region_sets:
-            self.tokenizer.fit(region_set)
+        # check for empty tokenizer
+        if self.tokenizer is None or len(self.tokenizer.universe) == 0:
+            raise ValueError(
+                "Cannot train model without a universe. Please call `add_universe` first."
+            )
+        region_sets = self.tokenizer.tokenize(data)
 
         _LOGGER.info("Training begin.")
 

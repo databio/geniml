@@ -60,14 +60,6 @@ class InMemTokenizer(Tokenizer):
     def trees(self):
         return self._trees
 
-    def add_regions(
-        self, regions: Union[str, List[Region], RegionSet, List[RegionSet], List[List[Region]]]
-    ):
-        """
-        Add regions to the universe.
-        """
-        self.build_trees(regions)
-
     def build_trees(
         self,
         regions: Union[
@@ -118,14 +110,6 @@ class InMemTokenizer(Tokenizer):
 
         # count total regions
         self.total_regions = sum([len(self._trees[tree]) for tree in self._trees])
-
-    def fit(
-        self, regions: Union[str, List[Region], RegionSet, List[RegionSet], List[List[Region]]]
-    ):
-        """
-        Fit the tokenizer to the given regions. This is equivalent to adding regions to the universe.
-        """
-        self.add_regions(regions)
 
     def find_overlaps(
         self,
