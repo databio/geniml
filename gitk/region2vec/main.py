@@ -372,10 +372,10 @@ class Region2Vec(Word2Vec):
             return self.wv[region_word]
         elif isinstance(regions, RegionSet):
             region_words = utils.wordify_regions(regions)
-            return [self.wv[r] for r in region_words]
+            return np.array([self.wv[r] for r in region_words])
         elif isinstance(regions, list):
             region_words = [utils.wordify_region(r) for r in regions]
-            return [self.wv[r] for r in region_words]
+            return np.array([self.wv[r] for r in region_words])
         else:
             raise TypeError(
                 f"Regions must be of type Region, RegionSet, or list, not {type(regions).__name__}"
@@ -434,7 +434,7 @@ class Region2VecExModel(ExModel):
 
     def _init_from_huggingface(
         self,
-        model_path: str,
+        model_repo: str,
         model_file_name: str = MODEL_FILE_NAME,
         universe_file_name: str = UNIVERSE_FILE_NAME,
         **kwargs,
@@ -447,8 +447,15 @@ class Region2VecExModel(ExModel):
         :param str model_file_name: The name of the model file - this should almost never be changed.
         :param str universe_file_name: The name of the universe file - this should almost never be changed.
         """
-        model_path = hf_hub_download(model_path, model_file_name, **kwargs)
-        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        model_path = hf_hub_download(model_repo, model_file_name, **kwargs)
+        universe_path = hf_hub_download(model_repo, universe_file_name, **kwargs)
+
+        syn1reg_file_name = utils.make_syn1neg_file_name(model_file_name)
+        wv_file_name = utils.make_wv_file_name(model_file_name)
+
+        # get the syn1neg and wv files
+        hf_hub_download(model_repo, wv_file_name, **kwargs)
+        hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
 
         # set the paths to the downloaded files
         self._model_path = model_path

@@ -13,6 +13,7 @@ from ..models.main import ExModel
 from ..region2vec import Region2Vec
 from ..tokenization import InMemTokenizer
 from .const import CHR_KEY, END_KEY, MODEL_FILE_NAME, MODULE_NAME, START_KEY, UNIVERSE_FILE_NAME
+from .utils import make_syn1neg_file_name, make_wv_file_name
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -30,19 +31,19 @@ class ScEmbed(ExModel):
     extension of Region2Vec.
     """
 
-    def __init__(self, model_path: Union[str, None] = None, **kwargs):
+    def __init__(self, model_repo: Union[str, None] = None, **kwargs):
         """
         Initialize ScEmbed model.
 
         :param str model_path: Path to the pre-trained model on huggingface.
         :param kwargs: Additional keyword arguments to pass to the model.
         """
-        self.model_path = model_path
+        self.model_path = model_repo
         self._model: Region2Vec = None
         self.tokenizer: InMemTokenizer = None
 
-        if model_path is not None:
-            self._init_from_huggingface(model_path)
+        if model_repo is not None:
+            self._init_from_huggingface(model_repo)
         else:
             self._model = Region2Vec(**kwargs)
             self.tokenizer = InMemTokenizer()
@@ -67,7 +68,7 @@ class ScEmbed(ExModel):
 
     def _init_from_huggingface(
         self,
-        model_path: str,
+        model_repo: str,
         model_file_name: str = MODEL_FILE_NAME,
         universe_file_name: str = UNIVERSE_FILE_NAME,
         **kwargs,
@@ -80,8 +81,15 @@ class ScEmbed(ExModel):
         :param str model_file_name: The name of the model file - this should almost never be changed.
         :param str universe_file_name: The name of the universe file - this should almost never be changed.
         """
-        model_path = hf_hub_download(model_path, model_file_name, **kwargs)
-        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        model_path = hf_hub_download(model_repo, model_file_name, **kwargs)
+        universe_path = hf_hub_download(model_repo, universe_file_name, **kwargs)
+
+        syn1reg_file_name = make_syn1neg_file_name(model_file_name)
+        wv_file_name = make_wv_file_name(model_file_name)
+
+        # get the syn1neg and wv files
+        hf_hub_download(model_repo, wv_file_name, **kwargs)
+        hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
 
         # set the paths to the downloaded files
         self._model_path = model_path
@@ -190,9 +198,9 @@ class ScEmbed(ExModel):
         _LOGGER.info("Encoding data.")
         enoded_data = []
         for region_set in tqdm(region_sets, desc="Encoding data", total=len(region_sets)):
-            vector = self._model.forward(region_set)
+            vectors = self._model.forward(region_set)
             # compute the mean of the vectors
-            vector = np.mean(vector, axis=0)
+            vector = np.mean(vectors, axis=0)
             enoded_data.append(vector)
         return np.array(enoded_data)
 

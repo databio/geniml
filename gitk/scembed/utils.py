@@ -36,3 +36,23 @@ class AnnDataChunker:
 
     def __repr__(self):
         return f"<AnnDataChunker: {self.n_chunks} chunks of size {self.chunk_size}>"
+
+
+def make_syn1neg_file_name(model_file_name: str) -> str:
+    """
+    Make the syn1neg file name from the model file name.
+
+    :param str model_file_name: The model file name.
+    :return str: The syn1neg file name.
+    """
+    return f"{model_file_name}.syn1neg.npy"
+
+
+def make_wv_file_name(model_file_name: str) -> str:
+    """
+    Make the wv file name from the model file name.
+
+    :param str model_file_name: The model file name.
+    :return str: The wv file name.
+    """
+    return f"{model_file_name}.wv.vectors.npy"
