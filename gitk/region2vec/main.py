@@ -372,10 +372,10 @@ class Region2Vec(Word2Vec):
             return self.wv[region_word]
         elif isinstance(regions, RegionSet):
             region_words = utils.wordify_regions(regions)
-            return np.mean([self.wv[r] for r in region_words], axis=0)
+            return [self.wv[r] for r in region_words]
         elif isinstance(regions, list):
             region_words = [utils.wordify_region(r) for r in regions]
-            return np.mean([self.wv[r] for r in region_words], axis=0)
+            return [self.wv[r] for r in region_words]
         else:
             raise TypeError(
                 f"Regions must be of type Region, RegionSet, or list, not {type(regions).__name__}"
