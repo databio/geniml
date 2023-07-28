@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 
 from gitk.io import RegionSet
-from gitk.region2vec import Region2Vec, wordify_region, wordify_regions
+from gitk.region2vec import Region2Vec, Region2VecExModel, wordify_region, wordify_regions
 
 
 @pytest.fixture
@@ -96,3 +96,34 @@ def test_save_and_load_model(region_sets: RegionSet):
                 assert isinstance(model_loaded.forward(region), np.ndarray)
     finally:
         os.remove("tests/data/test_model.model")
+
+
+def test_train_exmodel(region_sets: RegionSet):
+    model = Region2VecExModel(
+        min_count=1,  # for testing, we need to set min_count to 1
+    )
+    model.train(region_sets, epochs=100)
+
+    try:
+        model.export("tests/data/model-r2v-test/")
+        assert os.path.exists("tests/data/model-r2v-test/model.bin")
+        assert os.path.exists("tests/data/model-r2v-test/universe.bed")
+
+        # load in
+        model_loaded = Region2VecExModel()
+        model_loaded.from_pretrained(
+            "tests/data/model-r2v-test/model.bin",
+            "tests/data/model-r2v-test/universe.bed",
+        )
+        assert model_loaded is not None
+        for region_set in region_sets:
+            for region in region_set:
+                region_word = wordify_region(region)
+                assert region_word in model_loaded.wv
+                assert isinstance(model_loaded(region), np.ndarray)
+                assert isinstance(model_loaded.encode(region), np.ndarray)
+
+    finally:
+        os.remove("tests/data/model-r2v-test/model.bin")
+        os.remove("tests/data/model-r2v-test/universe.bed")
+        os.rmdir("tests/data/model-r2v-test/")

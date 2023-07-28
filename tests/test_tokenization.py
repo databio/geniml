@@ -1,13 +1,6 @@
-import os
-import sys
-
 import pytest
 import scanpy as sc
-import numpy as np
 
-
-# add parent directory to path
-sys.path.append("../")
 
 from gitk.io import Region, RegionSet
 from gitk.tokenization import InMemTokenizer
