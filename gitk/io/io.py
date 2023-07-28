@@ -21,7 +21,6 @@ class Region(Interval):
         return f"Region({self.chr}, {self.start}, {self.end})"
 
 
-# TODO: This belongs somewhere else
 class RegionSet(object):
     def __init__(self, regions: Union[str, List[Region]], backed: bool = False):
         # load from file

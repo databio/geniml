@@ -5,12 +5,18 @@ import pytest
 import numpy as np
 
 from gitk.io import RegionSet
+from gitk.tokenization import InMemTokenizer
 from gitk.region2vec import Region2Vec, Region2VecExModel, wordify_region, wordify_regions
 
 
 @pytest.fixture
 def bed_file():
     return "tests/data/to_tokenize.bed"
+
+
+@pytest.fixture
+def universe_file():
+    return "tests/data/universe.bed"
 
 
 @pytest.fixture
@@ -98,10 +104,14 @@ def test_save_and_load_model(region_sets: RegionSet):
         os.remove("tests/data/test_model.model")
 
 
-def test_train_exmodel(region_sets: RegionSet):
+def test_train_exmodel(region_sets: RegionSet, universe_file: str):
     model = Region2VecExModel(
         min_count=1,  # for testing, we need to set min_count to 1
+        tokenizer=InMemTokenizer(universe_file),
     )
+    # or
+    # model = Region2VecExModel(min_count=1)
+    # model.add_tokenizer_from_universe(universe_file)
     model.train(region_sets, epochs=100)
 
     try:
