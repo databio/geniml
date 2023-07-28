@@ -17,6 +17,11 @@ logging.basicConfig(level=logging.INFO)
 
 
 @pytest.fixture
+def hf_model():
+    return "databio/r2v-pbmc-hg38-small"
+
+
+@pytest.fixture
 def pbmc_data():
     return sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
 
@@ -77,3 +82,10 @@ def test_model_train_and_export(pbmc_data: sc.AnnData):
     finally:
         os.remove("tests/data/model-tests/model.bin")
         os.remove("tests/data/model-tests/universe.bed")
+
+
+@pytest.mark.skip(reason="Need to get a pretrained model first")
+def test_pretrained_scembed_model(hf_model: str, pbmc_data: sc.AnnData):
+    model = ScEmbed(hf_model)
+    embeddings = model.encode(pbmc_data)
+    assert embeddings.shape[0] == pbmc_data.shape[0]

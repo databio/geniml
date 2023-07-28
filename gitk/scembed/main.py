@@ -191,6 +191,8 @@ class ScEmbed(ExModel):
         enoded_data = []
         for region_set in tqdm(region_sets, desc="Encoding data", total=len(region_sets)):
             vector = self._model.forward(region_set)
+            # compute the mean of the vectors
+            vector = np.mean(vector, axis=0)
             enoded_data.append(vector)
         return np.array(enoded_data)
 
