@@ -411,6 +411,17 @@ class Region2VecExModel(ExModel):
             self._model = Region2Vec(**kwargs)
             self.tokenizer = InMemTokenizer()
 
+    @property
+    def wv(self):
+        return self._model.wv
+
+    @property
+    def trained(self) -> bool:
+        """
+        Return whether or not the model is trained.
+        """
+        return self._model.trained
+
     def from_pretrained(self, model_file_path: str, universe_file_path: str):
         """
         Initialize ScEmbed model from pretrained model.
@@ -508,6 +519,9 @@ class Region2VecExModel(ExModel):
 
         :param str path: The path to save the model to.
         """
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         model_file_path = os.path.join(path, MODEL_FILE_NAME)
         universe_file_path = os.path.join(path, UNIVERSE_FILE_NAME)
 
