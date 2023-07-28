@@ -2,7 +2,7 @@ import pytest
 import scanpy as sc
 import numpy as np
 
-from gitk.io import Region, RegionSet
+from gitk.io.io import Region, RegionSet
 
 
 @pytest.fixture

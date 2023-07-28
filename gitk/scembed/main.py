@@ -31,7 +31,7 @@ class ScEmbed(ExModel):
     extension of Region2Vec.
     """
 
-    def __init__(self, model_repo: Union[str, None] = None, **kwargs):
+    def __init__(self, model_repo: str = None, tokenizer: InMemTokenizer = None, **kwargs):
         """
         Initialize ScEmbed model.
 
@@ -46,7 +46,7 @@ class ScEmbed(ExModel):
             self._init_from_huggingface(model_repo)
         else:
             self._model = Region2Vec(**kwargs)
-            self.tokenizer = InMemTokenizer()
+            self.tokenizer = tokenizer
 
     @property
     def wv(self):
@@ -55,6 +55,14 @@ class ScEmbed(ExModel):
     @property
     def trained(self):
         return self._model.trained
+
+    def add_tokenizer_from_file(self, universe_file_path: str):
+        """
+        Add a tokenizer from a file.
+
+        :param str universe_file_path: Path to the universe file.
+        """
+        self.tokenizer = InMemTokenizer(universe_file_path)
 
     def from_pretrained(self, model_file_path: str, universe_file_path: str):
         """
@@ -143,8 +151,12 @@ class ScEmbed(ExModel):
 
         _LOGGER.info("Extracting region sets.")
 
-        # fit the tokenizer on the regions
-        self.tokenizer.fit(regions)
+        # check if we already have a tokenizer, if not create one
+        # from the regions
+        if self.tokenizer is None:
+            self.tokenizer = InMemTokenizer(RegionSet(regions))
+        else:
+            self.tokenizer.tokenize(RegionSet(data))
 
         # convert the data to a list of documents
         region_sets = self.tokenizer.tokenize(data)

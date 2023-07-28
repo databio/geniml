@@ -4,9 +4,10 @@ from typing import List
 import pytest
 import numpy as np
 
-from gitk.io import RegionSet
-from gitk.tokenization import InMemTokenizer
-from gitk.region2vec import Region2Vec, Region2VecExModel, wordify_region, wordify_regions
+from gitk.io.io import RegionSet
+from gitk.region2vec.main import Region2Vec, Region2VecExModel
+from gitk.region2vec.utils import wordify_region, wordify_regions
+from gitk.tokenization.main import InMemTokenizer
 
 
 @pytest.fixture
