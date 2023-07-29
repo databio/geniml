@@ -3,7 +3,7 @@ import os
 import shlex
 import subprocess
 
-from gitk.region2vec import utils
+from geniml.region2vec import utils
 
 
 def bedtools_tokenization(

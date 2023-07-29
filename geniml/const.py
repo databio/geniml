@@ -1,1 +1,1 @@
-PKG_NAME = "gitk"
+PKG_NAME = "geniml"

@@ -7,7 +7,7 @@ from functools import cmp_to_key
 import numpy as np
 import pyBigWig
 
-from gitk.utils import natural_chr_sort, timer_func
+from geniml.utils import natural_chr_sort, timer_func
 
 
 def ana_region(reg, start_s, starts, ends, track_val):

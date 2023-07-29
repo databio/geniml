@@ -24,10 +24,10 @@ def build_argparser():
     """
 
     banner = "%(prog)s - Genomic Interval toolkit"
-    additional_description = "\nhttps://gitk.databio.org"
+    additional_description = "\nhttps://geniml.databio.org"
 
     parser = VersionInHelpParser(
-        prog="gitk",
+        prog="geniml",
         version=f"{__version__}",
         description=banner,
         epilog=additional_description,
@@ -191,14 +191,14 @@ def main(test_args=None):
         )
     if args.command == "eval":
         if args.subcommand == "gdst":
-            from gitk.eval.gdst import get_gdst_score
+            from geniml.eval.gdst import get_gdst_score
 
             gdst_score = get_gdst_score(
                 args.model_path, args.embed_type, args.num_samples, args.seed
             )
             print(gdst_score)
         if args.subcommand == "npt":
-            from gitk.eval.npt import get_npt_score
+            from geniml.eval.npt import get_npt_score
 
             npt_score = get_npt_score(
                 args.model_path,
@@ -211,7 +211,7 @@ def main(test_args=None):
             )
             print(npt_score["SNPR"][0])
         if args.subcommand == "ctt":
-            from gitk.eval.ctt import get_ctt_score
+            from geniml.eval.ctt import get_ctt_score
 
             ctt_score = get_ctt_score(
                 args.model_path,
@@ -223,7 +223,7 @@ def main(test_args=None):
 
             print(ctt_score)
         if args.subcommand == "rct":
-            from gitk.eval.rct import get_rct_score
+            from geniml.eval.rct import get_rct_score
 
             rct_score = get_rct_score(
                 args.model_path,
@@ -236,7 +236,7 @@ def main(test_args=None):
             )
             print(rct_score)
         if args.subcommand == "bin-gen":
-            from gitk.eval.utils import get_bin_embeddings
+            from geniml.eval.utils import get_bin_embeddings
             import glob, pickle, os
 
             if os.path.exists(args.file_name):
