@@ -3,7 +3,7 @@ import sys
 
 from setuptools import setup
 
-PACKAGE_NAME = "gitk"
+PACKAGE_NAME = "geniml"
 
 # Ordinary dependencies
 DEPENDENCIES = []
