@@ -3,7 +3,7 @@ import sys
 
 from setuptools import setup
 
-PACKAGE_NAME = "gitk"
+PACKAGE_NAME = "geniml"
 
 # Ordinary dependencies
 DEPENDENCIES = []
@@ -26,11 +26,17 @@ setup(
     name=PACKAGE_NAME,
     packages=[
         PACKAGE_NAME,
-        "gitk.assess",
-        "gitk.eval",
-        "gitk.hmm",
-        "gitk.likelihood",
-        "gitk.scembed",
+        "geniml.assess",
+        "geniml.bedspace",
+        "geniml.eval",
+        "geniml.likelihood",
+        "geniml.models",
+        "geniml.models.atac",
+        "geniml.models.rna",
+        "geniml.region2vec",
+        "geniml.scembed",
+        "geniml.tokenization",
+        "geniml.universe",
     ],
     version=version,
     long_description=long_description,
@@ -48,7 +54,7 @@ setup(
     license="BSD2",
     entry_points={
         "console_scripts": [
-            "gitk = gitk.cli:main",
+            "geniml = geniml.cli:main",
         ],
     },
     keywords="bioinformatics, sequencing, ngs",
@@ -56,5 +62,5 @@ setup(
     include_package_data=True,
     url="http://giss.databio.org",
     author="Nathan Sheffield",
-    **extra
+    **extra,
 )
