@@ -1,5 +1,7 @@
+import os
 from typing import List, Union
 
+import gzip
 from intervaltree import Interval
 
 from ..utils import *
@@ -28,13 +30,22 @@ class RegionSet(object):
             self.backed = backed
             self.regions: List[Region] = []
             self.path = regions
+
+            # Check if the file is gzipped
+            _, file_extension = os.path.splitext(self.path)
+            is_gzipped = file_extension == ".gz"
+
+            # Open function depending on file type
+            open_func = gzip.open if is_gzipped else open
+            mode = "rt" if is_gzipped else "r"
+
             if backed:
                 self.regions = None
                 # https://stackoverflow.com/a/32607817/13175187
-                with open(self.path, "r") as file:
+                with open_func(self.path, mode) as file:
                     self.length = sum(1 for line in file if line.strip())
             else:
-                with open(regions, "r") as f:
+                with open_func(regions, mode) as f:
                     lines = f.readlines()
                     for line in lines:
                         # some bed files have more than 3 columns, so we just take the first 3
@@ -68,7 +79,15 @@ class RegionSet(object):
 
     def __iter__(self):
         if self.backed:
-            with open(self.path, "r") as f:
+            # Check if the file is gzipped
+            _, file_extension = os.path.splitext(self.path)
+            is_gzipped = file_extension == ".gz"
+
+            # Open function depending on file type
+            open_func = gzip.open if is_gzipped else open
+            mode = "rt" if is_gzipped else "r"
+
+            with open_func(self.path, mode) as f:
                 for line in f:
                     chr, start, stop = line.split("\t")[:3]
                     yield Region(chr, int(start), int(stop))

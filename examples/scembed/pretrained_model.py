@@ -1,10 +1,10 @@
 # %%
 import scanpy as sc
-from gitk.models import PretrainedScembedModel
+from gitk.scembed import ScEmbed
 
 # %%
 # Load the pretrained model
-model = PretrainedScembedModel("databio/luecken2021")
+model = ScEmbed("databio/r2v-luecken2021-hg38-small")
 
 # %%
 # Load the data
