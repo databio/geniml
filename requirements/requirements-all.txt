@@ -11,3 +11,8 @@ seaborn
 tqdm
 umap-learn
 ubiquerg
+yacman
+pydantic
+huggingface_hub
+intervaltree
+qdrant_client

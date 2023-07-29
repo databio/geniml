@@ -1,16 +1,24 @@
-site_name: gitk
-site_logo: img/gitk_logo.svg
-site_url: http://gitk.databio.org/
-repo_url: http://github.com/databio/gitk
-pypi_name: gitk
+site_name: geniml
+site_logo: img/geniml_logo.svg
+site_url: http://geniml.databio.org/
+repo_url: http://github.com/databio/geniml
+pypi_name: geniml
 
 nav:
   - Getting Started: 
     - Introduction: README.md
+    - Module overviews: modules.md
   - How-to guides:    
-    - Create consensus peaks: likelihood/consensus-peaks.md
+    - Assess universe fit: tutorials/assess-universe.md
+    - Search intervals with BEDSpace: tutorials/bedspace.md
+    - Evaluate embeddings: tutorials/evaluation.md
+    - Train region2vec embeddings: tutorials/region2vec.md
+    - Train single-cell embeddings: tutorials/train-scembed-model.md
+    - Tokenize a BED file: tutorials/tokenization.md
+    - Build universe: tutorials/build-universe.md
+    - Create consensus peaks: tutorials/create-consensus-peaks.md
   - Reference:
-    - API: autodoc_build/gitk.md
+    - API: autodoc_build/geniml.md
     - Support: support.md
     - Contributing: contributing.md
     - Changelog: changelog.md
@@ -22,6 +30,6 @@ plugins:
       autodoc_build: "docs/autodoc_build"
       jupyter_source: "docs_jupyter"
       jupyter_build: "docs_jupyter/build"
-      autodoc_package: "gitk"
-      no_top_level: true
+      autodoc_package: "geniml"
+      no_top_level: false
   - search
