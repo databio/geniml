@@ -2,7 +2,7 @@
 
 ## Introduction
 
-To ensure that everything is working correctly, run: `python -c "from gitk import bedspace"`. There are four main commands in `bedspace`:
+To ensure that everything is working correctly, run: `python -c "from geniml import bedspace"`. There are four main commands in `bedspace`:
 
 1. `bedspace preprocess`: preprocesses a set of genomic interval regions and their associated metadata into a format that can be used by `bedspace train`.
 2. `bedspace train`: trains a StarSpace model on the preprocessed data.
@@ -13,7 +13,7 @@ To ensure that everything is working correctly, run: `python -c "from gitk impor
 The `preprocess` command will prepare a set of region sets and metadata labels for training. This includes things like adding the `__label__` prefix to metadata labels, and converting the region sets into a format that can be used by StarSpace. The command takes in a set of region sets and metadata labels, and outputs a set of preprocessed region sets and metadata labels. The command can be run as follows:
 
 ```console
-gitk bedspace preprocess \
+geniml bedspace preprocess \
     --input <path to input region sets> \
     --metadata <path to input metadata labels> \
     --universe <path to universe file> \
@@ -33,7 +33,7 @@ Input Description:
 The `train` command will train a StarSpace model on the preprocessed region sets and metadata labels. It requires that you have run the `preprocess` command first. The `train` command takes in a set of preprocessed region sets and metadata labels, and outputs a trained StarSpace model. The command can be run as follows:
 
 ```console
-gitk bedspace train \
+geniml bedspace train \
     --path-to-starspace <path to StarSpace executable> \
     --input <path to preprocessed region sets> \
     --output <path to output trained model> \
@@ -60,7 +60,7 @@ Input Description:
 The `distances` command will compute the distances between all of the region sets and metadata labels in the trained model. It requires that you have ran the `train` command first. The `distances` command takes in a trained StarSpace model, and outputs a set of distances between all of the region sets and metadata labels in the model. The command can be run as follows:
 
 ```console
-gitk bedspace distances \
+geniml bedspace distances \
     --input <path to trained model> \
     --metadata <path to input metadata labels> \
     --universe <path to universe file> \
@@ -92,7 +92,7 @@ Example usage for each type are given below:
 
 #### `r2l`
 ```console
-gitk bedspace search \
+geniml bedspace search \
     -t lr2
     -d <path to distances> \
     -n <number of results to return> \
@@ -101,7 +101,7 @@ gitk bedspace search \
 
 #### `l2r`
 ```console
-gitk bedspace search \
+geniml bedspace search \
     -t rl2
     -d <path to distances> \
     -n <number of results to return> \
@@ -110,7 +110,7 @@ gitk bedspace search \
 
 #### `r2r`
 ```console
-gitk bedspace search \
+geniml bedspace search \
     -t r2r
     -d <path to distances> \
     -n <number of results to return> \

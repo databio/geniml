@@ -14,8 +14,8 @@ import numpy as np
 import requests
 import yaml
 
-import gitk.region2vec.utils as utils
-from gitk.tokenization.split_file import split_file
+import geniml.region2vec.utils as utils
+from geniml.tokenization.split_file import split_file
 
 from .hard_tokenization_batch import main as hard_tokenization
 

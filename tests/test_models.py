@@ -8,7 +8,7 @@ import numpy as np
 # add parent directory to path
 sys.path.append("../")
 
-from gitk import models
+from geniml import models
 
 
 @pytest.fixture
