@@ -142,50 +142,55 @@ class InMemTokenizer(Tokenizer):
 
     def convert_anndata_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
         """
-        Convert an AnnData object to a universe. This is done by
-        inspecting the peaks in the AnnData object and converting
-        them to regions found in the universe. This process
-        occurs in-place.
+        Converts the consensus peak set (.var) attributes of the AnnData object
+        to a universe representation. This is done through interval overlap
+        analysis with bedtools.
 
-        :param sc.AnnData adata: The AnnData object to convert.
-        :param Universe universe: The universe to convert to.
+        For each region in the `.var` attribute of the AnnData object, we
+        either 1) map it to a region in the universe, or 2) map it to `None`.
+        If it is mapped to `None`, it is not in the universe and will be dropped
+        from the AnnData object. If it is mapped to a region, it will be updated
+        to the region in the universe for downstream analysis.
         """
         # ensure adata has chr, start, and end
         if not all([x in adata.var.columns for x in ["chr", "start", "end"]]):
             raise ValueError("AnnData object must have `chr`, `start`, and `end` columns in .var")
 
         # create list of regions from adata
-        adata.var["region"] = (
-            adata.var["chr"].astype(str)
-            + "_"
-            + adata.var["start"].astype(str)
-            + "_"
-            + adata.var["end"].astype(str)
-        )
-        query_set = [
-            Region(x[0], x[1], x[2])
-            for x in list(
-                zip(adata.var["chr"], adata.var["start"].astype(int), adata.var["end"].astype(int))
-            )
-        ]
+        query_set: List[tuple[str, int, int]] = adata.var.apply(
+            lambda x: Region(x["chr"], int(x["start"]), int(x["end"])), axis=1
+        ).tolist()
 
         # generate conversion map
         _map = self.generate_var_conversion_map(query_set)
 
-        # map regions to new universe
-        adata.var["new_region"] = adata.var["region"].map(_map)
+        # create a new DataFrame with the updated values
+        updated_var = adata.var.copy()
 
-        # drop rows where new_region is None
-        adata.var.dropna(subset=["new_region"], inplace=True)
+        # find the regions that overlap with the universe
+        # use dynamic programming to create a boolean mask of columns to keep
+        columns_to_keep = []
+        for i, row in tqdm(adata.var.iterrows(), total=adata.var.shape[0]):
+            region = f"{row['chr']}_{row['start']}_{row['end']}"
+            if _map[region] is None:
+                columns_to_keep.append(False)
+                continue
 
-        # split new_region into chr, start, end
-        adata.var[["chr", "start", "end"]] = adata.var["new_region"].str.split("_", expand=True)
+            # if it is, change the region to the universe region,
+            # grab the first for now
+            # TODO - this is a simplification, we should be able to handle multiple
+            universe_region = _map[region]
+            chr, start, end = universe_region.split("_")
 
-        # drop 'region' and 'new_region' columns
-        adata.var.drop(columns=["region", "new_region"], inplace=True)
+            updated_var.at[i, "chr"] = chr
+            updated_var.at[i, "start"] = start
+            updated_var.at[i, "end"] = end
 
-        # update adata with the new DataFrame
-        adata = adata[:, adata.var.index]
+            columns_to_keep.append(True)
+
+        # update adata with the new DataFrame and filtered columns
+        adata = adata[:, columns_to_keep]
+        adata.var = updated_var[columns_to_keep]
 
         return adata
 
