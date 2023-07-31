@@ -406,6 +406,7 @@ def shuffle_documents(
                     [n_shuffles] * len(documents),
                 ),
                 total=len(documents),
+                desc="Shuffling documents",
             )
         )
     return shuffled_documents

@@ -169,7 +169,9 @@ class InMemTokenizer(Tokenizer):
         # find the regions that overlap with the universe
         # use dynamic programming to create a boolean mask of columns to keep
         columns_to_keep = []
-        for i, row in tqdm(adata.var.iterrows(), total=adata.var.shape[0]):
+        for i, row in tqdm(
+            adata.var.iterrows(), total=adata.var.shape[0], desc="Converting to universe"
+        ):
             region = f"{row['chr']}_{row['start']}_{row['end']}"
             if _map[region] is None:
                 columns_to_keep.append(False)
