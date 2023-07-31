@@ -265,11 +265,11 @@ class Region2Vec(Word2Vec):
             if all([isinstance(d, str) for d in data]):
                 data = [RegionSet(d) for d in data]
             # list of RegionSets? Great.
-            elif all([isinstance(d, RegionSet) for d in data]):
+            elif all([isinstance(d, RegionSet) for d in data if len(d) > 0]):
                 pass
-            # list of list of Regions? Great.
+            # list of list of Regions? Great. Some might be empty, but that's ok.
             elif all([isinstance(d, list) for d in data]) and all(
-                [isinstance(d[0], Region) for d in data]
+                [isinstance(d[0], Region) for d in data if len(d) > 0]
             ):
                 data = [RegionSet(d) for d in data]
             # something else? error.
@@ -509,6 +509,7 @@ class Region2VecExModel(ExModel):
             )
 
         # tokenize each region set
+        _LOGGER.info("Tokenizing region sets.")
         region_sets_tokenized = [self.tokenizer.tokenize(rs) for rs in region_sets]
 
         _LOGGER.info("Training begin.")
