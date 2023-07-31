@@ -464,7 +464,11 @@ class Region2VecExModel(ExModel):
         :param List[RegionSet] region_sets: The region sets to filter.
         :return: The filtered region sets.
         """
-        return [r for r in region_sets if len(r) > 0]
+        return [
+            r
+            for r in tqdm(region_sets, total=len(region_sets), desc="Filtering out empty sets.")
+            if len(r) > 0
+        ]
 
     def _validate_data(
         self, data: Union[List[str], List[RegionSet], List[List[Region]]]
@@ -525,7 +529,8 @@ class Region2VecExModel(ExModel):
         # tokenize each region set
         _LOGGER.info("Tokenizing region sets.")
         region_sets_tokenized = [
-            self.tokenizer.tokenize(rs) for rs in tqdm(region_sets, total=len(region_sets))
+            self.tokenizer.tokenize(rs)
+            for rs in tqdm(region_sets, total=len(region_sets), desc="Tokenizing region sets.")
         ]
         region_sets_tokenized = self._filter_empty_region_sets(region_sets_tokenized)
 
