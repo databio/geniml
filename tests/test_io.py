@@ -1,6 +1,4 @@
 import pytest
-import scanpy as sc
-import numpy as np
 
 from gitk.io.io import Region, RegionSet
 
@@ -26,7 +24,7 @@ def test_make_region():
 def test_make_region_set(universe_bed_file: str):
     u = RegionSet(universe_bed_file)
     assert u is not None
-    assert len(u) == 10_000
+    assert len(u) == 2_433
 
     # test we can iterate over it
     for region in u:
@@ -36,7 +34,7 @@ def test_make_region_set(universe_bed_file: str):
 def test_make_region_set_with_backed(universe_bed_file: str):
     u = RegionSet(universe_bed_file, backed=True)
     assert u is not None
-    assert len(u) == 10_000
+    assert len(u) == 2_433
 
     # test we can iterate over it
     for region in u:

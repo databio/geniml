@@ -3,7 +3,7 @@ import os
 import shlex
 import subprocess
 
-from ..region2vec import utils
+from .utils import time_str, Timer
 
 
 def bedtools_tokenization(
