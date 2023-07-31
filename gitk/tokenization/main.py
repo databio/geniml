@@ -10,12 +10,11 @@ import scanpy as sc
 from intervaltree import IntervalTree
 from tqdm import tqdm
 
-import gitk.region2vec.utils as utils
 from gitk.tokenization.split_file import split_file
 
 from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization
-from .utils import anndata_to_regionsets
+from .utils import anndata_to_regionsets, time_str, Timer
 
 
 class Tokenizer(ABC):
@@ -309,7 +308,7 @@ def hard_tokenization_main(
             has the complete tokenized BED files or the tokenization process
             succeeds.
     """
-    timer = utils.Timer()
+    timer = Timer()
     start_time = timer.t()
 
     file_list_path = os.path.join(dst_folder, "file_list.txt")
@@ -404,5 +403,5 @@ def hard_tokenization_main(
     os.remove(file_list_path)
     print(f"Tokenization complete {len(os.listdir(dst_folder))}/{file_count} bed files")
     elapsed_time = timer.t() - start_time
-    print(f"[Tokenization] {utils.time_str(elapsed_time)}/{utils.time_str(timer.t())}")
+    print(f"[Tokenization] {time_str(elapsed_time)}/{time_str(timer.t())}")
     return 1
