@@ -66,7 +66,10 @@ class RegionSet(object):
         return self.length
 
     def __getitem__(self, key):
-        return self.regions[key]
+        if self.backed:
+            raise NotImplementedError("Backed RegionSets do not currently support indexing.")
+        else:
+            return self.regions[key]
 
     def __repr__(self):
         if self.path:
