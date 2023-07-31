@@ -457,6 +457,15 @@ class Region2VecExModel(ExModel):
         self._model = Region2Vec.load(model_path)
         self.tokenizer = InMemTokenizer(universe_path)
 
+    def _filter_empty_region_sets(self, region_sets: List[RegionSet]) -> List[RegionSet]:
+        """
+        Filter out any empty region sets.
+
+        :param List[RegionSet] region_sets: The region sets to filter.
+        :return: The filtered region sets.
+        """
+        return [r for r in region_sets if len(r) > 0]
+
     def _validate_data(
         self, data: Union[List[str], List[RegionSet], List[List[Region]]]
     ) -> List[RegionSet]:
@@ -474,13 +483,13 @@ class Region2VecExModel(ExModel):
                 raise ValueError("Data cannot be empty.")
             elif isinstance(data[0], str):
                 # we have a list of paths to bed files
-                return [RegionSet(path) for path in data]
+                region_sets = [RegionSet(path) for path in data]
             elif isinstance(data[0], RegionSet):
                 # we have a list of RegionSets
-                return data
+                region_sets = data
             elif isinstance(data[0], list):
                 # we have a list of lists of Regions
-                return [RegionSet(regions) for regions in data]
+                region_sets = [RegionSet(regions) for regions in data]
             else:
                 raise TypeError(
                     f"Data must be of type List[str], List[RegionSet], or List[List[Region]], not {type(data).__name__}"
@@ -489,6 +498,11 @@ class Region2VecExModel(ExModel):
             raise TypeError(
                 f"Data must be of type List[str], List[RegionSet], or List[List[Region]], not {type(data).__name__}"
             )
+
+        # filter out empty region sets
+        return self._filter_empty_region_sets(region_sets)
+
+        return region_sets
 
     def train(self, data: Union[List[str], List[RegionSet], List[List[Region]]], **kwargs):
         """
@@ -510,7 +524,10 @@ class Region2VecExModel(ExModel):
 
         # tokenize each region set
         _LOGGER.info("Tokenizing region sets.")
-        region_sets_tokenized = [self.tokenizer.tokenize(rs) for rs in region_sets]
+        region_sets_tokenized = [
+            self.tokenizer.tokenize(rs) for rs in tqdm(region_sets, total=len(region_sets))
+        ]
+        region_sets_tokenized = self._filter_empty_region_sets(region_sets_tokenized)
 
         _LOGGER.info("Training begin.")
 
