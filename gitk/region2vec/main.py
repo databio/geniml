@@ -507,11 +507,13 @@ class Region2VecExModel(ExModel):
             raise ValueError(
                 "Cannot train model without a universe. Please call `add_universe` first."
             )
-        region_sets = self.tokenizer.tokenize(data)
+
+        # tokenize each region set
+        region_sets_tokenized = [self.tokenizer.tokenize(rs) for rs in region_sets]
 
         _LOGGER.info("Training begin.")
 
-        self._model.train(region_sets, **kwargs)
+        self._model.train(region_sets_tokenized, **kwargs)
 
         _LOGGER.info("Training complete.")
 
