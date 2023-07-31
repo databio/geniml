@@ -299,7 +299,7 @@ class Region2Vec(Word2Vec):
             min_count=self.min_count,
         )
 
-        for shuffle_num in range(epochs):
+        for shuffle_num in tqdm(range(epochs), total=epochs, desc="Epochs"):
             # update current values
             current_lr = lr_scheduler.get_lr()
             current_loss = self.get_latest_training_loss()
