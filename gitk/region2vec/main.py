@@ -356,10 +356,10 @@ class Region2Vec(Word2Vec):
             return self.wv[region_word]
         elif isinstance(regions, RegionSet):
             region_words = utils.wordify_regions(regions)
-            return np.array([self.wv[r] for r in region_words])
+            return np.array([self.wv[r] for r in region_words if r in self.wv])
         elif isinstance(regions, list):
             region_words = [utils.wordify_region(r) for r in regions]
-            return np.array([self.wv[r] for r in region_words])
+            return np.array([self.wv[r] for r in region_words if r in self.wv])
         else:
             raise TypeError(
                 f"Regions must be of type Region, RegionSet, or list, not {type(regions).__name__}"
