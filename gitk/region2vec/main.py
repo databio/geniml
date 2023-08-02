@@ -353,7 +353,12 @@ class Region2Vec(Word2Vec):
         """
         if isinstance(regions, Region):
             region_word = utils.wordify_region(regions)
-            return self.wv[region_word]
+            try:
+                return self.wv[region_word]
+            except:
+                embedding_vec = np.empty(self.vector_size)
+                embedding_vec[:] = np.nan
+                return embedding_vec
         elif isinstance(regions, RegionSet):
             region_words = utils.wordify_regions(regions)
             return np.array([self.wv[r] for r in region_words if r in self.wv])
