@@ -36,6 +36,7 @@ setup(
         "gitk.tokenization",
         "gitk.universe",
         "gitk.io",
+        "gitk.text2bednn"
     ],
     version=version,
     long_description=long_description,
