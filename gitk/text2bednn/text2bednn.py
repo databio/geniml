@@ -1,11 +1,14 @@
 import numpy as np
 from typing import List, Union, Tuple
 from sentence_transformers import SentenceTransformer
-from .const import DEFAULT_HF_ST_MODEL
+from .const import *
 from dataclasses import dataclass, replace
 from ..io import RegionSet
 from ..region2vec import Region2VecExModel
 from .utils import *
+from ..models import Model
+import tensorflow as tf
+import matplotlib as plt
 
 @dataclass
 class BedMetadataEmbedding:
@@ -175,40 +178,81 @@ def update_BedMetadata_list(old_list: List[BedMetadataEmbedding],
 
     return new_list
 
-# class TextToBedNN(Model):
-#     """A Extended Model for TextToBed using a FFNN."""
-#
-#     def __init__(self,
-#                  model_nn_path: Union[str, None] = None,
-#                  model_st_repo: str = DEFAULT_HF_ST_MODEL,
-#                  **kwargs):
-#         # super().__init__(model, universe, tokenizer)
-#         self._st_model = SentenceTransformer(model_st_repo)
-#         if model_nn_path is not None:
-#             self.from_pretrained(model_nn_path)
-#         else:
-#             self._nn_model = tf.keras.models.Sequential()
-#         # initiation
-#     def __repr__(self):
-#         print("To be completed")
-#
-#     def _init_from_huggingface(self):
-#         # to be finished
-#         return
-#
-#     def from_pretrained(self, model_nn_path: str):
-#         self._nn_model = tf.keras.models.load_model(model_nn_path)
-#
-#     def train(self, dataset: BedMetadataEmbeddingSet):
-#         return
-#
-#     def forward(self, query: str):
-#         # input string -> embedded by sentence transformer -> FNN -> vector
-#         return
-#
-#     def train(self, dataset: BedMetadataEmbeddingSet):
-#         # given embedded [bed, metadata] pair, fit the neural network
-#         return
+
+class TextToBedNN(Model):
+    """A Extended Model for TextToBed using a FFNN."""
+
+    def __init__(self,
+                 model_nn_path: Union[str, None] = None,
+                 model_st_repo: str = DEFAULT_HF_ST_MODEL,
+                 **kwargs):
+        # super().__init__(model, universe, tokenizer)
+        self.built = True
+        self._st_model = SentenceTransformer(model_st_repo)
+        if model_nn_path is not None:
+            self.from_pretrained(model_nn_path)
+        else:
+            self._nn_model = tf.keras.models.Sequential()
+            self.built = False
+        # initiation
+
+    def __repr__(self):
+        print("To be completed")
+
+    def _init_from_huggingface(self):
+        # to be finished
+        return
+
+    def from_pretrained(self, model_nn_path: str):
+        self._nn_model = tf.keras.models.load_model(model_nn_path)
+
+    def train(self, dataset: BedMetadataEmbeddingSet,
+              epochs: int = DEFAULT_EPOCHES,
+              batches: int = DEFAULT_BATCHES,
+              units: int = DEFAULT_UNITS,
+              layers: int = DEFAULT_LAYERS,
+              plotting:bool = True):
+
+        training_X, training_Y = dataset.generate_data("training")
+        validating_X, validating_Y = dataset.generate_data("validating")
+
+        if not self.built:
+
+            input_dim = training_X.shape[1]
+            output_dim = training_Y.shape[1]
+
+            self._nn_model.add(tf.keras.layers.Dense(258, input_shape=(input_dim,), activation='relu'))
+
+            for i in range(layers):
+                self._nn_model.add(tf.keras.layers.Dense(258, activation='relu'))
+
+            self._nn_model.add(tf.keras.layers.Dense(output_dim))
+            self._nn_model.compile(optimizer="adam", loss="mean_squared_error")
+
+            self.built = True
+
+        early_stoppage = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=int(epochs*0.25))
+
+        train_hist = self._nn_model.fit(training_X, training_Y, epochs=epochs, batch_size=batches,
+                        validation_data=(validating_X, validating_Y),
+                        callbacks=[early_stoppage])
+
+        epoch_range = range(1, len(train_hist.history['accuracy']) + 1)
+        train_loss = train_hist.history['loss']
+        valid_loss = train_hist.history['val_loss']
+        plt.plot(epoch_range, train_loss, 'r', label='Training loss')
+        plt.plot(epoch_range, valid_loss, 'b', label='Validation loss')
+        plt.title('Training and validation loss')
+        plt.legend()
+        plt.show()
+
+
+
+    def forward(self, query: str) -> np.ndarray:
+        # input string -> embedded by sentence transformer -> FNN -> vector
+        query_embedding = self._st_model.encode(query)
+
+        return self._nn_model.predict(query_embedding)
 
 
 # class TextToBedNNSearchInterface(object):
