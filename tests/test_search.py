@@ -26,7 +26,4 @@ def test_QdrantBackend(bed_folder):
     assert isinstance(search_result, list)
     assert isinstance(search_result[0].id, int)
     assert isinstance(search_result[0].payload, dict)
-
-
-
-
+    assert len(qd_search_backend) == len(file_names)

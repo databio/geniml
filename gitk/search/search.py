@@ -44,11 +44,19 @@ class EmSearchBackend(ABC):
         raise NotImplementedError()
 
 
-class QdrantBackend:
+class QdrantBackend(EmSearchBackend):
     """A search backend that uses a qdrant server to store and search embeddings"""
 
     def __init__(self, config: VectorParams,
                  collection: str = "embeddings"):
+        """
+        Connect to Qdrant on commandline first:
+        (Ubuntu Linux terminal)
+        sudo docker run -p 6333:6333     -v $(pwd)/qdrant_storage:/qdrant/storage     qdrant/qdrant
+
+        :param config: the vector parameter
+        :param collection: name of collection
+        """
         self.collection = collection
         self.config = config
         # self.qd_client = get_qdrant(True)
@@ -58,8 +66,15 @@ class QdrantBackend:
         # TODO: initialize connection to qdrant server
 
     def load(self,
-             embeddings: Union[np.ndarray, List[Union[List, np.ndarray]]],
-             labels: list):
+             embeddings: np.ndarray,
+             labels: List[str]):
+        """
+        upload vectors and their labels onto qdrant storage
+
+        :param embeddings: embedding vectors of bed files, an np.ndarray with shape of (n, <vector size>)
+        :param labels: list of labels, can be name of bed files
+        :return:
+        """
         if embeddings.shape[0] != len(labels):
             raise KeyError("The number of embeddings does not match the number of labels")
         self.qd_client.upsert(
@@ -75,6 +90,13 @@ class QdrantBackend:
         )
 
     def search(self, query: np.ndarray, k: int) -> List:
+        """
+        with a given query vector, get k nearest neighbors from vectors in the collection
+
+        :param query: a vector to search
+        :param k: number of returned results
+        :return: a list of search results
+        """
         search_results = self.qd_client.search(
             collection_name=self.collection,
             query_vector=query,
@@ -84,6 +106,11 @@ class QdrantBackend:
         # raise NotImplementedError
         return search_results
 
+    def __len__(self) -> int:
+        """
+        Return the number of embeddings in the backend
+        """
+        return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 #
 # class HNSWBackend(EmSearchBackend):
 #     """A search backend that uses a local HNSW index to store and search embeddings"""

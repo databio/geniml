@@ -1,6 +1,8 @@
 import os
 from typing import List, Tuple
 import random
+import numpy as np
+import tensorflow as tf
 
 
 def data_split(full_list: List,
@@ -11,7 +13,7 @@ def data_split(full_list: List,
     With a given folder of data, this function split the files
     into training set, validating set, and testing set.
 
-    :param bed_folder: folder where bed files are stored
+    :param full_list: list of data
     :param train_p: proportion of files for training set
     :param valid_p: proportion of files for validating set
     and files will be copied to them.
@@ -20,17 +22,12 @@ def data_split(full_list: List,
     """
 
     # split training data and testing data
-    # file_list = os.listdir(bed_folder)
     train_size = int(len(full_list) * train_p)
     validate_size = int(len(full_list) * valid_p)
     random.seed(seed_index)
     train_list = random.sample(full_list, train_size)
     validate_list = random.sample([content for content in full_list if content not in train_list], validate_size)
     test_list = [content for content in full_list if (content not in train_list and content not in validate_list)]
-
-    # train_list.sort()
-    # validate_list.sort()
-    # test_list.sort()
 
     return train_list, validate_list, test_list
 
@@ -48,6 +45,10 @@ def metadata_line_process(metadata_line: str) -> str:
     metadata_line = metadata_line.replace("\n", "")
 
     return metadata_line
+
+
+def np2dataset(X: np.ndarray, Y: np.ndarray) -> tf.data.Dataset:
+    return tf.data.Dataset.from_tensor_slices((X, Y))
 
 
 """
