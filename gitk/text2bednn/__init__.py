@@ -1,1 +1,1 @@
-from text2bednn import *
+from .text2bednn import *

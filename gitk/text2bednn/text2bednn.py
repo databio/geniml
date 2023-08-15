@@ -7,8 +7,10 @@ from ..io import RegionSet
 from ..region2vec import Region2VecExModel
 from .utils import *
 from ..models import Model
+from ..search import QdrantBackend
 import tensorflow as tf
 import matplotlib as plt
+
 
 @dataclass
 class BedMetadataEmbedding:
@@ -39,6 +41,21 @@ class BedMetadataEmbeddingSet:
         """
         return len(self.training) + len(self.validating) + len(self.testing)
 
+    @property
+    def tolist(self) -> List[BedMetadataEmbedding]:
+        """
+        put all BedMetadataEmbedding into one list
+
+        :return: a list of all BedMetadataEmbedding in the set
+        """
+        result = []
+        # add elements from each list
+        result.extend(self.training)
+        result.extend(self.validating)
+        result.extend(self.testing)
+
+        return result
+
     def generate_data(self, set_name: str) -> Tuple[np.ndarray, np.ndarray]:
         """
         With given dataset name, return a tuple of X and Y
@@ -65,6 +82,21 @@ class BedMetadataEmbeddingSet:
             Y.append(dc.region_set_embedding)
 
         return np.array(X), np.array(Y)
+
+    def to_qd_upload(self) -> Tuple[np.ndarray, List[str]]:
+        """
+        return a tuple of:
+        a np.ndarray of dimension (number of vectors, vector length), and a list of matching file names
+
+        which matches the uploading format of QdrantBackend
+        :return:
+        """
+        vecs = []
+        labels = []
+        for embeddings in self.tolist:
+            vecs.append(embeddings.region_set_embedding)
+            labels.append(embeddings.file_name)
+        return np.vstack(vecs), labels
 
 
 def build_BedMetadataSet_from_files(bed_folder: str,
@@ -190,85 +222,142 @@ class TextToBedNN(Model):
         self.built = True
         self._st_model = SentenceTransformer(model_st_repo)
         if model_nn_path is not None:
+            # upload local models
             self.from_pretrained(model_nn_path)
         else:
+            # create an empty Sequential
             self._nn_model = tf.keras.models.Sequential()
-            self.built = False
+            self.built = False # model is not built
         # initiation
 
     def __repr__(self):
         print("To be completed")
 
-    def _init_from_huggingface(self):
+    def init_from_huggingface(self):
         # to be finished
-        return
+        print("To be completed")
 
     def from_pretrained(self, model_nn_path: str):
+        """
+        load pretrained model from local file
+
+        :param model_nn_path: the local path of saved model
+        :return:
+        """
         self._nn_model = tf.keras.models.load_model(model_nn_path)
 
     def train(self, dataset: BedMetadataEmbeddingSet,
+              loss_func: str = DEFAULT_LOSS,
               epochs: int = DEFAULT_EPOCHES,
-              batches: int = DEFAULT_BATCHES,
+              batch_size: int = DEFAULT_BATCH_SIZE,
               units: int = DEFAULT_UNITS,
               layers: int = DEFAULT_LAYERS,
-              plotting:bool = True):
+              plotting: bool = False):
+        """
+        train the feedforward neural network model with a given BedMetadataEmbeddingSet
 
+        :param dataset: a BedMetadataEmbeddingSet
+        :param loss_func: loss function for training
+        :param epochs: number of training epochs
+        :param batch_size: training batch size
+        :param units: number of neurons in a dense layer
+        :param layers: number of extra layers
+        :param plotting: whether to plot the training and velidation loss by epochs
+        :return:
+        """
+
+        # get training and validating dataset from BedMetadataEmbeddingSet
         training_X, training_Y = dataset.generate_data("training")
         validating_X, validating_Y = dataset.generate_data("validating")
 
+        # if the model is empty
         if not self.built:
+            print("Build new sequential model")
 
-            input_dim = training_X.shape[1]
-            output_dim = training_Y.shape[1]
+            # dimensions of input and output
+            input_dims = training_X[0].shape
+            output_dims = training_Y[0].shape
 
-            self._nn_model.add(tf.keras.layers.Dense(258, input_shape=(input_dim,), activation='relu'))
+            # the dense layer that connected to input
+            self._nn_model.add(tf.keras.layers.Dense(units, input_shape=input_dims, activation='relu'))
 
+            # extra dense layers
             for i in range(layers):
-                self._nn_model.add(tf.keras.layers.Dense(258, activation='relu'))
+                self._nn_model.add(tf.keras.layers.Dense(units, input_shape=(units,), activation='relu'))
 
-            self._nn_model.add(tf.keras.layers.Dense(output_dim))
-            self._nn_model.compile(optimizer="adam", loss="mean_squared_error")
+            # output
+            self._nn_model.add(tf.keras.layers.Dense(output_dims[0]))
 
+            self._nn_model.compile(optimizer="adam", loss=loss_func)
+
+            # model is no longer empty
             self.built = True
 
-        early_stoppage = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=int(epochs*0.25))
+        # early stoppage to prevent overfitting
+        early_stoppage = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=int(epochs * 0.25))
 
-        train_hist = self._nn_model.fit(training_X, training_Y, epochs=epochs, batch_size=batches,
-                        validation_data=(validating_X, validating_Y),
-                        callbacks=[early_stoppage])
+        # record training history
+        train_hist = self._nn_model.fit(training_X, training_Y, epochs=epochs, batch_size=batch_size,
+                                        validation_data=(validating_X, validating_Y),
+                                        callbacks=[early_stoppage])
 
-        epoch_range = range(1, len(train_hist.history['accuracy']) + 1)
-        train_loss = train_hist.history['loss']
-        valid_loss = train_hist.history['val_loss']
-        plt.plot(epoch_range, train_loss, 'r', label='Training loss')
-        plt.plot(epoch_range, valid_loss, 'b', label='Validation loss')
-        plt.title('Training and validation loss')
-        plt.legend()
-        plt.show()
-
-
+        # plot the training history: training / validation loss by epoch
+        if plotting:
+            epoch_range = range(1, len(train_hist.history['loss']) + 1)
+            train_loss = train_hist.history['loss']
+            valid_loss = train_hist.history['val_loss']
+            plt.plot(epoch_range, train_loss, 'r', label='Training loss')
+            plt.plot(epoch_range, valid_loss, 'b', label='Validation loss')
+            plt.title('Training and validation loss')
+            plt.legend()
+            plt.show()
 
     def forward(self, query: str) -> np.ndarray:
+        """
+        map a query string to an embedding vector of bed file
+
+        :param query: a string
+        :return:
+        """
+
         # input string -> embedded by sentence transformer -> FNN -> vector
+
+        # encode the query string to vector by sentence transformer
         query_embedding = self._st_model.encode(query)
 
-        return self._nn_model.predict(query_embedding)
+        # reshape the encoding vector
+        # because the model takes input with shape of (n, <vector dimension>)
+        # and the shape of encoding vector is (<vector dimension>, )
+        vec_dim = query_embedding.shape[0]
+
+        # map the encoding vector to bedfile embedding vector by feedforward neural network
+        output_vec = self._nn_model.predict(query_embedding.reshape((1, vec_dim)))
+
+        # reshape the output from (1, <region2vec embedding dimension>) to (<~ dimension>, 1)
+        output_vec_dim = output_vec.shape[1]
+        return output_vec.reshape(output_vec_dim, )
 
 
-# class TextToBedNNSearchInterface(object):
-#     def __init__(self, exmodel: TextToBedNN, region_set_backend: EmSearchBackend):
-#         self.exmodel = exmodel
-#         self.region_set_backend = region_set_backend
-#
-#     def nlsearch(self, query: str, k: int = 10):
-#         """Given an input natural lange, suggest region sets"""
-#
-#         # first, get the embedding of the query string
-#         query_embedding = self.tum.embed(query)
-#         # then, use the query embedding to predict the region set embedding
-#         region_set_embedding = self.tum.str_to_region_set(query_embedding)
-#         # finally, use the region set embedding to search for similar region sets
-#         return self.region_set_backend.search(region_set_embedding, k)
+class TextToBedNNSearchInterface(object):
+    def __init__(self, nn_model: TextToBedNN, region_set_backend: QdrantBackend):
+        self.model = nn_model
+        self.region_set_backend = region_set_backend
+
+    def nlsearch(self, query: str, k: int = 10) -> List:
+        """
+        Given an input natural language, suggest region sets
+
+        :param query: searching input string
+        :param k: number of results (nearst neighbor in vectors)
+        :return: a list of Qdrant Client search results
+        """
+
+        # first, get the embedding of the query string
+        query_embedding = self.model.forward(query)
+        # then, use the query embedding to predict the region set embedding
+        # region_set_embedding = self.tum.str_to_region_set(query_embedding)
+        # finally, use the region set embedding to search for similar region sets
+        return self.region_set_backend.search(query_embedding, k)
 
 #
 # # Example of how to use the TextToBedNN Search Interface
@@ -283,3 +372,4 @@ class TextToBedNN(Model):
 # st_model = SentenceTransformer(st_hf_repo)
 # bme_set = build_BedMetadataSet_from_files(bed_folder, metadata_path, r2v_model, st_model)
 # assert bme_set is not None
+# git add -A && git commit -m "Update comments and passed pytest"
