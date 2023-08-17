@@ -2,7 +2,7 @@ from typing import List
 from pydantic import BaseModel
 
 
-class EncodedRegion(BaseModel):
+class EncodedRegions(BaseModel):
     """
     A region that has been encoded into a list of ids.
     """
