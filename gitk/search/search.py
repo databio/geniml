@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from qdrant_client import QdrantClient
+import hnswlib
 from .const import *
 from typing import List, Tuple, Union
 from ..models import ExModel
@@ -8,6 +9,7 @@ from ..region2vec import Region2VecExModel
 from .utils import get_qdrant
 from ..tokenization import InMemTokenizer
 from qdrant_client.models import VectorParams, Distance, PointStruct
+import pickle
 
 
 class EmSearchBackend(ABC):
@@ -47,8 +49,8 @@ class EmSearchBackend(ABC):
 class QdrantBackend(EmSearchBackend):
     """A search backend that uses a qdrant server to store and search embeddings"""
 
-    def __init__(self, config: VectorParams,
-                 collection: str = "embeddings"):
+    def __init__(self, config: VectorParams = DEFAULT_CONFIG,
+                 collection: str = DEFAULT_COLLECTION):
         """
         Connect to Qdrant on commandline first:
         (Ubuntu Linux terminal)
@@ -111,45 +113,66 @@ class QdrantBackend(EmSearchBackend):
         Return the number of embeddings in the backend
         """
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
-#
-# class HNSWBackend(EmSearchBackend):
-#     """A search backend that uses a local HNSW index to store and search embeddings"""
-#
-#     idx: hnswlib.Index
-#
-#     def __init__(self, embeddings: np.ndarray, labels: list, metadata: dict = None) -> None:
-#         self.labels = labels
-#         self.metadata = metadata
-#
-#         # create an HNSW index for the embeddings
-#         dim = embeddings.shape[1]
-#         self.idx = hnswlib.Index(space="l2", dim=dim)  # possible options are l2, cosine or ip
-#         self.idx.init_index(max_elements=len(embeddings), ef_construction=200, M=16)
-#         self.idx.add_items(embeddings, labels)
-#
-#     def search(self, query: np.ndarray, k: int) -> List[Tuple[int, float]]:
-#         return self.idx.knn_query(query, k)
-#
-#     def __len__(self) -> int:
-#         return idx.element_count()
-#
-#     def __getitem__(self, key) -> np.ndarray:
-#         if metadata:
-#             ret = metadata[key]
-#         else:
-#             ret = {}
-#         ret["embedding"] = self.idx.get_items([key])[0]
-#         return ret
-#
-#     def __str__(self):
-#         return "HNSWBackend with {} items".format(len(self))
-#
-#     def save(self, path):
-#         with open(path, "wb") as f:
-#             pickle.dump(self, f)
-#
-#     def load(self, path):
-#         self = pickle.load(path)
+
+
+class HNSWBackend(EmSearchBackend):
+    """A search backend that uses a local HNSW index to store and search embeddings"""
+
+    idx: hnswlib.Index
+
+    def __init__(self,
+                 local_index_path: str = DEFAULT_INDEX_PATH,
+                 space: str = DEFAULT_HNSW_SPACE,
+                 dim: int = DEFAULT_DIM,
+                 ef: int = DEFAULT_EF,
+                 m: int = DEFAULT_M):
+
+        self.idx = hnswlib.Index(space=space, dim=dim)  # possible options are l2, cosine or ip
+        self.idx.init_index(max_elements=0, ef_construction=ef, M=m)
+        self.idx.save_index(local_index_path)
+        self.metadata = {}
+        self.idx_path = local_index_path
+
+    def load(self,
+             embeddings: np.ndarray,
+             labels: List[str]):
+        if embeddings.shape[0] != len(labels):
+            raise KeyError("The number of embeddings does not match the number of labels")
+
+        current_max = self.idx.get_max_elements()
+        new_max = current_max + embeddings.shape[0]
+        ids = np.arange(start = current_max, stop = new_max)
+        for i in range(len(labels)):
+            self.metadata[ids[i]] = labels[i]
+
+        self.idx.load_index(self.idx_path, max_elements=new_max)
+        self.idx.add_items(embeddings, ids)
+
+        self.idx.save_index(self.idx_path)
+
+    def search(self, query: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
+        return self.idx.knn_query(query, k)
+
+    def __len__(self) -> int:
+        return self.idx.element_count
+
+    # def __getitem__(self, key) -> np.ndarray:
+    #     if metadata:
+    #         ret = metadata[key]
+    #     else:
+    #         ret = {}
+    #     ret["embedding"] = self.idx.get_items([key])[0]
+    #     return ret
+
+    def __str__(self):
+        return "HNSWBackend with {} items".format(len(self))
+
+    # def save(self, path):
+    #     with open(path, "wb") as f:
+    #         pickle.dump(self, f)
+
+    # def load(self, path):
+    #     self = pickle.load(path)
 #
 #
 # class BEDSpaceSearchInterface(object):
