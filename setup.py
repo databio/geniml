@@ -36,7 +36,7 @@ setup(
         "gitk.tokenization",
         "gitk.universe",
         "gitk.io",
-	"gitk.preprocessing"
+        "gitk.preprocessing",
     ],
     version=version,
     long_description=long_description,
