@@ -181,7 +181,12 @@ class InMemTokenizer(Tokenizer):
             # grab the first for now
             # TODO - this is a simplification, we should be able to handle multiple
             universe_region = _map[region]
-            chr, start, end = universe_region.split("_")
+            try:
+                chr, start, end = universe_region.split("_")
+                start = int(start)
+                end = int(end)
+            except ValueError:
+                raise ValueError(f"Could not parse region {universe_region}")
 
             updated_var.at[i, "chr"] = chr
             updated_var.at[i, "start"] = start
