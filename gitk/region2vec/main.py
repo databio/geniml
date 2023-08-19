@@ -353,13 +353,17 @@ class Region2Vec(Word2Vec):
         """
         if isinstance(regions, Region):
             region_word = utils.wordify_region(regions)
-            return self.wv[region_word] if region_word in self.wv else np.nan
+            return self.wv[region_word] if region_word in self.wv else np.empty(self.vector_size)
         elif isinstance(regions, RegionSet):
             region_words = utils.wordify_regions(regions)
-            return np.array([self.wv[r] if r in self.wv else np.nan for r in region_words])
+            return np.array(
+                [self.wv[r] if r in self.wv else np.empty(self.vector_size) for r in region_words]
+            )
         elif isinstance(regions, list):
             region_words = [utils.wordify_region(r) for r in regions]
-            return np.array([self.wv[r] if r in self.wv else np.nan for r in region_words])
+            return np.array(
+                [self.wv[r] if r in self.wv else np.empty(self.vector_size) for r in region_words]
+            )
         else:
             raise TypeError(
                 f"Regions must be of type Region, RegionSet, or list, not {type(regions).__name__}"
