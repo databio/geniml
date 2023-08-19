@@ -353,13 +353,13 @@ class Region2Vec(Word2Vec):
         """
         if isinstance(regions, Region):
             region_word = utils.wordify_region(regions)
-            return self.wv[region_word]
+            return self.wv[region_word] if region_word in self.wv else None
         elif isinstance(regions, RegionSet):
             region_words = utils.wordify_regions(regions)
-            return np.array([self.wv[r] for r in region_words if r in self.wv])
+            return np.array([self.wv[r] if r in self.wv else None for r in region_words])
         elif isinstance(regions, list):
             region_words = [utils.wordify_region(r) for r in regions]
-            return np.array([self.wv[r] for r in region_words if r in self.wv])
+            return np.array([self.wv[r] if r in self.wv else None for r in region_words])
         else:
             raise TypeError(
                 f"Regions must be of type Region, RegionSet, or list, not {type(regions).__name__}"
@@ -569,7 +569,7 @@ class Region2VecExModel(ExModel):
         """
         raise NotImplementedError("This method is not yet implemented.")
 
-    def encode(self, regions: Union[List[Region], RegionSet]) -> np.ndarray:
+    def encode(self, regions: Union[str, List[Region], RegionSet]) -> np.ndarray:
         """
         Encode the data into a latent space.
 
@@ -577,15 +577,12 @@ class Region2VecExModel(ExModel):
         :return np.ndarray: The encoded data.
         """
         # tokenize the data
-        region_sets = self.tokenizer.tokenize(regions)
+        regions = self.tokenizer.tokenize(regions)
 
         # encode the data
         _LOGGER.info("Encoding data.")
-        enoded_data = []
-        for region_set in tqdm(region_sets, desc="Encoding data", total=len(region_sets)):
-            vector = self._model.forward(region_set)
-            enoded_data.append(vector)
-        return np.array(enoded_data)
+        region_vectors = self._model.forward(regions)
+        return region_vectors
 
     def __call__(self, regions: Union[List[Region], RegionSet]) -> np.ndarray:
         return self.encode(regions)

@@ -73,7 +73,8 @@ class RegionIDifier:
 
     def generate_attention_mask_from_ids(self, ids: List[int]) -> List[int]:
         """
-        Generate an attention mask for a list of ids.
+        Generate an attention mask for a list of ids. Will be 1 unless the
+        id is the id for the [PAD] token or the [MASK] token.
         """
         return [1 if i != self.word_to_id("[PAD]") else 0 for i in ids]
 
