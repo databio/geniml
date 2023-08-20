@@ -1,8 +1,9 @@
+import random
 from typing import List, Union
 
 from ..io import Region
 from .const import DEFAULT_MAX_LENGTH
-from .schemas import EncodedRegions
+from .schemas import EncodedRegions, TokenMask
 from .utils import wordify_region, unwordify_region
 
 
@@ -13,10 +14,20 @@ class RegionIDifier:
     the ATAC Transformer model.
     """
 
-    def __init__(self, vocab_file: str = None, max_length: int = DEFAULT_MAX_LENGTH):
+    def __init__(
+        self,
+        vocab_file: str = None,
+        max_length: int = DEFAULT_MAX_LENGTH,
+        pad_token: str = "[PAD]",
+        mask_token: str = "[MASK]",
+    ):
         self._word_to_id = {}
         self._id_to_word = {}
         self.max_length = max_length
+        self.pad_token = pad_token
+        self.mask_token = mask_token
+        self.pad_token_id = None
+        self.mask_token_id = None
 
         if vocab_file is not None:
             self.load_vocab(vocab_file)
@@ -31,6 +42,13 @@ class RegionIDifier:
                 line = line.strip()
                 self._word_to_id[line] = i
                 self._id_to_word[i] = line
+
+                # extract pad and mask token ids
+                # short circuit if already found
+                if self.pad_token_id is None and line == self.pad_token:
+                    self.pad_token_id = i
+                elif self.mask_token_id is None and line == self.mask_token:
+                    self.mask_token_id = i
 
     def word_to_id(self, word: str) -> int:
         """
@@ -164,7 +182,85 @@ class RegionIDifier:
         else:
             return encoded_regions
 
+    def mask_tokens(
+        self,
+        ids: List[int],
+        mask_token_id: int = None,
+        mask_rate: float = 0.15,
+        replace_with_token_rate: float = 0.8,
+        random_token_rate: float = 0.1,
+        do_nothing_rate: float = 0.1,
+        seed: any = None,
+    ) -> TokenMask:
+        """
+        Perform masked language modeling on a list of ids. This function
+        will randomly mask tokens, replace tokens with other tokens, or
+        do nothing to tokens. The mask token id can be specified, otherwise
+        the default mask token id will be used. From Devlin et al. 2019.
+
+        "The training data generator
+        chooses 15% of the token positions at random for
+        prediction. If the i-th token is chosen, we replace
+        the i-th token with (1) the [MASK] token 80% of
+        the time (2) a random token 10% of the time (3)
+        the unchanged i-th token 10% of the time."
+
+        15% corresponds to mask_rate,
+        80% corresponds to replace_with_token_rate,
+        10% corresponds to random_token_rate,
+        10% corresponds to do_nothing_rate
+
+        :param ids: list of ids to mask
+        :param mask_token_id: id of the mask token
+        :param mask_rate: rate of tokens to mask
+        :param replace_with_token_rate: rate of tokens to replace with other tokens
+        :param random_token_rate: rate of tokens to replace with random tokens
+        :param do_nothing_rate: rate of tokens to do nothing to
+        :return: A token mask which contains the masked ids and the indices of the masked tokens.
+        """
+        # set seed
+        random.seed(seed)
+
+        # get mask id
+        mask_token_id = mask_token_id or self.mask_token_id
+
+        # ensure all rates add up to 1
+        assert (
+            replace_with_token_rate + random_token_rate + do_nothing_rate == 1
+        ), "replace_with_token_rate, random_token_rate, and do_nothing_rate must add up to 1"
+
+        # get a list of indicies to mask at a rate of mask_rate
+        mask_indices = [i for i in range(len(ids)) if random.random() < mask_rate]
+
+        def select_token_for_mask(token_id: int):
+            """
+            Select a token to replace the masked token with. this is called
+            at a rate of mask_rate. The token can be the mask token, a random
+            token, or the original token. they are selected at a rate of
+            replace_with_token_rate, random_token_rate, and do_nothing_rate
+            respectively.
+            """
+            # select a random number between 0 and 1
+            return random.choices(
+                population=[mask_token_id, random.randint(0, len(self._word_to_id) - 1), token_id],
+                weights=[replace_with_token_rate, random_token_rate, do_nothing_rate],
+                k=1,
+            )[0]
+
+        # convert ids to mask_token_id at rate of mask_rate
+        masked_ids = [
+            select_token_for_mask(ids[i]) if i in mask_indices else ids[i] for i in range(len(ids))
+        ]
+
+        return TokenMask(
+            ids=masked_ids,
+            indices=mask_indices,
+        )
+
     def __call__(
         self, regions: Union[List[Region], List[List[Region]]], **kwargs
     ) -> Union[EncodedRegions, List[EncodedRegions]]:
         return self.tokenize(regions, **kwargs)
+
+    def __len__(self):
+        return len(self._word_to_id)

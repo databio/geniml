@@ -313,3 +313,27 @@ def test_encode(
         5,
     ]  # 0 is the padding token id, 2 is the cls token id
     assert tokens[1].attention_mask == [1, 1, 1, 1, 1, 1, 1]
+
+
+def test_masked_langauge_modeling(
+    transformer_vocab_file: str,
+):
+    idifier = RegionIDifier(transformer_vocab_file)
+
+    regions = [
+        Region("chr1", 63403166, 63403785),
+        Region("chr10", 20783474, 20784387),
+        Region("chr1", 121484861, 121485361),
+        Region("chr1", 63403166, 63403785),
+        Region("chr10", 20783474, 20784387),
+        Region("chr1", 63403166, 63403785),
+        Region("chr10", 20783474, 20784387),
+        Region("chr1", 121484861, 121485361),
+        Region("chr1", 63403166, 63403785),
+        Region("chr10", 20783474, 20784387),
+    ]
+
+    tokens = idifier.tokenize(regions)
+    tokens_masked = idifier.mask_tokens(tokens.ids)
+
+    assert len(tokens.ids) == len(tokens_masked.ids)
