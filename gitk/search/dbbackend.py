@@ -3,7 +3,7 @@ from .const import *
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, PointStruct
 import numpy as np
-from typing import List
+from typing import List, Dict, Union
 
 
 class QdrantBackend(EmSearchBackend):
@@ -29,7 +29,7 @@ class QdrantBackend(EmSearchBackend):
 
     def load(self,
              embeddings: np.ndarray,
-             labels: List[str]):
+             labels: List[Dict[str, str]]):
         """
         upload vectors and their labels onto qdrant storage
 
@@ -37,15 +37,18 @@ class QdrantBackend(EmSearchBackend):
         :param labels: list of labels, can be name of bed files
         :return:
         """
+
         if embeddings.shape[0] != len(labels):
             raise KeyError("The number of embeddings does not match the number of labels")
+
+        start = len(self)
         self.qd_client.upsert(
             collection_name=self.collection,
             points=[
                 PointStruct(
-                    id=i,
+                    id=i + start,
                     vector=embeddings[i].tolist(),
-                    payload={"label": labels[i]}
+                    payload=labels[i]
                 )
                 for i in range(len(labels))
             ]
@@ -74,3 +77,40 @@ class QdrantBackend(EmSearchBackend):
         """
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 
+    def retrieve_info(self, key: Union[List[int], int],
+                      with_vecs: bool = False) -> Dict[Union[str, int], Union[str, List[int]]]:
+        """
+        With a given list of storage ids, return the information of these vectors
+
+        :param key: list of ids
+        :param with_vecs: whether the vectors themselves will also be returned in the output
+        :return: a dictionary in this format:
+        {
+            <id>: {
+                ...(information from payloads)
+                "vector": <vector>
+            }
+        }
+        """
+
+        if not isinstance(key, list):
+            # retrieve() only takes iterable input
+            key = [key]
+
+        output_dict = {}
+
+        # get the information
+        retrievals = self.qd_client.retrieve(
+            collection_name=self.collection,
+            ids=key,
+            with_payload=True,
+            with_vectors=with_vecs  # no need vectors
+        )
+
+        for result in retrievals:
+            output_dict[result.id] = result.payload
+
+            if with_vecs:
+                output_dict[result.id]["embedding"] = result.vector
+
+        return output_dict

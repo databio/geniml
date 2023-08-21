@@ -2,7 +2,7 @@ from .abstract import EmSearchBackend
 from .const import *
 import hnswlib
 import numpy as np
-from typing import List, Tuple, Union
+from typing import List, Dict, Tuple, Union
 
 
 class HNSWBackend(EmSearchBackend):
@@ -10,8 +10,8 @@ class HNSWBackend(EmSearchBackend):
 
     # the index
     idx: hnswlib.Index
-    metadata: dict # in the format of {<id>: <label>}
-    idx_path: str # local path where the index is saved to
+    metadata: dict  # in the format of {<id>: <info dict>}
+    idx_path: str  # local path where the index is saved to
 
     def __init__(self,
                  local_index_path: str = DEFAULT_INDEX_PATH,
@@ -41,7 +41,7 @@ class HNSWBackend(EmSearchBackend):
 
     def load(self,
              embeddings: np.ndarray,
-             labels: List[str]):
+             labels: List[Dict[str, str]]):
         """
         Load embedding vectors into the hnsw index, and store their hnsw index id and label into metddata
 
@@ -99,9 +99,39 @@ class HNSWBackend(EmSearchBackend):
         :return:
         """
         if isinstance(ids, np.ndarray):
-            return[self.metadata[num] for num in ids]
+            return [self.metadata[num] for num in ids]
         else:
             return self.metadata[ids]
+
+    def retrieve_info(self, key: Union[List[int], int],
+                      with_vecs: bool = False) -> Dict[Union[str, int], Union[str, List[int]]]:
+        """
+        With a given list of storage ids, return the information of these vectors
+
+        :param key: list of ids
+        :param with_vecs: whether the vectors themselves will also be returned in the output
+        :return: a dictionary in this format:
+        {
+            <id>: {
+                ...(information from metadata)
+                "vector": <vector>
+            }
+        }
+        """
+
+        if not isinstance(key, list):
+            # get_items() only takes list of indices
+            key = [key]
+        output_dict = {}
+        for id_ in key:
+            output_dict[id_] = self.metadata[id_]
+
+        if with_vecs:
+            vecs = self.idx.get_items(key)
+            for i in range(len(key)):
+                output_dict[key[i]]["embedding"] = vecs[i]
+
+        return output_dict
 
     # def __getitem__(self, key) -> np.ndarray:
     #     if metadata:
@@ -113,3 +143,7 @@ class HNSWBackend(EmSearchBackend):
 
     def __str__(self):
         return "HNSWBackend with {} items".format(len(self))
+
+    """
+    
+    """

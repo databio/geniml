@@ -35,3 +35,10 @@ class EmSearchBackend(ABC):
         Return the number of embeddings in the backend
         """
         raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_info(self, key):
+        """
+        with a list of storage ids, return matching vectors and their information
+        """
+        raise NotImplementedError()
