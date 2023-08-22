@@ -4,7 +4,7 @@ from typing import List
 import pytest
 import numpy as np
 
-from gitk.io.io import RegionSet
+from gitk.io.io import RegionSet, Region
 from gitk.region2vec.main import Region2Vec, Region2VecExModel
 from gitk.region2vec.utils import wordify_region, wordify_regions
 from gitk.tokenization.main import InMemTokenizer
@@ -136,3 +136,14 @@ def test_train_exmodel(region_sets: List[RegionSet], universe_file: str):
         os.remove("tests/data/model-r2v-test/model.bin")
         os.remove("tests/data/model-r2v-test/universe.bed")
         os.rmdir("tests/data/model-r2v-test/")
+
+
+# @pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
+def test_pretrained_model():
+    model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38")
+
+    region = Region("chr1", 63403166, 63403785)
+    embedding = model.encode(region)
+
+    assert embedding is not None
+    assert isinstance(embedding, np.ndarray)

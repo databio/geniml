@@ -1,7 +1,7 @@
 import multiprocessing
 import os
 from logging import getLogger
-from typing import List, Union
+from typing import List, Union, Optional
 
 import numpy as np
 from tqdm import tqdm
@@ -345,28 +345,48 @@ class Region2Vec(Word2Vec):
         # I feel like this shouldnt work, but it does?
         return super().load(filepath)
 
-    def forward(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
+    def forward(
+        self, regions: Union[Region, RegionSet, List[Region], str], skip_missing: bool = False
+    ) -> Union[np.ndarray, List[Optional[np.ndarray]]]:
         """
         Get the embedding vector(s) for a given region or region set.
 
-        :param Union[Region, RegionSet, List[Region]] regions: The region(s) to get the embedding vector(s) for.
+        :param Union[Region, RegionSet, List[Region], str] regions: The region(s) to get the embedding vector(s) for.
+        :param bool skip_missing: If True, regions without vectors will be skipped. If False, will return None for such regions.
         """
+
+        def get_vector(region_word: str) -> Optional[np.ndarray]:
+            """Helper function to get vector for a region word or return None."""
+            return self.wv[region_word] if region_word in self.wv else None
+
+        # If it's a single region
         if isinstance(regions, Region):
             region_word = utils.wordify_region(regions)
-            return self.wv[region_word] if region_word in self.wv else np.empty(self.vector_size)
-        elif isinstance(regions, RegionSet):
-            region_words = utils.wordify_regions(regions)
-            return np.array(
-                [self.wv[r] if r in self.wv else np.empty(self.vector_size) for r in region_words]
-            )
-        elif isinstance(regions, list):
-            region_words = [utils.wordify_region(r) for r in regions]
-            return np.array(
-                [self.wv[r] if r in self.wv else np.empty(self.vector_size) for r in region_words]
-            )
+            return get_vector(region_word)
+
+        # If it's a RegionSet or list, or a str path to a bed file (assuming you have a function `load_from_bed`)
+        elif isinstance(regions, (RegionSet, list, str)):
+            # Convert str path to a RegionSet
+            if isinstance(regions, str):
+                regions = RegionSet(str)  # Assuming you have a function like this
+
+            # For RegionSet or List
+            if isinstance(regions, RegionSet):
+                region_words = utils.wordify_regions(regions)
+            else:
+                region_words = [utils.wordify_region(r) for r in regions]
+
+            vectors = [get_vector(r) for r in region_words]
+
+            # Handle missing regions based on the skip_missing flag
+            if skip_missing:
+                vectors = [vec for vec in vectors if vec is not None]
+
+            return vectors
+
         else:
             raise TypeError(
-                f"Regions must be of type Region, RegionSet, or list, not {type(regions).__name__}"
+                f"Regions must be of type Region, RegionSet, list, or str (path to bed file), not {type(regions).__name__}"
             )
 
     def __call__(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
@@ -573,7 +593,9 @@ class Region2VecExModel(ExModel):
         """
         raise NotImplementedError("This method is not yet implemented.")
 
-    def encode(self, regions: Union[str, List[Region], RegionSet]) -> np.ndarray:
+    def encode(
+        self, regions: Union[str, List[Region], RegionSet, str], skip_missing: bool = False
+    ) -> np.ndarray:
         """
         Encode the data into a latent space.
 
@@ -585,8 +607,10 @@ class Region2VecExModel(ExModel):
 
         # encode the data
         _LOGGER.info("Encoding data.")
-        region_vectors = self._model.forward(regions)
+        region_vectors = self._model.forward(regions, skip_missing=skip_missing)
         return region_vectors
 
-    def __call__(self, regions: Union[List[Region], RegionSet]) -> np.ndarray:
-        return self.encode(regions)
+    def __call__(
+        self, regions: Union[List[Region], RegionSet, str], skip_missing: bool = False
+    ) -> np.ndarray:
+        return self.encode(regions, skip_missing=skip_missing)
