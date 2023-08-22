@@ -2,7 +2,6 @@ import os
 from typing import List, Tuple, Dict
 import random
 import numpy as np
-import tensorflow as tf
 from .const import *
 from dataclasses import dataclass, replace
 from ..io import RegionSet
@@ -88,7 +87,7 @@ def build_RegionsetInfo_list(bed_folder: str,
     return output_list
 
 
-def RegionsetInfo_list_to_vectors(ri_list: List[RegionsetInfo]) -> Tuple[np.ndarray, np.ndarray]:
+def RI_list_to_vectors(ri_list: List[RegionsetInfo]) -> Tuple[np.ndarray, np.ndarray]:
     X = []
     Y = []
     for ri in ri_list:
