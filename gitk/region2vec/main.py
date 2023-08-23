@@ -608,6 +608,10 @@ class Region2VecExModel(ExModel):
         # encode the data
         _LOGGER.info("Encoding data.")
         region_vectors = self._model.forward(regions, skip_missing=skip_missing)
+
+        if len(region_vectors) == 1:
+            return region_vectors[0]
+
         return region_vectors
 
     def __call__(
