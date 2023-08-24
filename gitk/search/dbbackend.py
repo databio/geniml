@@ -3,14 +3,15 @@ from .const import *
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, PointStruct
 import numpy as np
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 
 
 class QdrantBackend(EmSearchBackend):
     """A search backend that uses a qdrant server to store and search embeddings"""
 
-    def __init__(self, config: VectorParams = DEFAULT_CONFIG,
-                 collection: str = DEFAULT_COLLECTION):
+    def __init__(
+        self, config: VectorParams = DEFAULT_CONFIG, collection: str = DEFAULT_COLLECTION
+    ):
         """
         Connect to Qdrant on commandline first:
         (Ubuntu Linux terminal)
@@ -22,14 +23,13 @@ class QdrantBackend(EmSearchBackend):
         self.collection = collection
         self.config = config
         # self.qd_client = get_qdrant(True)
-        self.qd_client = QdrantClient('http://localhost:6333')
-        self.qd_client.recreate_collection(collection_name=self.collection,
-                                           vectors_config=self.config)
+        self.qd_client = QdrantClient("http://localhost:6333")
+        self.qd_client.recreate_collection(
+            collection_name=self.collection, vectors_config=self.config
+        )
         # TODO: initialize connection to qdrant server
 
-    def load(self,
-             embeddings: np.ndarray,
-             labels: List[Dict[str, str]]):
+    def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
         """
         upload vectors and their labels onto qdrant storage
 
@@ -45,16 +45,12 @@ class QdrantBackend(EmSearchBackend):
         self.qd_client.upsert(
             collection_name=self.collection,
             points=[
-                PointStruct(
-                    id=i + start,
-                    vector=embeddings[i].tolist(),
-                    payload=labels[i]
-                )
+                PointStruct(id=i + start, vector=embeddings[i].tolist(), payload=labels[i])
                 for i in range(len(labels))
-            ]
+            ],
         )
 
-    def search(self, query: np.ndarray, k: int) -> List:
+    def search(self, query: np.ndarray, k: int) -> Tuple[List[int], List[float]]:
         """
         with a given query vector, get k nearest neighbors from vectors in the collection
 
@@ -63,13 +59,17 @@ class QdrantBackend(EmSearchBackend):
         :return: a list of search results
         """
         search_results = self.qd_client.search(
-            collection_name=self.collection,
-            query_vector=query,
-            limit=k,
-            with_payload=True
+            collection_name=self.collection, query_vector=query, limit=k, with_payload=True
         )
-        # raise NotImplementedError
-        return search_results
+
+        ids = []
+        scores = []
+
+        for result in search_results:
+            ids.append(result.id)
+            scores.append(result.score)
+
+        return ids, scores
 
     def __len__(self) -> int:
         """
@@ -77,8 +77,9 @@ class QdrantBackend(EmSearchBackend):
         """
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 
-    def retrieve_info(self, key: Union[List[int], int],
-                      with_vecs: bool = False) -> Dict[Union[str, int], Union[str, List[int]]]:
+    def retrieve_info(
+        self, key: Union[List[int], int], with_vecs: bool = False
+    ) -> Dict[Union[str, int], Union[str, List[float]]]:
         """
         With a given list of storage ids, return the information of these vectors
 
@@ -104,13 +105,17 @@ class QdrantBackend(EmSearchBackend):
             collection_name=self.collection,
             ids=key,
             with_payload=True,
-            with_vectors=with_vecs  # no need vectors
+            with_vectors=with_vecs,  # no need vectors
         )
 
+        # store the retrieved information to the output dictionary
         for result in retrievals:
             output_dict[result.id] = result.payload
 
             if with_vecs:
-                output_dict[result.id]["embedding"] = result.vector
+                output_dict[result.id]["vector"] = result.vector
 
         return output_dict
+
+    def __str__(self):
+        return "QdrantBackend with {} items".format(len(self))

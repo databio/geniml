@@ -1,139 +1,190 @@
 import pytest
-# import scanpy as sc
 import os
-# from gitk.text2bednn.text2bednn import build_BedMetadataSet_from_files, TextToBedNN, TextToBedNNSearchInterface
-from gitk.text2bednn.utils import RegionsetInfo, build_RegionsetInfo_list, data_split, RI_list_to_vectors
-from gitk.text2bednn.text2bednn import Embed2EmbedNN
+import shutil
+from gitk.text2bednn.utils import (
+    build_RegionsetInfo_list,
+    data_split,
+    RI_list_to_vectors,
+    search_backend_upload,
+)
+from gitk.text2bednn.text2bednn import Embed2EmbedNN, TextToBedNNSearchInterface
 from gitk.region2vec.main import Region2Vec, Region2VecExModel
+from gitk.search.dbbackend import QdrantBackend
+from gitk.search.filebackend import HNSWBackend
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
 
-# from qdrant_client.models import VectorParams, Distance
-# from gitk.search.search import QdrantBackend
-
-
 @pytest.fixture
 def metadata_path():
+    """
+    :return: the path to the metadata file (sorted)
+    """
     return "./data/hg38_metadata_sample_sorted.tab"
 
 
 @pytest.fixture
 def bed_folder():
+    """
+    :return: the path to the folder where bed files are stored
+    """
     return "./data/hg38_sample"
 
 
 @pytest.fixture
 def r2v_hf_repo():
+    """
+    :return: the huggingface repo of Region2VecExModel
+    """
     return "databio/r2v-ChIP-atlas"
 
 
 @pytest.fixture
 def r2v_model(r2v_hf_repo):
+    """
+    :param r2v_hf_repo:
+    :return: the Region2VecExModel
+    """
     return Region2VecExModel(r2v_hf_repo)
 
 
 @pytest.fixture
 def st_hf_repo():
+    """
+    :return: the huggingface repo of SentenceTransformer
+    """
     return "sentence-transformers/all-MiniLM-L12-v2"
 
 
 @pytest.fixture
 def st_model(st_hf_repo):
+    """
+    :param st_hf_repo:
+    :return: the SentenceTransformer
+    """
     return SentenceTransformer(st_hf_repo)
 
 
 @pytest.fixture
 def local_model_path():
-    return "./testing_keras.h5"
+    """
+    :return: path to save the Embed2EmbedNN model, will be deleted after testing
+    """
+    # return "./testing.keras"
+    return "./testing_local_model.h5"
 
 
 @pytest.fixture
 def testing_input():
+    """
+    :return: a random generated np.ndarray,
+    with same dimension as a sentence embedding vector of SentenceTransformer
+    """
     np.random.seed(100)
-    return np.random.random((384, ))
-
-# @pytest.fixture
-# def query_term():
-#     return "human, kidney, blood"
+    return np.random.random((384,))
 
 
-# @pytest.fixture
-# def k():
-#     return 5
+@pytest.fixture
+def collection():
+    """
+    collection name for qdrant client storage
+    """
+
+    return "hg38_sample"
 
 
-def test_RegionsetInfo_list(bed_folder, metadata_path,
-                            r2v_model, st_model, local_model_path,
-                            testing_input):
-    ri_list = build_RegionsetInfo_list(bed_folder, metadata_path,
-                                       r2v_model, st_model)
+@pytest.fixture
+def query_term():
+    """
+    :return: a query string
+    """
+    return "human, kidney, blood"
+
+
+@pytest.fixture
+def k():
+    """
+    :return: number of nearest neighbor to search
+    """
+    return 5
+
+
+@pytest.fixture
+def local_idx_path():
+    """
+    :return: local file path to save hnsw index,
+    will be deleted after testing
+    """
+
+    return "./testing_idx.bin"
+
+
+def test_RegionsetInfo_list(
+    bed_folder,
+    metadata_path,
+    r2v_model,
+    st_model,
+    local_model_path,
+    testing_input,
+    collection,
+    query_term,
+    k,
+    local_idx_path,
+):
+    # construct a list of RegionSetInfo
+    ri_list = build_RegionsetInfo_list(bed_folder, metadata_path, r2v_model, st_model)
     assert len(ri_list) == len(os.listdir(bed_folder))
 
+    # split the RegionSetInfo list to training, validating, and testing set
     train_list, validate_list, test_list = data_split(ri_list)
-
     train_X, train_Y = RI_list_to_vectors(train_list)
     validate_X, validate_Y = RI_list_to_vectors(validate_list)
+    assert isinstance(train_X, np.ndarray)
+    assert isinstance(train_Y, np.ndarray)
+    assert train_X.shape[1] == 384
+    assert train_Y.shape[1] == 100
+    assert train_X[0].shape == (384,)
+    assert train_Y[0].shape == (100,)
 
-    assert (isinstance(train_X, np.ndarray))
-    assert (isinstance(train_Y, np.ndarray))
-    assert (train_X.shape[1] == 384)
-    assert (train_Y.shape[1] == 100)
-    assert (train_X[0].shape == (384,))
-    assert (train_Y[0].shape == (100,))
-
+    # fit the Embed2EmbedNN model
     e2enn = Embed2EmbedNN()
-    e2enn.train(train_X, train_Y, validate_X, validate_Y)
+    e2enn.train(train_X, train_Y, validate_X, validate_Y, epochs=50)
 
-    e2enn.export(local_model_path)
+    # save the model to local file
+    e2enn.save(local_model_path,
+               save_format="h5")
 
+    # load pretrained file
     new_e2nn = Embed2EmbedNN()
-
     new_e2nn.load_local_pretrained(local_model_path)
 
+    # testing if the loaded model is same as previously saved model
     map_vec_1 = e2enn.embedding_to_embedding(testing_input)
     map_vec_2 = new_e2nn.embedding_to_embedding(testing_input)
+    assert np.array_equal(map_vec_1, map_vec_2)
 
-    assert map_vec_1 == map_vec_2
+    # loading data to search backend
+    embeddings, labels = search_backend_upload(ri_list)
+    qd_search_backend = QdrantBackend(collection=collection)
+    qd_search_backend.load(embeddings, labels)
 
+    # construct a search interface
+    db_interface = TextToBedNNSearchInterface(st_model, e2enn, qd_search_backend)
+    ids, scores = db_interface.nl_vec_search(query_term, k)
+    for i in range(len(ids)):
+        assert isinstance(ids[i], int)
+        assert isinstance(scores[i], float)
 
-#
-# def test_data_nn_search(bed_folder, metadata_path,
-#                         r2v_hf_repo, query_term, k):
-#
-#     r2v_model = Region2VecExModel(r2v_hf_repo)
-#     # st_model = SentenceTransformer(st_hf_repo)
-#     st_model = SentenceTransformer("sentence-transformers/all-MiniLM-L12-v2")
-#     bme_set = build_BedMetadataSet_from_files(bed_folder, metadata_path, r2v_model, st_model)
-#     bed_count = len(os.listdir(bed_folder))
-#     assert bme_set is not None
-#     assert len(bme_set) == bed_count
-#     train_X, train_Y = bme_set.generate_data("training")
-#     assert (isinstance(train_X, np.ndarray))
-#     assert (isinstance(train_Y, np.ndarray))
-#     assert (train_X.shape[1] == 384)
-#     assert (train_Y.shape[1] == 100)
-#     assert (train_X[0].shape == (384,))
-#     assert (train_Y[0].shape == (100,))
-#
-#     t2bnn = TextToBedNN(None, "sentence-transformers/all-MiniLM-L12-v2")
-#     t2bnn.train(bme_set, epochs=50)
-#
-#     config = VectorParams(size=100, distance=Distance.COSINE)
-#     collection = "hg38_sample"
-#
-#     embeddings, labels = bme_set.to_qd_upload()
-#
-#     for i in range(bed_count):
-#         assert np.array_equal(bme_set.tolist[i].region_set_embedding,
-#                               embeddings[i])
-#         assert bme_set.tolist[i].file_name == labels[i]
-#
-#     qd_search_backend = QdrantBackend(config, collection)
-#     qd_search_backend.load(embeddings, labels)
-#
-#     t2bnn_interface = TextToBedNNSearchInterface(t2bnn, qd_search_backend)
-#     search_results = t2bnn_interface.nlsearch(query_term, k)
-#     print("search resuts:")
-#     for result in search_results:
-#         print(result.payload["label"])
+    # construct a search interface with file backend
+    hnsw_backend = HNSWBackend(local_index_path=local_idx_path)
+    hnsw_backend.load(embeddings, labels)
+    file_interface = TextToBedNNSearchInterface(st_model, e2enn, hnsw_backend)
+
+    ids, scores = file_interface.nl_vec_search(query_term, k)
+    for i in range(len(ids)):
+        assert isinstance(ids[i], int)
+        assert isinstance(scores[i], float)
+
+    # remove files and paths for testing
+    os.remove(local_idx_path)
+    os.remove(local_model_path)

@@ -10,15 +10,17 @@ class HNSWBackend(EmSearchBackend):
 
     # the index
     idx: hnswlib.Index
-    metadata: dict  # in the format of {<id>: <info dict>}
+    metadata: dict  # in the format of {<id>: <info dict>}, equivalent to payloads in Qdrant
     idx_path: str  # local path where the index is saved to
 
-    def __init__(self,
-                 local_index_path: str = DEFAULT_INDEX_PATH,
-                 space: str = DEFAULT_HNSW_SPACE,
-                 dim: int = DEFAULT_DIM,
-                 ef: int = DEFAULT_EF,
-                 m: int = DEFAULT_M):
+    def __init__(
+        self,
+        local_index_path: str = DEFAULT_INDEX_PATH,
+        space: str = DEFAULT_HNSW_SPACE,
+        dim: int = DEFAULT_DIM,
+        ef: int = DEFAULT_EF,
+        m: int = DEFAULT_M,
+    ):
         """
         initiate the backend
 
@@ -39,11 +41,9 @@ class HNSWBackend(EmSearchBackend):
         self.metadata = {}
         self.idx_path = local_index_path
 
-    def load(self,
-             embeddings: np.ndarray,
-             labels: List[Dict[str, str]]):
+    def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
         """
-        Load embedding vectors into the hnsw index, and store their hnsw index id and label into metddata
+        Load embedding vectors into the hnsw index, and store their hnsw index id and label into metaddata
 
         :param embeddings: embedding vectors
         :param labels: labels
@@ -69,7 +69,9 @@ class HNSWBackend(EmSearchBackend):
         # save hnsw index to local file
         self.idx.save_index(self.idx_path)
 
-    def search(self, query: np.ndarray, k: int) -> Tuple[Union[List[str], List[List[str]]], np.ndarray, np.ndarray]:
+    def search(
+        self, query: np.ndarray, k: int
+    ) -> Tuple[Union[List[int], List[List[int]]], Union[List[float], List[List[float]]]]:
         """
         with query vector(s), get the k nearest neighbors
 
@@ -78,33 +80,24 @@ class HNSWBackend(EmSearchBackend):
         :return: a tuple of search results that consist of labels, ids, and distances
         """
         ids, distances = self.idx.knn_query(query, k)
+        # if the query vector's shape is (dimension,),
+        # knn_query will return two np.ndarray with shape of (1, dimension)
         if len(query.shape) == 1:
-            ids = ids.reshape(ids.shape[1], )
-            distances = distances.reshape(distances.shape[1], )
-            labels = self._get_labels(ids)
-        else:
-            labels = []
-            for search_result in ids:
-                labels.append(self._get_labels(search_result))
-        return labels, ids, distances
+            ids = ids.reshape(
+                ids.shape[1],
+            )
+            distances = distances.reshape(
+                distances.shape[1],
+            )
+
+        return ids.tolist(), distances.tolist()
 
     def __len__(self) -> int:
         return self.idx.element_count
 
-    def _get_labels(self, ids: Union[np.uint64, int, np.ndarray]) -> Union[str, List[str]]:
-        """
-        With given one or a list of storage ids, return the matching labels
-
-        :param ids:
-        :return:
-        """
-        if isinstance(ids, np.ndarray):
-            return [self.metadata[num] for num in ids]
-        else:
-            return self.metadata[ids]
-
-    def retrieve_info(self, key: Union[List[int], int],
-                      with_vecs: bool = False) -> Dict[Union[str, int], Union[str, List[int]]]:
+    def retrieve_info(
+        self, key: Union[List[int], int], with_vecs: bool = False
+    ) -> Dict[int, Dict[str, Union[str, List[float]]]]:
         """
         With a given list of storage ids, return the information of these vectors
 
@@ -129,21 +122,9 @@ class HNSWBackend(EmSearchBackend):
         if with_vecs:
             vecs = self.idx.get_items(key)
             for i in range(len(key)):
-                output_dict[key[i]]["embedding"] = vecs[i]
+                output_dict[key[i]]["vector"] = vecs[i]
 
         return output_dict
 
-    # def __getitem__(self, key) -> np.ndarray:
-    #     if metadata:
-    #         ret = metadata[key]
-    #     else:
-    #         ret = {}
-    #     ret["embedding"] = self.idx.get_items([key])[0]
-    #     return ret
-
     def __str__(self):
         return "HNSWBackend with {} items".format(len(self))
-
-    """
-    
-    """
