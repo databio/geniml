@@ -1,2 +1,2 @@
 from .text2bednn import TextToBedNNSearchInterface, Embed2EmbedNN
-from .utils import RegionsetInfo
+from .utils import RegionSetInfo

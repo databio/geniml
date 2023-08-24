@@ -10,10 +10,11 @@ from sentence_transformers import SentenceTransformer
 
 
 @dataclass
-class RegionsetInfo:
+class RegionSetInfo:
     """
     Store the information of a bed file, its metadata, and embeddings
     """
+
     file_name: str  # the name of the bed file
     metadata: str  # the metadata of the bed file
     region_set: RegionSet  # the RegionSet that contains intervals in that bed file, not tokenized
@@ -21,18 +22,20 @@ class RegionsetInfo:
     region_set_embedding: np.ndarray  # the embedding vector of region set
 
 
-def build_RegionsetInfo_list(bed_folder: str,
-                             metadata_path: str,
-                             r2v_model: Region2VecExModel,
-                             st_model: SentenceTransformer) -> List[RegionsetInfo]:
+def build_RegionsetInfo_list(
+    bed_folder: str,
+    metadata_path: str,
+    r2v_model: Region2VecExModel,
+    st_model: SentenceTransformer,
+) -> List[RegionSetInfo]:
     """
     With each bed file in the given folder and its matching metadata from the meadata file,
-    create a RegionsetInfo with each, and return the list containing all.
+    create a RegionSetInfo with each, and return the list containing all.
 
-    :param bed_folder:
-    :param metadata_path:
-    :param r2v_model:
-    :param st_model:
+    :param bed_folder: folder where bed files are stored
+    :param metadata_path: path to the metadata file
+    :param r2v_model: a Region2VecExModel that can embed region sets
+    :param st_model: a SentenceTransformer model that can embed metadata
     :return:
     """
 
@@ -53,7 +56,6 @@ def build_RegionsetInfo_list(bed_folder: str,
     j = 0
 
     while i < len(metadata_lines):
-
         # read the line of metadata
         metadata_line = metadata_lines[i]
         # get the name of the interval set
@@ -66,11 +68,9 @@ def build_RegionsetInfo_list(bed_folder: str,
             region_set = RegionSet(bed_file_path)
             metadata_embedding = st_model.encode(bed_metadata)
             region_set_embedding = np.nanmean(r2v_model.encode(region_set), axis=0)
-            bed_metadata_dc = RegionsetInfo(bed_file_name,
-                                            bed_metadata,
-                                            region_set,
-                                            metadata_embedding,
-                                            region_set_embedding)
+            bed_metadata_dc = RegionSetInfo(
+                bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
+            )
             output_list.append(bed_metadata_dc)
             j += 1
 
@@ -82,40 +82,19 @@ def build_RegionsetInfo_list(bed_folder: str,
 
     # print a message if not all bed files are matched to metadata rows
     if i < j:
-        print("An incomplete list will be returned, some files cannot be matched to any rows by first column")
+        print(
+            "An incomplete list will be returned, some files cannot be matched to any rows by first column"
+        )
 
     return output_list
 
 
-def RI_list_to_vectors(ri_list: List[RegionsetInfo]) -> Tuple[np.ndarray, np.ndarray]:
-    X = []
-    Y = []
-    for ri in ri_list:
-        # X: metadata embedding
-        X.append(ri.metadata_embedding)
-        # Y: bed file embedding
-        Y.append(ri.region_set_embedding)
-    return np.array(X), np.array(Y)
-
-
-def search_backend_upload(ri_list: List[RegionsetInfo]) -> Tuple[np.ndarray, Dict[str, str]]:
-    embeddings = []
-    labels = []
-    for ri in ri_list:
-
-        # X: metadata embedding
-        embeddings.append(ri.region_set_embedding)
-        # Y: bed file embedding
-        labels.append({"name": ri.file_name,
-                       "metadata": ri.metadata})
-
-    return np.array(embeddings), labels
-
-
-def data_split(full_list: List,
-               train_p: float = DEFAULT_TRAIN_P,
-               valid_p: float = DEFAULT_VALIDATE_P,
-               seed_index: int = 10) -> Tuple[List, List, List]:
+def data_split(
+    full_list: List,
+    train_p: float = DEFAULT_TRAIN_P,
+    valid_p: float = DEFAULT_VALIDATE_P,
+    seed_index: int = 10,
+) -> Tuple[List, List, List]:
     """
     With a given folder of data, this function split the files
     into training set, validating set, and testing set.
@@ -133,17 +112,24 @@ def data_split(full_list: List,
     validate_size = int(len(full_list) * valid_p)
     random.seed(seed_index)
     train_list = random.sample(full_list, train_size)
-    validate_list = random.sample([content for content in full_list if content not in train_list], validate_size)
-    test_list = [content for content in full_list if (content not in train_list and content not in validate_list)]
+    validate_list = random.sample(
+        [content for content in full_list if content not in train_list], validate_size
+    )
+    test_list = [
+        content
+        for content in full_list
+        if (content not in train_list and content not in validate_list)
+    ]
 
     return train_list, validate_list, test_list
 
 
-def update_BedMetadata_list(old_list: List[RegionsetInfo],
-                            r2v_model: Region2VecExModel) -> List[RegionsetInfo]:
+def update_BedMetadata_list(
+    old_list: List[RegionSetInfo], r2v_model: Region2VecExModel
+) -> List[RegionSetInfo]:
     """
-    With an old list of RegionsetInfo, re-embed the region set with a new region2vec model,
-    then return the list of new RegionsetInfo with re-embedded region set vectors.
+    With an old list of RegionSetInfo, re-embed the region set with a new region2vec model,
+    then return the list of new RegionSetInfo with re-embedded region set vectors.
     :param old_list:
     :param r2v_model:
     :return:
@@ -169,6 +155,50 @@ def metadata_line_process(metadata_line: str) -> str:
     metadata_line = metadata_line.replace("\n", "")
 
     return metadata_line
+
+
+def RI_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    With a given list of RegionSetInfo, returns two np.ndarrays,
+    one represents embeddings of bed files, the other represents embedding of metadata,
+    used as data preprocessing for fitting models.
+
+    :param ri_list: RegionSetInfo list
+    :return: two np.ndarray with shape (n, <embedding dimension>)
+    """
+    X = []
+    Y = []
+    for ri in ri_list:
+        # X: metadata embedding
+        X.append(ri.metadata_embedding)
+        # Y: bed file embedding
+        Y.append(ri.region_set_embedding)
+    return np.array(X), np.array(Y)
+
+
+def search_backend_upload(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, List[Dict[str, str]]]:
+    """
+    With a given list of RegionSetInfo, returns one np.ndarray representing bed files embeddings,
+    and one list of dictionary that stores names of bed files and metadata,
+    used as data preprocessing for upload to search backend (gitk.search)
+
+    :param ri_list: RegionSetInfo list
+    :return: one np.ndarray with shape (n, <Region2vec embedding dimension>),
+    and one list of dictionary in the format of:
+    {
+        "name": <bed file name>,
+        "metadata": <region set metadata>
+    }
+    """
+    embeddings = []
+    labels = []
+    for ri in ri_list:
+        # region set embedding
+        embeddings.append(ri.region_set_embedding)
+        # file name and metadata
+        labels.append({"name": ri.file_name, "metadata": ri.metadata})
+
+    return np.array(embeddings), labels
 
 
 """

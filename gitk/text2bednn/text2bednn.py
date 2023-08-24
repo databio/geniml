@@ -1,57 +1,92 @@
 import numpy as np
 from typing import List, Union, Tuple
-
 from .const import *
-
 from .utils import *
-from ..models import Model
 from ..search import QdrantBackend, HNSWBackend
 import tensorflow as tf
 import matplotlib as plt
 
 
 class Embed2EmbedNN(tf.keras.models.Sequential):
+    """
+    A feedforward neural network that maps embedding vectors or region sets metadata
+    to the embedding vectors of region sets
+    """
+
     def __init__(self):
-        super()
-        # super.__init__()
+        # initiate a Sequential model from keras
+        super().__init__()
+        # most recent training history
         self.most_recent_train = None
 
-    def add_layers(self,
-                   input_dim: int,
-                   output_dim: int,
-                   units: int,
-                   layers: int):
+    def add_layers(self, input_dim: int, output_dim: int, units: int, layers: int):
+        """
+        Add layers to an empty Sequential model
 
-        self.add(tf.keras.layers.Dense(units, input_shape=(input_dim,), activation='relu'))
+        :param input_dim: dimension of input vector
+        :param output_dim: dimension of output vector
+        :param units: number of units in dense layer
+        :param layers: number of extra layers
+        :return:
+        """
+        # the dense layer that accept the input
+        self.add(tf.keras.layers.Dense(units, input_shape=(input_dim,), activation="relu"))
 
         # extra dense layers
         for i in range(layers):
-            self.add(tf.keras.layers.Dense(units, input_shape=(units,), activation='relu'))
+            self.add(tf.keras.layers.Dense(units, input_shape=(units,), activation="relu"))
 
         # output
         self.add(tf.keras.layers.Dense(output_dim))
 
-    def load_local_pretrained(self,
-                              model_path: str):
+    def load_local_pretrained(self, model_path: str):
+        """
+        load pretrained model from local file
+
+        :param model_path: path where the model is saved
+        :return:
+        """
+
+        # empty the layers if current model is not empty
         while len(self.layers) > 0:
             self.layers.pop()
 
-        local_model = tf.keras.models.load_model(model_path)
+        # https://stackoverflow.com/questions/63068639/valueerror-unknown-layer-functional
+        local_model = tf.keras.models.load_model(
+            model_path, custom_objects={"Embed2EmbedNN": tf.keras.models.Sequential()}
+        )
+        # add layers from pretrained model
         for layer in local_model.layers:
             self.add(layer)
 
-    def train(self,
-              training_X: np.ndarray,
-              training_Y: np.ndarray,
-              validating_X: np.ndarray,
-              validating_Y: np.ndarray,
-              opt_name: str = DEFAULT_OPTIMIZER,
-              loss_func: str = DEFAULT_LOSS,
-              epochs: int = DEFAULT_EPOCHES,
-              batch_size: int = DEFAULT_BATCH_SIZE,
-              **kwargs
-              ):
+    def train(
+        self,
+        training_X: np.ndarray,
+        training_Y: np.ndarray,
+        validating_X: np.ndarray,
+        validating_Y: np.ndarray,
+        opt_name: str = DEFAULT_OPTIMIZER,
+        loss_func: str = DEFAULT_LOSS,
+        epochs: int = DEFAULT_EPOCHES,
+        batch_size: int = DEFAULT_BATCH_SIZE,
+        **kwargs,
+    ):
+        """
+        Fit the feedforward neural network
 
+        :param training_X: embedding vectors of metadata, np.ndarray with shape of (n, <dim>)
+        :param training_Y: embedding vectors of region set, np.ndarray with shape of (n, <dim>)
+        :param validating_X:
+        :param validating_Y:
+        :param opt_name: name of optimizer
+        :param loss_func: name of loss function
+        :param epochs: number of training epoches
+        :param batch_size: size of batch for training
+        :param kwargs: see units and layers in add_layers()
+        :return:
+        """
+
+        # if current model is empty, add layers
         if len(self.layers) == 0:
             # dimensions of input and output
             input_dim = training_X.shape[1]
@@ -61,70 +96,115 @@ class Embed2EmbedNN(tf.keras.models.Sequential):
                 input_dim=input_dim,
                 output_dim=output_dim,
                 units=kwargs.get("units") or DEFAULT_UNITS,
-                layers=kwargs.get("layers") or DEFAULT_LAYERS
+                layers=kwargs.get("layers") or DEFAULT_LAYERS,
             )
 
+        # compile the model
         self.compile(optimizer=opt_name, loss=loss_func)
         # early stoppage to prevent over-fitting
-        early_stoppage = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=int(epochs * 0.25))
+        early_stoppage = tf.keras.callbacks.EarlyStopping(
+            monitor="val_loss", patience=int(epochs * 0.25)
+        )
 
         # record training history
-        train_hist = self.fit(training_X, training_Y, epochs=epochs, batch_size=batch_size,
-                              validation_data=(validating_X, validating_Y),
-                              callbacks=[early_stoppage])
+        train_hist = self.fit(
+            training_X,
+            training_Y,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_data=(validating_X, validating_Y),
+            callbacks=[early_stoppage],
+        )
         self.most_recent_train = train_hist
 
     def embedding_to_embedding(self, input_vec: np.ndarray):
-        if len(np.ndarray.shape) == 1:
+        """
+        predict the region set embedding from embedding of natural language strings
+        :param input_vec:
+        :return:
+        """
+        # the network only accept input vectors in shape of (n, <input dim>)
+        # so if the input np.ndarray has shape (<input dim>,)
+        # it needs reshaping
+        if len(input_vec.shape) == 1:
             vec_dim = input_vec.shape[0]
             input_vec = input_vec.reshape((1, vec_dim))
 
+        # reshape output vector if the input np.ndarray has shape (<input dim>,)
         output_vec = self.predict(input_vec)
         if output_vec.shape[0] == 1:
             output_vec_dim = output_vec.shape[1]
-            output_vec = output_vec.reshape(output_vec_dim, )
+            output_vec = output_vec.reshape(
+                output_vec_dim,
+            )
         return output_vec
 
     def plotting_training_hist(self):
+        """
+        plot the training & validating loss of the most recent training
+        :return:
+        """
 
-        epoch_range = range(1, len(self.most_recent_train.history['loss']) + 1)
-        train_loss = self.most_recent_train.history['loss']
-        valid_loss = self.most_recent_train.history['val_loss']
-        plt.plot(epoch_range, train_loss, 'r', label='Training loss')
-        plt.plot(epoch_range, valid_loss, 'b', label='Validation loss')
-        plt.title('Training and validation loss')
+        epoch_range = range(1, len(self.most_recent_train.history["loss"]) + 1)
+        train_loss = self.most_recent_train.history["loss"]
+        valid_loss = self.most_recent_train.history["val_loss"]
+        plt.plot(epoch_range, train_loss, "r", label="Training loss")
+        plt.plot(epoch_range, valid_loss, "b", label="Validation loss")
+        plt.title("Training and validation loss")
         plt.legend()
         plt.show()
 
 
 class TextToBedNNSearchInterface(object):
-    def __init__(self,
-                 nl2vec_model: Union[SentenceTransformer, None],
-                 vec2vec_model: Union[Embed2EmbedNN, None],
-                 region_set_backend: Union[QdrantBackend, HNSWBackend, None]):
+    """
+    search backend interface
+    """
 
-        if isinstance(nl2vec_model, None):
+    def __init__(
+        self,
+        nl2vec_model: Union[SentenceTransformer, None],
+        vec2vec_model: Union[Embed2EmbedNN, None],
+        search_backend: Union[QdrantBackend, HNSWBackend, None],
+    ):
+        """
+        initiate the search interface
+
+        :param nl2vec_model: model that embed natural language to vectors
+        :param vec2vec_model: model that map natural language embedding vectors to region set embedding vectors
+        :param search_backend: search backend that can store vectors and perform KNN search
+        """
+
+        if isinstance(nl2vec_model, type(None)):
+            # default SentenceTransformer model
             self.set_sentence_transformer()
         else:
             self.nl2vec = nl2vec_model
 
-        if isinstance(vec2vec_model, None):
+        if isinstance(vec2vec_model, type(None)):
+            # init an empty Embed2EmbedNN model if input is None
             self.vec2vec = Embed2EmbedNN()
         else:
             self.vec2vec = vec2vec_model
 
-        if isinstance(region_set_backend, None):
-            self.region_set_backend = QdrantBackend()
+        if isinstance(search_backend, type(None)):
+            # init a default HNSWBackend if input is None
+            self.search_backend = HNSWBackend()
         else:
-            self.region_set_backend = region_set_backend
+            self.search_backend = search_backend
 
-    def set_sentence_transformer(self,
-                                 st_repo: str = DEFAULT_HF_ST_MODEL):
+    def set_sentence_transformer(self, st_repo: str = DEFAULT_HF_ST_MODEL):
+        """
+        With a given huggingface repo, set the nl2vec model as a sentence transformer
+
+        :param st_repo: the hugging face repository of sentence transformer
+        see https://huggingface.co/sentence-transformers
+        :return:
+        """
         self.nl2vec = SentenceTransformer(st_repo)
 
-    def nl_vec_search(self,
-                      query: Union[str, np.ndarray],
-                 k: int = 10) -> List:
+    def nl_vec_search(
+        self, query: Union[str, np.ndarray], k: int = 10
+    ) -> Tuple[Union[List[int], List[List[int]]], Union[List[float], List[List[float]]]]:
         """
         Given an input natural language, suggest region sets
 
@@ -137,15 +217,10 @@ class TextToBedNNSearchInterface(object):
         if isinstance(query, str):
             query = self.nl2vec.encode(query)
         search_vector = self.vec2vec.embedding_to_embedding(query)
-        #
-        return self.region_set_backend.search(search_vector, k)
+        # perform the KNN search among vectors stored in backend
+        return self.search_backend.search(search_vector, k)
 
-    # def evaluate(self,
-    #              ):
 
-    # Todo
-    # function that load a folder of bed files into the qdrant client db
-    # then fit the embed2embed nn with metadata
 #
 # # Example of how to use the TextToBedNN Search Interface
 #

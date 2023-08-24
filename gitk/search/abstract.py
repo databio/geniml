@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Union
 
 
 class EmSearchBackend(ABC):
@@ -19,7 +19,7 @@ class EmSearchBackend(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def search(self, query: np.ndarray, k: int) -> List[Tuple[int, float]]:
+    def search(self, query: np.ndarray, k: int) -> Tuple[List[int], List[float]]:
         """
         Search for the nearest neighbors of the given embedding
 
@@ -37,7 +37,7 @@ class EmSearchBackend(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def retrieve_info(self, key):
+    def retrieve_info(self, key) -> Dict[int, Dict[str, Union[str, List[float]]]]:
         """
         with a list of storage ids, return matching vectors and their information
         """
