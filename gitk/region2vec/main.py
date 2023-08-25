@@ -630,9 +630,11 @@ class Region2VecExModel(ExModel):
         _pool_fn: callable
 
         # pool the data if requested
-        if isinstance(pool, bool) and pool:
+        if pool == True:
             pool = "mean"
             _pool_fn = mean_pooling
+        elif pool == False:
+            _pool_fn = None
         elif not isinstance(pool, str):
             if pool.lower() == "mean":
                 _pool_fn = mean_pooling
