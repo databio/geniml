@@ -1,7 +1,7 @@
 import multiprocessing
 import os
 from logging import getLogger
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Literal
 
 import numpy as np
 from tqdm import tqdm
@@ -18,6 +18,7 @@ from . import utils
 from .const import *
 from .region2vec_train import main as region2_train
 from .region_shuffling import main as sent_gen
+from .pooling import mean_pooling, max_pooling
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -347,7 +348,7 @@ class Region2Vec(Word2Vec):
         return super().load(filepath)
 
     def forward(
-        self, regions: Union[Region, RegionSet, List[Region], str], skip_missing: bool = False
+        self, regions: Union[Region, RegionSet, List[Region], str]
     ) -> Union[np.ndarray, List[Optional[np.ndarray]]]:
         """
         Get the embedding vector(s) for a given region or region set.
@@ -378,10 +379,6 @@ class Region2Vec(Word2Vec):
                 region_words = [utils.wordify_region(r) for r in regions]
 
             vectors = [get_vector(r) for r in region_words]
-
-            # Handle missing regions based on the skip_missing flag
-            if skip_missing:
-                vectors = [vec for vec in vectors if vec is not None]
 
             return vectors
 
@@ -604,12 +601,18 @@ class Region2VecExModel(ExModel):
         raise NotImplementedError("This method is not yet implemented.")
 
     def encode(
-        self, regions: Union[str, List[Region], RegionSet, str], skip_missing: bool = False
+        self,
+        regions: Union[str, List[Region], RegionSet, str],
+        pool: Union[Literal["mean", "max"], bool, callable] = False,
     ) -> np.ndarray:
         """
         Encode the data into a latent space.
 
-        :param sc.AnnData adata: The AnnData object containing the data to encode.
+        :param Union[str, List[Region], RegionSet, str] regions: The regions to encode.
+        :param bool skip_missing: If True, regions without vectors will be skipped. If False, will return None for such regions.
+        :param Union[Literal["mean", "max"], bool, callable] pool: Whether or not to pool the data. If True, will use mean pooling.
+                                                                   If False, will not pool. If callable, will use the callable
+                                                                   function to pool the data.
         :return np.ndarray: The encoded data.
         """
         # tokenize the data
@@ -617,12 +620,39 @@ class Region2VecExModel(ExModel):
 
         # encode the data
         _LOGGER.info("Encoding data.")
-        region_vectors = self._model.forward(regions, skip_missing=skip_missing)
+        region_vectors = self._model.forward(regions)
 
         if len(region_vectors) == 1:
             return region_vectors[0]
 
-        return region_vectors
+        _pool_fn: callable
+
+        # pool the data if requested
+        if isinstance(pool, bool) and pool:
+            pool = "mean"
+            _pool_fn = mean_pooling
+        elif not isinstance(pool, str):
+            if pool.lower() == "mean":
+                _pool_fn = mean_pooling
+            elif pool.lower() == "max":
+                _pool_fn = max_pooling
+            else:
+                raise ValueError(
+                    f"Invalid pooling function. Must be one of ['mean', 'max']. Got {pool}."
+                )
+        elif isinstance(pool, callable):
+            _pool_fn = pool
+        else:
+            raise ValueError(
+                f"Invalid pooling function. Must be str (['mean', 'max']), or callable. Got {pool}."
+            )
+
+        # use pool function if specified
+        if _pool_fn is not None:
+            result = _pool_fn(region_vectors)
+        else:
+            result = region_vectors
+        return result
 
     def __call__(
         self, regions: Union[List[Region], RegionSet, str], skip_missing: bool = False
