@@ -8,6 +8,7 @@ from tqdm import tqdm
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
+from huggingface_hub.utils._errors import EntryNotFoundError
 from numba import config
 
 from ..io import Region, RegionSet
@@ -470,8 +471,17 @@ class Region2VecExModel(ExModel):
         wv_file_name = utils.make_wv_file_name(model_file_name)
 
         # get the syn1neg and wv files
-        hf_hub_download(model_repo, wv_file_name, **kwargs)
-        hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
+        try:
+            hf_hub_download(model_repo, wv_file_name, **kwargs)
+        except EntryNotFoundError:
+            print("Could not find wv file. This is ok - skipping. Likely means model is small.")
+
+        try:
+            hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
+        except EntryNotFoundError:
+            print(
+                "Could not find syn1neg file. This is ok - skipping. Likely means model is small."
+            )
 
         # set the paths to the downloaded files
         self._model_path = model_path
