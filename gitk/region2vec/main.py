@@ -604,6 +604,7 @@ class Region2VecExModel(ExModel):
         self,
         regions: Union[str, List[Region], RegionSet, str],
         pool: Union[Literal["mean", "max"], bool, callable] = False,
+        return_none: bool = True,
     ) -> np.ndarray:
         """
         Encode the data into a latent space.
@@ -613,6 +614,7 @@ class Region2VecExModel(ExModel):
         :param Union[Literal["mean", "max"], bool, callable] pool: Whether or not to pool the data. If True, will use mean pooling.
                                                                    If False, will not pool. If callable, will use the callable
                                                                    function to pool the data.
+        :param bool return_none: If True, will return None for regions without vectors. If False, will skip such regions. (it is highly recommended to set this to True)
         :return np.ndarray: The encoded data.
         """
         # tokenize the data
@@ -650,8 +652,12 @@ class Region2VecExModel(ExModel):
         # use pool function if specified
         if _pool_fn is not None:
             result = _pool_fn(region_vectors)
+        # otherwise, return the region vectors, filtering out None values if requested
         else:
-            result = region_vectors
+            if return_none:
+                result = region_vectors
+            else:
+                result = [rv for rv in region_vectors if rv is not None]
         return result
 
     def __call__(

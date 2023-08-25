@@ -19,10 +19,10 @@ Encoding cells is as easy as:
 ```python
 import scanpy as sc
 
-from gitk.models import PretrainedScembedModel
+from gitk.scembed import ScEmbed
 
 adata = sc.read_h5ad("path/to/adata.h5ad")
-model = PretrainedScembedModel("databio/luecken2021")
+model = ScEmbed("databio/luecken2021")
 
 embeddings = model.encode(adata)
 adata.obsm['scembed_X'] = embeddings
