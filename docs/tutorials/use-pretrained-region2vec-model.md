@@ -32,7 +32,7 @@ bed = "/path/to/bed/file.bed"
 embeddings = model.encode(bed)
 ```
 
-> Note: It is not uncommon for a region to not be tokenizable by the tokenizer. This is because the tokenizer was trained on a specific set of regions. If this is the case, the model simply returns `None` for the embedding of that region. If you want to override this behavior, you can set `return_none=False` in the `encode` function. This will return a zero vector for the embedding of the region. However, we do not recommend this as it removes the ability to distinguish between regions that are tokenizable and regions that are not.
+> Note: It is not uncommon for a region to not be tokenizable by the tokenizer. This is because the tokenizer was trained on a specific set of regions. If this is the case, the model simply returns `None` for the embedding of that region. If you want to override this behavior, you can set `return_none=False` in the `encode` function. This will skip that region in the return. However, we do not recommend this as it removes the ability to distinguish between regions that are tokenizable and regions that are not. The output shape will no longer match the input shape.
 
 ## Region pooling
 It is often the case that we want a single embedding that represents a set of regions. For example, we may want to encode a patient by taking the average embedding of all the SNPs in the patient's genome. We can do this by using the `pool` argument. Out of the box, we support `mean` and `max` pooling. For example:
