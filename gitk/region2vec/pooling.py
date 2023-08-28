@@ -14,7 +14,7 @@ def mean_pooling(region_vectors: List[Union[np.ndarray, None]]) -> np.ndarray:
     """
     region_vectors = [rv for rv in region_vectors if rv is not None]
     if len(region_vectors) == 0:
-        raise ValueError("No region vectors to pool.")
+        return None
 
     region_vectors = np.array(region_vectors)
     return np.mean(region_vectors, axis=0)
@@ -31,7 +31,7 @@ def max_pooling(region_vectors: List[Union[np.ndarray, None]]) -> np.ndarray:
     """
     region_vectors = [rv for rv in region_vectors if rv is not None]
     if len(region_vectors) == 0:
-        raise ValueError("No region vectors to pool.")
+        return None
 
     region_vectors = np.array(region_vectors)
     return np.max(region_vectors, axis=0)
