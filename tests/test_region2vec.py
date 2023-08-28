@@ -7,6 +7,7 @@ import numpy as np
 from gitk.io.io import RegionSet, Region
 from gitk.region2vec.main import Region2Vec, Region2VecExModel
 from gitk.region2vec.utils import wordify_region, wordify_regions
+from gitk.region2vec.pooling import mean_pooling, max_pooling
 from gitk.tokenization.main import InMemTokenizer
 
 
@@ -147,3 +148,23 @@ def test_pretrained_model():
 
     assert embedding is not None
     assert isinstance(embedding, np.ndarray)
+
+
+def test_mean_pooling():
+    a = np.array([1, 2, 3])
+    b = np.array([4, 5, 6])
+
+    assert np.allclose(mean_pooling([a, b]), np.array([2.5, 3.5, 4.5]))
+    assert np.allclose(mean_pooling(np.array([a, b])), np.array([2.5, 3.5, 4.5]))
+    assert mean_pooling([a, b]).shape == (3,)
+    assert mean_pooling(np.array([a, b])).shape == (3,)
+
+
+def test_max_pooling():
+    a = np.array([1, 2, 3])
+    b = np.array([4, 5, 6])
+
+    assert np.allclose(max_pooling([a, b]), np.array([4, 5, 6]))
+    assert np.allclose(max_pooling(np.array([a, b])), np.array([4, 5, 6]))
+    assert max_pooling([a, b]).shape == (3,)
+    assert max_pooling(np.array([a, b])).shape == (3,)
