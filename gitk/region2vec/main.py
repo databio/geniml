@@ -499,16 +499,24 @@ class Region2VecExModel(ExModel):
 
     def _filter_empty_region_sets(self, region_sets: List[RegionSet]) -> List[RegionSet]:
         """
-        Filter out any empty region sets.
+        Filter out any empty region sets. This includes empty lists and lists of None
 
         :param List[RegionSet] region_sets: The region sets to filter.
         :return: The filtered region sets.
         """
-        return [
-            r
-            for r in tqdm(region_sets, total=len(region_sets), desc="Filtering out empty sets.")
-            if len(r) > 0
+        # remove all None's from all region sets
+        region_sets = [
+            [region for region in region_set if region is not None] for region_set in region_sets
         ]
+
+        # remove all empty region sets
+        region_sets = [
+            rs
+            for rs in tqdm(region_sets, total=len(region_sets), desc="Filtering out empty sets.")
+            if len(rs) > 0
+        ]
+
+        return region_sets
 
     def _validate_data(
         self, data: Union[List[str], List[RegionSet], List[List[Region]]]
