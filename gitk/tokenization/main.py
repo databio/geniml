@@ -252,7 +252,7 @@ class InMemTokenizer(Tokenizer):
         return conversion_map
 
     def tokenize(
-        self, region_set: Union[str, List[Region], RegionSet, sc.AnnData]
+        self, regions: Union[str, List[Region], RegionSet, sc.AnnData]
     ) -> Union[List[Region], List[List[Region]], List[RegionSet]]:
         """
         Tokenize a RegionSet.
@@ -260,16 +260,16 @@ class InMemTokenizer(Tokenizer):
         This is achieved using hard tokenization which is just a query to the universe, or
         simple overlap detection.
 
-        :param str | List[Region] | sc.AnnData region_set: The list of regions to tokenize
+        :param str | List[Region] | sc.AnnData regions: The list of regions to tokenize
         """
-        if isinstance(region_set, sc.AnnData):
+        if isinstance(regions, sc.AnnData):
             # step 1 is to convert the AnnData object to the universe
-            region_set = self.convert_anndata_to_universe(region_set)
+            regions = self.convert_anndata_to_universe(regions)
 
             # step 2 is to convert the AnnData object to a list of lists of regions
-            return anndata_to_regionsets(region_set)
+            return anndata_to_regionsets(regions)
         else:
-            return self.find_overlaps(region_set)
+            return self.find_overlaps(regions)
 
     # not sure what this looks like, multiple RegionSets?
     def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:
