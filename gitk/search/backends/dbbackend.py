@@ -117,7 +117,8 @@ class QdrantBackend(EmSearchBackend):
 
         :param ids: list of ids, or a single id
         :param with_vec:  whether the vectors themselves will also be returned in the output
-        :return: a list of dictionaries, similar to the output of search(), but just without "score"
+        :return: if ids is one id, a dictionary similar to the output of search() will be returned, without "score";
+        if ids is a list, a list of dictionaries will be returned
         """
         if not isinstance(ids, list):
             # retrieve() only takes iterable input
