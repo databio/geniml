@@ -19,22 +19,24 @@ class Embed2EmbedNN(tf.keras.models.Sequential):
         # most recent training history
         self.most_recent_train = None
 
-    def add_layers(self, input_dim: int, output_dim: int, units: int, layers: int):
+    def add_layers(
+        self, input_dim: int, output_dim: int, num_units: int, num_extra_hidden_layers: int
+    ):
         """
         Add layers to an empty Sequential model
 
         :param input_dim: dimension of input vector
         :param output_dim: dimension of output vector
-        :param units: number of units in dense layer
-        :param layers: number of extra layers
+        :param num_units: number of units in dense layer
+        :param num_extra_hidden_layers: number of extra hidden layers
         :return:
         """
         # the dense layer that accept the input
-        self.add(tf.keras.layers.Dense(units, input_shape=(input_dim,), activation="relu"))
+        self.add(tf.keras.layers.Dense(num_units, input_shape=(input_dim,), activation="relu"))
 
         # extra dense layers
-        for i in range(layers):
-            self.add(tf.keras.layers.Dense(units, input_shape=(units,), activation="relu"))
+        for i in range(num_extra_hidden_layers):
+            self.add(tf.keras.layers.Dense(num_units, input_shape=(num_units,), activation="relu"))
 
         # output
         self.add(tf.keras.layers.Dense(output_dim))
@@ -65,9 +67,9 @@ class Embed2EmbedNN(tf.keras.models.Sequential):
         training_Y: np.ndarray,
         validating_X: np.ndarray,
         validating_Y: np.ndarray,
-        opt_name: str = DEFAULT_OPTIMIZER,
-        loss_func: str = DEFAULT_LOSS,
-        epochs: int = DEFAULT_EPOCHES,
+        opt_name: str = DEFAULT_OPTIMIZER_NAME,
+        loss_func: str = DEFAULT_LOSS_NAME,
+        num_epochs: int = DEFAULT_NUM_EPOCHS,
         batch_size: int = DEFAULT_BATCH_SIZE,
         **kwargs,
     ):
@@ -95,22 +97,23 @@ class Embed2EmbedNN(tf.keras.models.Sequential):
             self.add_layers(
                 input_dim=input_dim,
                 output_dim=output_dim,
-                units=kwargs.get("units") or DEFAULT_UNITS,
-                layers=kwargs.get("layers") or DEFAULT_LAYERS,
+                num_units=kwargs.get("num_units") or DEFAULT_NUM_UNITS,
+                num_extra_hidden_layers=kwargs.get("num_extra_hidden_layers")
+                or DEFAULT_NUM_EXTRA_HIDDEN_LAYERS,
             )
 
         # compile the model
         self.compile(optimizer=opt_name, loss=loss_func)
         # early stoppage to prevent over-fitting
         early_stoppage = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=int(epochs * 0.25)
+            monitor="val_loss", patience=int(num_epochs * 0.25)
         )
 
         # record training history
         train_hist = self.fit(
             training_X,
             training_Y,
-            epochs=epochs,
+            epochs=num_epochs,
             batch_size=batch_size,
             validation_data=(validating_X, validating_Y),
             callbacks=[early_stoppage],

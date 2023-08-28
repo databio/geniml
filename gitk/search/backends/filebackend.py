@@ -1,5 +1,5 @@
 from .abstract import EmSearchBackend
-from .const import *
+from gitk.search.const import *
 import hnswlib
 import numpy as np
 from typing import List, Dict, Tuple, Union
