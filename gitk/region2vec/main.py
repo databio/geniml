@@ -348,17 +348,21 @@ class Region2Vec(Word2Vec):
         return super().load(filepath)
 
     def forward(
-        self, regions: Union[Region, RegionSet, List[Region], str]
+        self, regions: Union[Region, RegionSet, List[Region], str, None, List[None]]
     ) -> Union[np.ndarray, List[Optional[np.ndarray]]]:
         """
         Get the embedding vector(s) for a given region or region set.
 
-        :param Union[Region, RegionSet, List[Region], str] regions: The region(s) to get the embedding vector(s) for.
+        :param Union[Region, RegionSet, List[Region], str, None, List[None]] regions: The region(s) to get the embedding vector(s) for.
         :param bool skip_missing: If True, regions without vectors will be skipped. If False, will return None for such regions.
         """
+        if regions is None:
+            return None
 
-        def get_vector(region_word: str) -> Optional[np.ndarray]:
+        def get_vector(region_word: Union[str, None]) -> Optional[np.ndarray]:
             """Helper function to get vector for a region word or return None."""
+            if region_word is None:
+                return None
             return self.wv[region_word] if region_word in self.wv else None
 
         # If it's a single region
@@ -376,7 +380,12 @@ class Region2Vec(Word2Vec):
             if isinstance(regions, RegionSet):
                 region_words = utils.wordify_regions(regions)
             else:
-                region_words = [utils.wordify_region(r) for r in regions]
+                region_words = []
+                for region in regions:
+                    if region is not None:
+                        region_words.append(utils.wordify_region(region))
+                    else:
+                        region_words.append(None)
 
             vectors = [get_vector(r) for r in region_words]
 
