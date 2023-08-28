@@ -64,7 +64,7 @@ def build_regionset_info_list(
         if j < len(file_name_list) and file_name_list[j].startswith(set_name):
             bed_file_name = file_name_list[j]
             bed_file_path = os.path.join(bed_folder, bed_file_name)
-            bed_metadata = metadata_line_process(metadata_line)
+            bed_metadata = clean_escape_characters(metadata_line)
             region_set = RegionSet(bed_file_path)
             metadata_embedding = st_model.encode(bed_metadata)
             region_set_embedding = np.nanmean(r2v_model.encode(region_set), axis=0)
@@ -142,7 +142,7 @@ def update_bed_metadata_list(
     return new_list
 
 
-def metadata_line_process(metadata_line: str) -> str:
+def clean_escape_characters(metadata_line: str) -> str:
     """
     remove formatting characters and interval set name from metadata
 
