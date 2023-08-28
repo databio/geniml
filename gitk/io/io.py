@@ -135,13 +135,14 @@ class SNP(object):
         return self.chromosome
 
     def to_region(self):
+        chr = self.chromosome
         start = int(self.start_position)
         end = int(self.end_position)
         # bump end position by 1 if needed
         if start == end:
             end += 1
 
-        return Region(self.chromosome, self.start_position, self.end_position)
+        return Region(chr, start, end)
 
     def __len__(self):
         return self.end - self.start
@@ -218,10 +219,12 @@ class Maf(object):
                                 chromosome=self._extract_value_from_col(
                                     MAF_CHROMOSOME_COL_NAME, line
                                 ),
-                                start_position=self._extract_value_from_col(
-                                    MAF_START_COL_NAME, line
+                                start_position=int(
+                                    self._extract_value_from_col(MAF_START_COL_NAME, line)
                                 ),
-                                end_position=self._extract_value_from_col(MAF_END_COL_NAME, line),
+                                end_position=int(
+                                    self._extract_value_from_col(MAF_END_COL_NAME, line)
+                                ),
                                 strand=self._extract_value_from_col(MAF_STRAND_COL_NAME, line),
                             )
                         )
