@@ -1,15 +1,14 @@
 import pytest
 import os
 from gitk.text2bednn.utils import (
-    build_RegionsetInfo_list,
+    build_regionset_info_list,
     data_split,
-    RI_list_to_vectors,
+    region_info_list_to_vectors,
     search_backend_upload,
 )
 from gitk.text2bednn.text2bednn import Embed2EmbedNN, TextToBedNNSearchInterface
 from gitk.region2vec.main import Region2VecExModel
-from gitk.search.backends import QdrantBackend
-from gitk.search.backends import HNSWBackend
+from gitk.search.backends import QdrantBackend, HNSWBackend
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
@@ -131,13 +130,13 @@ def test_RegionsetInfo_list(
     local_idx_path,
 ):
     # construct a list of RegionSetInfo
-    ri_list = build_RegionsetInfo_list(bed_folder, metadata_path, r2v_model, st_model)
+    ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, st_model)
     assert len(ri_list) == len(os.listdir(bed_folder))
 
     # split the RegionSetInfo list to training, validating, and testing set
     train_list, validate_list, test_list = data_split(ri_list)
-    train_X, train_Y = RI_list_to_vectors(train_list)
-    validate_X, validate_Y = RI_list_to_vectors(validate_list)
+    train_X, train_Y = region_info_list_to_vectors(train_list)
+    validate_X, validate_Y = region_info_list_to_vectors(validate_list)
     assert isinstance(train_X, np.ndarray)
     assert isinstance(train_Y, np.ndarray)
     assert train_X.shape[1] == 384
@@ -150,8 +149,7 @@ def test_RegionsetInfo_list(
     e2enn.train(train_X, train_Y, validate_X, validate_Y, epochs=50)
 
     # save the model to local file
-    e2enn.save(local_model_path,
-               save_format="h5")
+    e2enn.save(local_model_path, save_format="h5")
 
     # load pretrained file
     new_e2nn = Embed2EmbedNN()
@@ -169,20 +167,18 @@ def test_RegionsetInfo_list(
 
     # construct a search interface
     db_interface = TextToBedNNSearchInterface(st_model, e2enn, qd_search_backend)
-    ids, scores = db_interface.nl_vec_search(query_term, k)
-    for i in range(len(ids)):
-        assert isinstance(ids[i], int)
-        assert isinstance(scores[i], float)
+    db_search_result = db_interface.nl_vec_search(query_term, k)
+    for i in range(len(db_search_result)):
+        assert isinstance(db_search_result[i], dict)
 
     # construct a search interface with file backend
     hnsw_backend = HNSWBackend(local_index_path=local_idx_path)
     hnsw_backend.load(embeddings, labels)
     file_interface = TextToBedNNSearchInterface(st_model, e2enn, hnsw_backend)
 
-    ids, scores = file_interface.nl_vec_search(query_term, k)
-    for i in range(len(ids)):
-        assert isinstance(ids[i], int)
-        assert isinstance(scores[i], float)
+    file_search_result = file_interface.nl_vec_search(query_term, k)
+    for i in range(len(file_search_result)):
+        assert isinstance(file_search_result[i], dict)
 
     # remove files and paths for testing
     os.remove(local_idx_path)

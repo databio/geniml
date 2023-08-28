@@ -22,7 +22,7 @@ class RegionSetInfo:
     region_set_embedding: np.ndarray  # the embedding vector of region set
 
 
-def build_RegionsetInfo_list(
+def build_regionset_info_list(
     bed_folder: str,
     metadata_path: str,
     r2v_model: Region2VecExModel,
@@ -124,7 +124,7 @@ def data_split(
     return train_list, validate_list, test_list
 
 
-def update_BedMetadata_list(
+def update_bed_metadata_list(
     old_list: List[RegionSetInfo], r2v_model: Region2VecExModel
 ) -> List[RegionSetInfo]:
     """
@@ -157,7 +157,7 @@ def metadata_line_process(metadata_line: str) -> str:
     return metadata_line
 
 
-def RI_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, np.ndarray]:
+def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, np.ndarray]:
     """
     With a given list of RegionSetInfo, returns two np.ndarrays,
     one represents embeddings of bed files, the other represents embedding of metadata,

@@ -1,10 +1,10 @@
-import numpy as np
-from typing import List, Union, Tuple
-from .const import *
+from typing import Union
 from .utils import *
-from ..search import QdrantBackend, HNSWBackend
+from gitk.search.backends import HNSWBackend, QdrantBackend
+from .const import *
 import tensorflow as tf
 import matplotlib as plt
+import numpy as np
 
 
 class Embed2EmbedNN(tf.keras.models.Sequential):
@@ -78,11 +78,11 @@ class Embed2EmbedNN(tf.keras.models.Sequential):
 
         :param training_X: embedding vectors of metadata, np.ndarray with shape of (n, <dim>)
         :param training_Y: embedding vectors of region set, np.ndarray with shape of (n, <dim>)
-        :param validating_X:
-        :param validating_Y:
+        :param validating_X: validating vectors of metadata
+        :param validating_Y: validating vectors of region set
         :param opt_name: name of optimizer
         :param loss_func: name of loss function
-        :param epochs: number of training epoches
+        :param num_epochs: number of training epoches
         :param batch_size: size of batch for training
         :param kwargs: see units and layers in add_layers()
         :return:
@@ -142,7 +142,7 @@ class Embed2EmbedNN(tf.keras.models.Sequential):
             )
         return output_vec
 
-    def plotting_training_hist(self):
+    def plot_training_hist(self):
         """
         plot the training & validating loss of the most recent training
         :return:

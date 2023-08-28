@@ -1,7 +1,6 @@
 import hnswlib
 import pytest
-from gitk.search.backends import QdrantBackend
-from gitk.search.backends import HNSWBackend
+from gitk.search.backends import QdrantBackend, HNSWBackend
 import numpy as np
 import os
 import random
@@ -164,10 +163,10 @@ def test_HNSWBackend(filenames, embeddings, labels, local_idx_path, ids):
 
     # batches to load
     labels_1 = labels[: num_upload // 2]
-    labels_2 = labels[num_upload // 2:]
+    labels_2 = labels[num_upload // 2 :]
 
     embeddings_1 = embeddings[: num_upload // 2]
-    embeddings_2 = embeddings[num_upload // 2:]
+    embeddings_2 = embeddings[num_upload // 2 :]
 
     # load first batch
     hnswb.load(embeddings_1, labels_1)
@@ -200,4 +199,3 @@ def test_HNSWBackend(filenames, embeddings, labels, local_idx_path, ids):
 
     # remove local file of saved index
     os.remove(local_idx_path)
-
