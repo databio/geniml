@@ -1,10 +1,11 @@
 from .abstract import EmSearchBackend
 from gitk.search.const import *
+from gitk.search.utils import verify_load_inputs
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, PointStruct
 import numpy as np
 import os
-from typing import List, Dict, Union, Tuple
+from typing import List, Dict, Union
 
 
 class QdrantBackend(EmSearchBackend):
@@ -35,7 +36,6 @@ class QdrantBackend(EmSearchBackend):
         self.qd_client.recreate_collection(
             collection_name=self.collection, vectors_config=self.config
         )
-        # TODO: initialize connection to qdrant server
 
     def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
         """
@@ -46,8 +46,7 @@ class QdrantBackend(EmSearchBackend):
         :return:
         """
 
-        if embeddings.shape[0] != len(labels):
-            raise ValueError("The number of embeddings does not match the number of labels")
+        verify_load_inputs(embeddings, labels)
 
         start = len(self)
         points = [

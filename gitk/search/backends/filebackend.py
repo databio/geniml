@@ -3,6 +3,7 @@ from gitk.search.const import *
 import hnswlib
 import numpy as np
 from typing import List, Dict, Tuple, Union
+from gitk.search.utils import verify_load_inputs
 
 
 class HNSWBackend(EmSearchBackend):
@@ -50,8 +51,7 @@ class HNSWBackend(EmSearchBackend):
         :return:
         """
         # check if the number of embedding vectors and labels are same
-        if embeddings.shape[0] != len(labels):
-            raise KeyError("The number of embeddings does not match the number of labels")
+        verify_load_inputs(embeddings, labels)
 
         # increase max_elements to contain new loadings
         current_max = self.idx.get_max_elements()
