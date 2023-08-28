@@ -168,3 +168,43 @@ def test_max_pooling():
     assert np.allclose(max_pooling(np.array([a, b])), np.array([4, 5, 6]))
     assert max_pooling([a, b]).shape == (3,)
     assert max_pooling(np.array([a, b])).shape == (3,)
+
+
+def test_model_pooling():
+    r1 = Region("chr11", 45639005, 45639830)
+    r2 = Region("chr1", 89566099, 89566939)  # will be None
+    r3 = Region("chr11", 63533954, 63534897)
+
+    model = Region2VecExModel()
+    model.from_pretrained("tests/data/tiny-model/model.bin", "tests/data/tiny-model/universe.bed")
+
+    r1_vector = model.encode(r1)
+    r2_vector = model.encode(r2)
+    r3_vector = model.encode(r3)
+
+    assert all([isinstance(v, np.ndarray) for v in [r1_vector, r3_vector]])
+    assert r2_vector is None
+    assert r1_vector.shape == (100,)
+    assert r3_vector.shape == (100,)
+
+    vectors = model.encode([r1, r2, r3])
+    assert isinstance(
+        vectors, list
+    )  # should return a list of vectors, not an np.ndarray. List of np.ndarray is fine and also more conducive to downstream processing. It also mirrors the input.
+    assert len(vectors) == 3
+    assert vectors[0].shape == (100,)
+    assert vectors[1] is None
+    assert vectors[2].shape == (100,)
+
+    vector_mean = model.encode([r1, r2, r3], pool="mean")
+    vector_max = model.encode([r1, r2, r3], pool="max")
+    assert vector_mean.shape == (100,)
+    assert vector_max.shape == (100,)
+
+    # custom pooling function that just sums them
+    def sum_pooling(vectors):
+        vectors = [v for v in vectors if v is not None]
+        return np.sum(vectors, axis=0)
+
+    vector_sum = model.encode([r1, r2, r3], pool=sum_pooling)
+    assert vector_sum.shape == (100,)

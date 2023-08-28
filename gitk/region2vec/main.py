@@ -1,7 +1,7 @@
 import multiprocessing
 import os
 from logging import getLogger
-from typing import List, Union, Optional, Literal
+from typing import List, Union, Optional, Literal, Callable
 
 import numpy as np
 from tqdm import tqdm
@@ -603,7 +603,7 @@ class Region2VecExModel(ExModel):
     def encode(
         self,
         regions: Union[str, List[Region], RegionSet, str],
-        pool: Union[Literal["mean", "max"], bool, callable] = False,
+        pool: Union[Literal["mean", "max"], bool, Callable] = False,
         return_none: bool = True,
     ) -> np.ndarray:
         """
@@ -635,7 +635,7 @@ class Region2VecExModel(ExModel):
             _pool_fn = mean_pooling
         elif pool == False:
             _pool_fn = None
-        elif not isinstance(pool, str):
+        elif isinstance(pool, str):
             if pool.lower() == "mean":
                 _pool_fn = mean_pooling
             elif pool.lower() == "max":
@@ -644,7 +644,7 @@ class Region2VecExModel(ExModel):
                 raise ValueError(
                     f"Invalid pooling function. Must be one of ['mean', 'max']. Got {pool}."
                 )
-        elif isinstance(pool, callable):
+        elif callable(pool):
             _pool_fn = pool
         else:
             raise ValueError(
