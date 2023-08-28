@@ -36,4 +36,4 @@ Different strategies can be used to tokenize. The simplest case we call *hard to
 
 ## Module `search`
 
-With `region2Vec`, BED files can be embedded to a vector. [`qdrant-client`](https://github.com/qdrant/qdrant-client) and [`hnswlib`](https://github.com/nmslib/hnswlib) can store vectors and perform k-nearest neighbors (KNN) search with a given query vector, so we created one database backend (qdrant-client) and one local file backend (hnswlib) that can store the embedding vectors for KNN search.
+With `region2vec`, BED files can be embedded to a vector. [`qdrant-client`](https://github.com/qdrant/qdrant-client) and [`hnswlib`](https://github.com/nmslib/hnswlib) can store vectors and perform k-nearest neighbors (KNN) search with a given query vector, so we created one database backend (qdrant-client) and one local file backend (hnswlib) that can store the embedding vectors for KNN search.
