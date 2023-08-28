@@ -10,7 +10,7 @@ class HNSWBackend(EmSearchBackend):
 
     # the index
     idx: hnswlib.Index
-    metadata: dict  # in the format of {<id>: <info dict>}, equivalent to payloads in Qdrant
+    payloads: dict  # in the format of {<id>: <info dict>}, equivalent to payloads in Qdrant
     idx_path: str  # local path where the index is saved to
 
     def __init__(
@@ -38,12 +38,12 @@ class HNSWBackend(EmSearchBackend):
 
         # save the index to local file path
         self.idx.save_index(local_index_path)
-        self.metadata = {}
+        self.payloads = {}
         self.idx_path = local_index_path
 
     def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
         """
-        Load embedding vectors into the hnsw index, and store their hnsw index id and label into metaddata
+        Load embedding vectors into the hnsw index, and store their hnsw index id and label into metadata
 
         :param embeddings: embedding vectors
         :param labels: labels
@@ -60,7 +60,7 @@ class HNSWBackend(EmSearchBackend):
         # set ids and store id: label into metadata
         ids = np.arange(start=current_max, stop=new_max)
         for i in range(len(labels)):
-            self.metadata[ids[i]] = labels[i]
+            self.payloads[ids[i]] = labels[i]
 
         # update hnsw index and load embedding vectors
         self.idx.load_index(self.idx_path, max_elements=new_max)
@@ -70,61 +70,89 @@ class HNSWBackend(EmSearchBackend):
         self.idx.save_index(self.idx_path)
 
     def search(
-        self, query: np.ndarray, k: int
-    ) -> Tuple[Union[List[int], List[List[int]]], Union[List[float], List[List[float]]]]:
+        self, query: np.ndarray, k: int, with_payload: bool = True, with_vec: bool = True
+    ) -> Union[
+        List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
+        List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
+    ]:
         """
         with query vector(s), get the k nearest neighbors
-
         :param query: the query vector, np.ndarray with shape of (1, dim) or (dim, )
         :param k: number of nearest neighbors to search for query vector
-        :return: a tuple of search results that consist of labels, ids, and distances
+        :param with_payload: whether payload is included in the result
+        :param with_vec: whether the stored vector is included in the result
+        :return: if the shape of query vector is (<dim>, ), a list of k dictionaries will be returned,
+        the format of dictionary will be:
+        {
+            "id": <id>
+            "distance": <distance>
+            "payload": {
+                <information of the vector>
+            }
+            "vector": [<the vector>]
+        }
+        if the shape of query vector is (n, <dim>), a 2d list will be returned,
+        which is a list of n * list of k dictionaries
         """
         ids, distances = self.idx.knn_query(query, k)
-        # if the query vector's shape is (dimension,),
-        # knn_query will return two np.ndarray with shape of (1, dimension)
-        if len(query.shape) == 1:
-            ids = ids.reshape(
-                ids.shape[1],
-            )
-            distances = distances.reshape(
-                distances.shape[1],
-            )
+        # ids and distances are 2d array
+        ids = ids.tolist()
+        distances = distances.tolist()
 
-        return ids.tolist(), distances.tolist()
+        output_list = []
+        for i in range(len(ids)):
+            search_list = []
+            result_id = ids[i]
+            result_distances = distances[i]
+            if with_vec:
+                result_vectors = self.idx.get_items(result_id)
+            for j in range(k):
+                output_dict = {"id": result_id[j], "distance": result_distances[j]}
+                if with_payload:
+                    output_dict["payload"] = self.payloads[result_id[j]]
+                if with_vec:
+                    output_dict["vector"] = result_vectors[j]
+                search_list.append(output_dict)
+            output_list.append(search_list)
+
+        if len(output_list) == 1:
+            return output_list[0]
+        else:
+            return output_list
 
     def __len__(self) -> int:
         return self.idx.element_count
 
     def retrieve_info(
-        self, key: Union[List[int], int], with_vecs: bool = False
-    ) -> Dict[int, Dict[str, Union[str, List[float]]]]:
+        self, ids: Union[List[int], int], with_vec: bool = False
+    ) -> Union[
+        Dict[str, Union[int, List[float], Dict[str, str]]],
+        List[Dict[str, Union[int, List[float], Dict[str, str]]]],
+    ]:
         """
-        With a given list of storage ids, return the information of these vectors
-
-        :param key: list of ids
-        :param with_vecs: whether the vectors themselves will also be returned in the output
-        :return: a dictionary in this format:
-        {
-            <id>: {
-                ...(information from metadata)
-                "vector": <vector>
-            }
-        }
+        With an id or a list of storage ids, return the information of these vectors
+        :param ids: storage id, or a list of ids
+        :param with_vec: whether the stored vector is included in the result
+        :return:
         """
+        if not isinstance(ids, list):
+            # retrieve() only takes iterable input
+            ids = [ids]
+        output_list = []
+        for id_ in ids:
+            output_dict = {"id": id_, "payload": self.payloads[id_]}
+            output_list.append(output_dict)
 
-        if not isinstance(key, list):
-            # get_items() only takes list of indices
-            key = [key]
-        output_dict = {}
-        for id_ in key:
-            output_dict[id_] = self.metadata[id_]
+        if with_vec:
+            vecs = self.idx.get_items(ids)
+            for i in range(len(vecs)):
+                output_list[i]["vector"] = vecs[i]
 
-        if with_vecs:
-            vecs = self.idx.get_items(key)
-            for i in range(len(key)):
-                output_dict[key[i]]["vector"] = vecs[i]
-
-        return output_dict
+        # with just one id, only the dictionary instead of the list will be returned
+        if len(output_list) == 1:
+            return output_list[0]
+        else:
+            return output_list
 
     def __str__(self):
         return "HNSWBackend with {} items".format(len(self))
