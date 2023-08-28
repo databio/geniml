@@ -199,19 +199,3 @@ def search_backend_upload(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, Lis
         labels.append({"name": ri.file_name, "metadata": ri.metadata})
 
     return np.array(embeddings), labels
-
-
-"""
-ls | shuf -n 20 | xargs -I '{}' cp '{}' /home/claudehu/Desktop/repo/geniml_dev/tests/data/hg38_sample
-
-for file in /home/claudehu/Desktop/repo/geniml_dev/tests/data/hg38_sample/*.bed; do
-    key=$(basename "$file" | cut -d. -f1)
-    grep -w "$key" experimentList_sorted_hg38.tab >> /home/claudehu/Desktop/repo/geniml_dev/tests/data/hg38_metadata_sample.tab
-done
-
-shuf -n 20 experimentList_sorted_hg38.tab >> /home/claudehu/Desktop/repo/geniml_dev/tests/data/hg38_metadata_sample.tab
-
-sort -k1,1 -t$'\t' hg38_metadata_sample.tab > hg38_metadata_sample_sorted.tab
-
-
-"""

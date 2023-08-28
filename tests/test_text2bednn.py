@@ -1,6 +1,5 @@
 import pytest
 import os
-import shutil
 from gitk.text2bednn.utils import (
     build_RegionsetInfo_list,
     data_split,
@@ -8,9 +7,9 @@ from gitk.text2bednn.utils import (
     search_backend_upload,
 )
 from gitk.text2bednn.text2bednn import Embed2EmbedNN, TextToBedNNSearchInterface
-from gitk.region2vec.main import Region2Vec, Region2VecExModel
-from gitk.search.dbbackend import QdrantBackend
-from gitk.search.filebackend import HNSWBackend
+from gitk.region2vec.main import Region2VecExModel
+from gitk.search.backends import QdrantBackend
+from gitk.search.backends import HNSWBackend
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
