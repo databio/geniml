@@ -113,7 +113,8 @@ class InMemTokenizer(Tokenizer):
     def find_overlaps(
         self,
         regions: Union[str, List[Region], Region, RegionSet],
-        f: float = None,  # not implemented yet
+        f: float = None,  # not implemented yet,
+        return_all: bool = False,
     ) -> List[Region]:
         """
         Query the interval tree for the given regions. That is, find all regions that overlap with the given regions.
@@ -121,6 +122,7 @@ class InMemTokenizer(Tokenizer):
         :param Union[str, List[str], List[Region], Region, RegionSet] regions: The regions to query for. this can be either a bed file,
                                                                             a list of regions (chr_start_end), or a list of tuples of chr, start, end.
         :param float f: The fraction of the region that must overlap to be considered an overlap. Not yet implemented.
+        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to False. (in the future, we can change this to return the top k or best)
         """
         # validate input
         if isinstance(regions, Region):
@@ -133,10 +135,23 @@ class InMemTokenizer(Tokenizer):
         overlapping_regions = []
         for region in regions:
             if region.chr not in self._trees:
+                print(f"Warning: Could not find {region.chr} in universe.")
                 continue
+
             overlaps = self._trees[region.chr][region.start : region.end]
-            for overlap in overlaps:
-                overlapping_regions.append(Region(region.chr, overlap.begin, overlap.end))
+            overlaps = list(overlaps)
+            if len(overlaps) == 0:
+                overlapping_regions.append(None)
+            else:
+                if return_all:
+                    overlapping_regions.append(
+                        [Region(region.chr, olap.begin, olap.end) for olap in overlaps]
+                    )
+                else:
+                    overlapping_regions.append(
+                        Region(region.chr, overlaps[0].begin, overlaps[0].end)
+                    )
+
         return overlapping_regions
 
     def convert_anndata_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
