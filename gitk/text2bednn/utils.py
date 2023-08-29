@@ -29,7 +29,8 @@ def build_regionset_info_list(
     st_model: SentenceTransformer,
 ) -> List[RegionSetInfo]:
     """
-    With each bed file in the given folder and its matching metadata from the meadata file,
+    With each bed file in the given folder and its matching metadata from the metadata file,
+
     create a RegionSetInfo with each, and return the list containing all.
 
     :param bed_folder: folder where bed files are stored
