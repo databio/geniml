@@ -147,9 +147,8 @@ def update_bed_metadata_list(
 
 def clean_escape_characters(metadata_line: str) -> str:
     """
-    remove formatting characters and interval set name from metadata
+    Remove formatting characters from metadata
 
-    :param set_name: name of interval set
     :param metadata_line: the metadata text
     :return: the metadata text without interval set name and formatting characters
     """
