@@ -4,7 +4,7 @@ from gitk.text2bednn.utils import (
     build_regionset_info_list,
     data_split,
     region_info_list_to_vectors,
-    search_backend_upload,
+    prepare_vectors_for_database,
 )
 from gitk.text2bednn.text2bednn import Embed2EmbedNN, TextToBedNNSearchInterface
 from gitk.region2vec.main import Region2VecExModel
@@ -161,7 +161,7 @@ def test_RegionsetInfo_list(
     assert np.array_equal(map_vec_1, map_vec_2)
 
     # loading data to search backend
-    embeddings, labels = search_backend_upload(ri_list)
+    embeddings, labels = prepare_vectors_for_database(ri_list)
     qd_search_backend = QdrantBackend(collection=collection)
     qd_search_backend.load(embeddings, labels)
 
