@@ -150,3 +150,6 @@ class QdrantBackend(EmSearchBackend):
 
     def __str__(self):
         return "QdrantBackend with {} items".format(len(self))
+
+    def __repr__(self):
+        return "QdrantBackend with {} items".format(len(self))
