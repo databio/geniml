@@ -82,6 +82,6 @@ file_interface = TextToBedNNSearchInterface(st_model, e2enn, hnsw_backend)
 
 # natural language query string
 query_term = "human, kidney, blood"
-# perform KNN search with K = 5, the id of stored vectors and the distance / simialrity score will be returned
+# perform KNN search with K = 5, the id of stored vectors and the distance / similarity score will be returned
 ids, scores = file_interface.nl_vec_search(query_term, 5)
 ```
