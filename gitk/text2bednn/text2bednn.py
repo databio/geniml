@@ -1,10 +1,12 @@
 from typing import Union
-from .utils import *
-from gitk.search.backends import HNSWBackend, QdrantBackend
-from .const import *
-import tensorflow as tf
+
 import matplotlib as plt
 import numpy as np
+import tensorflow as tf
+from gitk.search.backends import HNSWBackend, QdrantBackend
+
+from .const import *
+from .utils import *
 
 
 class Embed2EmbedNN(tf.keras.models.Sequential):

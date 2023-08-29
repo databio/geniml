@@ -1,5 +1,6 @@
-import numpy as np
 from typing import Dict, List
+
+import numpy as np
 
 
 def verify_load_inputs(embeddings: np.ndarray, labels: List[Dict[str, str]]):

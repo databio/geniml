@@ -1,11 +1,13 @@
-from .abstract import EmSearchBackend
+import os
+from typing import Dict, List, Union
+
+import numpy as np
 from gitk.search.const import *
 from gitk.search.utils import verify_load_inputs
 from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, PointStruct
-import numpy as np
-import os
-from typing import List, Dict, Union
+from qdrant_client.models import PointStruct, VectorParams
+
+from .abstract import EmSearchBackend
 
 
 class QdrantBackend(EmSearchBackend):

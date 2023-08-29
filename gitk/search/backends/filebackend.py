@@ -1,9 +1,11 @@
-from .abstract import EmSearchBackend
-from gitk.search.const import *
+from typing import Dict, List, Tuple, Union
+
 import hnswlib
 import numpy as np
-from typing import List, Dict, Tuple, Union
+from gitk.search.const import *
 from gitk.search.utils import verify_load_inputs
+
+from .abstract import EmSearchBackend
 
 
 class HNSWBackend(EmSearchBackend):
