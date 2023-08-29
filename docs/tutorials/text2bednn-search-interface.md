@@ -24,7 +24,7 @@ from sentence_transformers import SentenceTransformer
 
 # load Region2Vec from hugging face
 r2v_model = Region2VecExModel("databio/r2v-ChIP-atlas")
-#load SentenceTransformers
+# load SentenceTransformers
 st_model = SentenceTransformer("sentence-transformers/all-MiniLM-L12-v2")
 
 # folder of bed file
