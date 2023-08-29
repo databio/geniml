@@ -177,7 +177,7 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
     return np.array(X), np.array(Y)
 
 
-def search_backend_upload(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, List[Dict[str, str]]]:
+def prepare_vectors_for_database(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, List[Dict[str, str]]]:
     """
     With a given list of RegionSetInfo, returns one np.ndarray representing bed files embeddings,
     and one list of dictionary that stores names of bed files and metadata,
