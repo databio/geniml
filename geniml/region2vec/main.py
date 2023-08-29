@@ -7,6 +7,8 @@ from geniml.region2vec import utils
 from geniml.region2vec.region2vec_train import main as region2_train
 from geniml.region2vec.region_shuffling import main as sent_gen
 
+from typing import List
+
 
 class Namespace:
     def __init__(self, **kwargs):
@@ -16,7 +18,7 @@ class Namespace:
 def region2vec(
     token_folder: str,
     save_dir: str,
-    file_list: list[str] = None,
+    file_list: List[str] = None,
     data_type: str = "files",
     mat_path: str = None,
     num_shufflings: int = 1000,
@@ -32,7 +34,7 @@ def region2vec(
     init_lr: float = 0.025,
     min_lr: float = 1e-4,
     lr_scheduler: str = "linear",
-    milestones: list[int] = [],
+    milestones: List[int] = [],
     hier_softmax: bool = False,
     seed: int = 0,
     update_vocab: str = "once",

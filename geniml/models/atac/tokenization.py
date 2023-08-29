@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import scanpy as sc
 from tqdm import tqdm
@@ -77,7 +77,7 @@ class Universe:
 
     def query(
         self,
-        regions: Union[str, List[str], List[tuple[str, int, int]], tuple[str, int, int]],
+        regions: Union[str, List[str], List[Tuple[str, int, int]], Tuple[str, int, int]],
     ):
         """
         Query the interval tree for the given regions.
@@ -102,7 +102,7 @@ class Universe:
                 overlapping_regions.append((chr, overlap.begin, overlap.end))
         return overlapping_regions
 
-    def __contains__(self, item: tuple[str, int, int]):
+    def __contains__(self, item: Tuple[str, int, int]):
         """
         Check if the given region is in the universe.
 

@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Tuple, List
 
 import numpy as np
 import scanpy as sc
@@ -67,7 +67,7 @@ class PretrainedScembedModel:
         """
         return scembed.utils.load_scembed_model(path)
 
-    def encode(self, data: Union[str, list[tuple[str, int, int]], sc.AnnData]) -> np.ndarray:
+    def encode(self, data: Union[str, List[Tuple[str, int, int]], sc.AnnData]) -> np.ndarray:
         """
         Encode region sets data using the pretrained model.
 

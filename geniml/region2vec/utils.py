@@ -3,7 +3,7 @@ import select
 import shutil
 import sys
 import time
-from typing import Union
+from typing import Union, Dict
 import numpy as np
 
 
@@ -186,7 +186,7 @@ class lr_scheduler:
         init_lr: float,
         end_lr: float,
         epochs: int,
-        lr_info: dict[str, Union[int, float, list]],
+        lr_info: Dict[str, Union[int, float, list]],
         mode: str = "linear",
     ):
         """Initializes the learning rate scheduler.
