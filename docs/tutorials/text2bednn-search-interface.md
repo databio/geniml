@@ -1,7 +1,7 @@
 # How to create a natural language search backend for BED files
 The metadata of each BED file / region set is needed to build a natural language search backend. Embedding vectors of BED
 files are created by `Region2Vec`, and embedding vectors of metadata are created by [`SentenceTransformers`](https://www.sbert.net/). `Embed2EmbedNN`,
-a feedforward neural network (FNN), is trained to encode the embedding vectors of metadata to the embedding vectors of BED
+a feedforward neural network (FNN), is trained to learn the embedding vectors of metadata from the embedding vectors of BED
 files. When a natural language query string is given, it will first be encoded to a vector by `SentenceTransformers`, and that
 vector will be encoded to a query vector by the FNN. `search` backend can perform k-nearest neighbors (KNN) search among the
 stored embedding vectors of BED files, and the BED files whose embedding vectors are closest to that query vector are the
