@@ -18,7 +18,7 @@ sort -k1 1 metadata_file >  new_metadata_file
 ```
 Example code to build a list of RegionSetInfo
 ```python
-from gitk.text2bednn.utils import build_RegionsetInfo_list
+from gitk.text2bednn.utils import build_regionset_info_list
 from gitk.region2vec.main import Region2VecExModel
 from sentence_transformers import SentenceTransformer
 
@@ -33,25 +33,25 @@ bed_folder = "path/to/folders/of/bed/files"
 metadata_path = "path/to/file/of/metadata"
 
 # list of RegionSetInfo
-ri_list = build_RegionsetInfo_list(bed_folder, metadata_path, r2v_model, st_model)
+ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, st_model)
 ```
 
 ## Train the Embed2EmbedNN
 The list of RegionSetInfo can be split into 3 lists, which represent the training set, validating set, and testing set. The embedding
 vectors of metadata will be X, and the embedding vectors of the region set will be Y.
 ```python
-from gitk.text2bednn.utils import data_split, RI_list_to_vectors
-from gitk.text2bednn.text2bednn import Embed2EmbedNN
+from gitk.text2bednn.utils import data_split, region_info_list_to_vectors
+from gitk.text2bednn.text2bednn import Vec2VecFNN
 
 # split the list of RegionInfoSet into different data set
 train_list, validate_list, test_list = data_split(ri_list)
 
 # get the embedding vectors
-train_X, train_Y = RI_list_to_vectors(train_list)
-validate_X, validate_Y = RI_list_to_vectors(validate_list)
+train_X, train_Y = region_info_list_to_vectors(train_list)
+validate_X, validate_Y = region_info_list_to_vectors(validate_list)
 
 # train the neural network
-e2enn = Embed2EmbedNN()
+e2enn = Vec2VecFNN()
 e2enn.train(train_X, train_Y, validate_X, validate_Y)
 ```
 
@@ -60,10 +60,10 @@ e2enn.train(train_X, train_Y, validate_X, validate_Y)
 created one database backend (`QdrantBackend`) and one local file backend (`HNSWBackend`) that can store the embedding
 vectors for KNN search. `HNSWBackend` will create a .bin file with given path, which saves the searching index.
 ```python
-from gitk.text2bednn.utils import search_backend_upload
+from gitk.text2bednn.utils import prepare_vectors_for_database
 
 # loading data to search backend
-embeddings, labels = search_backend_upload(ri_list)
+embeddings, labels = prepare_vectors_for_database(ri_list)
 
 # search backend
 hnsw_backend = HNSWBackend(local_index_path="path/to/local/index.bin")
@@ -75,10 +75,10 @@ The `TextToBedNNSearchInterface` includes model that encode natural language to 
 model that encode natural language embedding vectors to BED file embedding vectors (`Embed2EmbedNN`), and a `search` backend.
 
 ```python
-from gitk.text2bednn.text2bednn import TextToBedNNSearchInterface
+from gitk.text2bednn.text2bednn import Text2BEDSearchInterface
 
 # initiate the search interface
-file_interface = TextToBedNNSearchInterface(st_model, e2enn, hnsw_backend)
+file_interface = Text2BEDSearchInterface(st_model, e2enn, hnsw_backend)
 
 # natural language query string
 query_term = "human, kidney, blood"
