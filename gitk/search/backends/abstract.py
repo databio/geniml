@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from typing import Dict, List
+
 import numpy as np
-from typing import List, Dict
 
 
 class EmSearchBackend(ABC):

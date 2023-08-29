@@ -1,12 +1,14 @@
 import os
-from typing import List, Tuple, Dict
 import random
-import numpy as np
-from .const import *
 from dataclasses import dataclass, replace
+from typing import Dict, List, Tuple
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
 from ..io import RegionSet
 from ..region2vec import Region2VecExModel
-from sentence_transformers import SentenceTransformer
+from .const import *
 
 
 @dataclass
