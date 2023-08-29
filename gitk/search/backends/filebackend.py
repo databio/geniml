@@ -23,7 +23,7 @@ class HNSWBackend(EmSearchBackend):
         m: int = DEFAULT_M,
     ):
         """
-        initiate the backend
+        Initiate the backend
 
         :param local_index_path: local path where the index is saved to
         :param space: possible options are l2, cosine or ip
