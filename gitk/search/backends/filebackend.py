@@ -76,7 +76,8 @@ class HNSWBackend(EmSearchBackend):
         List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
     ]:
         """
-        with query vector(s), get the k nearest neighbors
+        With query vector(s), get the k nearest neighbors.
+        
         :param query: the query vector, np.ndarray with shape of (1, dim) or (dim, )
         :param k: number of nearest neighbors to search for query vector
         :param with_payload: whether payload is included in the result
