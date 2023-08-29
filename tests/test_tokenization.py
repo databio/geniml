@@ -2,8 +2,8 @@ import pytest
 import scanpy as sc
 
 
-from gitk.io.io import Region, RegionSet
-from gitk.tokenization.main import InMemTokenizer
+from geniml.io.io import Region, RegionSet
+from geniml.tokenization.main import InMemTokenizer
 
 
 @pytest.fixture

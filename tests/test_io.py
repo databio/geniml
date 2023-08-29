@@ -1,6 +1,6 @@
 import pytest
 
-from gitk.io.io import Region, RegionSet, Maf, SNP
+from geniml.io.io import Region, RegionSet, Maf, SNP
 
 
 @pytest.fixture

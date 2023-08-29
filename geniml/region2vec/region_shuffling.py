@@ -9,7 +9,7 @@ from typing import List
 
 import numpy as np
 
-from gitk.region2vec import utils
+from geniml.region2vec import utils
 
 
 class BEDDataset:
