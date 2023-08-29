@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Dict, List, Union
+from typing import TYPE_CHECKING, Dict, List, Union, Tuple
 
 import numpy as np
 import scanpy as sc
@@ -37,8 +37,8 @@ def make_cache_dir():
 
 
 def validate_region_input(
-    regions: Union[str, List[str], List[tuple[str]]]
-) -> List[tuple[str, int, int]]:
+    regions: Union[str, List[str], List[Tuple[str]]]
+) -> List[Tuple[str, int, int]]:
     """
     Validate the input for the regions. this universe accepts a lot of forms of input,
     so we need to check what the user has passed. It also standardizes the input to a list
@@ -81,7 +81,7 @@ def validate_region_input(
 
 
 def generate_var_conversion_map(
-    a: List[tuple[str, int, int]],
+    a: List[Tuple[str, int, int]],
     b: "Universe",
     fraction: float = 1.0e-9,
 ) -> Dict[str, Union[str, None]]:
