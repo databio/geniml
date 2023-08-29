@@ -9,7 +9,7 @@ from .const import *
 from .utils import *
 
 
-class Embed2EmbedNN(tf.keras.models.Sequential):
+class Vec2VecFNN(tf.keras.models.Sequential):
     """
     A feedforward neural network that maps embedding vectors or region sets metadata
     to the embedding vectors of region sets
@@ -57,7 +57,7 @@ class Embed2EmbedNN(tf.keras.models.Sequential):
 
         # https://stackoverflow.com/questions/63068639/valueerror-unknown-layer-functional
         local_model = tf.keras.models.load_model(
-            model_path, custom_objects={"Embed2EmbedNN": tf.keras.models.Sequential()}
+            model_path, custom_objects={"Vec2VecFNN": tf.keras.models.Sequential()}
         )
         # add layers from pretrained model
         for layer in local_model.layers:
@@ -160,7 +160,7 @@ class Embed2EmbedNN(tf.keras.models.Sequential):
         plt.show()
 
 
-class TextToBedNNSearchInterface(object):
+class Text2BEDSearchInterface(object):
     """
     search backend interface
     """
@@ -168,7 +168,7 @@ class TextToBedNNSearchInterface(object):
     def __init__(
         self,
         nl2vec_model: Union[SentenceTransformer, None],
-        vec2vec_model: Union[Embed2EmbedNN, None],
+        vec2vec_model: Union[Vec2VecFNN, None],
         search_backend: Union[QdrantBackend, HNSWBackend, None],
     ):
         """
@@ -186,8 +186,8 @@ class TextToBedNNSearchInterface(object):
             self.nl2vec = nl2vec_model
 
         if isinstance(vec2vec_model, type(None)):
-            # init an empty Embed2EmbedNN model if input is None
-            self.vec2vec = Embed2EmbedNN()
+            # init an empty Vec2VecFNN model if input is None
+            self.vec2vec = Vec2VecFNN()
         else:
             self.vec2vec = vec2vec_model
 
@@ -231,4 +231,4 @@ class TextToBedNNSearchInterface(object):
 #
 # betum = BEDEmbedTUM(RSC, universe, tokenizer)
 # embeddings = betum.compute_embeddings()
-# T2BNNSI = TextToBedNNSearchInterface(betum, embeddings)  # ???
+# T2BNNSI = Text2BEDSearchInterface(betum, embeddings)  # ???

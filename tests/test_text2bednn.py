@@ -6,7 +6,7 @@ from gitk.text2bednn.utils import (
     region_info_list_to_vectors,
     prepare_vectors_for_database,
 )
-from gitk.text2bednn.text2bednn import Embed2EmbedNN, TextToBedNNSearchInterface
+from gitk.text2bednn.text2bednn import Vec2VecFNN, Text2BEDSearchInterface
 from gitk.region2vec.main import Region2VecExModel
 from gitk.search.backends import QdrantBackend, HNSWBackend
 from sentence_transformers import SentenceTransformer
@@ -66,7 +66,7 @@ def st_model(st_hf_repo):
 @pytest.fixture
 def local_model_path():
     """
-    :return: path to save the Embed2EmbedNN model, will be deleted after testing
+    :return: path to save the Vec2VecFNN model, will be deleted after testing
     """
     # return "./testing.keras"
     return "./testing_local_model.h5"
@@ -144,19 +144,20 @@ def test_RegionsetInfo_list(
     assert train_X[0].shape == (384,)
     assert train_Y[0].shape == (100,)
 
-    # fit the Embed2EmbedNN model
-    e2enn = Embed2EmbedNN()
+    # fit the Vec2VecFNN model
+    e2enn = Vec2VecFNN()
     e2enn.train(train_X, train_Y, validate_X, validate_Y, epochs=50)
 
     # save the model to local file
     e2enn.save(local_model_path, save_format="h5")
 
     # load pretrained file
-    new_e2nn = Embed2EmbedNN()
+    new_e2nn = Vec2VecFNN()
     new_e2nn.load_local_pretrained(local_model_path)
 
     # testing if the loaded model is same as previously saved model
     map_vec_1 = e2enn.embedding_to_embedding(testing_input)
+    map_vec_2 = new_e2nn.embedding_to_embedding(testing_input)
     map_vec_2 = new_e2nn.embedding_to_embedding(testing_input)
     assert np.array_equal(map_vec_1, map_vec_2)
 
@@ -166,7 +167,7 @@ def test_RegionsetInfo_list(
     qd_search_backend.load(embeddings, labels)
 
     # construct a search interface
-    db_interface = TextToBedNNSearchInterface(st_model, e2enn, qd_search_backend)
+    db_interface = Text2BEDSearchInterface(st_model, e2enn, qd_search_backend)
     db_search_result = db_interface.nl_vec_search(query_term, k)
     for i in range(len(db_search_result)):
         assert isinstance(db_search_result[i], dict)
@@ -174,7 +175,7 @@ def test_RegionsetInfo_list(
     # construct a search interface with file backend
     hnsw_backend = HNSWBackend(local_index_path=local_idx_path)
     hnsw_backend.load(embeddings, labels)
-    file_interface = TextToBedNNSearchInterface(st_model, e2enn, hnsw_backend)
+    file_interface = Text2BEDSearchInterface(st_model, e2enn, hnsw_backend)
 
     file_search_result = file_interface.nl_vec_search(query_term, k)
     for i in range(len(file_search_result)):
