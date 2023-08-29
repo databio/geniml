@@ -29,7 +29,7 @@ st_model = SentenceTransformer("sentence-transformers/all-MiniLM-L12-v2")
 
 # folder of bed file
 bed_folder = "path/to/folders/of/bed/files"
-#path for metadata file
+# path for metadata file
 metadata_path = "path/to/file/of/metadata"
 
 # list of RegionSetInfo
