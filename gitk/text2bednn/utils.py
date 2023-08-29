@@ -131,16 +131,17 @@ def update_bed_metadata_list(
     old_list: List[RegionSetInfo], r2v_model: Region2VecExModel
 ) -> List[RegionSetInfo]:
     """
-    With an old list of RegionSetInfo, re-embed the region set with a new region2vec model,
+    With an old list of RegionSetInfo, re-embed the region set with a new Region2Vec model,
     then return the list of new RegionSetInfo with re-embedded region set vectors.
     :param old_list:
     :param r2v_model:
     :return:
     """
     new_list = []
-    for dc in old_list:
-        new_dc = replace(dc, region_set_embedding=r2v_model.encode(dc.region_set))
-        new_list.append(new_dc)
+    for region_set_info in old_list:
+        # update reach RegionSetInfo with new embedding
+        new_ri = replace(region_set_info, region_set_embedding=r2v_model.encode(region_set_info.region_set))
+        new_list.append(new_ri)
 
     return new_list
 
