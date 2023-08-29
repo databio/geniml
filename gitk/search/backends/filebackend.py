@@ -159,3 +159,6 @@ class HNSWBackend(EmSearchBackend):
 
     def __str__(self):
         return "HNSWBackend with {} items".format(len(self))
+
+    def __repr__(self):
+        return "HNSWBackend with {} items".format(len(self))
