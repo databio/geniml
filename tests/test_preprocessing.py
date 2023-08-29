@@ -1,9 +1,9 @@
 import pytest
 
-from gitk.io import Region
-from gitk.preprocessing import RegionIDifier
-from gitk.preprocessing.utils import wordify_region
-from gitk.preprocessing.schemas import EncodedRegions
+from geniml.io import Region
+from geniml.preprocessing import RegionIDifier
+from geniml.preprocessing.utils import wordify_region
+from geniml.preprocessing.schemas import EncodedRegions
 
 
 @pytest.fixture

@@ -4,11 +4,11 @@ from typing import List
 import pytest
 import numpy as np
 
-from gitk.io.io import RegionSet, Region
-from gitk.region2vec.main import Region2Vec, Region2VecExModel
-from gitk.region2vec.utils import wordify_region, wordify_regions
-from gitk.region2vec.pooling import mean_pooling, max_pooling
-from gitk.tokenization.main import InMemTokenizer
+from geniml.io.io import RegionSet, Region
+from geniml.region2vec.main import Region2Vec, Region2VecExModel
+from geniml.region2vec.utils import wordify_region, wordify_regions
+from geniml.region2vec.pooling import mean_pooling, max_pooling
+from geniml.tokenization.main import InMemTokenizer
 
 
 @pytest.fixture

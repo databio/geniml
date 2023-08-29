@@ -1,4 +1,4 @@
-from gitk.models import ExModel
+from geniml.models import ExModel
 from ..search import EmSearchBackend
 
 
