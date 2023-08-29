@@ -1,6 +1,6 @@
 # %%
 import scanpy as sc
-from gitk.models import PretrainedScembedModel
+from geniml.models import PretrainedScembedModel
 
 # %%
 # Load the pretrained model
