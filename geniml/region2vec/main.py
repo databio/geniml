@@ -3,9 +3,9 @@ import os
 
 import numpy as np
 
-from gitk.region2vec import utils
-from gitk.region2vec.region2vec_train import main as region2_train
-from gitk.region2vec.region_shuffling import main as sent_gen
+from geniml.region2vec import utils
+from geniml.region2vec.region2vec_train import main as region2_train
+from geniml.region2vec.region_shuffling import main as sent_gen
 
 from typing import List
 
