@@ -428,6 +428,9 @@ class Region2VecExModel(ExModel):
 
     @property
     def wv(self):
+        """
+        Return the word vectors. Similar to the `wv` property of a gensim Word2Vec model.
+        """
         return self._model.wv
 
     @property
@@ -480,12 +483,14 @@ class Region2VecExModel(ExModel):
         try:
             hf_hub_download(model_repo, wv_file_name, **kwargs)
         except EntryNotFoundError:
-            print("Could not find wv file. This is ok - skipping. Likely means model is small.")
+            _LOGGER.error(
+                "Could not find wv file. This is ok - skipping. Likely means model is small."
+            )
 
         try:
             hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
         except EntryNotFoundError:
-            print(
+            _LOGGER.error(
                 "Could not find syn1neg file. This is ok - skipping. Likely means model is small."
             )
 

@@ -27,6 +27,15 @@ class Region(Interval):
 
 class RegionSet(object):
     def __init__(self, regions: Union[str, List[Region]], backed: bool = False):
+        """
+        Instantiate a RegionSet object. This can be backed or not backed. It represents a set of genomic regions.
+
+        If you specify `backed` as True, then the bed file will not be loaded into memory. This is useful for large
+        bed files. You can still iterate over the regions, but you cannot index into them.
+
+        :param regions: path to bed file or list of Region objects
+        :param backed: whether to load the bed file into memory or not
+        """
         # load from file
         if isinstance(regions, str):
             self.backed = backed
@@ -95,6 +104,11 @@ class RegionSet(object):
         else:
             for region in self.regions:
                 yield region
+
+
+class BedSet(object):
+    def __init__(self, sets: Union[List[RegionSet], List[str]]):
+        pass
 
 
 class SNP(object):

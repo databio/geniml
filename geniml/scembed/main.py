@@ -27,7 +27,7 @@ config.THREADING_LAYER = "threadsafe"  # type: ignore
 
 class ScEmbed(ExModel):
     """
-    ScEmbed model for single-cell ATAC-seq data. It is a single-cell
+    ScEmbed extended model for single-cell ATAC-seq data. It is a single-cell
     extension of Region2Vec.
     """
 
