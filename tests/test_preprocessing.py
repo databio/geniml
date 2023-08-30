@@ -315,7 +315,7 @@ def test_encode(
     assert tokens[1].attention_mask == [1, 1, 1, 1, 1, 1, 1]
 
 
-def test_masked_langauge_modeling(
+def test_masked_language_modeling(
     transformer_vocab_file: str,
 ):
     idifier = RegionIDifier(transformer_vocab_file)

@@ -11,7 +11,7 @@ class RegionIDifier:
     """
     Class for converting a region to an integer id. This class
     is intended to be used as a preprocessing step for
-    the ATAC Transformer model.
+    the ATAC Transformer model, which requires integer words.
     """
 
     def __init__(
