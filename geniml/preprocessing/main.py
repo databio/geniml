@@ -7,7 +7,7 @@ from .schemas import EncodedRegions, TokenMask
 from .utils import wordify_region, unwordify_region
 
 
-class RegionIDifier:
+class RegionIntegerIDGenerator:
     """
     Class for converting a region to an integer id. This class
     is intended to be used as a preprocessing step for

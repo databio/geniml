@@ -14,6 +14,10 @@ class Region(Interval):
         return super(Region, cls).__new__(cls, start, stop, data)
 
     def __init__(self, chr: str, start: int, stop: int, data=None):
+        """
+        Instantiate a Region object. This is a wrapper around the Interval class from the intervaltree package.
+        This makes it easier to work with regions.
+        """
         # no need to call super().__init__() because namedtuple doesn't have __init__()
         self.chr = chr
 

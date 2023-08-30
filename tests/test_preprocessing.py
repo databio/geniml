@@ -1,7 +1,7 @@
 import pytest
 
 from geniml.io import Region
-from geniml.preprocessing import RegionIDifier
+from geniml.preprocessing import RegionIntegerIDGenerator
 from geniml.preprocessing.utils import wordify_region
 from geniml.preprocessing.schemas import EncodedRegions
 
@@ -16,8 +16,8 @@ def transformer_vocab_file():
     return "tests/data/transformer_vocab.txt"
 
 
-def test_load_regionidifier(transformer_vocab_file: str):
-    r = RegionIDifier(
+def test_load_RegionIntegerIDGenerator(transformer_vocab_file: str):
+    r = RegionIntegerIDGenerator(
         transformer_vocab_file,
     )
 
@@ -36,7 +36,7 @@ def test_load_regionidifier(transformer_vocab_file: str):
 def test_generate_region_ids(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     # these are the regions in the universe bed file, garuanteed to be in the vocab
     regions = [
@@ -57,7 +57,7 @@ def test_generate_region_ids(
 def test_convert_ids_to_tokens(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     # these are the regions in the universe bed file, garuanteed to be in the vocab
     ids = [5, 6, 7]
@@ -73,7 +73,7 @@ def test_convert_ids_to_tokens(
 def test_convert_ids_to_regions(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     # these are the regions in the universe bed file, garuanteed to be in the vocab
     ids = [5, 6, 7]
@@ -89,7 +89,7 @@ def test_convert_ids_to_regions(
 def test_attention_mask_generation(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     # these are the regions in the universe bed file, garuanteed to be in the vocab
     ids = [5, 6, 7]  # see above tests for what these ids correspond to
@@ -118,7 +118,7 @@ def test_attention_mask_generation(
 def test_unknown_tokens_and_ids(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     this_token_doesnt_exist = "chr1_1_2"
     id = idifier.word_to_id(this_token_doesnt_exist)
@@ -133,7 +133,7 @@ def test_unknown_tokens_and_ids(
 def test_padding(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     ids = [5, 6, 0]
 
@@ -164,7 +164,7 @@ def test_padding(
 def test_truncation(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     ids = [5, 6, 0, 5, 6, 5, 6, 5, 6, 5, 6]
 
@@ -197,7 +197,7 @@ def test_truncation(
 def test_encode(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     # test basic functionality
     # these are the regions in the universe bed file, garuanteed to be in the vocab
@@ -279,7 +279,7 @@ def test_encode(
     assert tokens[1].attention_mask == [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
     # now test the truncation functionality
-    idifier = RegionIDifier(transformer_vocab_file, max_length=6)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file, max_length=6)
 
     tokens = idifier([regions1, regions2])
 
@@ -318,7 +318,7 @@ def test_encode(
 def test_masked_language_modeling(
     transformer_vocab_file: str,
 ):
-    idifier = RegionIDifier(transformer_vocab_file)
+    idifier = RegionIntegerIDGenerator(transformer_vocab_file)
 
     regions = [
         Region("chr1", 63403166, 63403785),
