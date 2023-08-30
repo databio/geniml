@@ -116,7 +116,7 @@ def local_idx_path():
     return "./testing_idx.bin"
 
 
-def test_RegionsetInfo_list(
+def test_data_nn_search_interface(
     bed_folder,
     metadata_path,
     r2v_model,
@@ -133,8 +133,8 @@ def test_RegionsetInfo_list(
     assert len(ri_list) == len(os.listdir(bed_folder))
 
     # split the RegionSetInfo list to training, validating, and testing set
-    train_list, test_list = train_test_split(ri_list, test_size=0.15)
-    train_list, validate_list = train_test_split(ri_list, test_size=0.1)
+    # train_list, test_list = train_test_split(ri_list, test_size=0.15)
+    train_list, validate_list = train_test_split(ri_list, test_size=0.2)
     train_X, train_Y = region_info_list_to_vectors(train_list)
     validate_X, validate_Y = region_info_list_to_vectors(validate_list)
     assert isinstance(train_X, np.ndarray)
