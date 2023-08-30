@@ -1,5 +1,4 @@
 import os
-import random
 from dataclasses import dataclass, replace
 from typing import Dict, List, Tuple
 
@@ -92,41 +91,6 @@ def build_regionset_info_list(
     return output_list
 
 
-def data_split(
-    full_list: List,
-    train_p: float = DEFAULT_TRAIN_P,
-    valid_p: float = DEFAULT_VALIDATE_P,
-    seed_index: int = 10,
-) -> Tuple[List, List, List]:
-    """
-    With a given folder of data, this function split the files
-    into training set, validating set, and testing set.
-
-    :param full_list: list of data
-    :param train_p: proportion of files for training set
-    :param valid_p: proportion of files for validating set
-    and files will be copied to them.
-    :param seed_index: index for random seed
-    :return: lists of file names for training set, validating set, and training set.
-    """
-
-    # split training data and testing data
-    train_size = int(len(full_list) * train_p)
-    validate_size = int(len(full_list) * valid_p)
-    random.seed(seed_index)
-    train_list = random.sample(full_list, train_size)
-    validate_list = random.sample(
-        [content for content in full_list if content not in train_list], validate_size
-    )
-    test_list = [
-        content
-        for content in full_list
-        if (content not in train_list and content not in validate_list)
-    ]
-
-    return train_list, validate_list, test_list
-
-
 def update_bed_metadata_list(
     old_list: List[RegionSetInfo], r2v_model: Region2VecExModel
 ) -> List[RegionSetInfo]:
@@ -140,7 +104,9 @@ def update_bed_metadata_list(
     new_list = []
     for region_set_info in old_list:
         # update reach RegionSetInfo with new embedding
-        new_ri = replace(region_set_info, region_set_embedding=r2v_model.encode(region_set_info.region_set))
+        new_ri = replace(
+            region_set_info, region_set_embedding=r2v_model.encode(region_set_info.region_set)
+        )
         new_list.append(new_ri)
 
     return new_list
@@ -179,7 +145,9 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
     return np.array(X), np.array(Y)
 
 
-def prepare_vectors_for_database(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, List[Dict[str, str]]]:
+def prepare_vectors_for_database(
+    ri_list: List[RegionSetInfo],
+) -> Tuple[np.ndarray, List[Dict[str, str]]]:
     """
     With a given list of RegionSetInfo, returns one np.ndarray representing bed files embeddings,
     and one list of dictionary that stores names of bed files and metadata,

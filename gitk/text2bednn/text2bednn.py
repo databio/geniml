@@ -67,8 +67,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         self,
         training_X: np.ndarray,
         training_Y: np.ndarray,
-        validating_X: np.ndarray,
-        validating_Y: np.ndarray,
+        validating_data: Union[Tuple[np.ndarray, np.ndarray], None] = None,
         opt_name: str = DEFAULT_OPTIMIZER_NAME,
         loss_func: str = DEFAULT_LOSS_NAME,
         num_epochs: int = DEFAULT_NUM_EPOCHS,
@@ -80,8 +79,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
 
         :param training_X: embedding vectors of metadata, np.ndarray with shape of (n, <dim>)
         :param training_Y: embedding vectors of region set, np.ndarray with shape of (n, <dim>)
-        :param validating_X: validating vectors of metadata
-        :param validating_Y: validating vectors of region set
+        :param validating_data: validating data, which contains validating X and validating Y
         :param opt_name: name of optimizer
         :param loss_func: name of loss function
         :param num_epochs: number of training epoches
@@ -106,10 +104,13 @@ class Vec2VecFNN(tf.keras.models.Sequential):
 
         # compile the model
         self.compile(optimizer=opt_name, loss=loss_func)
-        # early stoppage to prevent over-fitting
-        early_stoppage = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=int(num_epochs * 0.25)
-        )
+        # if there is validating data, set early stoppage to prevent over-fitting
+        callbacks = None
+        if validating_data:
+            early_stoppage = tf.keras.callbacks.EarlyStopping(
+                monitor="val_loss", patience=int(num_epochs * 0.25)
+            )
+            callbacks = [early_stoppage]
 
         # record training history
         train_hist = self.fit(
@@ -117,8 +118,8 @@ class Vec2VecFNN(tf.keras.models.Sequential):
             training_Y,
             epochs=num_epochs,
             batch_size=batch_size,
-            validation_data=(validating_X, validating_Y),
-            callbacks=[early_stoppage],
+            validation_data=validating_data,
+            callbacks=callbacks,
         )
         self.most_recent_train = train_hist
 

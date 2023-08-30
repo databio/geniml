@@ -1,16 +1,15 @@
-import pytest
 import os
-from gitk.text2bednn.utils import (
-    build_regionset_info_list,
-    data_split,
-    region_info_list_to_vectors,
-    prepare_vectors_for_database,
-)
-from gitk.text2bednn.text2bednn import Vec2VecFNN, Text2BEDSearchInterface
-from gitk.region2vec.main import Region2VecExModel
-from gitk.search.backends import QdrantBackend, HNSWBackend
-from sentence_transformers import SentenceTransformer
+
 import numpy as np
+import pytest
+from gitk.region2vec.main import Region2VecExModel
+from gitk.search.backends import HNSWBackend, QdrantBackend
+from gitk.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
+from gitk.text2bednn.utils import (build_regionset_info_list,  # data_split,
+                                   prepare_vectors_for_database,
+                                   region_info_list_to_vectors)
+from sentence_transformers import SentenceTransformer
+from sklearn.model_selection import train_test_split
 
 
 @pytest.fixture
@@ -134,7 +133,8 @@ def test_RegionsetInfo_list(
     assert len(ri_list) == len(os.listdir(bed_folder))
 
     # split the RegionSetInfo list to training, validating, and testing set
-    train_list, validate_list, test_list = data_split(ri_list)
+    train_list, test_list = train_test_split(ri_list, test_size=0.15)
+    train_list, validate_list = train_test_split(ri_list, test_size=0.1)
     train_X, train_Y = region_info_list_to_vectors(train_list)
     validate_X, validate_Y = region_info_list_to_vectors(validate_list)
     assert isinstance(train_X, np.ndarray)
@@ -145,21 +145,28 @@ def test_RegionsetInfo_list(
     assert train_Y[0].shape == (100,)
 
     # fit the Vec2VecFNN model
-    e2enn = Vec2VecFNN()
-    e2enn.train(train_X, train_Y, validate_X, validate_Y, epochs=50)
+    v2vnn = Vec2VecFNN()
+    v2vnn.train(train_X, train_Y, validating_data=(validate_X, validate_Y), num_epochs=50)
 
     # save the model to local file
-    e2enn.save(local_model_path, save_format="h5")
+    v2vnn.save(local_model_path, save_format="h5")
 
     # load pretrained file
     new_e2nn = Vec2VecFNN()
     new_e2nn.load_local_pretrained(local_model_path)
 
     # testing if the loaded model is same as previously saved model
-    map_vec_1 = e2enn.embedding_to_embedding(testing_input)
+    map_vec_1 = v2vnn.embedding_to_embedding(testing_input)
     map_vec_2 = new_e2nn.embedding_to_embedding(testing_input)
     map_vec_2 = new_e2nn.embedding_to_embedding(testing_input)
     assert np.array_equal(map_vec_1, map_vec_2)
+    # remove locally saved model
+    os.remove(local_model_path)
+
+    # train the model without validate data
+    X, Y = region_info_list_to_vectors(ri_list)
+    v2vnn_no_val = Vec2VecFNN()
+    v2vnn_no_val.train(X, Y, num_epochs=50)
 
     # loading data to search backend
     embeddings, labels = prepare_vectors_for_database(ri_list)
@@ -167,7 +174,7 @@ def test_RegionsetInfo_list(
     qd_search_backend.load(embeddings, labels)
 
     # construct a search interface
-    db_interface = Text2BEDSearchInterface(st_model, e2enn, qd_search_backend)
+    db_interface = Text2BEDSearchInterface(st_model, v2vnn, qd_search_backend)
     db_search_result = db_interface.nl_vec_search(query_term, k)
     for i in range(len(db_search_result)):
         assert isinstance(db_search_result[i], dict)
@@ -175,12 +182,11 @@ def test_RegionsetInfo_list(
     # construct a search interface with file backend
     hnsw_backend = HNSWBackend(local_index_path=local_idx_path)
     hnsw_backend.load(embeddings, labels)
-    file_interface = Text2BEDSearchInterface(st_model, e2enn, hnsw_backend)
+    file_interface = Text2BEDSearchInterface(st_model, v2vnn, hnsw_backend)
 
     file_search_result = file_interface.nl_vec_search(query_term, k)
     for i in range(len(file_search_result)):
         assert isinstance(file_search_result[i], dict)
 
-    # remove files and paths for testing
+    # remove local hnsw index
     os.remove(local_idx_path)
-    os.remove(local_model_path)
