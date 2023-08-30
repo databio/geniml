@@ -24,7 +24,7 @@ embedding = model.encode(region)
 embeddings = model.encode(regions)
 ```
 
-We can also encode an entire bed file:
+We can also encode an entire bed file, which will return region embeddings for each region in the file:
 
 ```python
 bed = "/path/to/bed/file.bed"
