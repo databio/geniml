@@ -1,12 +1,12 @@
+import gzip
 import os
 from typing import List, Union
 
-import gzip
+import numpy as np
 from intervaltree import Interval
 
-from .utils import extract_maf_col_positions, is_gzipped
 from .const import *
-from ..utils import *
+from .utils import extract_maf_col_positions, is_gzipped
 
 
 class Region(Interval):

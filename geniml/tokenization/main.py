@@ -139,18 +139,17 @@ class InMemTokenizer(Tokenizer):
                 continue
 
             overlaps = self._trees[region.chr][region.start : region.end]
-            overlaps = list(overlaps)
-            if len(overlaps) == 0:
+            if not overlaps:
                 overlapping_regions.append(None)
             else:
+                overlaps = list(overlaps)
                 if return_all:
-                    overlapping_regions.append(
+                    overlapping_regions.extend(
                         [Region(region.chr, olap.begin, olap.end) for olap in overlaps]
                     )
                 else:
-                    overlapping_regions.append(
-                        Region(region.chr, overlaps[0].begin, overlaps[0].end)
-                    )
+                    olap = overlaps[0]
+                    overlapping_regions.append(Region(region.chr, olap.begin, olap.end))
 
         return overlapping_regions
 
@@ -252,7 +251,7 @@ class InMemTokenizer(Tokenizer):
         return conversion_map
 
     def tokenize(
-        self, regions: Union[str, List[Region], RegionSet, sc.AnnData]
+        self, regions: Union[str, List[Region], RegionSet, sc.AnnData], return_all: bool = False
     ) -> Union[List[Region], List[List[Region]], List[RegionSet]]:
         """
         Tokenize a RegionSet.
@@ -261,6 +260,8 @@ class InMemTokenizer(Tokenizer):
         simple overlap detection.
 
         :param str | List[Region] | sc.AnnData regions: The list of regions to tokenize
+        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to False. (in the future, we can change this to return the top k or best)
+                                Note that returning all might return more than one region per region in the input. Thus, you lose the 1:1 mapping.
         """
         if isinstance(regions, sc.AnnData):
             # step 1 is to convert the AnnData object to the universe
@@ -269,7 +270,7 @@ class InMemTokenizer(Tokenizer):
             # step 2 is to convert the AnnData object to a list of lists of regions
             return anndata_to_regionsets(regions)
         else:
-            return self.find_overlaps(regions)
+            return self.find_overlaps(regions, return_all=return_all)
 
     # not sure what this looks like, multiple RegionSets?
     def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:

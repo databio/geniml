@@ -6,7 +6,7 @@ import numpy as np
 
 from geniml.io.io import RegionSet, Region
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
-from geniml.region2vec.utils import wordify_region, wordify_regions
+from geniml.utils import wordify_region, wordify_regions
 from geniml.region2vec.pooling import mean_pooling, max_pooling
 from geniml.tokenization.main import InMemTokenizer
 

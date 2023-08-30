@@ -4,7 +4,7 @@ from typing import List, Union
 from ..io import Region
 from .const import DEFAULT_MAX_LENGTH
 from .schemas import EncodedRegions, TokenMask
-from .utils import wordify_region, unwordify_region
+from ..utils import wordify_region, unwordify_region
 
 
 class RegionIntegerIDGenerator:

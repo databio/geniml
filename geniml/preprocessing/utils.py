@@ -2,20 +2,7 @@ from tqdm import tqdm
 
 from ..io import Region
 
-
-def wordify_region(region: Region) -> str:
-    """
-    Convert a region to a string.
-    """
-    return f"{region.chr}_{region.start}_{region.end}"
-
-
-def unwordify_region(word: str) -> Region:
-    """
-    Convert a string to a region.
-    """
-    chr, start, end = word.split("_")
-    return Region(chr, int(start), int(end))
+from ..utils import wordify_region
 
 
 def make_vocab_from_bed(bed_file: str, vocab_file: str, n_unused: int = 10000):

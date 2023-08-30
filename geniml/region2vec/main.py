@@ -15,6 +15,7 @@ from ..io import Region, RegionSet
 from ..models.main import ExModel
 from ..tokenization.main import InMemTokenizer
 from . import utils
+from ..utils import wordify_region, wordify_regions
 from .const import *
 from .region2vec_train import main as region2_train
 from .region_shuffling import main as sent_gen
@@ -289,7 +290,7 @@ class Region2Vec(Word2Vec):
         )
 
         # "wordify" the regions
-        region_sets = [utils.wordify_regions(rs) for rs in data]
+        region_sets = [wordify_regions(rs) for rs in data]
 
         # train the model using these shuffled documents
         _LOGGER.info("Training starting.")
@@ -367,7 +368,7 @@ class Region2Vec(Word2Vec):
 
         # If it's a single region
         if isinstance(regions, Region):
-            region_word = utils.wordify_region(regions)
+            region_word = wordify_region(regions)
             return get_vector(region_word)
 
         # If it's a RegionSet or list, or a str path to a bed file (assuming you have a function `load_from_bed`)
@@ -378,12 +379,12 @@ class Region2Vec(Word2Vec):
 
             # For RegionSet or List
             if isinstance(regions, RegionSet):
-                region_words = utils.wordify_regions(regions)
+                region_words = wordify_regions(regions)
             else:
                 region_words = []
                 for region in regions:
                     if region is not None:
-                        region_words.append(utils.wordify_region(region))
+                        region_words.append(wordify_region(region))
                     else:
                         region_words.append(None)
 
