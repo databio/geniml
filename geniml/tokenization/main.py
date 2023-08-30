@@ -241,6 +241,7 @@ class InMemTokenizer(Tokenizer):
         for region in tqdm(a, total=len(a), desc="Generating conversion map"):
             overlaps = self.find_overlaps(region)
             region_str = f"{region.chr}_{region.start}_{region.end}"
+            overlaps = [olap for olap in overlaps if olap is not None]
             if len(overlaps) > 0:
                 olap = overlaps[0]  # take the first overlap for now, we can change this later
                 olap_str = f"{olap.chr}_{olap.start}_{olap.end}"
