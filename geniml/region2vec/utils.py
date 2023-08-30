@@ -265,29 +265,6 @@ def ensure_dir(folder: str, default: str = "y") -> None:
     os.makedirs(folder, exist_ok=True)
 
 
-def wordify_region(region: Region) -> str:
-    """
-    Convert a region to a word of the form "chr_start_end"
-
-    :param Region region: A region
-
-    :return: A word
-    """
-    return f"{region.chr}_{region.start}_{region.end}"
-
-
-def wordify_regions(regions: Union[RegionSet, List[Region]]) -> List[str]:
-    """
-    Convert a list of regions to a list of words. Each region is converted
-    to a word of the form "chr_start_end"
-
-    :param RegionSet | list[Region] regions: A list of regions
-
-    :return: A list of words
-    """
-    return [f"{r.chr}_{r.start}_{r.end}" for r in regions]
-
-
 class ScheduleType(Enum):
     """Learning rate schedule types"""
 
