@@ -155,8 +155,6 @@ class ScEmbed(ExModel):
         # from the regions
         if self.tokenizer is None:
             self.tokenizer = InMemTokenizer(RegionSet(regions))
-        else:
-            self.tokenizer.tokenize(RegionSet(data))
 
         # convert the data to a list of documents
         region_sets = self.tokenizer.tokenize(data)
