@@ -2,7 +2,7 @@
 
 ## Repository organization
 
-This repo is divided into modules. Each module is in a subfolder. To add functionality to gitk, you could add it to an existing module. If there's no existing module that fits, you could add your own module.
+This repo is divided into modules. Each module is in a subfolder. To add functionality to geniml, you could add it to an existing module. If there's no existing module that fits, you could add your own module.
 
 ## Adding a new module
 
@@ -13,15 +13,15 @@ Each module should be written in a way that it provides utility as a Python libr
 - `README.md` - describes how to use the code
 - `<module>.py`, and other `.py` files - functions that provide utility for this module.
 
-*All* the functions should be written to be useful via import, calling with `gitk.<module>.<function>`. For example:
+*All* the functions should be written to be useful via import, calling with `geniml.<module>.<function>`. For example:
 
 ```
-import gitk
+import geniml
 
-gitk.hmm.function()
+geniml.hmm.function()
 ```
 
-### Adding your module to gitk
+### Adding your module to geniml
 
 1. Put your module in a subfolder
 2. Make sure to include a `__init__.py` so it's importable.
@@ -29,5 +29,5 @@ gitk.hmm.function()
 
 ### Shared code
 
-Any variables, functions, or other code that is shared across modules should be placed in the parent module, which is held in the [gitk](gitk) folder.
+Any variables, functions, or other code that is shared across modules should be placed in the parent module, which is held in the [geniml](geniml) folder.
 

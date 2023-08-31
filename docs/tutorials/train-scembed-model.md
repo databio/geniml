@@ -6,16 +6,16 @@ For this example we are using the [10x Genomics PBMC 10k dataset](https://www.10
 
 
 ## Installation
-Simply install the parent package `gitk` from PyPi:
+Simply install the parent package `geniml` from PyPi:
 
 ```bash
-pip install gitk
+pip install geniml
 ```
 
-Then import `scEmbed` from `gitk`:
+Then import `scEmbed` from `geniml`:
 
 ```python
-from gitk.scembed import SCEmbed
+from geniml.scembed import SCEmbed
 ```
 
 ## Usage
@@ -23,7 +23,7 @@ from gitk.scembed import SCEmbed
 
 ```python
 import scanpy as sc
-from gitk.scembed import SCEmbed
+from geniml.scembed import SCEmbed
 
 adata = sc.read_h5ad("path/to/adata.h5ad")
 
@@ -72,7 +72,7 @@ To train an `scembed` model, just create an instance of the `SCEmbed` model clas
 import logging
 
 import scanpy as sc
-from gitk.scembed import SCEmbed
+from geniml.scembed import SCEmbed
 
 # if you want to see the training progress
 logging.basicConfig(level=logging.INFO)
@@ -90,7 +90,7 @@ With the model now trained, we can get embeddings of our cells. This occurs in t
 
 **Tokenize:**
 ```python
-from gitk.models.tokenizers import HardTokenizer
+from geniml.models.tokenizers import HardTokenizer
 
 tokenizer = HardTokenizer("peaks.bed") # consensus peak set
 

@@ -3,7 +3,7 @@ import sys
 
 from setuptools import setup
 
-PACKAGE_NAME = "gitk"
+PACKAGE_NAME = "geniml"
 
 # Ordinary dependencies
 DEPENDENCIES = []
@@ -54,7 +54,7 @@ setup(
     license="BSD2",
     entry_points={
         "console_scripts": [
-            "gitk = gitk.cli:main",
+            "geniml = geniml.cli:main",
         ],
     },
     keywords="bioinformatics, sequencing, ngs",

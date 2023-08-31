@@ -19,7 +19,7 @@ Encoding cells is as easy as:
 ```python
 import scanpy as sc
 
-from gitk.scembed import ScEmbed
+from geniml.scembed import ScEmbed
 
 adata = sc.read_h5ad("path/to/adata.h5ad")
 model = ScEmbed("databio/luecken2021")
