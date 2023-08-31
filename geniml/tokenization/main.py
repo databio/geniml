@@ -10,7 +10,7 @@ import scanpy as sc
 from intervaltree import IntervalTree
 from tqdm import tqdm
 
-from gitk.tokenization.split_file import split_file
+from geniml.tokenization.split_file import split_file
 
 from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization

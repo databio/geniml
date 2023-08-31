@@ -151,7 +151,7 @@ def prepare_vectors_for_database(
     """
     With a given list of RegionSetInfo, returns one np.ndarray representing bed files embeddings,
     and one list of dictionary that stores names of bed files and metadata,
-    used as data preprocessing for upload to search backend (gitk.search)
+    used as data preprocessing for upload to search backend (geniml.search)
 
     :param ri_list: RegionSetInfo list
     :return: one np.ndarray with shape (n, <Region2vec embedding dimension>),

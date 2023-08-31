@@ -3,7 +3,7 @@ from typing import Union
 import matplotlib as plt
 import numpy as np
 import tensorflow as tf
-from gitk.search.backends import HNSWBackend, QdrantBackend
+from geniml.search.backends import HNSWBackend, QdrantBackend
 
 from .const import *
 from .utils import *

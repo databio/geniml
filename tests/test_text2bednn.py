@@ -2,12 +2,12 @@ import os
 
 import numpy as np
 import pytest
-from gitk.region2vec.main import Region2VecExModel
-from gitk.search.backends import HNSWBackend, QdrantBackend
-from gitk.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
-from gitk.text2bednn.utils import (build_regionset_info_list,  # data_split,
-                                   prepare_vectors_for_database,
-                                   region_info_list_to_vectors)
+from geniml.region2vec.main import Region2VecExModel
+from geniml.search.backends import HNSWBackend, QdrantBackend
+from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
+from geniml.text2bednn.utils import (build_regionset_info_list,  # data_split,
+                                     prepare_vectors_for_database,
+                                     region_info_list_to_vectors)
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
 
@@ -33,7 +33,7 @@ def r2v_hf_repo():
     """
     :return: the huggingface repo of Region2VecExModel
     """
-    return "databio/r2v-ChIP-atlas"
+    return "databio/r2v-ChIP-atlas-hg38"
 
 
 @pytest.fixture

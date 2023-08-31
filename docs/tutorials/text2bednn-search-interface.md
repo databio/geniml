@@ -17,9 +17,10 @@ sorted by a terminal command:
 sort -k1 1 metadata_file >  new_metadata_file
 ```
 Example code to build a list of RegionSetInfo
+
 ```python
-from gitk.text2bednn.utils import build_regionset_info_list
-from gitk.region2vec.main import Region2VecExModel
+from geniml.text2bednn.utils import build_regionset_info_list
+from geniml.region2vec.main import Region2VecExModel
 from sentence_transformers import SentenceTransformer
 
 # load Region2Vec from hugging face
@@ -39,9 +40,10 @@ ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, st_mod
 ## Train the Embed2EmbedNN
 The list of RegionSetInfo can be split into 3 lists, which represent the training set, validating set, and testing set. The embedding
 vectors of metadata will be X, and the embedding vectors of the region set will be Y.
+
 ```python
-from gitk.text2bednn.utils import data_split, region_info_list_to_vectors
-from gitk.text2bednn.text2bednn import Vec2VecFNN
+from geniml.text2bednn.utils import data_split, region_info_list_to_vectors
+from geniml.text2bednn.text2bednn import Vec2VecFNN
 
 # split the list of RegionInfoSet into different data set
 train_list, validate_list, test_list = data_split(ri_list)
@@ -59,8 +61,9 @@ e2enn.train(train_X, train_Y, validate_X, validate_Y)
 [`qdrant-client`](https://github.com/qdrant/qdrant-client) and [`hnswlib`](https://github.com/nmslib/hnswlib) can store vectors and perform k-nearest neighbors (KNN) search with a given query vector, so we
 created one database backend (`QdrantBackend`) and one local file backend (`HNSWBackend`) that can store the embedding
 vectors for KNN search. `HNSWBackend` will create a .bin file with given path, which saves the searching index.
+
 ```python
-from gitk.text2bednn.utils import prepare_vectors_for_database
+from geniml.text2bednn.utils import prepare_vectors_for_database
 
 # loading data to search backend
 embeddings, labels = prepare_vectors_for_database(ri_list)
@@ -75,7 +78,7 @@ The `TextToBedNNSearchInterface` includes model that encode natural language to 
 model that encode natural language embedding vectors to BED file embedding vectors (`Embed2EmbedNN`), and a `search` backend.
 
 ```python
-from gitk.text2bednn.text2bednn import Text2BEDSearchInterface
+from geniml.text2bednn.text2bednn import Text2BEDSearchInterface
 
 # initiate the search interface
 file_interface = Text2BEDSearchInterface(st_model, e2enn, hnsw_backend)
