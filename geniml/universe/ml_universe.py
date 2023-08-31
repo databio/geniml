@@ -9,7 +9,7 @@ from numba import njit
 
 from ..utils import natural_chr_sort, timer_func, read_chromosome_from_bw
 from .utils import predictions_to_bed, find_full
-from gitk.likelihood.build_model import ModelLH
+from geniml.likelihood.build_model import ModelLH
 
 
 @njit

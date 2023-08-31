@@ -4,7 +4,7 @@
 For hard tokenization, run
 
 ```python
-from gitk.tokenization import hard_tokenization
+from geniml.tokenization import hard_tokenization
 
 src_folder = '/path/to/raw/bed/files/'
 dst_folder = '/path/to/tokenized_files/'
@@ -18,7 +18,7 @@ By default, the code assumes the binary `bedtools` exists and can be called via 
 
 Command line usage
 ```bash
-gitk tokenize --data-folder /folder/with/raw/BED/files --token-folder ./tokens --universe /universe/file --bedtools-path bedtools
+geniml tokenize --data-folder /folder/with/raw/BED/files --token-folder ./tokens --universe /universe/file --bedtools-path bedtools
 ```
 
 For more details, type `gitk tokenize --help`.

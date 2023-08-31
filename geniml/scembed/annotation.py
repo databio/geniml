@@ -18,7 +18,7 @@ class AnnotationServer(QdrantClient):
         """
         A class for querying a Qdrant server for cell type predictions. This class requires that you have
         a Qdrant server running with a collection of cell type embeddings. You can create this collection using
-        the `gitk/examples/scembed/load_qdrant.ipynb` script.
+        the `geniml/examples/scembed/load_qdrant.ipynb` script.
 
         :param str collection_name: The name of the collection to query.
         :param str location: The location of the Qdrant server. This should be in the format `host:port`.
@@ -43,7 +43,7 @@ class Annotator:
         """
         A class for annotating single cell data with cell type predictions. This class requires that you have
         a Qdrant server running with a collection of cell type embeddings. You can create this collection using
-        the `gitk/examples/scembed/load_qdrant.ipynb` script.
+        the `geniml/examples/scembed/load_qdrant.ipynb` script.
 
         :param str collection_name: The name of the collection to query.
         :param str location: The location of the Qdrant server. This should be in the format `host:port`.

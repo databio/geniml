@@ -2,8 +2,8 @@ from typing import Dict, List, Tuple, Union
 
 import hnswlib
 import numpy as np
-from gitk.search.const import *
-from gitk.search.utils import verify_load_inputs
+from geniml.search.const import *
+from geniml.search.utils import verify_load_inputs
 
 from .abstract import EmSearchBackend
 

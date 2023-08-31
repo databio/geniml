@@ -1,7 +1,7 @@
 # %%
 import os
 import scanpy as sc
-from gitk.scembed import ScEmbed
+from geniml.scembed import ScEmbed
 
 # %%
 # Load the pretrained model

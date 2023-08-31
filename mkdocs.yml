@@ -1,8 +1,8 @@
-site_name: gitk
+site_name: geniml
 site_logo: img/gitk_logo.svg
 site_url: http://gitk.databio.org/
 repo_url: http://github.com/databio/gitk
-pypi_name: gitk
+pypi_name: geniml
 
 nav:
   - Getting Started: 
@@ -18,7 +18,7 @@ nav:
     - Build universe: tutorials/build-universe.md
     - Create consensus peaks: tutorials/create-consensus-peaks.md
   - Reference:
-    - API: autodoc_build/gitk.md
+    - API: autodoc_build/geniml.md
     - Support: support.md
     - Contributing: contributing.md
     - Changelog: changelog.md
@@ -30,6 +30,6 @@ plugins:
       autodoc_build: "docs/autodoc_build"
       jupyter_source: "docs_jupyter"
       jupyter_build: "docs_jupyter/build"
-      autodoc_package: "gitk"
+      autodoc_package: "geniml"
       no_top_level: false
   - search

@@ -2,8 +2,8 @@ import os
 from typing import Dict, List, Union
 
 import numpy as np
-from gitk.search.const import *
-from gitk.search.utils import verify_load_inputs
+from geniml.search.const import *
+from geniml.search.utils import verify_load_inputs
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
 

@@ -30,7 +30,7 @@ For training a Region2Vec model, the parameters, `init_lr`, `window_size`, `num_
 For command line usage, type `gitk region2vec --help` for details. We give a simple usage below
 
 ```bash
-gitk region2vec 
+geniml region2vec 
   --token-folder /path/to/token/folder \
   --save-dir ./region2vec_model \
   --num-shuffle 10 \

@@ -159,11 +159,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-gitk/__pycache__
-gitk/eval/__pycache__
-gitk/region2vec/__pycache__
-gitk/tokenization/__pycache__
-gitk/tokenization/bedtools
+geniml/__pycache__
+geniml/eval/__pycache__
+geniml/region2vec/__pycache__
+geniml/tokenization/__pycache__
+geniml/tokenization/bedtools
 # for testing
 test.*
 

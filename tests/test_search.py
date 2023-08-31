@@ -1,6 +1,6 @@
 import hnswlib
 import pytest
-from gitk.search.backends import QdrantBackend, HNSWBackend
+from geniml.search.backends import QdrantBackend, HNSWBackend
 import numpy as np
 import os
 import random

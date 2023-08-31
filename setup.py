@@ -3,7 +3,7 @@ import sys
 
 from setuptools import setup
 
-PACKAGE_NAME = "gitk"
+PACKAGE_NAME = "geniml"
 
 # Ordinary dependencies
 DEPENDENCIES = []
@@ -26,17 +26,17 @@ setup(
     name=PACKAGE_NAME,
     packages=[
         PACKAGE_NAME,
-        "gitk.assess",
-        "gitk.bedspace",
-        "gitk.eval",
-        "gitk.likelihood",
-        "gitk.models",
-        "gitk.region2vec",
-        "gitk.scembed",
-        "gitk.tokenization",
-        "gitk.universe",
-        "gitk.io",
-        "gitk.text2bednn"
+        "geniml.assess",
+        "geniml.bedspace",
+        "geniml.eval",
+        "geniml.likelihood",
+        "geniml.models",
+        "geniml.region2vec",
+        "geniml.scembed",
+        "geniml.tokenization",
+        "geniml.universe",
+        "geniml.io",
+        "geniml.text2bednn"
     ],
     version=version,
     long_description=long_description,
@@ -54,7 +54,7 @@ setup(
     license="BSD2",
     entry_points={
         "console_scripts": [
-            "gitk = gitk.cli:main",
+            "geniml = geniml.cli:main",
         ],
     },
     keywords="bioinformatics, sequencing, ngs",
