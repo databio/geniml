@@ -90,7 +90,7 @@ With the model now trained, we can get embeddings of our cells. This occurs in t
 
 **Tokenize:**
 ```python
-from geniml.models.tokenizers import HardTokenizer
+from geniml.tokenization import HardTokenizer
 
 tokenizer = HardTokenizer("peaks.bed") # consensus peak set
 
