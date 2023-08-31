@@ -15,7 +15,7 @@ their starts and ends. To do that we have to:
     - {prefix}_start.bw - with smoothed coverage of genome by ends
 
 In this tutorial we will use prefix "all" as it is a default prefix in
-`gitk` module
+`geniml` module
 
 ## Coverage cutoff universe
 
@@ -23,7 +23,7 @@ We will start by making a coverage universe with cutoff that results in maximum
 likelihood universe. We can build it through CLI:
 
 ```console
- gitk build-universe cc --coverage-folder tests/consenus/coverage/ \
+ geniml build-universe cc --coverage-folder tests/consenus/coverage/ \
                         --output-file tests/consenus/universe/universe.bed
 
 ```  
@@ -36,7 +36,7 @@ Where:
 Or we can import it directly into Python:
 
 ```
-from gitk.universe.cc_universe import cc_universe
+from geniml.universe.cc_universe import cc_universe
 
 cc_universe("tests/consenus/coverage/all_core.bw",
         file_out="tests/consenus/universe/universe.bed")
@@ -50,7 +50,7 @@ flag with the distance beloved witch peaks should be merged together and
 Next presented universe is coverage cutoff flexible universe. We can do it through CLI:
 
 ```
- gitk build-universe ccf --coverage-folder tests/consenus/coverage/ \
+ geniml build-universe ccf --coverage-folder tests/consenus/coverage/ \
                        --output-file tests/consenus/universe/universe.bed
 
 ```  
@@ -62,7 +62,7 @@ Where:
 
 Or we can import it directly into python:
 ```
-from gitk.universe.ccf_universe import ccf_universe
+from geniml.universe.ccf_universe import ccf_universe
 
 ccf_universe("tests/consenus/coverage/all_core.bw",
         file_out="tests/consenus/universe/universe.bed")
@@ -75,7 +75,7 @@ Another type of universe that we can make is maximum likelihood flexible univers
 To make a likelihood model we can use this CLI:
 
 ```
-gitk lh build_model --model-file tests/consenus/model.tar \
+geniml lh build_model --model-file tests/consenus/model.tar \
                     --coverage-folder tests/consenus/coverage/ \
                     --file-no 4 
 ```
@@ -89,7 +89,7 @@ Where:
 Or, we can do it directly in python:
 
 ```
-from gitk.likelihood.build_model import main
+from geniml.likelihood.build_model import main
 
 main("tests/consenus/model.tar", "tests/consesnus/coverage",
      "all",
@@ -100,7 +100,7 @@ main("tests/consenus/model.tar", "tests/consesnus/coverage",
 Now that we have the model we make the universe:
 
 ```
-gitk build-universe ml --model-file tests/consenus/model.tar \
+geniml build-universe ml --model-file tests/consenus/model.tar \
                           --output-file tests/consenus/universe/universe.bed \
                           --coverage-folder tests/consesnus/coverage
 ```
@@ -114,10 +114,10 @@ Where:
 Similarly, we can do it in python:
 
 ```
-from gitk.universe.ml_universe import ml_universe
+from geniml.universe.ml_universe import ml_universe
 
 ml_universe("tests/consesnus/model.tar",
-     "/home/hee6jn/Documents/gitk/tests/consesnus/coverage",
+     "/home/hee6jn/Documents/geniml/tests/consesnus/coverage",
      "all",
      "tests/consenus/universe/universe.bed")
 ```
@@ -127,7 +127,7 @@ Another approach to making flexible universes is using Hidden Markov Models.
 We can do it for example with:
 
 ```
-gitk build-universe hmm --out-file tests/consenus/universe/universe.bed \
+geniml build-universe hmm --out-file tests/consenus/universe/universe.bed \
          --coverage-folder tests/consenus/coverage/ \
          --save-max-cove
 ```
@@ -143,7 +143,7 @@ Where:
 Similarly, we can do it in python:
 
 ```
-from gitk.universe.hmm_universe import hmm_universe
+from geniml.universe.hmm_universe import hmm_universe
 
 hmm_universe("tests/consenus/coverage/",
                  "tests/consenus/universe/universe.bed",

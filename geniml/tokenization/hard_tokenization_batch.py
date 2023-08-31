@@ -5,7 +5,6 @@ import subprocess
 
 from .utils import time_str, Timer
 
-
 def bedtools_tokenization(
     f: str,
     bedtools_path: str,

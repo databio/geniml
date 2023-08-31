@@ -24,10 +24,10 @@ def build_argparser():
     """
 
     banner = "%(prog)s - Genomic Interval toolkit"
-    additional_description = "\nhttps://gitk.databio.org"
+    additional_description = "\nhttps://geniml.databio.org"
 
     parser = VersionInHelpParser(
-        prog="gitk",
+        prog="geniml",
         version=f"{__version__}",
         description=banner,
         epilog=additional_description,
