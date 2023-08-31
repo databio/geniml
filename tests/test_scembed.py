@@ -9,7 +9,7 @@ import scanpy as sc
 sys.path.append("../")
 
 from geniml.io.io import Region
-from geniml.utils import wordify_region, wordify_regions
+from geniml.utils import wordify_regions
 from geniml.scembed.main import ScEmbed
 
 # set to DEBUG to see more info
