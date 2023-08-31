@@ -11,6 +11,7 @@ import numpy as np
 
 from geniml.region2vec import utils
 
+
 class BEDDataset:
     """Wraps a set of BED files in a BEDDataset object.
 
