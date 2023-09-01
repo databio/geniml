@@ -1,5 +1,5 @@
 import argparse
-from bedfile_retrieval import BedProcessor, BedCacheManager, BedDownloader
+from .bedfile_retrieval import BedProcessor, BedCacheManager, BedDownloader
 
 def download_bedset(args):
     bed_downloader = BedDownloader()
