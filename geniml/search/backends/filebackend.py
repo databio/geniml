@@ -79,7 +79,7 @@ class HNSWBackend(EmSearchBackend):
     ]:
         """
         With query vector(s), get the k nearest neighbors.
-        
+
         :param query: the query vector, np.ndarray with shape of (1, dim) or (dim, )
         :param k: number of nearest neighbors to search for query vector
         :param with_payload: whether payload is included in the result

@@ -1,7 +1,7 @@
-DEFAULT_TRAIN_P = 0.85*0.9
-DEFAULT_VALIDATE_P = 0.85*0.1
+DEFAULT_TRAIN_P = 0.85 * 0.9
+DEFAULT_VALIDATE_P = 0.85 * 0.1
 
-#sentence transformer model from hugging face
+# sentence transformer model from hugging face
 DEFAULT_HF_ST_MODEL: str = "sentence-transformers/all-MiniLM-L12-v2"
 DEFAULT_NUM_EPOCHS = 1000
 DEFAULT_NUM_UNITS = 256
