@@ -54,4 +54,3 @@ class BEDToolsTokenizer(FileTokenizer):
                 stdout=output_file,
             )
             bedtools_process.communicate()
-            
