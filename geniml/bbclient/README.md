@@ -1,6 +1,6 @@
-# BED File Retrieval and Processing CLI
+# BED File Retrieval and Processing
 
-This Command Line Interface (CLI) is designed to download, process, and cache BED files from the BEDbase API and convert them into a GenomicRanges object. It provides various commands to interact with BED files, including downloading individual files, downloading BEDsets, processing local BED files, and processing BED file identifiers.
+This client downloads, processes, and caches BED files from the BEDbase API and converts them into a GenomicRanges object. It provides various commands to interact with BED files, including downloading individual files, downloading BEDsets, processing local BED files, and processing BED file identifiers.
 
 ## Usage
 
