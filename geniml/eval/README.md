@@ -5,6 +5,7 @@
 Given a set of genomic region embeddings `embeddings` and the corresponding regions `vocab`, use `BaseEmbeddings` to create an `base` embedding object.
 ```
 from geniml.eval.utils import BaseEmbeddings
+
 import pickle
 base_obj =  BaseEmbeddings(embeddings, vocab)
 with open("base_embed.pt", "wb") as f:
@@ -27,6 +28,7 @@ CTT analyzes how well a set of region embeddings can be clustered.  CTT score li
 
 ```python
 from geniml.eval.ctt import get_ctt_score, ctt_eval
+
 path = "/path/to/a/region2vec/model/"
 embed_type = "region2vec"
 ctt_score = get_ctt_score(path, embed_type, seed=42, num_data=10000, num_workers=10)
@@ -47,6 +49,7 @@ RCT evaluates how well an embedding of a region preserves the region’s occurre
 
 ```python
 from geniml.eval.rct import get_rct_score, rct_eval
+
 path = "/path/to/a/region2vec/model/"
 embed_type = "region2vec"
 bin_path = "/path/to/a/binary/embedding/for/the/same/tokenized/files/"
@@ -66,12 +69,14 @@ geniml eval rct --model-path /path/to/a/region2vec/model/ --embed-type region2ve
 ```
 To change the learning setting, go to the definition of `get_rct_score` in `geniml/eval/rct.py` and change the constructor of `MLPRegressor`.
 
+
 ## Biological Tests
 ### Genome Distance Scaling Test (GDST)
 GDST calculates a score measuring how much the embedding distance between two regions scales the corresponding genome distance.
 
 ```python
 from geniml.eval.gdst import get_gdst_score, gdst_eval
+
 path = "/path/to/a/region2vec/model/"
 embed_type = "region2vec"
 gdst_score = get_gdst_score(path, embed_type, num_samples=10000,seed=42)
@@ -79,6 +84,7 @@ print(gdst_score)
 
 # evaluate a batch of models and run GDST for 5 times with different random seeds
 batch = [(path,embed_type)] 
+
 gdst_score_arr = gdst_eval(batch, num_runs=5, num_samples=10000)
 ```
 
@@ -89,22 +95,27 @@ geniml eval gdst --model-path /path/to/a/region2vec/model/ --embed-type region2v
 
 
 ### Neighborhood Preserving Test (NPT)
+
 NPT evaluates how significant genomic region embeddings preserve their neighboring regions on the genome against random embeddings. The code output the NPT score for a set of region embeddings. 
 
 ```python
 from geniml.eval.npt import get_npt_score, npt_eval
+
 path = "/path/to/a/region2vec/model/"
 embed_type = "region2vec"
 K = 10
 # If resolution = K gives NPT for K neighbors
 # If resolution < K, gives NPT for [resolution, resolution*2, ...] neighbors
+
 resolution = K 
 npt_score = get_npt_score(path, embed_type, K, num_samples=100, seed=0, resolution=resolution,num_workers=10)
+
 print(npt_score['SNPR'])
 
 # evaluate a batch of models and run NPT for 5 times with different random seeds
 batch = [(path, embed_type)]
 npt_score_arr = npt_eval(batch, K, num_samples=100, num_workers=10, num_runs=5, resolution=resolution)
+
 print(f"Model: {npt_score_arr[0][0]}\n NPT scores: {npt_score_arr[0][1]}") # NPT scores for the 1st model in the batch
 ```
 

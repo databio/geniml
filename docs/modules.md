@@ -33,3 +33,7 @@ In NLP, training word embeddings requires first tokenizing words such that words
 To tokenize reigons, we need to provide a universe, which specifies the "vocabulary" of genomic regions. The universe is a BED file, containing representative regions. With the given universe, we represent (tokenize) raw regions into the regions in the universe.
 
 Different strategies can be used to tokenize. The simplest case we call *hard tokenization*, which means if the overlap between a raw region in a BED file and a region in the universe exceeds a certain amount, then we use the region in the universe to represent this raw region; otherwise, we ignore this raw region. This is a "zero or one" process. After hard tokenization, each BED file will contain only regions from the universe, and the number of regions will be smaller or equal to the original number.
+
+## Module `search`
+
+The search module provides a generic interface for vector search. Several geniml packages (such as `region2vec`), will create embeddings for different entities. The search module provides interfaces that store vectors and perform fast k-nearest neighbors (KNN) search with a given query vector.  Options include a database backend (using [`qdrant-client`](https://github.com/qdrant/qdrant-client)) and  local file backend (using [`hnswlib`](https://github.com/nmslib/hnswlib).

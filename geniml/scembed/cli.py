@@ -7,7 +7,7 @@ from gensim.models import Word2Vec
 from ._version import __version__
 from .argparser import build_argparser
 from .const import *
-from .scembed import convert_anndata_to_documents, load_scanpy_data, shuffle_documents, train
+from .main import convert_anndata_to_documents, load_scanpy_data, shuffle_documents, train
 
 
 def main():
