@@ -9,7 +9,7 @@ Run the CLI with appropriate subcommands and arguments as described below:
 ### Download and Process BED File Identifiers
 
 ```bash
-python CLI.py identifiers --input-identifier <bed_identifier>
+geniml bbclient identifiers --input-identifier <bed_identifier>
 ```
 
 Replace <bed_identifier> with either the BED file identifier or a file containing a list of BED file identifiers.
@@ -17,7 +17,7 @@ Replace <bed_identifier> with either the BED file identifier or a file containin
 ### Download and Process a BED Region
 
 ```bash
-python CLI.py region --input-identifier <bed_identifier> --chr <chromosome_number> --start <start_position> --end <end_position>
+geniml bbclient region --input-identifier <bed_identifier> --chr <chromosome_number> --start <start_position> --end <end_position>
 ```
 
 Replace <bed_identifier> with the identifier of the BED file, <chromosome_number> with the chromosome number, <start_position> with the start position, and <end_position> with the end position of the region you want to download and process.
@@ -25,7 +25,7 @@ Replace <bed_identifier> with the identifier of the BED file, <chromosome_number
 ### Process a Local BED File
 
 ```bash
-python CLI.py local --input-identifier <local_bed_file_path>
+geniml bbclient local --input-identifier <local_bed_file_path>
 ```
 
 Replace <local_bed_file_path> with the path to the local BED file you want to process.
@@ -33,7 +33,7 @@ Replace <local_bed_file_path> with the path to the local BED file you want to pr
 ### Download a BEDset
 
 ```bash
-python CLI.py bedset --bedset <bedset_identifier>
+geniml bbclient bedset --bedset <bedset_identifier>
 ```
 
 Replace <bedset_identifier> with the identifier of the BEDset you want to download.
