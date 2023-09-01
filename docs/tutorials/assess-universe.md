@@ -6,10 +6,10 @@ If you have a potential universe file, and a collection of BED files, this modul
 
 ## Command-line usage
 
-Both overlap and distance based assessments can be run using: `gitk assess ...` with appropriate flags.
+Both overlap and distance based assessments can be run using: `geniml assess ...` with appropriate flags.
 
 ```console
- gitk assess --assessment-method1 \
+ geniml assess --assessment-method1 \
              --assessment-method2 \
              --...
              --raw-data-folder tests/consesnus/raw/ \
@@ -34,12 +34,12 @@ containing file name and results of chosen metrics
 
 ## Base-level overlap measure
 
-First test checks how much of our file is present in the universe and how much additional information is present in the universe. We can check that by adding ```--overlap``` to ```gitk assess ...```. In the result files it will output columns with: number of bp in universe but not in file, number of bp in file but not the universe, and number of bp both in universe and file.
+First test checks how much of our file is present in the universe and how much additional information is present in the universe. We can check that by adding ```--overlap``` to ```geniml assess ...```. In the result files it will output columns with: number of bp in universe but not in file, number of bp in file but not the universe, and number of bp both in universe and file.
 
 We can also use it directly from Python like this:
 
 ```
-from gitk.assess.intersection import run_intersection
+from geniml.assess.intersection import run_intersection
 
 run_intersection("test/consensus/raw/",
                         "tests/consensus/file_list.txt",
@@ -50,7 +50,7 @@ run_intersection("test/consensus/raw/",
 Or, we can calculate F10 score of the universe using:
 
 ```
-from gitk.assess.intersection import get_f_10_score
+from geniml.assess.intersection import get_f_10_score
 
 get_f_10_score("test/consensus/raw/",
                "tests/consensus/file_list.txt",
@@ -70,7 +70,7 @@ Next, we can calculate the distance between query and universe. To do that we ca
 All presented distance measures can be done using python, which will result in matrix where first column is file names and the second one is median of distances. 
 
 ```
-from gitk.assess.distance import run_distance
+from geniml.assess.distance import run_distance
 
 d_median = run_distance("tests/consensus/raw",
                   "tests/consensus/file_list.txt",
@@ -80,7 +80,7 @@ d_median = run_distance("tests/consensus/raw",
 Additionally, we can directly calculate the closeness score using:
 
 ```
-from gitk.assess.distance import get_closeness_score
+from geniml.assess.distance import get_closeness_score
 
 closeness_score = get_closeness_score("tests/consensus/raw",
                                       "tests/consensus/file_list.txt",
@@ -96,7 +96,7 @@ will need [likelihood model](consensus-peaks.md#making-likelihood-model-). We ca
 either for hard universe:
 
 ```
-from gitk.assess.likelihood import hard_universe_likelihood
+from geniml.assess.likelihood import hard_universe_likelihood
 
 lh_hard = hard_universe_likelihood("tests/consensus/lh_model.tar",
                          "tests/consensus/universe/universe.bed",
@@ -106,7 +106,7 @@ lh_hard = hard_universe_likelihood("tests/consensus/lh_model.tar",
 or with taking into account universe flexibility:
 
 ```
-from gitk.assess.likelihood import likelihood_flexible_universe
+from geniml.assess.likelihood import likelihood_flexible_universe
 
 lh_flexible = likelihood_flexible_universe("tests/consensus/lh_model.tar",
                          "tests/consensus/universe/universe.bed",

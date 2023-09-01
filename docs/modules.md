@@ -1,10 +1,10 @@
 # Module overviews
 
-`gitk` is organized into modules. Each module groups together related tasks. This document provides an overview of each module.
+`geniml` is organized into modules. Each module groups together related tasks. This document provides an overview of each module.
 
 ## Module `assess-universe`
 
-Many genomic interval analysis methods, particularly those used by `gitk` require that regions be re-defined in terms of a consensus region set, or universe. However, a universe may not be a good fit to a collection of files. This module assesses that fit. Given a collection of genomic interval sets, and a proposed universe, we can assess how well the universe fits the genomic interval sets. This module provides several complementary methods to assess fit.
+Many genomic interval analysis methods, particularly those used by `geniml` require that regions be re-defined in terms of a consensus region set, or universe. However, a universe may not be a good fit to a collection of files. This module assesses that fit. Given a collection of genomic interval sets, and a proposed universe, we can assess how well the universe fits the genomic interval sets. This module provides several complementary methods to assess fit.
 
 ## Module `bedspace`
 
@@ -16,7 +16,7 @@ This module provides multiple ways to build a genomic region universe. These inc
 
 ## Module `evaluation`
 
-Once a `gitk` region embedding model is trained, we may want to evaluate the embeddings. The `evaluation` module provides several functions for that. These include statistical tests, like the Cluster Tendency Test (CTT) and the Reconstruction Test (RCT), and biological tests, the Genome Distance Scaling Test (GDST) and the Neighborhood Preserving Test (NPT). These evaluation metrics can be helpful to determine if your models are working well, optimize training parameters, etc.
+Once a `geniml` region embedding model is trained, we may want to evaluate the embeddings. The `evaluation` module provides several functions for that. These include statistical tests, like the Cluster Tendency Test (CTT) and the Reconstruction Test (RCT), and biological tests, the Genome Distance Scaling Test (GDST) and the Neighborhood Preserving Test (NPT). These evaluation metrics can be helpful to determine if your models are working well, optimize training parameters, etc.
 
 ## Module `region2vec`
 
@@ -28,7 +28,7 @@ Once a `gitk` region embedding model is trained, we may want to evaluate the emb
 
 ## Module `tokenization`
 
-In NLP, training word embeddings requires first tokenizing words such that words in different forms are represented by one word. For example, "orange", "oranges" and "Orange" are all mapped to "orange" since they essentially convey the same meaning. This reduces the vocabulary size and improves the quality of learned embeddings. Similary, many `gitk` modules (such as `region2vec`) require first tokenizating regions.
+In NLP, training word embeddings requires first tokenizing words such that words in different forms are represented by one word. For example, "orange", "oranges" and "Orange" are all mapped to "orange" since they essentially convey the same meaning. This reduces the vocabulary size and improves the quality of learned embeddings. Similary, many `geniml` modules (such as `region2vec`) require first tokenizating regions.
 
 To tokenize reigons, we need to provide a universe, which specifies the "vocabulary" of genomic regions. The universe is a BED file, containing representative regions. With the given universe, we represent (tokenize) raw regions into the regions in the universe.
 

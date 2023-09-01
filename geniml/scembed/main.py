@@ -27,7 +27,7 @@ config.THREADING_LAYER = "threadsafe"  # type: ignore
 
 class ScEmbed(ExModel):
     """
-    ScEmbed model for single-cell ATAC-seq data. It is a single-cell
+    ScEmbed extended model for single-cell ATAC-seq data. It is a single-cell
     extension of Region2Vec.
     """
 
@@ -155,8 +155,6 @@ class ScEmbed(ExModel):
         # from the regions
         if self.tokenizer is None:
             self.tokenizer = InMemTokenizer(RegionSet(regions))
-        else:
-            self.tokenizer.tokenize(RegionSet(data))
 
         # convert the data to a list of documents
         region_sets = self.tokenizer.tokenize(data)

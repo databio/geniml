@@ -1,22 +1,25 @@
 import multiprocessing
 import os
 from logging import getLogger
-from typing import List, Union
+from typing import List, Union, Optional, Literal, Callable
 
 import numpy as np
 from tqdm import tqdm
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
+from huggingface_hub.utils._errors import EntryNotFoundError
 from numba import config
 
 from ..io import Region, RegionSet
 from ..models.main import ExModel
 from ..tokenization.main import InMemTokenizer
 from . import utils
+from ..utils import wordify_region, wordify_regions
 from .const import *
 from .region2vec_train import main as region2_train
 from .region_shuffling import main as sent_gen
+from .pooling import mean_pooling, max_pooling
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -287,7 +290,7 @@ class Region2Vec(Word2Vec):
         )
 
         # "wordify" the regions
-        region_sets = [utils.wordify_regions(rs) for rs in data]
+        region_sets = [wordify_regions(rs) for rs in data]
 
         # train the model using these shuffled documents
         _LOGGER.info("Training starting.")
@@ -345,29 +348,53 @@ class Region2Vec(Word2Vec):
         # I feel like this shouldnt work, but it does?
         return super().load(filepath)
 
-    def forward(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
+    def forward(
+        self, regions: Union[Region, RegionSet, List[Region], str, None, List[None]]
+    ) -> Union[np.ndarray, List[Optional[np.ndarray]]]:
         """
         Get the embedding vector(s) for a given region or region set.
 
-        :param Union[Region, RegionSet, List[Region]] regions: The region(s) to get the embedding vector(s) for.
+        :param Union[Region, RegionSet, List[Region], str, None, List[None]] regions: The region(s) to get the embedding vector(s) for.
+        :param bool skip_missing: If True, regions without vectors will be skipped. If False, will return None for such regions.
         """
+        if regions is None:
+            return None
+
+        def get_vector(region_word: Union[str, None]) -> Optional[np.ndarray]:
+            """Helper function to get vector for a region word or return None."""
+            if region_word is None:
+                return None
+            return self.wv[region_word] if region_word in self.wv else None
+
+        # If it's a single region
         if isinstance(regions, Region):
-            region_word = utils.wordify_region(regions)
-            try:
-                return self.wv[region_word]
-            except:
-                embedding_vec = np.empty(self.vector_size)
-                embedding_vec[:] = np.nan
-                return embedding_vec
-        elif isinstance(regions, RegionSet):
-            region_words = utils.wordify_regions(regions)
-            return np.array([self.wv[r] for r in region_words if r in self.wv])
-        elif isinstance(regions, list):
-            region_words = [utils.wordify_region(r) for r in regions]
-            return np.array([self.wv[r] for r in region_words if r in self.wv])
+            region_word = wordify_region(regions)
+            return get_vector(region_word)
+
+        # If it's a RegionSet or list, or a str path to a bed file (assuming you have a function `load_from_bed`)
+        elif isinstance(regions, (RegionSet, list, str)):
+            # Convert str path to a RegionSet
+            if isinstance(regions, str):
+                regions = RegionSet(str)  # Assuming you have a function like this
+
+            # For RegionSet or List
+            if isinstance(regions, RegionSet):
+                region_words = wordify_regions(regions)
+            else:
+                region_words = []
+                for region in regions:
+                    if region is not None:
+                        region_words.append(wordify_region(region))
+                    else:
+                        region_words.append(None)
+
+            vectors = [get_vector(r) for r in region_words]
+
+            return vectors
+
         else:
             raise TypeError(
-                f"Regions must be of type Region, RegionSet, or list, not {type(regions).__name__}"
+                f"Regions must be of type Region, RegionSet, list, or str (path to bed file), not {type(regions).__name__}"
             )
 
     def __call__(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
@@ -402,6 +429,9 @@ class Region2VecExModel(ExModel):
 
     @property
     def wv(self):
+        """
+        Return the word vectors. Similar to the `wv` property of a gensim Word2Vec model.
+        """
         return self._model.wv
 
     @property
@@ -451,8 +481,19 @@ class Region2VecExModel(ExModel):
         wv_file_name = utils.make_wv_file_name(model_file_name)
 
         # get the syn1neg and wv files
-        hf_hub_download(model_repo, wv_file_name, **kwargs)
-        hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
+        try:
+            hf_hub_download(model_repo, wv_file_name, **kwargs)
+        except EntryNotFoundError:
+            _LOGGER.error(
+                "Could not find wv file. This is ok - skipping. Likely means model is small."
+            )
+
+        try:
+            hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
+        except EntryNotFoundError:
+            _LOGGER.error(
+                "Could not find syn1neg file. This is ok - skipping. Likely means model is small."
+            )
 
         # set the paths to the downloaded files
         self._model_path = model_path
@@ -464,16 +505,24 @@ class Region2VecExModel(ExModel):
 
     def _filter_empty_region_sets(self, region_sets: List[RegionSet]) -> List[RegionSet]:
         """
-        Filter out any empty region sets.
+        Filter out any empty region sets. This includes empty lists and lists of None
 
         :param List[RegionSet] region_sets: The region sets to filter.
         :return: The filtered region sets.
         """
-        return [
-            r
-            for r in tqdm(region_sets, total=len(region_sets), desc="Filtering out empty sets.")
-            if len(r) > 0
+        # remove all None's from all region sets
+        region_sets = [
+            [region for region in region_set if region is not None] for region_set in region_sets
         ]
+
+        # remove all empty region sets
+        region_sets = [
+            rs
+            for rs in tqdm(region_sets, total=len(region_sets), desc="Filtering out empty sets.")
+            if len(rs) > 0
+        ]
+
+        return region_sets
 
     def _validate_data(
         self, data: Union[List[str], List[RegionSet], List[List[Region]]]
@@ -574,23 +623,69 @@ class Region2VecExModel(ExModel):
         """
         raise NotImplementedError("This method is not yet implemented.")
 
-    def encode(self, regions: Union[List[Region], RegionSet]) -> np.ndarray:
+    def encode(
+        self,
+        regions: Union[str, List[Region], RegionSet, str],
+        pool: Union[Literal["mean", "max"], bool, Callable] = False,
+        return_none: bool = True,
+    ) -> np.ndarray:
         """
         Encode the data into a latent space.
 
-        :param sc.AnnData adata: The AnnData object containing the data to encode.
+        :param Union[str, List[Region], RegionSet, str] regions: The regions to encode.
+        :param bool skip_missing: If True, regions without vectors will be skipped. If False, will return None for such regions.
+        :param Union[Literal["mean", "max"], bool, callable] pool: Whether or not to pool the data. If True, will use mean pooling.
+                                                                   If False, will not pool. If callable, will use the callable
+                                                                   function to pool the data.
+        :param bool return_none: If True, will return None for regions without vectors. If False, will skip such regions. (it is highly recommended to set this to True)
         :return np.ndarray: The encoded data.
         """
         # tokenize the data
-        region_sets = self.tokenizer.tokenize(regions)
+        regions = self.tokenizer.tokenize(regions)
 
         # encode the data
         _LOGGER.info("Encoding data.")
-        enoded_data = []
-        for region_set in tqdm(region_sets, desc="Encoding data", total=len(region_sets)):
-            vector = self._model.forward(region_set)
-            enoded_data.append(vector)
-        return np.array(enoded_data)
+        region_vectors = self._model.forward(regions)
 
-    def __call__(self, regions: Union[List[Region], RegionSet]) -> np.ndarray:
-        return self.encode(regions)
+        if len(region_vectors) == 1:
+            return region_vectors[0]
+
+        _pool_fn: callable
+
+        # pool the data if requested
+        if pool == True:
+            pool = "mean"
+            _pool_fn = mean_pooling
+        elif pool == False:
+            _pool_fn = None
+        elif isinstance(pool, str):
+            if pool.lower() == "mean":
+                _pool_fn = mean_pooling
+            elif pool.lower() == "max":
+                _pool_fn = max_pooling
+            else:
+                raise ValueError(
+                    f"Invalid pooling function. Must be one of ['mean', 'max']. Got {pool}."
+                )
+        elif callable(pool):
+            _pool_fn = pool
+        else:
+            raise ValueError(
+                f"Invalid pooling function. Must be str (['mean', 'max']), or callable. Got {pool}."
+            )
+
+        # use pool function if specified
+        if _pool_fn is not None:
+            result = _pool_fn(region_vectors)
+        # otherwise, return the region vectors, filtering out None values if requested
+        else:
+            if return_none:
+                result = region_vectors
+            else:
+                result = [rv for rv in region_vectors if rv is not None]
+        return result
+
+    def __call__(
+        self, regions: Union[List[Region], RegionSet, str], skip_missing: bool = False
+    ) -> np.ndarray:
+        return self.encode(regions, skip_missing=skip_missing)

@@ -37,6 +37,7 @@ setup(
         "geniml.universe",
         "geniml.io",
         "geniml.text2bednn"
+        "geniml.preprocessing",
     ],
     version=version,
     long_description=long_description,

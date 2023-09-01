@@ -113,7 +113,8 @@ class InMemTokenizer(Tokenizer):
     def find_overlaps(
         self,
         regions: Union[str, List[Region], Region, RegionSet],
-        f: float = None,  # not implemented yet
+        f: float = None,  # not implemented yet,
+        return_all: bool = False,
     ) -> List[Region]:
         """
         Query the interval tree for the given regions. That is, find all regions that overlap with the given regions.
@@ -121,6 +122,7 @@ class InMemTokenizer(Tokenizer):
         :param Union[str, List[str], List[Region], Region, RegionSet] regions: The regions to query for. this can be either a bed file,
                                                                             a list of regions (chr_start_end), or a list of tuples of chr, start, end.
         :param float f: The fraction of the region that must overlap to be considered an overlap. Not yet implemented.
+        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to False. (in the future, we can change this to return the top k or best)
         """
         # validate input
         if isinstance(regions, Region):
@@ -133,10 +135,22 @@ class InMemTokenizer(Tokenizer):
         overlapping_regions = []
         for region in regions:
             if region.chr not in self._trees:
+                print(f"Warning: Could not find {region.chr} in universe.")
                 continue
+
             overlaps = self._trees[region.chr][region.start : region.end]
-            for overlap in overlaps:
-                overlapping_regions.append(Region(region.chr, overlap.begin, overlap.end))
+            if not overlaps:
+                overlapping_regions.append(None)
+            else:
+                overlaps = list(overlaps)
+                if return_all:
+                    overlapping_regions.extend(
+                        [Region(region.chr, olap.begin, olap.end) for olap in overlaps]
+                    )
+                else:
+                    olap = overlaps[0]
+                    overlapping_regions.append(Region(region.chr, olap.begin, olap.end))
+
         return overlapping_regions
 
     def convert_anndata_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
@@ -181,7 +195,12 @@ class InMemTokenizer(Tokenizer):
             # grab the first for now
             # TODO - this is a simplification, we should be able to handle multiple
             universe_region = _map[region]
-            chr, start, end = universe_region.split("_")
+            try:
+                chr, start, end = universe_region.split("_")
+                start = int(start)
+                end = int(end)
+            except ValueError:
+                raise ValueError(f"Could not parse region {universe_region}")
 
             updated_var.at[i, "chr"] = chr
             updated_var.at[i, "start"] = start
@@ -222,6 +241,7 @@ class InMemTokenizer(Tokenizer):
         for region in tqdm(a, total=len(a), desc="Generating conversion map"):
             overlaps = self.find_overlaps(region)
             region_str = f"{region.chr}_{region.start}_{region.end}"
+            overlaps = [olap for olap in overlaps if olap is not None]
             if len(overlaps) > 0:
                 olap = overlaps[0]  # take the first overlap for now, we can change this later
                 olap_str = f"{olap.chr}_{olap.start}_{olap.end}"
@@ -232,7 +252,7 @@ class InMemTokenizer(Tokenizer):
         return conversion_map
 
     def tokenize(
-        self, region_set: Union[str, List[Region], RegionSet, sc.AnnData]
+        self, regions: Union[str, List[Region], RegionSet, sc.AnnData], return_all: bool = False
     ) -> Union[List[Region], List[List[Region]], List[RegionSet]]:
         """
         Tokenize a RegionSet.
@@ -240,16 +260,18 @@ class InMemTokenizer(Tokenizer):
         This is achieved using hard tokenization which is just a query to the universe, or
         simple overlap detection.
 
-        :param str | List[Region] | sc.AnnData region_set: The list of regions to tokenize
+        :param str | List[Region] | sc.AnnData regions: The list of regions to tokenize
+        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to False. (in the future, we can change this to return the top k or best)
+                                Note that returning all might return more than one region per region in the input. Thus, you lose the 1:1 mapping.
         """
-        if isinstance(region_set, sc.AnnData):
+        if isinstance(regions, sc.AnnData):
             # step 1 is to convert the AnnData object to the universe
-            region_set = self.convert_anndata_to_universe(region_set)
+            regions = self.convert_anndata_to_universe(regions)
 
             # step 2 is to convert the AnnData object to a list of lists of regions
-            return anndata_to_regionsets(region_set)
+            return anndata_to_regionsets(regions)
         else:
-            return self.find_overlaps(region_set)
+            return self.find_overlaps(regions, return_all=return_all)
 
     # not sure what this looks like, multiple RegionSets?
     def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:

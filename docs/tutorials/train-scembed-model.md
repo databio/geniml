@@ -6,13 +6,13 @@ For this example we are using the [10x Genomics PBMC 10k dataset](https://www.10
 
 
 ## Installation
-Simply install the parent package `gitk` from PyPi:
+Simply install the parent package `geniml` from PyPi:
 
 ```bash
 pip install geniml
 ```
 
-Then import `scEmbed` from `gitk`:
+Then import `scEmbed` from `geniml`:
 
 ```python
 from geniml.scembed import SCEmbed
@@ -91,7 +91,8 @@ With the model now trained, we can get embeddings of our cells. This occurs in t
 **Tokenize:**
 
 ```python
-from geniml.models.tokenizers import HardTokenizer
+from geniml.tokenization import HardTokenizer
+
 
 tokenizer = HardTokenizer("peaks.bed")  # consensus peak set
 

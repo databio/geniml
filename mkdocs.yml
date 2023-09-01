@@ -1,7 +1,7 @@
 site_name: geniml
-site_logo: img/gitk_logo.svg
-site_url: http://gitk.databio.org/
-repo_url: http://github.com/databio/gitk
+site_logo: img/geniml_logo.svg
+site_url: http://geniml.databio.org/
+repo_url: http://github.com/databio/geniml
 pypi_name: geniml
 
 nav:

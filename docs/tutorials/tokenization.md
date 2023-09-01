@@ -21,4 +21,4 @@ Command line usage
 geniml tokenize --data-folder /folder/with/raw/BED/files --token-folder ./tokens --universe /universe/file --bedtools-path bedtools
 ```
 
-For more details, type `gitk tokenize --help`.
+For more details, type `geniml tokenize --help`.
