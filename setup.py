@@ -36,7 +36,7 @@ setup(
         "geniml.tokenization",
         "geniml.universe",
         "geniml.io",
-        "geniml.preprocessing",
+        "geniml.text2bednn" "geniml.preprocessing",
     ],
     version=version,
     long_description=long_description,
