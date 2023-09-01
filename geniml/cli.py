@@ -12,6 +12,7 @@ from .tokenization.cli import build_subparser as tokenization_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
 from .bedspace.cli import build_argparser as bedspace_subparser
+from .bbclient.cli import main as bbclient_subparser
 
 from ._version import __version__
 
@@ -59,6 +60,7 @@ def build_argparser():
     subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
     subparsers["eval"] = eval_subparser(subparsers["eval"])
     subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
+    subparsers["bbclient"] = bbclient_subparser(subparsers["bbclient"])
 
     return parser
 
@@ -108,6 +110,11 @@ def main(test_args=None):
             args.file_no,
             args.force,
         )
+
+    if args.command == "bbclient":
+        from .bbclient.cli import main
+
+        main()
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
