@@ -36,14 +36,15 @@ def build_argparser():
 
     # Individual subcommands
     msg_by_cmd = {
-        "build-universe": "Build a consensus peak set using one of provided model",
-        "lh": "Make likelihood model",
         "assess-universe": "Assess a universe",
-        "scembed": "Embed single-cell data as region vectors",
-        "region2vec": "Train a region2vec model",
-        "tokenize": "Tokenize BED files",
-        "eval": "Evaluate a set of region embeddings",
+        "bbclient": "Client for the BEDbase server",
         "bedspace": "Coembed regionsets (bed files) and labels",
+        "build-universe": "Build a consensus peak set using one of provided model",
+        "eval": "Evaluate a set of region embeddings",
+        "lh": "Make likelihood model",
+        "region2vec": "Train a region2vec model",
+        "scembed": "Embed single-cell data as region vectors",
+        "tokenize": "Tokenize BED files",
     }
 
     sp = parser.add_subparsers(dest="command")
@@ -52,15 +53,15 @@ def build_argparser():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
     # build up subparsers for modules
-    subparsers["build-universe"] = universe_subparser(subparsers["build-universe"])
     subparsers["assess-universe"] = assess_subparser(subparsers["assess-universe"])
-    subparsers["lh"] = likelihood_subparser(subparsers["lh"])
-    subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
-    subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
-    subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
-    subparsers["eval"] = eval_subparser(subparsers["eval"])
-    subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
     subparsers["bbclient"] = bbclient_subparser(subparsers["bbclient"])
+    subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
+    subparsers["build-universe"] = universe_subparser(subparsers["build-universe"])
+    subparsers["eval"] = eval_subparser(subparsers["eval"])
+    subparsers["lh"] = likelihood_subparser(subparsers["lh"])
+    subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
+    subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
+    subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
 
     return parser
 
@@ -112,9 +113,10 @@ def main(test_args=None):
         )
 
     if args.command == "bbclient":
-        from .bbclient.cli import main
+        if args.subcommand == "local":
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            # This is where you would call the functions
 
-        main()
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
