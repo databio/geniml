@@ -21,6 +21,7 @@ import scanpy as sc
 
 from geniml.scembed import ScEmbed
 
+
 adata = sc.read_h5ad("path/to/adata.h5ad")
 model = ScEmbed("databio/luecken2021")
 
