@@ -21,9 +21,8 @@ def process_identifiers(args):
     print(bed_ident)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Process and cache BED file(s) from the BEDbase API and convert them into a GenomicRanges object")
-
+def build_subparser(parser):
+    """Build subparser for bbclient"""
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand', description='Choose a subcommand')
     subparsers.required = True
 
@@ -49,10 +48,6 @@ def main():
     parser_ident.add_argument('--cache-folder', default='bed_cache', help='Cache folder path (default: bed_cache)')
     parser_ident.set_defaults(func=process_identifiers)
 
-    args = parser.parse_args()
-    args.func(args)
-
-if __name__ == "__main__":
-    main()
+    return parser
 
 
