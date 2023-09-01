@@ -12,7 +12,7 @@ from .tokenization.cli import build_subparser as tokenization_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
 from .bedspace.cli import build_argparser as bedspace_subparser
-from .bbclient.cli import main as bbclient_subparser
+from .bbclient.cli import build_subparser as bbclient_subparser
 
 from ._version import __version__
 
