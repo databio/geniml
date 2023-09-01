@@ -78,9 +78,9 @@ from geniml.scembed import SCEmbed
 logging.basicConfig(level=logging.INFO)
 
 model = SCEmbed(
-    use_default_region_names=False # this is to specify that we want to use chr, start, end.
+    use_default_region_names=False  # this is to specify that we want to use chr, start, end.
 )
-model.train(adata, epochs=3) # we recomend increasing this to 100
+model.train(adata, epochs=3)  # we recomend increasing this to 100
 ```
 
 Thats it!
@@ -89,10 +89,12 @@ Thats it!
 With the model now trained, we can get embeddings of our cells. This occurs in two steps: 1) tokenize the data and 2) encode the cells.
 
 **Tokenize:**
-```python
-from geniml.models.tokenizers import HardTokenizer
 
-tokenizer = HardTokenizer("peaks.bed") # consensus peak set
+```python
+from geniml.tokenization import HardTokenizer
+
+
+tokenizer = HardTokenizer("peaks.bed")  # consensus peak set
 
 region_sets = tokenizer(adata)
 ```
