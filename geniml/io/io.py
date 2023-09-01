@@ -1,4 +1,3 @@
-
 import gzip
 import os
 from typing import List, Union
@@ -8,6 +7,7 @@ from intervaltree import Interval
 
 from .const import *
 from .utils import extract_maf_col_positions, is_gzipped
+
 
 class Region(Interval):
     def __new__(cls, chr: str, start: int, stop: int, data=None):

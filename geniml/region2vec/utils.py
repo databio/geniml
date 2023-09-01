@@ -264,6 +264,7 @@ def ensure_dir(folder: str, default: str = "y") -> None:
             return
     os.makedirs(folder, exist_ok=True)
 
+
 class ScheduleType(Enum):
     """Learning rate schedule types"""
 
