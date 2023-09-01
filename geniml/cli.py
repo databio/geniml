@@ -117,7 +117,6 @@ def main(test_args=None):
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             # This is where you would call the functions
 
-
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
         if args.subcommand == "hmm":
