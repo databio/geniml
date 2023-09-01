@@ -75,16 +75,12 @@ Replace <bedset_identifier> with the identifier of the BEDset you want to downlo
     local: Process a local BED file.
     identifiers: Process BED file identifiers.
 
-For each subcommand, additional arguments are required. Run python CLI.py <subcommand> -h for more information on the required arguments for each subcommand.
-
 ### Cache Folder
 
 By default, the downloaded and processed BED files are cached in the bed_cache folder. You can specify a different cache folder using the --cache-folder argument.
 
 
 ### Dependencies
-
-    argparse: For parsing command-line arguments.
     requests: For making HTTP requests.
     pandas: For data manipulation.
     genomicranges: For processing BED files and creating GenomicRanges objects.
