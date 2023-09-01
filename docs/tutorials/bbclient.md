@@ -4,7 +4,37 @@ This client downloads, processes, and caches BED files from the BEDbase API and 
 
 ## Usage
 
-Run the CLI with appropriate subcommands and arguments as described below:
+###
+```python
+import geniml
+```
+
+### Create an Instance of the BedProcessor Class:
+
+```python
+bbc = geniml.bbclient.bedfile_retrieval
+bbc_processor = bbc.BedProcessor(cache_folder="<cache_folder_path>")
+```
+
+### Process a Local BED File
+```python 
+bbc_processor.process_local_bed_data("<local_bed_file_path>")
+```
+### Download a BEDset
+```python
+bbc_processor.download_bedset_data("<bed_identifier>")
+```
+
+### Download and Process a BED Region
+```python
+result = bed_processor.download_and_process_bed_region_data("<bed_identifier>", "<chr_num>", <start>, <end>)
+```
+### Download and Process BED File Identifiers
+```python
+result = bed_processor.process_identifiers(<input_identifier(s)>)
+```
+
+## For command line usage, run the CLI with appropriate subcommands and arguments as described below:
 
 ### Download and Process BED File Identifiers
 
