@@ -78,7 +78,7 @@ Or use the command line
 ```bash
 geniml eval rct --model-path /path/to/a/region2vec/model/ --embed-type region2vec
 ```
-To change the learning setting, go to the definition of `get_rct_score` in `gitk/eval/rct.py` and change the constructor of `MLPRegressor`.
+To change the learning setting, go to the definition of `get_rct_score` in `geniml/eval/rct.py` and change the constructor of `MLPRegressor`.
 
 
 ## Biological Tests

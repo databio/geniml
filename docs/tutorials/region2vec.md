@@ -9,8 +9,8 @@
 3. Create a token folder which will be used to store tokenized files `dst_folder`.
 5. Run the following command
 ``` python
-from gitk.tokenization import hard_tokenization
-from gitk.region2vec import region2vec
+from geniml.tokenization import hard_tokenization
+from geniml.region2vec import region2vec
 
 src_folder = '/path/to/raw/bed/files'
 dst_folder = '/path/to/tokenized_files'
@@ -27,7 +27,7 @@ if status: # if hard_tokenization is successful, then run Region2Vec training
 For customized settings, please go and check the parameters used in `main.py`. 
 For training a Region2Vec model, the parameters, `init_lr`, `window_size`, `num_shufflings`, `embedding_dim`, are frequently tuned in experiments.
 
-For command line usage, type `gitk region2vec --help` for details. We give a simple usage below
+For command line usage, type `geniml region2vec --help` for details. We give a simple usage below
 
 ```bash
 geniml region2vec 

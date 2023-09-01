@@ -60,11 +60,11 @@ def test_tokenize_bed_file(universe_bed_file: str):
             chr, start, stop = line.strip().split("\t")
             regions.append(Region(chr, int(start), int(stop)))
 
-    tokens = t.tokenize(bed_file)
+    tokens = t.tokenize(bed_file, return_all=True)
 
     # ensure that the tokens are unqiue from the original regions
     assert len(set(tokens).intersection(set(regions))) == 0
-    assert len(tokens) == 3
+    assert len([t for t in tokens if t is not None]) == 3
 
 
 def test_tokenize_list_of_regions(universe_bed_file: str):
@@ -88,18 +88,18 @@ def test_tokenize_list_of_regions(universe_bed_file: str):
             chr, start, stop = line.strip().split("\t")
             regions.append(Region(chr, int(start), int(stop)))
 
-    tokens = t.tokenize(regions)
+    tokens = t.tokenize(regions, return_all=True)
 
     # ensure that the tokens are unqiue from the original regions
     assert len(set(tokens).intersection(set(regions))) == 0
-    assert len(tokens) == 3
+    assert len([t for t in tokens if t is not None]) == 3
 
 
 def test_tokenize_anndata(universe_bed_file: str, pbmc_data: sc.AnnData):
     t = InMemTokenizer(universe_bed_file)
     assert t is not None
 
-    tokens = t.tokenize(pbmc_data)
+    tokens = t.tokenize(pbmc_data, return_all=True)
 
     # returns list of regions for each cell
     assert len(tokens) == pbmc_data.shape[0]

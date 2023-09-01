@@ -4,9 +4,10 @@ from typing import List
 import pytest
 import numpy as np
 
-from geniml.io.io import RegionSet
+from geniml.io.io import RegionSet, Region
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
-from geniml.region2vec.utils import wordify_region, wordify_regions
+from geniml.utils import wordify_region, wordify_regions
+from geniml.region2vec.pooling import mean_pooling, max_pooling
 from geniml.tokenization.main import InMemTokenizer
 
 
@@ -136,3 +137,74 @@ def test_train_exmodel(region_sets: List[RegionSet], universe_file: str):
         os.remove("tests/data/model-r2v-test/model.bin")
         os.remove("tests/data/model-r2v-test/universe.bed")
         os.rmdir("tests/data/model-r2v-test/")
+
+
+# @pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
+def test_pretrained_model():
+    model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38")
+
+    region = Region("chr1", 63403166, 63403785)
+    embedding = model.encode(region)
+
+    assert embedding is not None
+    assert isinstance(embedding, np.ndarray)
+
+
+def test_mean_pooling():
+    a = np.array([1, 2, 3])
+    b = np.array([4, 5, 6])
+
+    assert np.allclose(mean_pooling([a, b]), np.array([2.5, 3.5, 4.5]))
+    assert np.allclose(mean_pooling(np.array([a, b])), np.array([2.5, 3.5, 4.5]))
+    assert mean_pooling([a, b]).shape == (3,)
+    assert mean_pooling(np.array([a, b])).shape == (3,)
+
+
+def test_max_pooling():
+    a = np.array([1, 2, 3])
+    b = np.array([4, 5, 6])
+
+    assert np.allclose(max_pooling([a, b]), np.array([4, 5, 6]))
+    assert np.allclose(max_pooling(np.array([a, b])), np.array([4, 5, 6]))
+    assert max_pooling([a, b]).shape == (3,)
+    assert max_pooling(np.array([a, b])).shape == (3,)
+
+
+def test_model_pooling():
+    r1 = Region("chr11", 45639005, 45639830)
+    r2 = Region("chr1", 89566099, 89566939)  # will be None
+    r3 = Region("chr11", 63533954, 63534897)
+
+    model = Region2VecExModel()
+    model.from_pretrained("tests/data/tiny-model/model.bin", "tests/data/tiny-model/universe.bed")
+
+    r1_vector = model.encode(r1)
+    r2_vector = model.encode(r2)
+    r3_vector = model.encode(r3)
+
+    assert all([isinstance(v, np.ndarray) for v in [r1_vector, r3_vector]])
+    assert r2_vector is None
+    assert r1_vector.shape == (100,)
+    assert r3_vector.shape == (100,)
+
+    vectors = model.encode([r1, r2, r3])
+    assert isinstance(
+        vectors, list
+    )  # should return a list of vectors, not an np.ndarray. List of np.ndarray is fine and also more conducive to downstream processing. It also mirrors the input.
+    assert len(vectors) == 3
+    assert vectors[0].shape == (100,)
+    assert vectors[1] is None
+    assert vectors[2].shape == (100,)
+
+    vector_mean = model.encode([r1, r2, r3], pool="mean")
+    vector_max = model.encode([r1, r2, r3], pool="max")
+    assert vector_mean.shape == (100,)
+    assert vector_max.shape == (100,)
+
+    # custom pooling function that just sums them
+    def sum_pooling(vectors):
+        vectors = [v for v in vectors if v is not None]
+        return np.sum(vectors, axis=0)
+
+    vector_sum = model.encode([r1, r2, r3], pool=sum_pooling)
+    assert vector_sum.shape == (100,)

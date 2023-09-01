@@ -6,7 +6,7 @@ import numpy as np
 import scanpy as sc
 from tqdm import tqdm
 
-from ..io import Region, RegionSet
+from ..io import Region
 
 
 class Timer:
@@ -52,7 +52,7 @@ def time_str(t: float) -> str:
     return f"{t:.2f}s"
 
 
-def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
+def anndata_to_regionsets(adata: sc.AnnData) -> List[List[Region]]:
     """
     Converts an AnnData object to a list of lists of regions. This
     is done by taking each cell and creating a list of all regions
@@ -89,11 +89,9 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[str]]:
     regions = []
     for i in tqdm(range(adata.shape[0]), total=adata.shape[0], desc="Tokenizing"):
         regions.append(
-            RegionSet(
-                [
-                    Region(chr_values[j], start_values[j], end_values[j])
-                    for j in np.where(positive_values[i])[0]
-                ]
-            )
+            [
+                Region(chr_values[j], start_values[j], end_values[j])
+                for j in np.where(positive_values[i])[0]
+            ]
         )
     return regions
