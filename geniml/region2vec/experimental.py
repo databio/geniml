@@ -7,7 +7,14 @@ import torch.nn.functional as F
 from ..tokenization.main import InMemTokenizer
 from ..models.main import ExModel
 from ..io.io import RegionSet
-from .const import DEFAULT_EMBEDDING_SIZE, DEFAULT_HIDDEN_DIM
+from .const import (
+    DEFAULT_EMBEDDING_SIZE,
+    DEFAULT_HIDDEN_DIM,
+    DEFAULT_EPOCHS,
+    DEFAULT_WINDOW_SIZE,
+    DEFAULT_MIN_COUNT,
+    DEFAULT_N_SHUFFLES,
+)
 
 
 class Word2Vec(nn.Module):
@@ -73,12 +80,23 @@ class Region2VecExModel(ExModel):
         elif isinstance(data[0], str):
             return [RegionSet(f) for f in data]
 
-    def train(self, data: Union[List[RegionSet], List[str]]):
+    def train(
+        self,
+        data: Union[List[RegionSet], List[str]],
+        window_size: int = DEFAULT_WINDOW_SIZE,
+        epochs: int = DEFAULT_EPOCHS,
+        min_count: int = DEFAULT_MIN_COUNT,
+        n_shuffles: int = DEFAULT_N_SHUFFLES,
+    ):
         """
         Train the model.
 
         :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
                                                        a list of RegionSets or a list of paths to bed files.
+        :param int window_size: Window size for the model.
+        :param int epochs: Number of epochs to train for.
+        :param int min_count: Minimum count for a region to be included in the vocabulary.
+        :param int n_shuffles: Number of shuffles to perform on the data.
         """
         # validate the data
         data = self._validate_data_for_training(data)
