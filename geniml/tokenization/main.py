@@ -15,6 +15,7 @@ from geniml.tokenization.split_file import split_file
 from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization
 from .utils import anndata_to_regionsets, time_str, Timer
+from ..utils import wordify_region
 
 
 class Tokenizer(ABC):
@@ -24,7 +25,13 @@ class Tokenizer(ABC):
 
 
 class InMemTokenizer(Tokenizer):
-    """Abstract class representing a tokenizer function"""
+    """
+    Tokenize new regions into a vocabulary.
+
+    This is done using hard tokenization which is just a query to the universe, or
+    simple overlap detection. Computation occurs in memory. This is the fastest
+    tokenizer, but it is not scalable to large universes.
+    """
 
     def __init__(self, universe: Union[str, RegionSet, None] = None):
         """
@@ -35,6 +42,7 @@ class InMemTokenizer(Tokenizer):
         :param Union[str, RegionSet] universe: The universe to use for tokenization.
         """
         self._trees: Dict[str, IntervalTree] = dict()
+        self._region_to_index: Dict[str, int] = dict()
 
         if isinstance(universe, str):
             self.universe = RegionSet(universe)  # load from file
@@ -56,8 +64,12 @@ class InMemTokenizer(Tokenizer):
         return self._trees[tree]
 
     @property
-    def trees(self):
+    def trees(self) -> Dict[str, IntervalTree]:
         return self._trees
+
+    @property
+    def region_to_index(self) -> Dict[str, int]:
+        return self._region_to_index
 
     def build_trees(
         self,
@@ -98,14 +110,19 @@ class InMemTokenizer(Tokenizer):
         elif isinstance(regions, list) and isinstance(regions[0], Region):
             pass
 
-        # build trees + add regions to universe
+        # build trees + add regions to universe + make region to index map
         self.universe = regions
+        indx = 0
         for region in tqdm(regions, total=len(regions), desc="Adding regions to universe"):
+            r_string = wordify_region(region)
             if region.chr not in self._trees:
                 self._trees[region.chr] = IntervalTree()
-            self._trees[region.chr][
-                region.start : region.end
-            ] = f"{region.chr}_{region.start}_{region.end}"
+            self._trees[region.chr][region.start : region.end] = r_string
+
+            # add to region to index map
+            if r_string not in self._region_to_index:
+                self._region_to_index[r_string] = indx
+                indx += 1
 
         # count total regions
         self.total_regions = sum([len(self._trees[tree]) for tree in self._trees])
@@ -272,6 +289,30 @@ class InMemTokenizer(Tokenizer):
             return anndata_to_regionsets(regions)
         else:
             return self.find_overlaps(regions, return_all=return_all)
+
+    def convert_tokens_to_ids(self, tokens: List[Region]) -> List[int]:
+        """
+        Convert a list of tokens to a list of ids.
+
+        :param List[Region] tokens: The list of tokens to convert
+        """
+        return [self._region_to_index[wordify_region(token)] for token in tokens]
+
+    def tokenize_and_convert_to_ids(
+        self, regions: Union[str, List[Region], RegionSet, sc.AnnData], return_all: bool = False
+    ) -> List[int]:
+        """
+        Tokenize a RegionSet and convert to ids.
+
+        This is achieved using hard tokenization which is just a query to the universe, or
+        simple overlap detection.
+
+        :param str | List[Region] | sc.AnnData regions: The list of regions to tokenize
+        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to False. (in the future, we can change this to return the top k or best)
+                                Note that returning all might return more than one region per region in the input. Thus, you lose the 1:1 mapping.
+        """
+        tokens = self.tokenize(regions, return_all=return_all)
+        return self.convert_tokens_to_ids(tokens)
 
     # not sure what this looks like, multiple RegionSets?
     def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:
