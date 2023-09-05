@@ -110,9 +110,19 @@ class RegionSet(object):
                 yield region
 
 
-class BedSet(object):
-    def __init__(self, sets: Union[List[RegionSet], List[str]]):
-        pass
+class RegionSetList(object):
+    def __init__(self, region_sets: Union[List[RegionSet], List[str], List[List[Region]]]):
+        self.region_sets = region_sets
+
+    def __len__(self):
+        return len(self.region_sets)
+
+    def __iter__(self):
+        for region_set in self.region_sets:
+            yield region_set
+
+    def __getitem__(self, indx: int):
+        return self.region_sets[indx]
 
 
 class SNP(object):

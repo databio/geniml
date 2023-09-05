@@ -7,7 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from random import shuffle
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import numpy as np
 from tqdm import tqdm
@@ -407,3 +407,12 @@ def make_wv_file_name(model_file_name: str) -> str:
     :return str: The wv file name.
     """
     return f"{model_file_name}.wv.vectors.npy"
+
+
+def generate_window_training_data(
+    data: List[RegionSet],
+) -> Tuple[List[List[Region]], List[Region]]:
+    """
+    Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
+    """
+    pass
