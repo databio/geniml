@@ -17,3 +17,4 @@ huggingface_hub
 intervaltree
 qdrant_client
 hnswlib
+tensorflow
