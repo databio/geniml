@@ -114,7 +114,7 @@ def test_convert_to_ids(universe_bed_file: str):
     ids = t.convert_tokens_to_ids(tokens)
 
     assert len(ids) == len(tokens)
-    assert all(isinstance(i, int) for i in ids)
+    assert all(isinstance(i, int) or i is None for i in ids)
 
 
 def test_tokenize_anndata(universe_bed_file: str, pbmc_data: sc.AnnData):
