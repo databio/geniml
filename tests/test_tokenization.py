@@ -95,6 +95,28 @@ def test_tokenize_list_of_regions(universe_bed_file: str):
     assert len([t for t in tokens if t is not None]) == 3
 
 
+def test_convert_to_ids(universe_bed_file: str):
+    t = InMemTokenizer(universe_bed_file)
+    assert t is not None
+
+    # tokenize a bed file
+    bed_file = "tests/data/to_tokenize.bed"
+
+    # read in each and cast as a region
+    with open(bed_file, "r") as f:
+        lines = f.readlines()
+        regions = []
+        for line in lines:
+            chr, start, stop = line.strip().split("\t")
+            regions.append(Region(chr, int(start), int(stop)))
+
+    tokens = t.tokenize(regions)
+    ids = t.convert_tokens_to_ids(tokens)
+
+    assert len(ids) == len(tokens)
+    assert all(isinstance(i, int) for i in ids)
+
+
 def test_tokenize_anndata(universe_bed_file: str, pbmc_data: sc.AnnData):
     t = InMemTokenizer(universe_bed_file)
     assert t is not None

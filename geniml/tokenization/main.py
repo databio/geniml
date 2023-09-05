@@ -290,13 +290,18 @@ class InMemTokenizer(Tokenizer):
         else:
             return self.find_overlaps(regions, return_all=return_all)
 
-    def convert_tokens_to_ids(self, tokens: List[Region]) -> List[int]:
+    def convert_tokens_to_ids(
+        self, tokens: List[Region], missing_token_id: any = None
+    ) -> List[int]:
         """
         Convert a list of tokens to a list of ids.
 
         :param List[Region] tokens: The list of tokens to convert
         """
-        return [self._region_to_index[wordify_region(token)] for token in tokens]
+        return [
+            missing_token_id if token is None else self._region_to_index[wordify_region(token)]
+            for token in tokens
+        ]
 
     def tokenize_and_convert_to_ids(
         self, regions: Union[str, List[Region], RegionSet, sc.AnnData], return_all: bool = False
