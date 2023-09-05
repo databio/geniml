@@ -170,6 +170,12 @@ class InMemTokenizer(Tokenizer):
 
         return overlapping_regions
 
+    def __len__(self, *args, **kwargs):
+        if self.universe is None:
+            return 0
+        else:
+            return len(self.universe)
+
     def convert_anndata_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
         """
         Converts the consensus peak set (.var) attributes of the AnnData object

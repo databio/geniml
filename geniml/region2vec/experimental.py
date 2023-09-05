@@ -1,8 +1,12 @@
+from typing import List, Union
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from ..tokenization.main import InMemTokenizer
+from ..models.main import ExModel
+from ..io.io import RegionSet
 from .const import DEFAULT_EMBEDDING_SIZE, DEFAULT_HIDDEN_DIM
 
 
@@ -26,7 +30,7 @@ class Word2Vec(nn.Module):
         x = self.output(x)
 
 
-class Region2VecExModel(Word2Vec):
+class Region2VecExModel(ExModel):
     def __init__(self, model_path: str = None, tokenizer: InMemTokenizer = None, **kwargs):
         """
         Initialize Region2VecExModel.
@@ -34,7 +38,7 @@ class Region2VecExModel(Word2Vec):
         :param str model_path: Path to the pre-trained model on huggingface.
         :param kwargs: Additional keyword arguments to pass to the model.
         """
-        super().__init__(**kwargs)
+        super().__init__()
         self.model_path = model_path
         self.tokenizer: InMemTokenizer = tokenizer
 
@@ -42,3 +46,42 @@ class Region2VecExModel(Word2Vec):
             self._init_from_huggingface(model_path)
         else:
             self.tokenizer = tokenizer
+            self._model = Word2Vec(
+                len(self.tokenizer.universe),
+                embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
+                hidden_dim=kwargs.get("hidden_dim", DEFAULT_HIDDEN_DIM),
+            )
+
+    def _validate_data_for_training(
+        self, data: Union[List[RegionSet], List[str]]
+    ) -> List[RegionSet]:
+        """
+        Validate the data for training. This will return a list of RegionSets if the data is valid.
+
+        :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
+                                                       a list of RegionSets or a list of paths to bed files.
+        :return: List of RegionSets.
+        """
+        if not isinstance(data, list):
+            raise TypeError("data must be a list or RegionSets or a list of paths to bed files.")
+        if len(data) == 0:
+            raise ValueError("data must not be empty.")
+
+        # check if the data is a list of RegionSets
+        if isinstance(data[0], RegionSet):
+            return data
+        elif isinstance(data[0], str):
+            return [RegionSet(f) for f in data]
+
+    def train(self, data: Union[List[RegionSet], List[str]]):
+        """
+        Train the model.
+
+        :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
+                                                       a list of RegionSets or a list of paths to bed files.
+        """
+        # validate the data
+        data = self._validate_data_for_training(data)
+
+        # train the model
+        raise NotImplementedError("Training is not yet implemented.")
