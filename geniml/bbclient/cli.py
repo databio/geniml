@@ -1,5 +1,5 @@
-import argparse
-from .bedfile_retrieval import BedProcessor, BedCacheManager, BedDownloader
+from .bedfile_retrieval import BedFetch
+from .utils import  BedCacheManager, BedDownloader
 
 
 def download_bedset(args):
@@ -8,7 +8,7 @@ def download_bedset(args):
 
 
 def download_and_process_bed_region(args):
-    bed_processor = BedProcessor(args.cache_folder)
+    bed_processor = BedFetch(args.cache_folder)
     bed_regions = bed_processor.download_and_process_bed_region_data(
         args.input_identifier, args.chr, args.start, args.end
     )
@@ -20,10 +20,14 @@ def process_local_bed_data(args):
     bed_local = cache_manager.process_local_bed_data(args.input_identifier)
     print(bed_local)
 
+def process_identifier(args):
+    bed_processor = BedFetch(args.cache_folder)
+    bed_ident = bed_processor.process_identifier(args.input_identifier)
+    print(bed_ident)
 
 def process_identifiers(args):
-    bed_processor = BedProcessor(args.cache_folder)
-    bed_ident = bed_processor.process_identifiers(args.input_identifier)
+    bed_processor = BedFetch(args.cache_folder)
+    bed_ident = bed_processor.process_identifiers(args.input_identifiers)
     print(bed_ident)
 
 
@@ -55,8 +59,15 @@ def build_subparser(parser):
     )
     parser_local.set_defaults(func=process_local_bed_data)
 
-    parser_ident = subparsers.add_parser("identifiers", help="Process identifiers")
+    parser_ident = subparsers.add_parser("identifier", help="Process identifiers")
     parser_ident.add_argument("--input-identifier", help="BED file identifier")
+    parser_ident.add_argument(
+        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
+    )
+    parser_ident.set_defaults(func=process_identifier)
+
+    parser_ident = subparsers.add_parser("identifiers", help="Process identifiers")
+    parser_ident.add_argument("--input-identifiers", help="BED file identifiers")
     parser_ident.add_argument(
         "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
     )

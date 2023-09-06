@@ -131,6 +131,12 @@ def main(test_args=None):
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             download_and_process_bed_region(args)
 
+        if args.subcommand == "identifier":
+            from .bbclient.cli import process_identifier
+
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            process_identifier(args)
+
         if args.subcommand == "identifiers":
             from .bbclient.cli import process_identifiers
 
