@@ -1,9 +1,11 @@
 import os
 import requests
 import genomicranges
+
 from typing import List, Union
-from ..io import RegionSet
+from ..io import RegionSet, Region
 from .utils import BedCacheManager, bedset_to_grangeslist, create_bedset_from_file
+from .const import DEFAULT_BEDBASE_URI
 
 # How should I be able to use this?
 
@@ -44,15 +46,19 @@ from .utils import BedCacheManager, bedset_to_grangeslist, create_bedset_from_fi
 
 
 class BedSet(object):
-    def __init__(self, region_sets: Union[List[RegionSets], List[str], List[List[Regions]], None], file_path: str = None, identifier: str = None):
-
-        if isinstance(region_sets, List[RegionSets]):
-              self.region_sets = region_sets
+    def __init__(
+        self,
+        region_sets: Union[List[RegionSet], List[str], List[List[Region]], None],
+        file_path: str = None,
+        identifier: str = None,
+    ):
+        if isinstance(region_sets, List[RegionSet]):
+            self.region_sets = region_sets
         elif isinstance(region_sets, List[str]):
             self.region_sets = []
             for r in region_sets:
                 self.region_sets.append(RegionSet(r))  # Needs to run through bbclient
-        elif isinstance(region_sets, List[List[Regions]]):
+        elif isinstance(region_sets, List[List[Region]]):
             self.region_sets = []
             for r in region_sets:
                 self.region_sets.append(RegionSet(r))
@@ -72,7 +78,7 @@ class BedSet(object):
 
     def __getitem__(self, indx: int):
         return self.region_sets[indx]
-    
+
     def compute_identifier(self):
         # TODO: set the bedset identifier
         # If the bedset identifier is not set, we should set it using
@@ -81,28 +87,30 @@ class BedSet(object):
         raise NotImplementedError("BedSet object does not have a bedset identifier")
         computed_identifier = ...
         return computed_identifier
-              
+
     def to_grangeslist(self) -> genomicranges.GenomicRangesList:
-            """Process a list of BED file identifiers and returns a GenomicRangesList object"""         
-            # return this bedset object
-            return bedset_to_grangeslist(self.bedset_identifier)
-        
+        """Process a list of BED file identifiers and returns a GenomicRangesList object"""
+        # return this bedset object
+        return bedset_to_grangeslist(self.bedset_identifier)
+
+
 class BBClient(BedCacheManager):
-    def __init__(self, cache_folder: str):
+    def __init__(self, cache_folder: str, bedbase_uri: str = DEFAULT_BEDBASE_URI):
         super().__init__(cache_folder)
+        self.bedbase_uri = bedbase_uri
 
     def download_and_process_bed_region_data(
         self, bed_identifier: str, chr_num: str, start: int, end: int
     ) -> genomicranges.GenomicRanges:
         """Download regions of a BED file from BEDbase API and return the file content as bytes"""
-        bed_url = f"http://bedbase.org/api/bed/{bed_identifier}/regions/{chr_num}?start={start}&end={end}"
+        bed_url = f"{self.bedbase_uri}/{bed_identifier}/regions/{chr_num}?start={start}&end={end}"
         response = requests.get(bed_url)
         response.raise_for_status()
         response_content = response.content
         gr_bed_regions = self.decompress_and_convert_to_genomic_ranges(response_content)
 
         return gr_bed_regions
-       
+
     def download_bed_data(self, bed_identifier: str) -> bytes:
         """Download BED file from BEDbase API and return the file content as bytes"""
         bed_url = f"http://bedbase.org/api/bed/{bed_identifier}/file/bed"
@@ -125,11 +133,11 @@ class BBClient(BedCacheManager):
         with open(file_path, "w") as file:
             for value in extracted_data:
                 file.write(value + "\n")
-        
+
         return BedSet(extracted_data)
-    
+
     def load_bed(self, bed_file_identifier: str) -> RegionSet:
-        """ Loads a BED file from cachce, or downloads and caches it if it doesn't exist"""
+        """Loads a BED file from cachce, or downloads and caches it if it doesn't exist"""
         cached_file_path_existing = os.path.join(
             self.cache_folder, bed_file_identifier[0], bed_file_identifier[1], bed_file_identifier
         )
