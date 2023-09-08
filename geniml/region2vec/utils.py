@@ -13,7 +13,13 @@ import numpy as np
 from tqdm import tqdm
 
 from ..io import Region, RegionSet
-from .const import DEFAULT_INIT_LR, DEFAULT_MIN_LR, MODULE_NAME
+from .const import (
+    DEFAULT_INIT_LR,
+    DEFAULT_MIN_LR,
+    MODULE_NAME,
+    DEFAULT_WINDOW_SIZE,
+    DEFAULT_N_SHUFFLES,
+)
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 
@@ -355,7 +361,7 @@ class LearningRateScheduler:
 
 
 def shuffle_documents(
-    documents: List[List[str]],
+    documents: List[List[any]],
     n_shuffles: int,
     threads: int = None,
 ) -> List[List[str]]:
@@ -367,7 +373,7 @@ def shuffle_documents(
     :param int threads: The number of threads to use for shuffling.
     """
 
-    def shuffle_list(l: List[str], n: int) -> List[str]:
+    def shuffle_list(l: List[any], n: int) -> List[any]:
         for _ in range(n):
             shuffle(l)
         return l
@@ -411,8 +417,44 @@ def make_wv_file_name(model_file_name: str) -> str:
 
 def generate_window_training_data(
     data: List[RegionSet],
+    window_size: int = DEFAULT_WINDOW_SIZE,
+    n_shuffles: int = DEFAULT_N_SHUFFLES,
+    threads: int = None,
 ) -> Tuple[List[List[Region]], List[Region]]:
     """
     Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
+
+    :param List[RegionSet] data: The data to generate the training data from.
+    :param int window_size: The window size to use.
+    :param int n_shuffles: The number of shuffles to perform.
+    :param int threads: The number of threads to use.
+
+    :return Tuple[List[List[Region]], List[Region]]: The contexts and targets.
     """
-    pass
+    _LOGGER.info("Generating windowed training data.")
+
+    # shuffle the documents
+    documents = shuffle_documents(
+        [[r for r in rs] for rs in data], n_shuffles=n_shuffles, threads=threads
+    )
+
+    # generate the contexts and targets
+    look_behind = look_ahead = (window_size - 1) // 2
+    contexts = []
+    targets = []
+
+    # iterate over the documents
+    for document in tqdm(documents, desc="Generating windowed training data"):
+        # iterate over the regions in the document
+        for i, region in enumerate(document):
+            # get the context
+            context = []
+            start = max(0, i - look_behind)
+            end = min(len(document), i + look_ahead + 1)
+            for j in range(start, end):
+                if j != i:
+                    context.append(document[j])
+            contexts.append(context)
+            targets.append(region)
+
+    return contexts, targets

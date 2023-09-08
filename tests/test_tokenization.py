@@ -95,6 +95,17 @@ def test_tokenize_list_of_regions(universe_bed_file: str):
     assert len([t for t in tokens if t is not None]) == 3
 
 
+def test_tokenize_training_data(universe_bed_file: str):
+    region_sets = [RegionSet("tests/data/to_tokenize.bed")] * 10
+    t = InMemTokenizer(universe_bed_file)
+
+    region_sets_tokenized = [t.tokenize(rs) for rs in region_sets]
+    region_sets_ids = [t.convert_tokens_to_ids(rs) for rs in region_sets_tokenized]
+
+    assert len(region_sets_tokenized) == len(region_sets)
+    assert len(region_sets_ids) == len(region_sets)
+
+
 def test_convert_to_ids(universe_bed_file: str):
     t = InMemTokenizer(universe_bed_file)
     assert t is not None

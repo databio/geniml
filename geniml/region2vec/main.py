@@ -628,7 +628,7 @@ class Region2VecExModel(ExModel):
         regions: Union[str, List[Region], RegionSet, str],
         pool: Union[Literal["mean", "max"], bool, Callable] = False,
         return_none: bool = True,
-    ) -> np.ndarray:
+    ) -> Union[np.ndarray, List[np.ndarray]]:
         """
         Encode the data into a latent space.
 
@@ -638,9 +638,10 @@ class Region2VecExModel(ExModel):
                                                                    If False, will not pool. If callable, will use the callable
                                                                    function to pool the data.
         :param bool return_none: If True, will return None for regions without vectors. If False, will skip such regions. (it is highly recommended to set this to True)
-        :return np.ndarray: The encoded data.
+        :return Union[np.ndarray, List[np.ndarray]]: The encoded data.
         """
         # tokenize the data
+        _LOGGER.info("Tokenize data.")
         regions = self.tokenizer.tokenize(regions)
 
         # encode the data
