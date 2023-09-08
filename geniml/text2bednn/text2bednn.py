@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import tensorflow as tf
+
 from ..search.backends import HNSWBackend, QdrantBackend
 
 from .const import *
@@ -174,7 +175,7 @@ class Text2BEDSearchInterface(object):
     def __init__(
         self,
         nl2vec_model: Union[SentenceTransformer, None],
-        vec2vec_model: Union[Vec2VecFNN, None],
+        vec2vec_model: Union[Vec2VecFNN, str, None],
         search_backend: Union[QdrantBackend, HNSWBackend, None],
     ):
         """
@@ -194,8 +195,13 @@ class Text2BEDSearchInterface(object):
         if isinstance(vec2vec_model, type(None)):
             # init an empty Vec2VecFNN model if input is None
             self.vec2vec = Vec2VecFNN()
-        else:
+        elif isinstance(vec2vec_model, str):
+            self.vec2vec = Vec2VecFNN()
+            self.vec2vec.load_local_pretrained(vec2vec_model)
+        elif isinstance(vec2vec_model, Vec2VecFNN):
             self.vec2vec = vec2vec_model
+        else:
+            raise TypeError("vec2vec_model must be either a path to a pretrained model or a Vec2VecFNN model")
 
         if isinstance(search_backend, type(None)):
             # init a default HNSWBackend if input is None
