@@ -15,9 +15,14 @@ from .const import (
     DEFAULT_MIN_COUNT,
     DEFAULT_N_SHUFFLES,
 )
+from .utils import generate_window_training_data
 
 
 class Word2Vec(nn.Module):
+    """
+    Word2Vec model. This is the CBOW model.
+    """
+
     def __init__(
         self,
         vocab_size: int,
@@ -35,6 +40,17 @@ class Word2Vec(nn.Module):
         x = self.projection(x)
         x = F.relu(self.hidden(x))
         x = self.output(x)
+        return F.log_softmax(x, dim=1)
+
+
+class Region2Vec(Word2Vec):
+    def __init__(
+        self,
+        vocab_size: int,
+        embedding_dim: int = DEFAULT_EMBEDDING_SIZE,
+        hidden_dim: int = DEFAULT_HIDDEN_DIM,
+    ):
+        super().__init__(vocab_size, embedding_dim, hidden_dim)
 
 
 class Region2VecExModel(ExModel):
@@ -47,6 +63,7 @@ class Region2VecExModel(ExModel):
         """
         super().__init__()
         self.model_path = model_path
+        self._model: Region2Vec = None
         self.tokenizer: InMemTokenizer = tokenizer
 
         if model_path is not None:
@@ -100,6 +117,14 @@ class Region2VecExModel(ExModel):
         """
         # validate the data
         data = self._validate_data_for_training(data)
+
+        # tokenize the data into regions and remove Nones
+        tokens = [self.tokenizer.tokenize(rs) for rs in data]
+        tokens = [[t for t in tokens_list if t is not None] for tokens_list in tokens]
+        tokens = self.tokenizer.convert_tokens_to_ids(tokens)
+
+        # create the dataset of windows
+        dataset = generate_window_training_data(tokens, window_size, n_shuffles)
 
         # train the model
         raise NotImplementedError("Training is not yet implemented.")

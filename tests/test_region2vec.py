@@ -8,12 +8,18 @@ from geniml.io.io import RegionSet, Region
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.utils import wordify_region, wordify_regions
 from geniml.region2vec.pooling import mean_pooling, max_pooling
+from geniml.region2vec.utils import generate_window_training_data
 from geniml.tokenization.main import InMemTokenizer
 
 
 @pytest.fixture
 def bed_file():
     return "tests/data/to_tokenize.bed"
+
+
+@pytest.fixture
+def bed_file2():
+    return "tests/data/to_tokenize2.bed"
 
 
 @pytest.fixture
@@ -208,3 +214,31 @@ def test_model_pooling():
 
     vector_sum = model.encode([r1, r2, r3], pool=sum_pooling)
     assert vector_sum.shape == (100,)
+
+
+def test_generate_windowed_training_data(
+    universe_file: str,
+    bed_file2: str,
+):
+    region_sets = [RegionSet(bed_file2) for _ in range(10)]
+    tokenizer = InMemTokenizer(universe_file)
+
+    window_size = 5
+    x_regions, y_regions = generate_window_training_data(region_sets, window_size=window_size)
+
+    # convert and remove None
+    region_sets_ids = [tokenizer.tokenize_and_convert_to_ids(rs) for rs in region_sets]
+    region_sets_ids = [
+        [t for t in tokens_list if t is not None] for tokens_list in region_sets_ids
+    ]
+
+    # convert to ids
+    x_ids, y_ids = generate_window_training_data(region_sets_ids, window_size=window_size)
+
+    assert len(x_regions) == len(y_regions)
+    assert all(isinstance(r, list) for r in x_regions)
+    assert all(isinstance(r, Region) for r in y_regions)
+
+    assert len(x_ids) == len(y_ids)
+    assert all(isinstance(r, list) for r in x_ids)
+    assert all(isinstance(r, int) for r in y_ids)
