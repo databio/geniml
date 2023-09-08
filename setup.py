@@ -39,6 +39,7 @@ setup(
         "geniml.text2bednn",
         "geniml.preprocessing",
         "geniml.bbclient",
+        "geniml.search",
     ],
     version=version,
     long_description=long_description,
