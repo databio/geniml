@@ -38,17 +38,6 @@ class EmSearchBackend(ABC):
         raise NotImplementedError()
 
 
-class QdrantBackend(EmSearchBackend):
-    """A search backend that uses a qdrant server to store and search embeddings"""
-
-    def __init__(self, config):
-        self.config = config
-        # TODO: initialize connection to qdrant server
-
-    def search(self, query):
-        raise NotImplementedError
-
-
 class HNSWBackend(EmSearchBackend):
     """A search backend that uses a local HNSW index to store and search embeddings"""
 
