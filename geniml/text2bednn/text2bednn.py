@@ -1,7 +1,8 @@
 from typing import Union
 
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import numpy as np
+import os
 import tensorflow as tf
 from ..search.backends import HNSWBackend, QdrantBackend
 
@@ -145,7 +146,8 @@ class Vec2VecFNN(tf.keras.models.Sequential):
             )
         return output_vec
 
-    def plot_training_hist(self):
+    def plot_training_hist(self,
+                          save_path:Union[str, None] = None):
         """
         plot the training & validating loss of the most recent training
         :return:
@@ -158,7 +160,10 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         plt.plot(epoch_range, valid_loss, "b", label="Validation loss")
         plt.title("Training and validation loss")
         plt.legend()
-        plt.show()
+        if save_path:
+            plt.savefig(os.path.join(save_path, "train_hist.png"))
+        else:
+            plt.show()
 
 
 class Text2BEDSearchInterface(object):
@@ -233,3 +238,4 @@ class Text2BEDSearchInterface(object):
 # betum = BEDEmbedTUM(RSC, universe, tokenizer)
 # embeddings = betum.compute_embeddings()
 # T2BNNSI = Text2BEDSearchInterface(betum, embeddings)  # ???
+
