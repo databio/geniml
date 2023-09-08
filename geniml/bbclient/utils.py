@@ -7,29 +7,6 @@ from typing import Optional
 import os
 
 
-class BedDownloader:
-    def download_bed_data(self, bed_identifier: str) -> bytes:
-        """Download BED file from BEDbase API and return the file content as bytes"""
-        bed_url = f"http://bedbase.org/api/bed/{bed_identifier}/file/bed"
-        response = requests.get(bed_url)
-        response.raise_for_status()
-
-        return response.content
-
-    def download_bedset_data(self, bed_identifier: str) -> dict:
-        """Download BEDset (List of bedfiles) from BEDbase API and return the file content as bytes"""
-        bed_url = f"http://bedbase.org/api/bedset/{bed_identifier}/bedfiles?ids=md5sum"
-        response = requests.get(bed_url)
-        data = response.json()
-        extracted_data = [entry[0] for entry in data["data"]]
-        filename = f"bedset_{bed_identifier}.txt"
-        folder_name = f"bedsets"
-        os.makedirs(folder_name, exist_ok=True)
-        file_path = os.path.join(folder_name, filename)
-
-        with open(file_path, "w") as file:
-            for value in extracted_data:
-                file.write(value + "\n")
 
 class BedCacheManager:
     def __init__(self, cache_folder: str):
@@ -82,3 +59,38 @@ class BedCacheManager:
         gr = genomicranges.from_pandas(df)
 
         return gr
+    
+
+def bedset_to_grangeslist(bedset: BedSet) -> genomicranges.GenomicRangesList:
+        """Convert a bedset into a GenomicRangesList object"""
+        gr_dict = {}  # Create empty dict to store GenomicRanges objects
+        
+        bed_identifiers = self.read_bed_identifiers_from_file(bedset_identifier)
+
+        for bed_identifier in bed_identifiers:
+            gr = self.process_bed_file(bed_identifier)
+            gr_dict[bed_identifier] = gr
+            print(f"Processed {bed_identifier}")
+            print(gr)
+
+            # Create a GenomicRangesList object from the dictionary
+            grl = genomicranges.GenomicRangesList(**gr_dict)
+            return grl
+
+# QUESTION: should this move to the RegionSet object?
+def regionset_to_granges(regionset: RegionSet) -> genomicranges.GenomicRanges:
+    """Convert a regionset into a GenomicRanges object"""
+    with open(regionset.path, "rb") as f:
+        bed_data = f.read()
+        gr = self.decompress_and_convert_to_genomic_ranges(bed_data)
+
+        return gr
+
+def read_bedset_file(file_path: str) -> List[str]:
+    """Load a bedset from a text file"""
+    bed_identifiers = []
+
+    with open(file_path, "r") as f:
+        for line in f:
+            bed_identifiers.append(line.strip())
+    return bed_identifiers
