@@ -37,9 +37,16 @@ class QdrantBackend(EmSearchBackend):
             port=self.port,
             api_key=os.environ.get("QDRANT_API_KEY", None),
         )
-        self.qd_client.recreate_collection(
-            collection_name=self.collection, vectors_config=self.config
-        )
+
+        # Create collection only if it does not exist
+        try: 
+            collection_info = self.qd_client.get_collection(collection_name=self.collection)
+            _LOGGER.info("Using collection {self.collection} with {collection_info.points_count} points"}}")
+        except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
+            _LOGGER.info(f"Collection {self.collection} does not exist, creating it")
+            self.qd_client.recreate_collection(
+                collection_name=self.collection, vectors_config=self.config
+            )
 
     def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
         """
