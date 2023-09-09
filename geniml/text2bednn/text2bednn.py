@@ -217,6 +217,7 @@ class Text2BEDSearchInterface(object):
         see https://huggingface.co/sentence-transformers
         :return:
         """
+        _LOGGER.info(f"Setting sentence transformer model {st_repo}")
         self.nl2vec = SentenceTransformer(st_repo)
 
     def nl_vec_search(
@@ -237,11 +238,6 @@ class Text2BEDSearchInterface(object):
         # perform the KNN search among vectors stored in backend
         return self.search_backend.search(search_vector, k)
 
-
-#
-# # Example of how to use the TextToBedNN Search Interface
-#
-# betum = BEDEmbedTUM(RSC, universe, tokenizer)
-# embeddings = betum.compute_embeddings()
-# T2BNNSI = Text2BEDSearchInterface(betum, embeddings)  # ???
-
+    def __repr__(self):
+        return f"Text2BEDSearchInterface(nl2vec_model={self.nl2vec}, vec2vec_model={self.vec2vec}, search_backend={self.search_backend})"
+    
