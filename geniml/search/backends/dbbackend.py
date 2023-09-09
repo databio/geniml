@@ -30,9 +30,11 @@ class QdrantBackend(EmSearchBackend):
         """
         self.collection = collection
         self.config = config
+        self.url = os.environ.get("QDRANT_HOST", qdrant_host)
+        self.port = os.environ.get("QDRANT_PORT", qdrant_port)
         self.qd_client = QdrantClient(
-            url=os.environ.get("QDRANT_HOST", qdrant_host),
-            port=os.environ.get("QDRANT_PORT", qdrant_port),
+            url=self.url,
+            port=self.port,
             api_key=os.environ.get("QDRANT_API_KEY", None),
         )
         self.qd_client.recreate_collection(
@@ -149,7 +151,19 @@ class QdrantBackend(EmSearchBackend):
             return output_list
 
     def __str__(self):
-        return "QdrantBackend with {} items".format(len(self))
+        n_items = len(self)
+        msg = f"""QdrantBackend
+            n items: {n_items}
+            url: {self.url}:{self.port},
+            collection: {self.collection}
+            """
+        return msg
 
     def __repr__(self):
-        return "QdrantBackend with {} items".format(len(self))
+        n_items = len(self)
+        msg = f"""QdrantBackend
+            n items: {n_items}
+            url: {self.url}:{self.port},
+            collection: {self.collection}
+            """
+        return msg
