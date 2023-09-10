@@ -139,8 +139,8 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
     Y = []
     for ri in ri_list:
         # X: metadata embedding
-        if ri.metadata_embedding.shape != DEFAULT_BED_EMBEDDING_SHAPE:
-            print(f"{ri.file_name}'s embedding has shape of {ri.metadata_embedding.shape}, exclude from dataset")
+        if ri.region_set_embedding.shape != DEFAULT_BED_EMBEDDING_SHAPE:
+            print(f"{ri.file_name}'s embedding has shape of {ri.region_set_embedding.shape}, exclude from dataset")
             continue
         X.append(ri.metadata_embedding)
         # Y: bed file embedding
