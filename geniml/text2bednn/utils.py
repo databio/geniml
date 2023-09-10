@@ -69,7 +69,7 @@ def build_regionset_info_list(
             bed_metadata = clean_escape_characters(metadata_line)
             region_set = RegionSet(bed_file_path)
             metadata_embedding = st_model.encode(bed_metadata)
-            region_set_embedding = r2v_model.encode(region_set, pool="mean")
+            region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
             bed_metadata_dc = RegionSetInfo(
                 bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
             )
