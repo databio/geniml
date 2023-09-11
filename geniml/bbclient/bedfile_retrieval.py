@@ -4,8 +4,9 @@ import genomicranges
 
 from typing import List, Union
 from ..io import RegionSet, Region
-from .utils import BedCacheManager, bedset_to_grangeslist, create_bedset_from_file
+from .utils import BedCacheManager, bedset_to_grangeslist, create_bedset_from_file, read_bedset_file
 from .const import DEFAULT_BEDBASE_URI
+
 
 # How should I be able to use this?
 
@@ -84,6 +85,8 @@ class BedSet(object):
         # If the bedset identifier is not set, we should set it using
         # the algorithm we use to compute bedset identifiers
         # (see bedboss/bedbuncher pipeline)
+        # I believe the bedset identifier is computed in bedbuncher.py line 76 with function 'get_bedset_digest'
+        # Is this passed in other parts of the bedbase ecosystem? 
         raise NotImplementedError("BedSet object does not have a bedset identifier")
         computed_identifier = ...
         return computed_identifier
