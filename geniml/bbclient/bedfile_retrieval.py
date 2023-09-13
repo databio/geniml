@@ -64,7 +64,11 @@ class BedSet(object):
             for r in region_sets:
                 self.region_sets.append(RegionSet(r))
         elif file_path is not None:
-            # TODO: check file exists, etc
+            if os.path.isfile(file_path):
+                self.region_sets = [RegionSet(r) for r in read_bedset_file(file_path)]
+            else:
+                raise FileNotFoundError(f"The specified file '{file_path}' does not exist.")
+            
             for r in read_bedset_file(region_sets):
                 self.region_sets.append(RegionSet(r))
 
@@ -86,10 +90,25 @@ class BedSet(object):
         # the algorithm we use to compute bedset identifiers
         # (see bedboss/bedbuncher pipeline)
         # I believe the bedset identifier is computed in bedbuncher.py line 76 with function 'get_bedset_digest'
-        # Is this passed in other parts of the bedbase ecosystem? 
-        raise NotImplementedError("BedSet object does not have a bedset identifier")
-        computed_identifier = ...
+
+        # something like this?
+        import hashlib as md5
+
+        if self.bedset_identifier is not None:
+            return self.bedset_identifier
+        
+        # Compute MD5 hash
+        m = md5()
+        m.update(self.identifier_string.encode('utf-8'))
+        computed_identifier = m.hexdigest()
+
+        # Set bedset identifier
+        self.bedset_identifier = computed_identifier
+        
         return computed_identifier
+
+        # raise NotImplementedError("BedSet object does not have a bedset identifier")
+    
 
     def to_grangeslist(self) -> genomicranges.GenomicRangesList:
         """Process a list of BED file identifiers and returns a GenomicRangesList object"""
