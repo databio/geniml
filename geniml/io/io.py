@@ -3,6 +3,7 @@ import os
 from typing import List, Union
 
 import numpy as np
+import pandas as pd
 from intervaltree import Interval
 
 from .const import *
@@ -56,12 +57,29 @@ class RegionSet(object):
                 with open_func(self.path, mode) as file:
                     self.length = sum(1 for line in file if line.strip())
             else:
-                with open_func(regions, mode) as f:
-                    lines = f.readlines()
-                    for line in lines:
-                        # some bed files have more than 3 columns, so we just take the first 3
-                        chr, start, stop = line.split("\t")[:3]
-                        self.regions.append(Region(chr, int(start), int(stop)))
+                if is_gzipped(regions):
+                    # open with pandas using arrow
+                    df = pd.read_csv(
+                        regions, sep="\t", compression="gzip", header=None, engine="pyarrow"
+                    )
+                    _regions = []
+                    df.apply(
+                        lambda row: _regions.append(Region(row[0], row[1], row[2])),
+                        axis=1,
+                    )
+
+                    self.regions = _regions
+                    self.length = len(self.regions)
+                else:
+                    # open with pandas
+                    df = pd.read_csv(regions, sep="\t", header=None, engine="pyarrow")
+                    _regions = []
+                    df.apply(
+                        lambda row: _regions.append(Region(row[0], row[1], row[2])),
+                        axis=1,
+                    )
+
+                    self.regions = _regions
                     self.length = len(self.regions)
 
         # load from list

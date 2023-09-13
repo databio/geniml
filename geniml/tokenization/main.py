@@ -5,7 +5,9 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Dict, List, Union
 
+import genomicranges as gr
 import numpy as np
+import pandas as pd
 import scanpy as sc
 from intervaltree import IntervalTree
 from tqdm import tqdm
@@ -22,6 +24,84 @@ class Tokenizer(ABC):
     @abstractmethod
     def tokenize(self, *args, **kwargs):
         raise NotImplementedError
+
+
+class GRangesTokenizer(Tokenizer):
+    """
+    Tokenize new regions into a vocabulary.
+
+    This tokenizer leverages the genomicranges.find_overlaps function to find overlaps
+    between regions. Computation occurs in memory. It is fast, at the cost of storing
+    the entire universe in memory.
+    """
+
+    def __init__(self, universe: str = None):
+        """
+        Create a new tokenizer.
+
+        This tokenizer only accepts a path to a BED file containing regions.
+
+        :param str universe: The universe to use for tokenization.
+        """
+        if self.universe is not None:
+            granges = self._read_in_universe(universe)
+            self._universe = granges
+        else:
+            self._universe = None
+
+    def _read_in_universe(self, universe: str) -> gr.GenomicRanges:
+        df = pd.read_csv(universe, sep="\t", header=None, columns=["seqnames", "starts", "ends"])
+        granges = gr.from_pandas(df)
+        return granges
+
+    def tokenize_region(self, region: Region) -> List[Region]:
+        """
+        Tokenize a single region into the universes
+        """
+        query = gr.from_pandas(
+            pd.DataFrame(
+                {
+                    "seqnames": [region.chr],
+                    "starts": [region.start],
+                    "ends": [region.end],
+                }
+            )
+        )
+        result = self._universe.find_overlaps(query)
+        return result
+
+    def tokenize_region_set(self, region_set: RegionSet) -> List[Region]:
+        """
+        Tokenize a RegionSet into the universe
+        """
+        chrs = starts = ends = []
+        for region in region_set:
+            chrs.append(region.chr)
+            starts.append(region.start)
+            ends.append(region.end)
+
+        query = gr.from_pandas(
+            pd.DataFrame(
+                {
+                    "seqnames": chrs,
+                    "starts": starts,
+                    "ends": ends,
+                }
+            )
+        )
+        result = self._universe.find_overlaps(query)
+        return result
+
+    def tokenize(self, query: Union[Region, RegionSet]) -> List[Region]:
+        """
+        Tokenize a Region or RegionSet into the universe
+        """
+        if isinstance(query, Region):
+            return self.tokenize_region(query)
+        elif isinstance(query, RegionSet):
+            return self.tokenize_region_set(query)
+        else:
+            raise ValueError("Query must be a Region or RegionSet")
 
 
 class InMemTokenizer(Tokenizer):
@@ -114,15 +194,15 @@ class InMemTokenizer(Tokenizer):
         self.universe = regions
         indx = 0
         for region in tqdm(regions, total=len(regions), desc="Adding regions to universe"):
-            r_string = wordify_region(region)
+            # r_string = wordify_region(region)
             if region.chr not in self._trees:
                 self._trees[region.chr] = IntervalTree()
-            self._trees[region.chr][region.start : region.end] = r_string
+            self._trees[region.chr][region.start : region.end] = None
 
-            # add to region to index map
-            if r_string not in self._region_to_index:
-                self._region_to_index[r_string] = indx
-                indx += 1
+            # # add to region to index map
+            # if r_string not in self._region_to_index:
+            #     self._region_to_index[r_string] = indx
+            #     indx += 1
 
         # count total regions
         self.total_regions = sum([len(self._trees[tree]) for tree in self._trees])
