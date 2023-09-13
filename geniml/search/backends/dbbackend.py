@@ -51,21 +51,27 @@ class QdrantBackend(EmSearchBackend):
                 collection_name=self.collection, vectors_config=self.config
             )
 
-    def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
+    def load(self,
+        vectors: np.ndarray,
+        ids: Union[List[str],None]=None,
+        payloads: Union[List[Dict[str, str]], None]=None):
         """
-        upload vectors and their labels onto qdrant storage
+        Upload vectors and their labels into qdrant storage.
 
-        :param embeddings: embedding vectors of bed files, a np.ndarray with shape of (n, <vector size>)
-        :param labels: list of dictionaries that contain information of the vectors to be store
+        :param vectors: embedding vectors, a np.ndarray with shape of (n, <vector size>)
+        :param ids: list of n point ids, or None to generate ids automatically
+        :param payloads: optional list of n dictionaries that contain vector metadata
         :return:
         """
 
-        verify_load_inputs(embeddings, labels)
-
-        start = len(self)
+        verify_load_inputs(vectors, ids, payloads)
+        if not ids:
+            start = len(self)
+            ids = list(range(start, start + len(labels)))
+                   
         points = [
-            PointStruct(id=i + start, vector=embeddings[i].tolist(), payload=labels[i])
-            for i in range(len(labels))
+            PointStruct(id=ids[i], vector=vectors[i].tolist(), payload=payloads[i])
+            for i in range(len(payloads))
         ]
         self.qd_client.upsert(
             collection_name=self.collection,
