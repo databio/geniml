@@ -43,14 +43,14 @@ class GRangesTokenizer(Tokenizer):
 
         :param str universe: The universe to use for tokenization.
         """
-        if self.universe is not None:
+        if universe is not None:
             granges = self._read_in_universe(universe)
             self._universe = granges
         else:
             self._universe = None
 
     def _read_in_universe(self, universe: str) -> gr.GenomicRanges:
-        df = pd.read_csv(universe, sep="\t", header=None, columns=["seqnames", "starts", "ends"])
+        df = pd.read_csv(universe, sep="\t", header=None, names=["seqnames", "starts", "ends"])
         granges = gr.from_pandas(df)
         return granges
 
@@ -68,13 +68,19 @@ class GRangesTokenizer(Tokenizer):
             )
         )
         result = self._universe.find_overlaps(query)
+        result = [
+            Region(chr, start, end)
+            for chr, start, end in zip(result.seqnames, result.starts, result.ends)
+        ]
         return result
 
     def tokenize_region_set(self, region_set: RegionSet) -> List[Region]:
         """
         Tokenize a RegionSet into the universe
         """
-        chrs = starts = ends = []
+        chrs = []
+        starts = []
+        ends = []
         for region in region_set:
             chrs.append(region.chr)
             starts.append(region.start)
@@ -90,6 +96,10 @@ class GRangesTokenizer(Tokenizer):
             )
         )
         result = self._universe.find_overlaps(query)
+        result = [
+            Region(chr, start, end)
+            for chr, start, end in zip(result.seqnames, result.starts, result.ends)
+        ]
         return result
 
     def tokenize(self, query: Union[Region, RegionSet]) -> List[Region]:
