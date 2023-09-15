@@ -74,6 +74,8 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         loss_func: str = DEFAULT_LOSS_NAME,
         num_epochs: int = DEFAULT_NUM_EPOCHS,
         batch_size: int = DEFAULT_BATCH_SIZE,
+        learning_rate: float = DEFAULT_LEARNING_RATE,
+        patience: float = DEFAULT_PATIENCE,
         **kwargs,
     ):
         """
@@ -86,6 +88,9 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         :param loss_func: name of loss function
         :param num_epochs: number of training epoches
         :param batch_size: size of batch for training
+        :param learning_rate: learning rate of optimizer
+        :param patience: the percentage of epoches in which if no validation loss improvement,
+        the training will be stopped
         :param kwargs: see units and layers in add_layers()
         :return:
         """
@@ -106,11 +111,13 @@ class Vec2VecFNN(tf.keras.models.Sequential):
 
         # compile the model
         self.compile(optimizer=opt_name, loss=loss_func)
+        # set the learning rate
+        tf.keras.backend.set_value(self.optimizer.learning_rate, learning_rate)
         # if there is validating data, set early stoppage to prevent over-fitting
         callbacks = None
         if validating_data:
             early_stoppage = tf.keras.callbacks.EarlyStopping(
-                monitor="val_loss", patience=int(num_epochs * 0.25)
+                monitor="val_loss", patience=int(num_epochs * patience)
             )
             callbacks = [early_stoppage]
 
