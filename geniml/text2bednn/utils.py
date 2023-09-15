@@ -63,9 +63,6 @@ def build_regionset_info_list(
     j = 0
 
     while i < len(metadata_lines):
-        # end the loop if all
-        if j == len(file_name_list):
-            break
         # read the line of metadata
         metadata_line = metadata_lines[i]
         # get the name of the interval set
@@ -81,6 +78,7 @@ def build_regionset_info_list(
             region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
             if region_set_embedding is None and bed_vec_necessary:
                 print(f"{bed_file_name}'s embedding is None, exclude from dataset")
+                j += 1
                 i += 1
                 continue
             if not with_regions:
@@ -89,6 +87,11 @@ def build_regionset_info_list(
                 bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
             )
             output_list.append(bed_metadata_dc)
+
+
+        # end the loop if all
+        if j == len(file_name_list):
+            break
 
         i += 1
 
