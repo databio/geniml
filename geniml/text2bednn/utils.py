@@ -18,7 +18,9 @@ class RegionSetInfo:
 
     file_name: str  # the name of the bed file
     metadata: str  # the metadata of the bed file
-    region_set: Union[RegionSet, None]  # the RegionSet that contains intervals in that bed file, not tokenized
+    region_set: Union[
+        RegionSet, None
+    ]  # the RegionSet that contains intervals in that bed file, not tokenized
     metadata_embedding: np.ndarray  # the embedding vector of the metadata by sentence transformer
     region_set_embedding: np.ndarray  # the embedding vector of region set
 
@@ -29,7 +31,7 @@ def build_regionset_info_list(
     r2v_model: Region2VecExModel,
     st_model: SentenceTransformer,
     with_regions: bool = False,
-    bed_vec_necessary: bool = True
+    bed_vec_necessary: bool = True,
 ) -> List[RegionSetInfo]:
     """
     With each bed file in the given folder and its matching metadata from the metadata file,
@@ -63,13 +65,15 @@ def build_regionset_info_list(
     j = 0
 
     while i < len(metadata_lines):
+        # end the loop if all bed files has been go over
+        if j == len(file_name_list):
+            break
         # read the line of metadata
         metadata_line = metadata_lines[i]
         # get the name of the interval set
         set_name = metadata_line.split("\t")[0]
 
         if j < len(file_name_list) and file_name_list[j].startswith(set_name):
-            j += 1
             bed_file_name = file_name_list[j]
             bed_file_path = os.path.join(bed_folder, bed_file_name)
             bed_metadata = clean_escape_characters(metadata_line)
@@ -87,20 +91,14 @@ def build_regionset_info_list(
                 bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
             )
             output_list.append(bed_metadata_dc)
-
-
-        # end the loop if all
-        if j == len(file_name_list):
-            break
+            j += 1
 
         i += 1
-
-    # print a message if not all bed files are matched to metadata rows
+        # print a message if not all bed files are matched to metadata rows
     if i < j:
         print(
             "An incomplete list will be returned, some files cannot be matched to any rows by first column"
         )
-
     return output_list
 
 
@@ -156,7 +154,9 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
             print(f"{ri.file_name}'s embedding is None, exclude from dataset")
             continue
         if ri.region_set_embedding.shape != DEFAULT_BED_EMBEDDING_SHAPE:
-            print(f"{ri.file_name}'s embedding has shape of {ri.region_set_embedding.shape}, exclude from dataset")
+            print(
+                f"{ri.file_name}'s embedding has shape of {ri.region_set_embedding.shape}, exclude from dataset"
+            )
             continue
         X.append(ri.metadata_embedding)
         # Y: bed file embedding
