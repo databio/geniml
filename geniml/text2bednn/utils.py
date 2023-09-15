@@ -29,6 +29,7 @@ def build_regionset_info_list(
     r2v_model: Region2VecExModel,
     st_model: SentenceTransformer,
     with_regions: bool = False,
+    bed_vec_necessary: bool = True
 ) -> List[RegionSetInfo]:
     """
     With each bed file in the given folder and its matching metadata from the metadata file,
@@ -40,6 +41,8 @@ def build_regionset_info_list(
     :param r2v_model: a Region2VecExModel that can embed region sets
     :param st_model: a SentenceTransformer model that can embed metadata
     :param with_regions: whether the RegionSet will be added into each dataclass
+    :param bed_vec_necessary: whether the embedding vector of a bed file has to be valid (not None)
+    to be included into the list
     :return:
     """
 
@@ -72,6 +75,9 @@ def build_regionset_info_list(
             region_set = RegionSet(bed_file_path)
             metadata_embedding = st_model.encode(bed_metadata)
             region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
+            if region_set_embedding is None and bed_vec_necessary:
+                print(f"{bed_file_name}'s embedding is None, exclude from dataset")
+                continue
             if not with_regions:
                 region_set = None
             bed_metadata_dc = RegionSetInfo(
