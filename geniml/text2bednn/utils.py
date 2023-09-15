@@ -69,6 +69,7 @@ def build_regionset_info_list(
         set_name = metadata_line.split("\t")[0]
 
         if j < len(file_name_list) and file_name_list[j].startswith(set_name):
+            j += 1
             bed_file_name = file_name_list[j]
             bed_file_path = os.path.join(bed_folder, bed_file_name)
             bed_metadata = clean_escape_characters(metadata_line)
@@ -84,7 +85,7 @@ def build_regionset_info_list(
                 bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
             )
             output_list.append(bed_metadata_dc)
-            j += 1
+
 
         # end the loop if all
         if j == len(file_name_list):
