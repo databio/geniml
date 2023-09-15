@@ -5,6 +5,7 @@ import numpy as np
 import os
 import random
 from typing import Dict, List
+import pickle
 
 
 @pytest.fixture
@@ -131,6 +132,7 @@ def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
 
         assert retrieval_results[i]["vector"] == client_retrieval[0].vector
         assert retrieval_results[i]["payload"] == client_retrieval[0].payload
+    qd_search_backend.qd_client.delete_collection(qd_search_backend.collection)
 
 
 def test_HNSWBackend(filenames, embeddings, labels, local_idx_path, ids):
