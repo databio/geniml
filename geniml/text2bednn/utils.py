@@ -81,6 +81,7 @@ def build_regionset_info_list(
             region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
             if region_set_embedding is None and bed_vec_necessary:
                 print(f"{bed_file_name}'s embedding is None, exclude from dataset")
+                i += 1
                 continue
             if not with_regions:
                 region_set = None
