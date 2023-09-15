@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass, replace
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -18,7 +18,7 @@ class RegionSetInfo:
 
     file_name: str  # the name of the bed file
     metadata: str  # the metadata of the bed file
-    region_set: RegionSet  # the RegionSet that contains intervals in that bed file, not tokenized
+    region_set: Union[RegionSet, None]  # the RegionSet that contains intervals in that bed file, not tokenized
     metadata_embedding: np.ndarray  # the embedding vector of the metadata by sentence transformer
     region_set_embedding: np.ndarray  # the embedding vector of region set
 
@@ -28,6 +28,7 @@ def build_regionset_info_list(
     metadata_path: str,
     r2v_model: Region2VecExModel,
     st_model: SentenceTransformer,
+    with_regions: bool = False,
 ) -> List[RegionSetInfo]:
     """
     With each bed file in the given folder and its matching metadata from the metadata file,
@@ -38,6 +39,7 @@ def build_regionset_info_list(
     :param metadata_path: path to the metadata file
     :param r2v_model: a Region2VecExModel that can embed region sets
     :param st_model: a SentenceTransformer model that can embed metadata
+    :param with_regions: whether the RegionSet will be added into each dataclass
     :return:
     """
 
@@ -70,6 +72,8 @@ def build_regionset_info_list(
             region_set = RegionSet(bed_file_path)
             metadata_embedding = st_model.encode(bed_metadata)
             region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
+            if not with_regions:
+                region_set = None
             bed_metadata_dc = RegionSetInfo(
                 bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
             )
