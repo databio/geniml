@@ -1,11 +1,13 @@
-import hnswlib
-import pytest
-from geniml.search.backends import QdrantBackend, HNSWBackend
-import numpy as np
 import os
+import pickle
 import random
 from typing import Dict, List
-import pickle
+
+import hnswlib
+import numpy as np
+import pytest
+
+from geniml.search.backends import HNSWBackend, QdrantBackend
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ import tempfile
 import numpy as np
 import pyBigWig
 
-from ..utils import timer_func, read_chromosome_from_bw
+from ..utils import read_chromosome_from_bw, timer_func
 
 
 def model_binomial(folder_in, in_file, chrom, file_out, file_no=None):

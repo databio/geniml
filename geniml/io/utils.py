@@ -1,6 +1,6 @@
-from typing import Dict, List, Union
 import gzip
 import os
+from typing import Dict, List, Union
 
 from .const import *
 

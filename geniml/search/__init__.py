@@ -1,2 +1,1 @@
-from .backends import QdrantBackend
-from .backends import HNSWBackend
+from .backends import HNSWBackend, QdrantBackend
