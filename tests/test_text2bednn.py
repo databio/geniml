@@ -118,17 +118,46 @@ def local_idx_path():
     return "./testing_idx.bin"
 
 
+@pytest.fixture
+def local_model_path():
+    """
+    :return: the path where you installed the model from hugging face manually
+    """
+
+    return "/home/claudehu/Desktop/src/models/vec2vec/hg38_metadata_BED_testing.h5"
+
+
+@pytest.fixture
+def hugging_face_repo():
+    """
+    :return: repository on huggingface where pretrained model is uploaded to
+    """
+
+    return "databio/v2v-ChIP-atlas-hg38-ATAC"
+
+
+# def test_hugging_face_install(local_model_path, hugging_face_repo, testing_input):
+#     vec2vec1 = Vec2VecFNN()
+#     vec2vec1.load(local_model_path)
+#     map_vec_1 = vec2vec1.embedding_to_embedding(testing_input)
+#
+#     vec2vec2 = Vec2VecFNN(hugging_face_repo)
+#     map_vec_2 = vec2vec2.embedding_to_embedding(testing_input)
+#
+#     assert np.array_equal(map_vec_1, map_vec_2)
+
+
 def test_data_nn_search_interface(
-    bed_folder,
-    metadata_path,
-    r2v_model,
-    st_model,
-    local_model_path,
-    testing_input,
-    collection,
-    query_term,
-    k,
-    local_idx_path,
+        bed_folder,
+        metadata_path,
+        r2v_model,
+        st_model,
+        local_model_path,
+        testing_input,
+        collection,
+        query_term,
+        k,
+        local_idx_path,
 ):
     # construct a list of RegionSetInfo
     ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, st_model)
@@ -159,7 +188,7 @@ def test_data_nn_search_interface(
 
     # testing if the loaded model is same as previously saved model
     map_vec_1 = v2vnn.embedding_to_embedding(testing_input)
-    map_vec_2 = new_e2nn.embedding_to_embedding(testing_input)
+    # map_vec_2 = new_e2nn.embedding_to_embedding(testing_input)
     map_vec_2 = new_e2nn.embedding_to_embedding(testing_input)
     assert np.array_equal(map_vec_1, map_vec_2)
     # remove locally saved model
