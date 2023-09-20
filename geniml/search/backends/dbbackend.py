@@ -3,15 +3,16 @@ import os
 from typing import Dict, List, Union
 
 import numpy as np
-from ..const import *
-from ...const import PKG_NAME
-from ..utils import verify_load_inputs
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
 
+from ...const import PKG_NAME
+from ..const import *
+from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
 
 _LOGGER = logging.getLogger(PKG_NAME)
+
 
 class QdrantBackend(EmSearchBackend):
     """A search backend that uses a qdrant server to store and search embeddings"""
@@ -42,9 +43,11 @@ class QdrantBackend(EmSearchBackend):
         )
 
         # Create collection only if it does not exist
-        try: 
+        try:
             collection_info = self.qd_client.get_collection(collection_name=self.collection)
-            _LOGGER.info(f"Using collection {self.collection} with {collection_info.points_count} points")
+            _LOGGER.info(
+                f"Using collection {self.collection} with {collection_info.points_count} points"
+            )
         except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
             _LOGGER.info(f"Collection {self.collection} does not exist, creating it")
             self.qd_client.recreate_collection(

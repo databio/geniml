@@ -1,14 +1,14 @@
 import os
 from typing import List
 
-import pytest
 import numpy as np
+import pytest
 
-from geniml.io.io import RegionSet, Region
+from geniml.io.io import Region, RegionSet
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
-from geniml.utils import wordify_region, wordify_regions
-from geniml.region2vec.pooling import mean_pooling, max_pooling
+from geniml.region2vec.pooling import max_pooling, mean_pooling
 from geniml.tokenization.main import InMemTokenizer
+from geniml.utils import wordify_region, wordify_regions
 
 
 @pytest.fixture

@@ -2,8 +2,8 @@ import pytest
 
 from geniml.io import Region
 from geniml.preprocessing import RegionIntegerIDGenerator
-from geniml.utils import wordify_region
 from geniml.preprocessing.schemas import EncodedRegions
+from geniml.utils import wordify_region
 
 
 @pytest.fixture

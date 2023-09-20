@@ -40,7 +40,7 @@ setup(
         "geniml.preprocessing",
         "geniml.bbclient",
         "geniml.search",
-        "geniml.search.backends"
+        "geniml.search.backends",
     ],
     version=version,
     long_description=long_description,

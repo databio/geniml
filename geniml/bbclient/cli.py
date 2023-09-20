@@ -1,5 +1,5 @@
 from .bedfile_retrieval import BedFetch
-from .utils import  BedCacheManager, BedDownloader
+from .utils import BedCacheManager, BedDownloader
 
 
 def download_bedset(args):
@@ -20,10 +20,12 @@ def process_local_bed_data(args):
     bed_local = cache_manager.process_local_bed_data(args.input_identifier)
     print(bed_local)
 
+
 def process_identifier(args):
     bed_processor = BedFetch(args.cache_folder)
     bed_ident = bed_processor.process_identifier(args.input_identifier)
     print(bed_ident)
+
 
 def process_identifiers(args):
     bed_processor = BedFetch(args.cache_folder)

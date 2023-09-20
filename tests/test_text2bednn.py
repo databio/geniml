@@ -2,16 +2,15 @@ import os
 
 import numpy as np
 import pytest
+from sentence_transformers import SentenceTransformer
+from sklearn.model_selection import train_test_split
+
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
-from geniml.text2bednn.utils import (
-    build_regionset_info_list,  # data_split,
-    prepare_vectors_for_database,
-    region_info_list_to_vectors,
-)
-from sentence_transformers import SentenceTransformer
-from sklearn.model_selection import train_test_split
+from geniml.text2bednn.utils import build_regionset_info_list  # data_split,
+from geniml.text2bednn.utils import (prepare_vectors_for_database,
+                                     region_info_list_to_vectors)
 
 
 @pytest.fixture
@@ -148,16 +147,16 @@ def hugging_face_repo():
 
 
 def test_data_nn_search_interface(
-        bed_folder,
-        metadata_path,
-        r2v_model,
-        st_model,
-        local_model_path,
-        testing_input,
-        collection,
-        query_term,
-        k,
-        local_idx_path,
+    bed_folder,
+    metadata_path,
+    r2v_model,
+    st_model,
+    local_model_path,
+    testing_input,
+    collection,
+    query_term,
+    k,
+    local_idx_path,
 ):
     # construct a list of RegionSetInfo
     ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, st_model)

@@ -1,12 +1,12 @@
+import os
 from typing import Union
-from huggingface_hub import hf_hub_download
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import tensorflow as tf
+from huggingface_hub import hf_hub_download
 
 from ..search.backends import HNSWBackend, QdrantBackend
-
 from .const import *
 from .utils import *
 
@@ -74,10 +74,10 @@ class Vec2VecFNN(tf.keras.models.Sequential):
             self.add(layer)
 
     def _load_from_huggingface(
-            self,
-            model_repo: str,
-            model_file_name: str = MODEL_FILE_NAME,
-            **kwargs,
+        self,
+        model_repo: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        **kwargs,
     ):
         model_path = hf_hub_download(model_repo, model_file_name, **kwargs)
         self.load(model_path)
@@ -171,8 +171,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
             )
         return output_vec
 
-    def plot_training_hist(self,
-                          save_path:Union[str, None] = None):
+    def plot_training_hist(self, save_path: Union[str, None] = None):
         """
         plot the training & validating loss of the most recent training
         :return:
@@ -225,7 +224,9 @@ class Text2BEDSearchInterface(object):
         elif isinstance(vec2vec_model, Vec2VecFNN):
             self.vec2vec = vec2vec_model
         else:
-            raise TypeError("vec2vec_model must be either a path to a pretrained model or a Vec2VecFNN model")
+            raise TypeError(
+                "vec2vec_model must be either a path to a pretrained model or a Vec2VecFNN model"
+            )
 
         if isinstance(search_backend, type(None)):
             # init a default HNSWBackend if input is None
@@ -264,4 +265,3 @@ class Text2BEDSearchInterface(object):
 
     def __repr__(self):
         return f"Text2BEDSearchInterface(nl2vec_model={self.nl2vec}, vec2vec_model={self.vec2vec}, search_backend={self.search_backend})"
-    

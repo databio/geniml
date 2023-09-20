@@ -4,7 +4,7 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
-from huggingface_hub import hf_hub_download, upload_file, login
+from huggingface_hub import hf_hub_download, login, upload_file
 from numba import config
 from tqdm import tqdm
 
@@ -12,7 +12,8 @@ from ..io import Region, RegionSet
 from ..models.main import ExModel
 from ..region2vec import Region2Vec
 from ..tokenization import InMemTokenizer
-from .const import CHR_KEY, END_KEY, MODEL_FILE_NAME, MODULE_NAME, START_KEY, UNIVERSE_FILE_NAME
+from .const import (CHR_KEY, END_KEY, MODEL_FILE_NAME, MODULE_NAME, START_KEY,
+                    UNIVERSE_FILE_NAME)
 from .utils import make_syn1neg_file_name, make_wv_file_name
 
 _GENSIM_LOGGER = getLogger("gensim")
