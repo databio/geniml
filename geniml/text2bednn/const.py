@@ -15,3 +15,5 @@ DEFAULT_LEARNING_RATE = 0.001
 # after patience*epoches if validation loss still not improved
 # training stop
 DEFAULT_PATIENCE = 0.2
+
+MODEL_FILE_NAME = "vec2vec.h5"

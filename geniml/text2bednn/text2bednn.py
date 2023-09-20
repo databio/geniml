@@ -1,5 +1,5 @@
 from typing import Union
-
+from huggingface_hub import hf_hub_download
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -17,9 +17,17 @@ class Vec2VecFNN(tf.keras.models.Sequential):
     to the embedding vectors of region sets
     """
 
-    def __init__(self):
-        # initiate a Sequential model from keras
+    def __init__(self, model_path: str = None):
+        """
+        initialization
+
+        :param str model_path: Path to the pre-trained model on huggingface.
+        """
         super().__init__()
+        # initiate a Sequential model from keras
+        if model_path is not None:
+            self._load_from_huggingface(model_path)
+
         # most recent training history
         self.most_recent_train = None
 
@@ -45,9 +53,9 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         # output
         self.add(tf.keras.layers.Dense(output_dim))
 
-    def load_local_pretrained(self, model_path: str):
+    def load(self, model_path: str):
         """
-        load pretrained model from local file
+        load pretrained model from disk
 
         :param model_path: path where the model is saved
         :return:
@@ -64,6 +72,15 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         # add layers from pretrained model
         for layer in local_model.layers:
             self.add(layer)
+
+    def _load_from_huggingface(
+            self,
+            model_repo: str,
+            model_file_name: str = MODEL_FILE_NAME,
+            **kwargs,
+    ):
+        model_path = hf_hub_download(model_repo, model_file_name, **kwargs)
+        self.load(model_path)
 
     def train(
         self,
