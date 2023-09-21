@@ -9,8 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ..utils import natural_chr_sort
-from .utils import (check_if_uni_flexible, check_if_uni_sorted, prep_data,
-                    process_db_line)
+from .utils import check_if_uni_flexible, check_if_uni_sorted, prep_data, process_db_line
 
 
 def flexible_distance_between_two_regions(region, query):

@@ -5,8 +5,7 @@ import genomicranges
 import requests
 
 from ..io import RegionSet
-from .utils import (BedCacheManager, bedset_to_grangeslist,
-                    create_bedset_from_file)
+from .utils import BedCacheManager, bedset_to_grangeslist, create_bedset_from_file
 
 # How should I be able to use this?
 
@@ -68,7 +67,7 @@ class BedSet(object):
                 self.region_sets = [RegionSet(r) for r in read_bedset_file(file_path)]
             else:
                 raise FileNotFoundError(f"The specified file '{file_path}' does not exist.")
-            
+
             for r in read_bedset_file(region_sets):
                 self.region_sets.append(RegionSet(r))
 
@@ -96,15 +95,15 @@ class BedSet(object):
 
         if self.bedset_identifier is not None:
             return self.bedset_identifier
-        
+
         # Compute MD5 hash
         m = md5()
-        m.update(self.identifier_string.encode('utf-8'))
+        m.update(self.identifier_string.encode("utf-8"))
         computed_identifier = m.hexdigest()
 
         # Set bedset identifier
         self.bedset_identifier = computed_identifier
-        
+
         return computed_identifier
 
     def to_grangeslist(self) -> genomicranges.GenomicRangesList:
