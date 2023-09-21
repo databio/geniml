@@ -22,18 +22,19 @@ class BedCacheManager:
         if not os.path.exists(full_path):
             os.makedirs(full_path)
 
-    def process_local_bed_data(self, file_path: str) -> genomicranges.GenomicRanges:
+    @staticmethod
+    def process_local_bed_data(file_path: str) -> genomicranges.GenomicRanges:
         """Process a local BED file and return the file content as bytes"""
         with open(file_path, "rb") as local_file:
             file_content = local_file.read()
 
-        gr_bed_local = self.decompress_and_convert_to_genomic_ranges(file_content)
+        gr_bed_local = BedCacheManager.decompress_and_convert_to_genomic_ranges(file_content)
 
         return gr_bed_local
 
-    def decompress_and_convert_to_genomic_ranges(
-        self, content: bytes
-    ) -> genomicranges.GenomicRanges:
+
+    @staticmethod
+    def decompress_and_convert_to_genomic_ranges(content: bytes) -> genomicranges.GenomicRanges:
         """Decompress a BED file and convert it to a GenomicRanges object"""
         is_gzipped = content[:2] == b"\x1f\x8b"
 
@@ -79,13 +80,15 @@ def bedset_to_grangeslist(bedset: BedSet) -> genomicranges.GenomicRangesList:
 
 
 # QUESTION: should this move to the RegionSet object?
+@staticmethod
 def regionset_to_granges(regionset: RegionSet) -> genomicranges.GenomicRanges:
     """Convert a regionset into a GenomicRanges object"""
     with open(regionset.path, "rb") as f:
         bed_data = f.read()
-        gr = self.decompress_and_convert_to_genomic_ranges(bed_data)
+        gr = BedCacheManager.decompress_and_convert_to_genomic_ranges(bed_data)
 
-        return gr
+    return gr
+
 
 
 def read_bedset_file(file_path: str) -> List[str]:

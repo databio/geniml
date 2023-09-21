@@ -59,12 +59,16 @@ class BedSet(object):
             self.region_sets = []
             for r in region_sets:
                 self.region_sets.append(RegionSet(r))  # Needs to run through bbclient
-        elif isinstance(region_sets, List[List[Regions]]):
+        elif isinstance(region_sets, List[List[Region]]):
             self.region_sets = []
             for r in region_sets:
                 self.region_sets.append(RegionSet(r))
         elif file_path is not None:
-            # TODO: check file exists, etc
+            if os.path.isfile(file_path):
+                self.region_sets = [RegionSet(r) for r in read_bedset_file(file_path)]
+            else:
+                raise FileNotFoundError(f"The specified file '{file_path}' does not exist.")
+            
             for r in read_bedset_file(region_sets):
                 self.region_sets.append(RegionSet(r))
 
@@ -85,8 +89,22 @@ class BedSet(object):
         # If the bedset identifier is not set, we should set it using
         # the algorithm we use to compute bedset identifiers
         # (see bedboss/bedbuncher pipeline)
-        raise NotImplementedError("BedSet object does not have a bedset identifier")
-        computed_identifier = ...
+        # I believe the bedset identifier is computed in bedbuncher.py line 76 with function 'get_bedset_digest'
+
+        # something like this?
+        import hashlib as md5
+
+        if self.bedset_identifier is not None:
+            return self.bedset_identifier
+        
+        # Compute MD5 hash
+        m = md5()
+        m.update(self.identifier_string.encode('utf-8'))
+        computed_identifier = m.hexdigest()
+
+        # Set bedset identifier
+        self.bedset_identifier = computed_identifier
+        
         return computed_identifier
 
     def to_grangeslist(self) -> genomicranges.GenomicRangesList:
@@ -96,14 +114,15 @@ class BedSet(object):
 
 
 class BBClient(BedCacheManager):
-    def __init__(self, cache_folder: str):
+    def __init__(self, cache_folder: str, bedbase_uri: str = DEFAULT_BEDBASE_URI):
         super().__init__(cache_folder)
+        self.bedbase_uri = bedbase_uri
 
     def download_and_process_bed_region_data(
         self, bed_identifier: str, chr_num: str, start: int, end: int
     ) -> genomicranges.GenomicRanges:
         """Download regions of a BED file from BEDbase API and return the file content as bytes"""
-        bed_url = f"http://bedbase.org/api/bed/{bed_identifier}/regions/{chr_num}?start={start}&end={end}"
+        bed_url = f"{self.bedbase_uri}/{bed_identifier}/regions/{chr_num}?start={start}&end={end}"
         response = requests.get(bed_url)
         response.raise_for_status()
         response_content = response.content
