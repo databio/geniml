@@ -32,7 +32,6 @@ class BedCacheManager:
 
         return gr_bed_local
 
-
     @staticmethod
     def decompress_and_convert_to_genomic_ranges(content: bytes) -> genomicranges.GenomicRanges:
         """Decompress a BED file and convert it to a GenomicRanges object"""
@@ -88,7 +87,6 @@ def regionset_to_granges(regionset: RegionSet) -> genomicranges.GenomicRanges:
         gr = BedCacheManager.decompress_and_convert_to_genomic_ranges(bed_data)
 
     return gr
-
 
 
 def read_bedset_file(file_path: str) -> List[str]:

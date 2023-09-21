@@ -12,8 +12,7 @@ from ..io import Region, RegionSet
 from ..models.main import ExModel
 from ..region2vec import Region2Vec
 from ..tokenization import InMemTokenizer
-from .const import (CHR_KEY, END_KEY, MODEL_FILE_NAME, MODULE_NAME, START_KEY,
-                    UNIVERSE_FILE_NAME)
+from .const import CHR_KEY, END_KEY, MODEL_FILE_NAME, MODULE_NAME, START_KEY, UNIVERSE_FILE_NAME
 from .utils import make_syn1neg_file_name, make_wv_file_name
 
 _GENSIM_LOGGER = getLogger("gensim")
