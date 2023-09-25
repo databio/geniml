@@ -9,7 +9,9 @@ DEFAULT_NUM_EXTRA_HIDDEN_LAYERS = 0
 DEFAULT_BATCH_SIZE = 1
 DEFAULT_OPTIMIZER_NAME = "Adam"
 DEFAULT_LOSS_NAME = "cosine_similarity"
+# embedding dimension of Region2Vec: https://huggingface.co/databio/r2v-ChIP-atlas-hg38
 DEFAULT_EMBEDDING_DIM = (100,)
+# default learning rate of Adam optimizer
 DEFAULT_LEARNING_RATE = 0.001
 
 # after patience*epoches if validation loss still not improved
