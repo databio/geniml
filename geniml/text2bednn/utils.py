@@ -9,6 +9,7 @@ from sentence_transformers import SentenceTransformer
 from ..const import PKG_NAME
 from ..io import RegionSet
 from ..region2vec import Region2VecExModel
+from ..search.backends import HNSWBackend, QdrantBackend
 from .const import *
 
 _LOGGER = logging.getLogger(PKG_NAME)
@@ -196,3 +197,43 @@ def prepare_vectors_for_database(
         labels.append({"name": ri.file_name, "metadata": ri.metadata})
 
     return np.array(embeddings), labels
+
+
+def vectors_from_backend(search_backend: Union[HNSWBackend, QdrantBackend],
+                         encoding_model: SentenceTransformer,
+                         payload_key: str = "payload",
+                         vec_key: str = "vector",
+                         metadata_key: str = "metadata") -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Load vectors from a search backend's qdrant client or hnsw index
+    and the metadata from payloads, then encode metadata into vectors.
+
+    Return the two np.ndarrays, one contains vectors from search backend,
+    and one contains matching metadata embedding vectors.
+
+    :param search_backend: the search backend where vectors are stored
+    :param payload_key: the key of payload in the retrieval output
+    :param vec_key: the key of vector in the retrieval output
+    :param metadata_key: the key of metadata content in the payload dictionary
+    :param encoding_model: model that can encode natural language, like SentenceTransformer
+    :return: two np.ndarray with shape (n, <embedding dimension>)
+    """
+    X = []
+    Y = []
+    n = len(search_backend)
+    for i in range(n):
+        # retrieve vector and metadata/payload
+        vec_info = search_backend.retrieve_info(i, with_vec=True)
+        # add vector to output list
+        vec = vec_info[vec_key]
+        Y.append(vec)
+        # embed metadata and add embedding vector to output list
+        metadata = vec_info[payload_key][metadata_key]
+        metadata_vec = encoding_model.encode(metadata)
+        X.append(metadata_vec)
+
+    # return output in np.ndarray format
+    return np.array(X), np.array(Y)
+
+
+
