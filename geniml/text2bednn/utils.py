@@ -199,11 +199,13 @@ def prepare_vectors_for_database(
     return np.array(embeddings), labels
 
 
-def vectors_from_backend(search_backend: Union[HNSWBackend, QdrantBackend],
-                         encoding_model: SentenceTransformer,
-                         payload_key: str = "payload",
-                         vec_key: str = "vector",
-                         metadata_key: str = "metadata") -> Tuple[np.ndarray, np.ndarray]:
+def vectors_from_backend(
+    search_backend: Union[HNSWBackend, QdrantBackend],
+    encoding_model: SentenceTransformer,
+    payload_key: str = "payload",
+    vec_key: str = "vector",
+    metadata_key: str = "metadata",
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Load vectors from a search backend's qdrant client or hnsw index
     and the metadata from payloads, then encode metadata into vectors.
@@ -234,6 +236,3 @@ def vectors_from_backend(search_backend: Union[HNSWBackend, QdrantBackend],
 
     # return output in np.ndarray format
     return np.array(X), np.array(Y)
-
-
-
