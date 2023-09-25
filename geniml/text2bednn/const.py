@@ -9,7 +9,7 @@ DEFAULT_NUM_EXTRA_HIDDEN_LAYERS = 0
 DEFAULT_BATCH_SIZE = 1
 DEFAULT_OPTIMIZER_NAME = "Adam"
 DEFAULT_LOSS_NAME = "cosine_similarity"
-DEFAULT_BED_EMBEDDING_SHAPE = (100,)
+DEFAULT_EMBEDDING_DIM = (100,)
 DEFAULT_LEARNING_RATE = 0.001
 
 # after patience*epoches if validation loss still not improved
