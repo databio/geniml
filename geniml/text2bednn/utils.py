@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass, replace
 from typing import Dict, List, Tuple, Union
@@ -5,9 +6,12 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+from ..const import PKG_NAME
 from ..io import RegionSet
 from ..region2vec import Region2VecExModel
 from .const import *
+
+_LOGGER = logging.getLogger(PKG_NAME)
 
 
 @dataclass
@@ -61,29 +65,31 @@ def build_regionset_info_list(
     # make sure metadata is sorted by the name of interval set
     # this can be done by this command
     # sort -k1 1 metadata_file >  new_metadata_file
-    i = 0
-    j = 0
+    metadata_file_index = 0
+    bed_folder_index = 0
 
-    while i < len(metadata_lines):
+    while metadata_file_index < len(metadata_lines):
         # end the loop if all bed files has been go over
-        if j == len(file_name_list):
+        if bed_folder_index == len(file_name_list):
             break
         # read the line of metadata
-        metadata_line = metadata_lines[i]
+        metadata_line = metadata_lines[metadata_file_index]
         # get the name of the interval set
         set_name = metadata_line.split("\t")[0]
 
-        if j < len(file_name_list) and file_name_list[j].startswith(set_name):
-            bed_file_name = file_name_list[j]
+        if bed_folder_index < len(file_name_list) and file_name_list[bed_folder_index].startswith(
+            set_name
+        ):
+            bed_file_name = file_name_list[bed_folder_index]
             bed_file_path = os.path.join(bed_folder, bed_file_name)
             bed_metadata = clean_escape_characters(metadata_line)
             region_set = RegionSet(bed_file_path)
             metadata_embedding = st_model.encode(bed_metadata)
             region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
             if region_set_embedding is None and bed_vec_necessary:
-                print(f"{bed_file_name}'s embedding is None, exclude from dataset")
-                j += 1
-                i += 1
+                _LOGGER.info(f"{bed_file_name}'s embedding is None, exclude from dataset")
+                bed_folder_index += 1
+                metadata_file_index += 1
                 continue
             if not with_regions:
                 region_set = None
@@ -91,14 +97,15 @@ def build_regionset_info_list(
                 bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
             )
             output_list.append(bed_metadata_dc)
-            j += 1
+            bed_folder_index += 1
 
-        i += 1
+        metadata_file_index += 1
         # print a message if not all bed files are matched to metadata rows
-    if i < j:
-        print(
+    if metadata_file_index < bed_folder_index:
+        _LOGGER.info(
             "An incomplete list will be returned, some files cannot be matched to any rows by first column"
         )
+
     return output_list
 
 
@@ -151,10 +158,10 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
     for ri in ri_list:
         # X: metadata embedding
         if ri.region_set_embedding is None:
-            print(f"{ri.file_name}'s embedding is None, exclude from dataset")
+            _LOGGER.info(f"{ri.file_name}'s embedding is None, exclude from dataset")
             continue
-        if ri.region_set_embedding.shape != DEFAULT_BED_EMBEDDING_SHAPE:
-            print(
+        if ri.region_set_embedding.shape != DEFAULT_EMBEDDING_DIM:
+            _LOGGER.info(
                 f"{ri.file_name}'s embedding has shape of {ri.region_set_embedding.shape}, exclude from dataset"
             )
             continue
