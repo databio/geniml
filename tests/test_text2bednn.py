@@ -5,9 +5,11 @@ import pytest
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
-from geniml.text2bednn.utils import build_regionset_info_list  # data_split,
-from geniml.text2bednn.utils import (prepare_vectors_for_database,
-                                     region_info_list_to_vectors)
+# from geniml.text2bednn.utils import build_regionset_info_list  # data_split,
+from geniml.text2bednn.utils import (build_regionset_info_list,
+                                     prepare_vectors_for_database,
+                                     region_info_list_to_vectors,
+                                     vectors_from_backend)
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
 
@@ -157,6 +159,22 @@ def test_data_nn_search_interface(
     k,
     local_idx_path,
 ):
+    def test_vector_from_backend(search_backend, st_model):
+        """
+        repeated test of vectors_from_backend
+        """
+        # get the vectors
+        X, Y = vectors_from_backend(search_backend, st_model)
+        assert X.shape == (len(search_backend), 384)
+        assert Y.shape == (len(search_backend), 100)
+
+        # see if the vectors match the storage from backend
+        for i in range(len(search_backend)):
+            retrieval = search_backend.retrieve_info(i, with_vec=True)
+            assert np.array_equal(np.array(retrieval["vector"]), Y[i])
+            nl_embedding = st_model.encode(retrieval["payload"]["metadata"])
+            assert np.array_equal(nl_embedding, X[i])
+
     # construct a list of RegionSetInfo
     ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, st_model)
     assert len(ri_list) == len(os.listdir(bed_folder))
@@ -207,6 +225,8 @@ def test_data_nn_search_interface(
     db_search_result = db_interface.nl_vec_search(query_term, k)
     for i in range(len(db_search_result)):
         assert isinstance(db_search_result[i], dict)
+    # test vectors_from_backend
+    test_vector_from_backend(db_interface.search_backend, st_model)
     # delete testing collection
     db_interface.search_backend.qd_client.delete_collection(collection_name=collection)
 
@@ -219,5 +239,6 @@ def test_data_nn_search_interface(
     for i in range(len(file_search_result)):
         assert isinstance(file_search_result[i], dict)
 
+    test_vector_from_backend(file_interface.search_backend, st_model)
     # remove local hnsw index
     os.remove(local_idx_path)
