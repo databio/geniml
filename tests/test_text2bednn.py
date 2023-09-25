@@ -2,14 +2,14 @@ import os
 
 import numpy as np
 import pytest
-from sentence_transformers import SentenceTransformer
-from sklearn.model_selection import train_test_split
-
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
 from geniml.text2bednn.utils import build_regionset_info_list  # data_split,
-from geniml.text2bednn.utils import prepare_vectors_for_database, region_info_list_to_vectors
+from geniml.text2bednn.utils import (prepare_vectors_for_database,
+                                     region_info_list_to_vectors)
+from sentence_transformers import SentenceTransformer
+from sklearn.model_selection import train_test_split
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def metadata_path():
     """
     :return: the path to the metadata file (sorted)
     """
-    return "./data/hg38_metadata_sample_sorted.tab"
+    return "./data/testing_hg38_metadata_sorted.tab"
 
 
 @pytest.fixture
@@ -117,12 +117,12 @@ def local_idx_path():
 
 
 @pytest.fixture
-def local_model_path():
+def local_hf_model_path():
     """
     :return: the path where you installed the model from hugging face manually
     """
 
-    return "/home/claudehu/Desktop/src/models/vec2vec/hg38_metadata_BED_testing.h5"
+    return "./data/hg38_metadata_BED_testing.h5"
 
 
 @pytest.fixture
@@ -134,15 +134,15 @@ def hugging_face_repo():
     return "databio/v2v-ChIP-atlas-hg38-ATAC"
 
 
-# def test_hugging_face_install(local_model_path, hugging_face_repo, testing_input):
-#     vec2vec1 = Vec2VecFNN()
-#     vec2vec1.load(local_model_path)
-#     map_vec_1 = vec2vec1.embedding_to_embedding(testing_input)
-#
-#     vec2vec2 = Vec2VecFNN(hugging_face_repo)
-#     map_vec_2 = vec2vec2.embedding_to_embedding(testing_input)
-#
-#     assert np.array_equal(map_vec_1, map_vec_2)
+def test_hugging_face_install(local_hf_model_path, hugging_face_repo, testing_input):
+    vec2vec1 = Vec2VecFNN()
+    vec2vec1.load(local_hf_model_path)
+    map_vec_1 = vec2vec1.embedding_to_embedding(testing_input)
+
+    vec2vec2 = Vec2VecFNN(hugging_face_repo)
+    map_vec_2 = vec2vec2.embedding_to_embedding(testing_input)
+
+    assert np.array_equal(map_vec_1, map_vec_2)
 
 
 def test_data_nn_search_interface(
@@ -182,7 +182,7 @@ def test_data_nn_search_interface(
 
     # load pretrained file
     new_e2nn = Vec2VecFNN()
-    new_e2nn.load_local_pretrained(local_model_path)
+    new_e2nn.load(local_model_path)
 
     # testing if the loaded model is same as previously saved model
     map_vec_1 = v2vnn.embedding_to_embedding(testing_input)
@@ -207,6 +207,8 @@ def test_data_nn_search_interface(
     db_search_result = db_interface.nl_vec_search(query_term, k)
     for i in range(len(db_search_result)):
         assert isinstance(db_search_result[i], dict)
+    # delete testing collection
+    db_interface.search_backend.qd_client.delete_collection(collection_name=collection)
 
     # construct a search interface with file backend
     hnsw_backend = HNSWBackend(local_index_path=local_idx_path)
