@@ -12,6 +12,7 @@ from geniml.text2bednn.utils import (
     prepare_vectors_for_database,
     region_info_list_to_vectors,
     vectors_from_backend,
+    bioGPT_sentence_transformer
 )
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
@@ -122,32 +123,13 @@ def local_idx_path():
 
 
 @pytest.fixture
-def local_hf_model_path():
+def testing_input_biogpt():
     """
-    :return: the path where you installed the model from hugging face manually
+    :return: a random generated np.ndarray,
+    with same dimension as a sentence embedding vector of SentenceTransformer
     """
-
-    return "./data/hg38_metadata_BED_testing.h5"
-
-
-@pytest.fixture
-def hugging_face_repo():
-    """
-    :return: repository on huggingface where pretrained model is uploaded to
-    """
-
-    return "databio/v2v-ChIP-atlas-hg38-ATAC"
-
-
-def test_hugging_face_install(local_hf_model_path, hugging_face_repo, testing_input):
-    vec2vec1 = Vec2VecFNN()
-    vec2vec1.load(local_hf_model_path)
-    map_vec_1 = vec2vec1.embedding_to_embedding(testing_input)
-
-    vec2vec2 = Vec2VecFNN(hugging_face_repo)
-    map_vec_2 = vec2vec2.embedding_to_embedding(testing_input)
-
-    assert np.array_equal(map_vec_1, map_vec_2)
+    np.random.seed(100)
+    return np.random.random((1024,))
 
 
 def test_data_nn_search_interface(
@@ -161,6 +143,7 @@ def test_data_nn_search_interface(
     query_term,
     k,
     local_idx_path,
+    testing_input_biogpt
 ):
     def test_vector_from_backend(search_backend, st_model):
         """
@@ -245,3 +228,26 @@ def test_data_nn_search_interface(
     test_vector_from_backend(file_interface.search_backend, st_model)
     # remove local hnsw index
     os.remove(local_idx_path)
+
+    # test the vec2vec with BioGPT emcoding metadata
+    biogpt_st = bioGPT_sentence_transformer()
+
+    ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, biogpt_st)
+    assert len(ri_list) == len(os.listdir(bed_folder))
+
+    # split the RegionSetInfo list to training, validating, and testing set
+    # train_list, test_list = train_test_split(ri_list, test_size=0.15)
+    train_list, validate_list = train_test_split(ri_list, test_size=0.2)
+    train_X, train_Y = region_info_list_to_vectors(train_list)
+    validate_X, validate_Y = region_info_list_to_vectors(validate_list)
+    assert isinstance(train_X, np.ndarray)
+    assert isinstance(train_Y, np.ndarray)
+    assert train_X.shape[1] == 1024
+    assert train_Y.shape[1] == 100
+    assert train_X[0].shape == (1024,)
+    assert train_Y[0].shape == (100,)
+
+    biogpt_v2v = Vec2VecFNN()
+    biogpt_v2v.train(train_X, train_Y, validating_data=(validate_X, validate_Y), num_epochs=50)
+    map_vec_biogpt = biogpt_v2v.embedding_to_embedding(testing_input_biogpt)
+    assert map_vec_biogpt.shape == (100,)
