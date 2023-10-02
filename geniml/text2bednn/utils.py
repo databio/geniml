@@ -4,14 +4,13 @@ from dataclasses import dataclass, replace
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, models
 
 from ..const import PKG_NAME
 from ..io import RegionSet
 from ..region2vec import Region2VecExModel
 from ..search.backends import HNSWBackend, QdrantBackend
 from .const import *
-from sentence_transformers import SentenceTransformer, models
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -32,12 +31,12 @@ class RegionSetInfo:
 
 
 def build_regionset_info_list(
-        bed_folder: str,
-        metadata_path: str,
-        r2v_model: Region2VecExModel,
-        st_model: SentenceTransformer,
-        with_regions: bool = False,
-        bed_vec_necessary: bool = True,
+    bed_folder: str,
+    metadata_path: str,
+    r2v_model: Region2VecExModel,
+    st_model: SentenceTransformer,
+    with_regions: bool = False,
+    bed_vec_necessary: bool = True,
 ) -> List[RegionSetInfo]:
     """
     With each bed file in the given folder and its matching metadata from the metadata file,
@@ -80,7 +79,7 @@ def build_regionset_info_list(
         set_name = metadata_line.split("\t")[0]
 
         if bed_folder_index < len(file_name_list) and file_name_list[bed_folder_index].startswith(
-                set_name
+            set_name
         ):
             bed_file_name = file_name_list[bed_folder_index]
             bed_file_path = os.path.join(bed_folder, bed_file_name)
@@ -112,7 +111,7 @@ def build_regionset_info_list(
 
 
 def update_bed_metadata_list(
-        old_list: List[RegionSetInfo], r2v_model: Region2VecExModel
+    old_list: List[RegionSetInfo], r2v_model: Region2VecExModel
 ) -> List[RegionSetInfo]:
     """
     With an old list of RegionSetInfo, re-embed the region set with a new Region2Vec model,
@@ -174,7 +173,7 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
 
 
 def prepare_vectors_for_database(
-        ri_list: List[RegionSetInfo],
+    ri_list: List[RegionSetInfo],
 ) -> Tuple[np.ndarray, List[Dict[str, str]]]:
     """
     With a given list of RegionSetInfo, returns one np.ndarray representing bed files embeddings,
@@ -201,11 +200,11 @@ def prepare_vectors_for_database(
 
 
 def vectors_from_backend(
-        search_backend: Union[HNSWBackend, QdrantBackend],
-        encoding_model: SentenceTransformer,
-        payload_key: str = "payload",
-        vec_key: str = "vector",
-        metadata_key: str = "metadata",
+    search_backend: Union[HNSWBackend, QdrantBackend],
+    encoding_model: SentenceTransformer,
+    payload_key: str = "payload",
+    vec_key: str = "vector",
+    metadata_key: str = "metadata",
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Load vectors from a search backend's qdrant client or hnsw index
@@ -246,5 +245,7 @@ def bioGPT_sentence_transformer(model_name: str = DEFAULT_BIOGPT_MODEL) -> Sente
     :param model_name: name of the biomedical text transformer model
     """
     word_embedding_model = models.Transformer(model_name)
-    pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(), pooling_mode='mean')
+    pooling_model = models.Pooling(
+        word_embedding_model.get_word_embedding_dimension(), pooling_mode="mean"
+    )
     return SentenceTransformer(modules=[word_embedding_model, pooling_model])
