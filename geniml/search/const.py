@@ -1,4 +1,5 @@
 from qdrant_client.models import Distance, VectorParams
+from qdrant_client.http import models
 
 DEFAULT_QDRANT_HOST = "localhost"
 DEFAULT_QDRANT_PORT = 6333
@@ -16,3 +17,11 @@ DEFAULT_DIM = 100
 DEFAULT_EF = 200
 
 DEFAULT_M = 16
+
+DEFAULT_QUANTIZATION_CONFIG = models.ScalarQuantization(
+    scalar=models.ScalarQuantizationConfig(
+        type=models.ScalarType.INT8,
+        quantile=0.99,
+        always_ram=True,
+    ),
+)

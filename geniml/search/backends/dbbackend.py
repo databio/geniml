@@ -51,7 +51,9 @@ class QdrantBackend(EmSearchBackend):
         except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
             _LOGGER.info(f"Collection {self.collection} does not exist, creating it")
             self.qd_client.recreate_collection(
-                collection_name=self.collection, vectors_config=self.config
+                collection_name=self.collection,
+                vectors_config=self.config,
+                quantization_config=DEFAULT_QUANTIZATION_CONFIG,
             )
 
     def load(
