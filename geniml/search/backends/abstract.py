@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy as np
 
@@ -16,10 +16,12 @@ class EmSearchBackend(ABC):
             self.load(embeddings, labels)
 
     @abstractmethod
-    def loadload(self,
+    def load(
+        self,
         vectors: np.ndarray,
-        ids: Union[np.ndarray, None]=None,
-        payloads: Union[List[Dict[str, str]], None]=None) -> None:
+        ids: Union[np.ndarray, None] = None,
+        payloads: Union[List[Dict[str, str]], None] = None,
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod

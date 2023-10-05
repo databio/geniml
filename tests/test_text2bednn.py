@@ -5,12 +5,15 @@ import pytest
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
+
 # from geniml.text2bednn.utils import build_regionset_info_list  # data_split,
-from geniml.text2bednn.utils import (bioGPT_sentence_transformer,
-                                     build_regionset_info_list,
-                                     prepare_vectors_for_database,
-                                     region_info_list_to_vectors,
-                                     vectors_from_backend)
+from geniml.text2bednn.utils import (
+    bioGPT_sentence_transformer,
+    build_regionset_info_list,
+    prepare_vectors_for_database,
+    region_info_list_to_vectors,
+    vectors_from_backend,
+)
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
 
