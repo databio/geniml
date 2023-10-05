@@ -63,11 +63,12 @@ class QdrantBackend(EmSearchBackend):
         :param payloads: optional list of n dictionaries that contain vector metadata
         :return:
         """
-
-        verify_load_inputs(vectors, ids, payloads)
+        
         if not ids:
             start = len(self)
             ids = list(range(start, start + len(labels)))
+
+        verify_load_inputs(vectors, ids, payloads)
                    
         points = [
             PointStruct(id=ids[i], vector=vectors[i].tolist(), payload=payloads[i])
