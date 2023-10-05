@@ -99,7 +99,7 @@ def local_idx_path():
 def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
     qd_search_backend = QdrantBackend(collection=collection)
     # load data
-    qd_search_backend.load(embeddings, labels)
+    qd_search_backend.load(embeddings, payloads=labels)
     # test searching
     search_results = qd_search_backend.search(
         np.random.random(
@@ -173,11 +173,11 @@ def test_HNSWBackend(filenames, embeddings, labels, local_idx_path, ids):
     embeddings_2 = embeddings[num_upload // 2 :]
 
     # load first batch
-    hnswb.load(embeddings_1, labels_1)
+    hnswb.load(embeddings_1, payloads=labels_1)
     assert len(hnswb) == num_upload // 2
 
     # load second batch
-    hnswb.load(embeddings_2, labels_2)
+    hnswb.load(embeddings_2, payloads=labels_2)
     assert len(hnswb) == num_upload
 
     # test searching with one vector (np.ndarray with shape (dim,))

@@ -44,10 +44,12 @@ class HNSWBackend(EmSearchBackend):
         self.payloads = {}
         self.idx_path = local_index_path
 
-    def load(self,
+    def load(
+        self,
         vectors: np.ndarray,
-        ids: Union[np.ndarray, None]=None,
-        payloads: Union[List[Dict[str, str]], None]=None):
+        ids: Union[np.ndarray, None] = None,
+        payloads: Union[List[Dict[str, str]], None] = None,
+    ):
         """
         Upload embedding vectors into the hnsw index, and store their hnsw index id and payloads into metadata
 
@@ -56,16 +58,16 @@ class HNSWBackend(EmSearchBackend):
         :param payloads: optional list of n dictionaries that contain vector metadata
         :return:
         """
-            
+
         # increase max_elements to contain new loadings
         current_max = self.idx.get_max_elements()
-        
+
         if not ids:
-            new_max = current_max + embeddings.shape[0]
+            new_max = current_max + vectors.shape[0]
             ids = np.arange(start=current_max, stop=new_max)
         else:
             new_max = ids.amax()
-            
+
         # check if the number of embedding vectors and labels are same
         verify_load_inputs(vectors, ids, payloads)
 

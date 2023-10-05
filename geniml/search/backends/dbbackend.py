@@ -54,10 +54,12 @@ class QdrantBackend(EmSearchBackend):
                 collection_name=self.collection, vectors_config=self.config
             )
 
-    def load(self,
+    def load(
+        self,
         vectors: np.ndarray,
-        ids: Union[List[str],None]=None,
-        payloads: Union[List[Dict[str, str]], None]=None):
+        ids: Union[List[str], None] = None,
+        payloads: Union[List[Dict[str, str]], None] = None,
+    ):
         """
         Upload vectors and their labels into qdrant storage.
 
@@ -66,13 +68,13 @@ class QdrantBackend(EmSearchBackend):
         :param payloads: optional list of n dictionaries that contain vector metadata
         :return:
         """
-        
+
         if not ids:
             start = len(self)
-            ids = list(range(start, start + len(labels)))
+            ids = list(range(start, start + len(payloads)))
 
         verify_load_inputs(vectors, ids, payloads)
-                   
+
         points = [
             PointStruct(id=ids[i], vector=vectors[i].tolist(), payload=payloads[i])
             for i in range(len(payloads))

@@ -3,10 +3,11 @@ from typing import Dict, List, Union
 import numpy as np
 
 
-def verify_load_inputs(vectors: np.ndarray,
-                       ids: Union[List[Union[str, int]], np.ndarray],
-                       payloads: List[Dict[str, str]]
-                      ):
+def verify_load_inputs(
+    vectors: np.ndarray,
+    ids: Union[List[Union[str, int]], np.ndarray],
+    payloads: List[Dict[str, str]],
+):
     n_ids = len(ids)
     n_vectors = vectors.shape[0]
     n_payloads = len(payloads)
