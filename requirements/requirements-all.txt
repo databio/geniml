@@ -20,5 +20,3 @@ hnswlib
 tensorflow
 torch
 sentence-transformers
-# gtokenizers
-# /Users/nathanleroy/projects.nosync/gtokenizers/bindings/python/target/wheels/gtokenizers-0.1.0-cp311-cp311-macosx_11_0_arm64.whl
