@@ -1,21 +1,30 @@
+import logging
+import os
 from typing import List, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm
 
 from ..tokenization.main import InMemTokenizer
 from ..models.main import ExModel
 from ..io.io import RegionSet
+from ..const import PKG_NAME
 from .const import (
+    DEFAULT_BATCH_SIZE,
     DEFAULT_EMBEDDING_SIZE,
     DEFAULT_HIDDEN_DIM,
     DEFAULT_EPOCHS,
     DEFAULT_WINDOW_SIZE,
     DEFAULT_MIN_COUNT,
     DEFAULT_N_SHUFFLES,
+    DEFAULT_CHECKPOINT_PATH,
+    DEFAULT_UNIVERSE_FILE_NAME,
 )
-from .utils import generate_window_training_data
+from .utils import generate_window_training_data, remove_below_min_count
+
+_LOGGER = logging.getLogger(PKG_NAME)
 
 
 class Word2Vec(nn.Module):
@@ -38,6 +47,7 @@ class Word2Vec(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.projection(x)
+        x = torch.sum(x, dim=1)
         x = F.relu(self.hidden(x))
         x = self.output(x)
         return F.log_softmax(x, dim=1)
@@ -59,6 +69,8 @@ class Region2VecExModel(ExModel):
         Initialize Region2VecExModel.
 
         :param str model_path: Path to the pre-trained model on huggingface.
+        :param embedding_dim: Dimension of the embedding.
+        :param hidden_dim: Dimension of the hidden layer.
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         super().__init__()
@@ -67,8 +79,10 @@ class Region2VecExModel(ExModel):
         self.tokenizer: InMemTokenizer = tokenizer
 
         if model_path is not None:
+            self.trained = True
             self._init_from_huggingface(model_path)
         else:
+            self.trained = False
             self.tokenizer = tokenizer
             self._model = Word2Vec(
                 len(self.tokenizer.universe),
@@ -104,6 +118,11 @@ class Region2VecExModel(ExModel):
         epochs: int = DEFAULT_EPOCHS,
         min_count: int = DEFAULT_MIN_COUNT,
         n_shuffles: int = DEFAULT_N_SHUFFLES,
+        batch_size: int = DEFAULT_BATCH_SIZE,
+        checkpoint_path: str = DEFAULT_CHECKPOINT_PATH,
+        optimizer: torch.optim.Optimizer = None,
+        loss_fn: torch.nn.modules.loss._Loss = None,
+        device: torch.device = torch.device("cpu"),
     ):
         """
         Train the model.
@@ -118,13 +137,82 @@ class Region2VecExModel(ExModel):
         # validate the data
         data = self._validate_data_for_training(data)
 
+        # add the universe to the tokenizer
+        self.tokenizer.add_universe(data)  # this API doesnt exist yet
+
         # tokenize the data into regions and remove Nones
         tokens = [self.tokenizer.tokenize(rs) for rs in data]
-        tokens = [[t for t in tokens_list if t is not None] for tokens_list in tokens]
+
+        # get actual ids from the tokens
         tokens = self.tokenizer.convert_tokens_to_ids(tokens)
 
-        # create the dataset of windows
-        dataset = generate_window_training_data(tokens, window_size, n_shuffles)
+        # remove tokens falling below min count
+        tokens = remove_below_min_count(tokens, min_count)
 
-        # train the model
-        raise NotImplementedError("Training is not yet implemented.")
+        # create the dataset of windows
+        contexts, targets = generate_window_training_data(tokens, window_size, n_shuffles)
+
+        # select optimizer
+        optimizer = optimizer or torch.optim.Adam(self._model.parameters())
+
+        # select loss function - default to cross entropy
+        loss_fn = loss_fn or torch.nn.CrossEntropyLoss()
+
+        # move necessary things to the device
+        contexts = contexts.to(device)
+        targets = targets.to(device)
+        self._model.to(device)
+
+        # train the model for the specified number of epochs
+        for epoch in tqdm(range(epochs), desc="Epochs"):
+            for i in tqdm(range(0, len(contexts), batch_size), desc="Batches"):
+                # zero the gradients
+                optimizer.zero_grad()
+
+                # forward pass
+                output = self._model(contexts[i : i + batch_size])
+
+                # calculate loss
+                loss = loss_fn(output, targets[i : i + batch_size])
+
+                # backward pass
+                loss.backward()
+
+                # update parameters
+                optimizer.step()
+
+            # log out loss
+            _LOGGER.info(f"Epoch {epoch + 1} loss: {loss.item()}")
+
+        # save the model
+        self.trained = True
+        torch.save(self._model.state_dict(), checkpoint_path)
+
+    def export(
+        self,
+        path: str,
+        checkpoint_file: str = DEFAULT_CHECKPOINT_PATH,
+        universe_file: str = DEFAULT_UNIVERSE_FILE_NAME,
+    ):
+        """
+        Function to facilitate exporting the model in a way that can
+        be directly uploaded to huggingface. This exports the model
+        weights and the vocabulary.
+
+        :param str path: Path to export the model to.
+        """
+        # make sure the model is trained
+        if not self.trained:
+            raise RuntimeError("Cannot export an untrained model.")
+
+        # make sure the path exists
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        # export the model weights
+        torch.save(self._model.state_dict(), checkpoint_file)
+
+        # export the vocabulary
+        for regionin in self.tokenizer.universe:
+            with open(os.path.join(path, universe_file), "a") as f:
+                f.write(regionin + "\n")
