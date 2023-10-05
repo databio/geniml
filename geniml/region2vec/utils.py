@@ -7,7 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from random import shuffle
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union, Tuple, Any
 
 import numpy as np
 from tqdm import tqdm
@@ -458,3 +458,13 @@ def generate_window_training_data(
             targets.append(region)
 
     return contexts, targets
+
+
+def remove_below_min_count(l: List[Any]) -> List[Any]:
+    """
+    Remove elements from a list that fall below the minimum count.
+    """
+    counts = {}
+    for e in l:
+        counts[e] = counts.get(e, 0) + 1
+    return [e for e in l if counts[e] > 1]

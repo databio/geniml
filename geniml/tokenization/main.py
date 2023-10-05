@@ -365,7 +365,7 @@ class InMemTokenizer(Tokenizer):
         return conversion_map
 
     def tokenize(
-        self, regions: Union[str, List[Region], RegionSet, sc.AnnData], return_all: bool = False
+        self, regions: Union[str, List[Region], RegionSet, sc.AnnData], return_all: bool = True
     ) -> Union[List[Region], List[List[Region]], List[RegionSet]]:
         """
         Tokenize a RegionSet.
@@ -374,7 +374,7 @@ class InMemTokenizer(Tokenizer):
         simple overlap detection.
 
         :param str | List[Region] | sc.AnnData regions: The list of regions to tokenize
-        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to False. (in the future, we can change this to return the top k or best)
+        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to True. (in the future, we can change this to return the top k or best)
                                 Note that returning all might return more than one region per region in the input. Thus, you lose the 1:1 mapping.
         """
         if isinstance(regions, sc.AnnData):
