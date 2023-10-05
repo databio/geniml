@@ -5,6 +5,7 @@ from typing import List, Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from huggingface_hub import hf_hub_download
 from tqdm import tqdm
 
 from ..tokenization.main import InMemTokenizer
@@ -19,7 +20,7 @@ from .const import (
     DEFAULT_WINDOW_SIZE,
     DEFAULT_MIN_COUNT,
     DEFAULT_N_SHUFFLES,
-    DEFAULT_CHECKPOINT_PATH,
+    DEFAULT_CHECKPOINT_FILE_NAME,
     DEFAULT_UNIVERSE_FILE_NAME,
 )
 from .utils import generate_window_training_data, remove_below_min_count
@@ -90,6 +91,37 @@ class Region2VecExModel(ExModel):
                 hidden_dim=kwargs.get("hidden_dim", DEFAULT_HIDDEN_DIM),
             )
 
+    def _init_from_huggingface(
+        self,
+        model_path: str,
+        model_file_name: str = DEFAULT_CHECKPOINT_FILE_NAME,
+        universe_file_name: str = DEFAULT_UNIVERSE_FILE_NAME,
+        **kwargs,
+    ):
+        """
+        Initialize the model from a huggingface model. This uses the model path
+        to download the necessary files and then "build itself up" from those. This
+        includes both the actual model and the tokenizer.
+
+        :param str model_path: Path to the pre-trained model on huggingface.
+        :param str model_file_name: Name of the model file.
+        :param str universe_file_name: Name of the universe file.
+        :param kwargs: Additional keyword arguments to pass to the hf download function.
+        """
+        model_path = hf_hub_download(model_path, model_file_name, **kwargs)
+        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+
+        # set the paths to the downloaded files
+        self._model_path = model_path
+        self._universe_path = universe_path
+
+        # init tokenizer
+        self.tokenizer = InMemTokenizer(universe_path)
+
+        # unpickle params
+        params = torch.load(model_path)
+        self._model = Region2Vec.load_state_dict(params)
+
     def _validate_data_for_training(
         self, data: Union[List[RegionSet], List[str]]
     ) -> List[RegionSet]:
@@ -119,7 +151,7 @@ class Region2VecExModel(ExModel):
         min_count: int = DEFAULT_MIN_COUNT,
         n_shuffles: int = DEFAULT_N_SHUFFLES,
         batch_size: int = DEFAULT_BATCH_SIZE,
-        checkpoint_path: str = DEFAULT_CHECKPOINT_PATH,
+        checkpoint_path: str = DEFAULT_CHECKPOINT_FILE_NAME,
         optimizer: torch.optim.Optimizer = None,
         loss_fn: torch.nn.modules.loss._Loss = None,
         device: torch.device = torch.device("cpu"),
@@ -191,7 +223,7 @@ class Region2VecExModel(ExModel):
     def export(
         self,
         path: str,
-        checkpoint_file: str = DEFAULT_CHECKPOINT_PATH,
+        checkpoint_file: str = DEFAULT_CHECKPOINT_FILE_NAME,
         universe_file: str = DEFAULT_UNIVERSE_FILE_NAME,
     ):
         """
