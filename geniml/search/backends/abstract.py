@@ -16,7 +16,10 @@ class EmSearchBackend(ABC):
             self.load(embeddings, labels)
 
     @abstractmethod
-    def load(self, embeddings: np.ndarray, labels: list) -> None:
+    def loadload(self,
+        vectors: np.ndarray,
+        ids: Union[np.ndarray, None]=None,
+        payloads: Union[List[Dict[str, str]], None]=None) -> None:
         raise NotImplementedError
 
     @abstractmethod
