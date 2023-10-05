@@ -1,11 +1,11 @@
 import os
 from typing import List, Union
-
+from const import DEFAULT_BEDBASE_URI
 import genomicranges
 import requests
 
-from ..io import RegionSet
-from .utils import BedCacheManager, bedset_to_grangeslist, create_bedset_from_file
+from ..io import RegionSet, Region
+from .utils import BedCacheManager, bedset_to_grangeslist,  read_bedset_file
 
 # How should I be able to use this?
 
@@ -48,20 +48,20 @@ from .utils import BedCacheManager, bedset_to_grangeslist, create_bedset_from_fi
 class BedSet(object):
     def __init__(
         self,
-        region_sets: Union[List[RegionSets], List[str], List[List[Regions]], None],
+        region_sets: Union[List[RegionSet], List[str], List[List[Region]], None],
         file_path: str = None,
         identifier: str = None,
     ):
-        if isinstance(region_sets, List[RegionSets]):
-            self.region_sets = region_sets
-        elif isinstance(region_sets, List[str]):
-            self.region_sets = []
-            for r in region_sets:
-                self.region_sets.append(RegionSet(r))  # Needs to run through bbclient
-        elif isinstance(region_sets, List[List[Region]]):
-            self.region_sets = []
-            for r in region_sets:
-                self.region_sets.append(RegionSet(r))
+        if isinstance(region_sets, list):
+            # if region_sets is List[RegionSet]
+            if all(isinstance(region_set, RegionSet) for region_set in region_sets):
+                self.region_sets = region_sets
+            # if region_sets is List[str] or List[List[Region]]
+            else:
+                self.region_sets = []
+                for r in region_sets:
+                    self.region_sets.append(RegionSet(r))  # Needs to run through bbclient
+
         elif file_path is not None:
             if os.path.isfile(file_path):
                 self.region_sets = [RegionSet(r) for r in read_bedset_file(file_path)]

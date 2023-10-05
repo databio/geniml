@@ -1,8 +1,8 @@
 import gzip
 import os
 from io import BytesIO
-from typing import Optional
-
+from typing import Optional, List
+from ..io import RegionSet
 import genomicranges
 import pandas as pd
 import requests
