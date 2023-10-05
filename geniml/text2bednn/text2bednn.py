@@ -79,7 +79,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
     def _load_from_huggingface(
         self,
         model_repo: str,
-        model_file_name: str = MODEL_FILE_NAME,
+        model_file_name: str = DEFAULT_VEC2VEC_MODEL_FILE_NAME,
         **kwargs,
     ):
         """
