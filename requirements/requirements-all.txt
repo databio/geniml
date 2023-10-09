@@ -18,3 +18,4 @@ intervaltree
 qdrant_client
 hnswlib
 tensorflow
+sentence_transformers
