@@ -1,11 +1,112 @@
 import gzip
 import os
 from io import BytesIO
-from typing import Optional, List
-from ..io import RegionSet
+from typing import List, Optional, Union
+
 import genomicranges
 import pandas as pd
 import requests
+
+from ..io import Region, RegionSet
+
+
+class BedFile(RegionSet):
+    """
+    RegionSet with identifier and local path
+    """
+
+    def __init__(self, regions: str, backed: bool = False, identifier: str = None):
+        super().__init__(regions, backed)
+        self.path = regions
+        self.identifier = identifier
+
+    def to_granges(self):
+        gr_dict = {}
+        seqnames = []
+        starts = []
+        ends = []
+        for region in self.regions:
+            seqnames.append(region.chr)
+            starts.append(region.start)
+            ends.append(region.end)
+
+        gr_dict["seqnames"] = seqnames
+        gr_dict["starts"] = starts
+        gr_dict["ends"] = ends
+
+        return genomicranges.GenomicRanges(gr_dict)
+
+
+class BedSet(object):
+    """
+    Storing BedFile
+    """
+
+    def __init__(
+        self,
+        # region_sets: Union[List[RegionSet], List[str], List[List[Region]], None],\
+        region_sets=List[BedFile],
+        file_path: str = None,
+        identifier: str = None,
+    ):
+        if isinstance(region_sets, list) and all(
+            isinstance(region_set, BedFile) for region_set in region_sets
+        ):
+            self.region_sets = region_sets
+
+        elif file_path is not None:
+            if os.path.isfile(file_path):
+                self.region_sets = [RegionSet(r) for r in read_bedset_file(file_path)]
+            else:
+                raise FileNotFoundError(f"The specified file '{file_path}' does not exist.")
+
+            for r in read_bedset_file(region_sets):
+                self.region_sets.append(RegionSet(r))
+
+        self.bedset_identifier = identifier or self.compute_identifier()
+
+    def __len__(self):
+        return len(self.region_sets)
+
+    def __iter__(self):
+        for region_set in self.region_sets:
+            yield region_set
+
+    def __getitem__(self, indx: int):
+        return self.region_sets[indx]
+
+    def compute_identifier(self):
+        # TODO: set the bedset identifier
+        # If the bedset identifier is not set, we should set it using
+        # the algorithm we use to compute bedset identifiers
+        # (see bedboss/bedbuncher pipeline)
+        # I believe the bedset identifier is computed in bedbuncher.py line 76 with function 'get_bedset_digest'
+
+        # something like this?
+        import hashlib as md5
+
+        if self.bedset_identifier is not None:
+            return self.bedset_identifier
+
+        # Compute MD5 hash
+        m = md5()
+        m.update(self.identifier_string.encode("utf-8"))
+        computed_identifier = m.hexdigest()
+
+        # Set bedset identifier
+        self.bedset_identifier = computed_identifier
+
+        return computed_identifier
+
+        # raise NotImplementedError("BedSet object does not have a bedset identifier")
+
+    def to_grangeslist(self) -> genomicranges.GenomicRangesList:
+        """Process a list of BED file identifiers and returns a GenomicRangesList object"""
+        gr_list = []
+        for regionset in self.region_sets:
+            gr_list.append(regionset.to_granges())
+
+        return genomicranges.GenomicRangesList(ranges=gr_list)
 
 
 class BedCacheManager:
@@ -61,21 +162,24 @@ class BedCacheManager:
         return gr
 
 
-def bedset_to_grangeslist(bedset: BedSet) -> genomicranges.GenomicRangesList:
+@classmethod
+def bedset_to_grangeslist(
+    cls, bedset: BedSet, bedset_identifier: str
+) -> genomicranges.GenomicRangesList:
     """Convert a bedset into a GenomicRangesList object"""
     gr_dict = {}  # Create empty dict to store GenomicRanges objects
 
-    bed_identifiers = self.read_bed_identifiers_from_file(bedset_identifier)
+    bed_identifiers = cls.read_bed_identifiers_from_file(bedset_identifier)
 
     for bed_identifier in bed_identifiers:
-        gr = self.process_bed_file(bed_identifier)
+        gr = cls.process_bed_file(bed_identifier)
         gr_dict[bed_identifier] = gr
         print(f"Processed {bed_identifier}")
         print(gr)
 
-        # Create a GenomicRangesList object from the dictionary
-        grl = genomicranges.GenomicRangesList(**gr_dict)
-        return grl
+    # Create a GenomicRangesList object from the dictionary
+    grl = genomicranges.GenomicRangesList(**gr_dict)
+    return grl
 
 
 # QUESTION: should this move to the RegionSet object?
