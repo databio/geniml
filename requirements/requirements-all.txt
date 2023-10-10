@@ -20,3 +20,4 @@ hnswlib
 tensorflow
 torch
 sentence-transformers
+gtokenizers
