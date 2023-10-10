@@ -9,6 +9,11 @@ import genomicranges as gr
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from gtokenizers import (
+    TreeTokenizer as GTreeTokenizer,
+    Region as GRegion,
+    TokenizedRegionSet as GTokenizedRegionSet,
+)
 from intervaltree import IntervalTree
 from tqdm import tqdm
 
@@ -112,6 +117,59 @@ class GRangesTokenizer(Tokenizer):
             return self.tokenize_region_set(query)
         else:
             raise ValueError("Query must be a Region or RegionSet")
+
+
+class Gtokenizer(Tokenizer):
+    """
+    A fast, in memory, tokenizer that uses `gtokenizers` - a rust based tokenizer. This
+    tokenizer is the fastest tokenizer available. It is also the most memory efficient.
+
+    It should be a near dropin replacement for InMemTokenizer.
+    """
+
+    # class based method to insantiate the tokenizer from file
+    @classmethod
+    def from_file(cls, universe: str):
+        """
+        Create a new tokenizer from a file.
+
+        Usage:
+        ```
+        tokenizer = Gtokenizer.from_file("path/to/universe.bed")
+        ```
+
+        :param str universe: The universe to use for tokenization.
+        """
+        return cls(universe)
+
+    def __init__(self, universe: str = None):
+        """
+        Create a new tokenizer.
+
+        This tokenizer only accepts a path to a BED file containing regions.
+
+        :param str universe: The universe to use for tokenization.
+        """
+        if universe is not None:
+            self._tokenizer: GTreeTokenizer = GTreeTokenizer(universe)
+        else:
+            self._tokenizer = None
+
+    def tokenize(self, query: Union[Region, RegionSet]) -> GTokenizedRegionSet:
+        """
+        Tokenize a Region or RegionSet into the universe
+
+        :param Union[Region, RegionSet] query: The query to tokenize.
+        """
+        if isinstance(query, Region):
+            query = [query]
+        elif isinstance(query, RegionSet):
+            pass
+        else:
+            raise ValueError("Query must be a Region or RegionSet")
+
+        result = self._tokenizer.tokenize(query)
+        return result
 
 
 class InMemTokenizer(Tokenizer):
