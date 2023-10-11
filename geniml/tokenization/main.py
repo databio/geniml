@@ -11,7 +11,6 @@ import pandas as pd
 import scanpy as sc
 from gtokenizers import (
     TreeTokenizer as GTreeTokenizer,
-    Region as GRegion,
     TokenizedRegionSet as GTokenizedRegionSet,
 )
 from intervaltree import IntervalTree
@@ -142,6 +141,10 @@ class Gtokenizer(Tokenizer):
         """
         return cls(universe)
 
+    @property
+    def universe(self):
+        return self._tokenizer.universe
+
     def __init__(self, universe: str = None):
         """
         Create a new tokenizer.
@@ -164,12 +167,17 @@ class Gtokenizer(Tokenizer):
         if isinstance(query, Region):
             query = [query]
         elif isinstance(query, RegionSet):
+            query = list(query)
+        elif isinstance(list, query) and isinstance(query[0], Region):
             pass
         else:
             raise ValueError("Query must be a Region or RegionSet")
 
-        result = self._tokenizer.tokenize(query)
+        result = self._tokenizer.tokenize(list(query))
         return result
+
+    def __len__(self):
+        return len(self._tokenizer)
 
 
 class InMemTokenizer(Tokenizer):
