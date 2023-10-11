@@ -1,40 +1,97 @@
 import gzip
 import os
+from hashlib import md5
 from io import BytesIO
 from typing import List, Optional, Union
 
 import genomicranges
 import pandas as pd
-import requests
 
-from ..io import Region, RegionSet
+from ..io import Region, RegionSet, is_gzipped
 
 
 class BedFile(RegionSet):
     """
-    RegionSet with identifier and local path
+    RegionSet with identifier
     """
 
-    def __init__(self, regions: str, backed: bool = False, identifier: str = None):
+    def __init__(
+        self, regions: Union[str, List[Region]], identifier: str = None, backed: bool = False
+    ):
+        """
+        Inherit from class RegionSet in geniml/io/io.py.
+
+        :param regions: path to bed file or list of Region objects
+        :param identifier: a unique identifier of the RegionSet, can computed later
+        :param backed: whether to load the bed file into memory or not
+        """
         super().__init__(regions, backed)
-        self.path = regions
         self.identifier = identifier
 
-    def to_granges(self):
+    def to_granges(self) -> genomicranges.GenomicRanges:
+        """
+        Return GenomicRanges contained in this BED file
+        """
+        # dictionary the stores the region info
         gr_dict = {}
+        # lists that represent each row of BED file
         seqnames = []
         starts = []
         ends = []
+        # store information of regions into the lists
         for region in self.regions:
             seqnames.append(region.chr)
             starts.append(region.start)
             ends.append(region.end)
-
+        # store information lists into the dictionary
         gr_dict["seqnames"] = seqnames
         gr_dict["starts"] = starts
         gr_dict["ends"] = ends
 
         return genomicranges.GenomicRanges(gr_dict)
+
+    def compute_bed_identifier(self):
+        """
+        Return the identifier. If it is not set, compute one
+
+        from digest_bedfile in bedboss/bedstat/bedstat.py
+        https://github.com/databio/bedboss/blob/main/bedboss/bedstat/bedstat.py
+        """
+        if self.identifier is None:
+            if not self.backed:
+                # concate column values
+                chrs = ",".join([region.chr for region in self.regions])
+                starts = ",".join([str(region.start) for region in self.regions])
+                ends = ",".join([str(region.end) for region in self.regions])
+
+            else:
+                open_func = open if not is_gzipped(self.path) else gzip.open
+                mode = "r" if not is_gzipped(self.path) else "rt"
+                with open_func(self.path, mode) as f:
+                    # concate column values
+                    chrs = []
+                    starts = []
+                    ends = []
+                    for row in f:
+                        chrs.append(row.split("\t")[0])
+                        starts.append(row.split("\t")[1])
+                        ends.append(row.split("\t")[2].replace("\n", ""))
+                    chrs = ",".join(chrs)
+                    starts = ",".join(starts)
+                    ends = ",".join(ends)
+
+            # hash column values
+            chr_digest = md5(chrs.encode("utf-8")).hexdigest()
+            start_digest = md5(starts.encode("utf-8")).hexdigest()
+            end_digest = md5(ends.encode("utf-8")).hexdigest()
+            # hash column digests
+            bed_digest = md5(
+                ",".join([chr_digest, start_digest, end_digest]).encode("utf-8")
+            ).hexdigest()
+
+            self.identifier = bed_digest
+
+        return self.identifier
 
 
 class BedSet(object):
@@ -44,15 +101,27 @@ class BedSet(object):
 
     def __init__(
         self,
-        # region_sets: Union[List[RegionSet], List[str], List[List[Region]], None],\
-        region_sets=List[BedFile],
+        region_sets: Union[
+            List[BedFile], List[str], List[List[Region]], None
+        ],  # region_sets=Union[List[BedFile], List[str]],
         file_path: str = None,
         identifier: str = None,
     ):
-        if isinstance(region_sets, list) and all(
-            isinstance(region_set, BedFile) for region_set in region_sets
-        ):
-            self.region_sets = region_sets
+        """
+        :param region_sets: list of BED file paths, BedFile, or 2-dimension list of Region
+        :param file_path: path to the .txt file with identifier of all BED files in it
+        :param identifier: the identifier of the BED set
+        """
+
+        if isinstance(region_sets, list):
+            # init with a list of BED files
+            if all(isinstance(region_set, BedFile) for region_set in region_sets):
+                self.region_sets = region_sets
+            # init with a list of file paths or a 2d list of Region
+            else:
+                self.region_sets = []
+                for r in region_sets:
+                    self.region_sets.append(BedFile(r))
 
         elif file_path is not None:
             if os.path.isfile(file_path):
@@ -63,7 +132,7 @@ class BedSet(object):
             for r in read_bedset_file(region_sets):
                 self.region_sets.append(RegionSet(r))
 
-        self.bedset_identifier = identifier or self.compute_identifier()
+        self.bedset_identifier = identifier
 
     def __len__(self):
         return len(self.region_sets)
@@ -75,33 +144,27 @@ class BedSet(object):
     def __getitem__(self, indx: int):
         return self.region_sets[indx]
 
-    def compute_identifier(self):
-        # TODO: set the bedset identifier
-        # If the bedset identifier is not set, we should set it using
-        # the algorithm we use to compute bedset identifiers
-        # (see bedboss/bedbuncher pipeline)
-        # I believe the bedset identifier is computed in bedbuncher.py line 76 with function 'get_bedset_digest'
+    def compute_identifier(self) -> str:
+        """
+        Return the identifier. If it is not set, compute one
 
-        # something like this?
-        import hashlib as md5
+        :return: the identifier of BED set
+        """
+        if self.bedset_identifier is None:
+            # based on get_bedset_digest() in bedbuncher/pipelines/bedbuncher.py
+            # https://github.com/databio/bedbuncher/blob/master/pipelines/bedbuncher.py
 
-        if self.bedset_identifier is not None:
-            return self.bedset_identifier
+            bedfile_ids = []
+            for bedfile in self.region_sets:
+                bedfile_ids.append(bedfile.compute_bed_identifier())
+            self.bedset_identifier = md5(";".join(sorted(bedfile_ids)).encode("utf-8")).hexdigest()
 
-        # Compute MD5 hash
-        m = md5()
-        m.update(self.identifier_string.encode("utf-8"))
-        computed_identifier = m.hexdigest()
-
-        # Set bedset identifier
-        self.bedset_identifier = computed_identifier
-
-        return computed_identifier
-
-        # raise NotImplementedError("BedSet object does not have a bedset identifier")
+        return self.bedset_identifier
 
     def to_grangeslist(self) -> genomicranges.GenomicRangesList:
-        """Process a list of BED file identifiers and returns a GenomicRangesList object"""
+        """
+        Process a list of BED set identifiers and returns a GenomicRangesList object
+        """
         gr_list = []
         for regionset in self.region_sets:
             gr_list.append(regionset.to_granges())
@@ -174,8 +237,6 @@ def bedset_to_grangeslist(
     for bed_identifier in bed_identifiers:
         gr = cls.process_bed_file(bed_identifier)
         gr_dict[bed_identifier] = gr
-        print(f"Processed {bed_identifier}")
-        print(gr)
 
     # Create a GenomicRangesList object from the dictionary
     grl = genomicranges.GenomicRangesList(**gr_dict)
