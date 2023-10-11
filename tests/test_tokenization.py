@@ -3,7 +3,7 @@ import scanpy as sc
 
 
 from geniml.io.io import Region, RegionSet
-from geniml.tokenization.main import InMemTokenizer
+from geniml.tokenization.main import InMemTokenizer, Gtokenizer
 
 
 @pytest.fixture
@@ -146,3 +146,30 @@ def test_tokenize_anndata_backed(universe_bed_file: str, pbmc_data_backed: sc.An
     tokens = t.tokenize(pbmc_data_backed)
 
     assert len(tokens) == pbmc_data_backed.shape[0]
+
+
+def test_make_gtokenizer(universe_bed_file: str):
+    t = Gtokenizer(universe_bed_file)
+    assert t is not None
+
+
+def test_gtokenize_region_set(universe_bed_file: str):
+    t = Gtokenizer(universe_bed_file)
+    assert t is not None
+
+    # tokenize a bed file
+    bed_file = "tests/data/to_tokenize.bed"
+
+    # read in the bed file to test
+    rs = RegionSet(bed_file)
+
+    # tokenize
+    tokens = t.tokenize(rs)
+    region_tokens = tokens.regions
+
+    # filter out UNK tokens
+    region_tokens = [t for t in region_tokens if t.chr != "chrUNK"]
+
+    # ensure that the tokens are unqiue from the original regions
+    assert len(set(region_tokens).intersection(set(list(rs)))) == 0
+    assert len([t for t in region_tokens if t is not None]) == 3
