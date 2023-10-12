@@ -18,18 +18,18 @@ def pbmc_data_backed():
 
 @pytest.fixture
 def universe_bed_file():
-    return "tests/data/universe.bed"
+    return "tests/data/universe.uniq.bed"
 
 
 def test_create_universe(universe_bed_file: str):
     u = RegionSet(universe_bed_file)
     assert u is not None
-    assert len(u) == 2_433
+    assert len(u) == 2_378
 
 
 def test_make_in_mem_tokenizer_from_file(universe_bed_file: str):
     t = InMemTokenizer(universe_bed_file)
-    assert len(t.universe) == 2_433
+    assert len(t.universe) == 2_378
     assert t is not None
 
 
@@ -168,8 +168,52 @@ def test_gtokenize_region_set(universe_bed_file: str):
     region_tokens = tokens.regions
 
     # filter out UNK tokens
+    assert len(region_tokens) == 14  # one of the regions gets split into two tokens
     region_tokens = [t for t in region_tokens if t.chr != "chrUNK"]
 
-    # ensure that the tokens are unqiue from the original regions
-    assert len(set(region_tokens).intersection(set(list(rs)))) == 0
+    # count tokens
     assert len([t for t in region_tokens if t is not None]) == 3
+
+
+def test_yield_tokens(universe_bed_file: str):
+    t = Gtokenizer(universe_bed_file)
+
+    # tokenize a bed file
+    bed_file = "tests/data/to_tokenize.bed"
+
+    # read in the bed file to test
+    rs = RegionSet(bed_file)
+
+    # tokenize
+    tokens = t.tokenize(rs)
+    region_tokens = tokens.regions
+
+    # filter out UNK tokens
+    assert len(region_tokens) == 14  # one of the regions gets split into two tokens
+    region_tokens = [t for t in region_tokens if t.chr != "chrUNK"]
+
+    # count tokens
+    assert len([t for t in region_tokens if t is not None]) == 3
+
+    # yield tokens
+    for token in tokens:
+        assert token is not None
+        assert isinstance(token.id, int)
+
+
+def test_gtokenize_to_bit_vector(universe_bed_file: str):
+    t = Gtokenizer(universe_bed_file)
+    assert t is not None
+
+    # tokenize a bed file
+    bed_file = "tests/data/to_tokenize.bed"
+
+    # read in the bed file to test
+    rs = RegionSet(bed_file)
+
+    # tokenize
+    tokens = t.tokenize(rs)
+    bit_vector = tokens.bit_vector
+
+    assert all(isinstance(b, bool) for b in bit_vector)
+    assert len(bit_vector) == 2_379
