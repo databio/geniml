@@ -1,4 +1,4 @@
-# How to tokenize a BED file
+# How to tokenize a BED file on the command line
 
 
 For hard tokenization, run
