@@ -3,12 +3,14 @@ import os
 import shutil
 from typing import List, Union
 
-import genomicranges
 import requests
 
 from ..io import is_gzipped
-from .const import DEFAULT_BEDBASE_API
-from .utils import BedCacheManager, BedFile, BedSet
+from .const import (DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
+                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
+                    DEFAULT_BEDSET_SUBFOLDER)
+from .utils import (BedCacheManager, BedFile, BedSet, compute_bed_identifier,
+                    compute_bedset_identifier)
 
 
 class BBClient(BedCacheManager):
@@ -21,20 +23,6 @@ class BBClient(BedCacheManager):
         """
         super().__init__(cache_folder)
         self.bedbase_api = bedbase_api
-
-    def download_and_process_bed_region_data(
-        self, bed_identifier: str, chr_num: str, start: int, end: int
-    ) -> genomicranges.GenomicRanges:
-        """
-        Download regions of a BED file from BEDbase API and return the file content as bytes
-        """
-        bed_url = f"{self.bedbase_api}/{bed_identifier}/regions/{chr_num}?start={start}&end={end}"
-        response = requests.get(bed_url)
-        response.raise_for_status()
-        response_content = response.content
-        gr_bed_regions = self.decompress_and_convert_to_genomic_ranges(response_content)
-
-        return gr_bed_regions
 
     def _download_bed_data(self, bedfile_id: str) -> bytes:
         """
@@ -59,7 +47,7 @@ class BBClient(BedCacheManager):
         file_path = self._bedset_path(bedset_id)
 
         if os.path.exists(file_path):
-            print("BED set already exists in cache.")
+            print(f"BED set {bedset_id} already exists in cache.")
             with open(file_path, "r") as file:
                 extracted_data = file.readlines()
         # if the BedSet is not in cache, download it from BEDBase
@@ -69,7 +57,7 @@ class BBClient(BedCacheManager):
             with open(file_path, "w") as file:
                 for value in extracted_data:
                     file.write(value + "\n")
-            print("BED set downloaded and cached successfully.")
+            print(f"BED set {bedset_id} downloaded and cached successfully.")
 
         # return the BedSet
         return BedSet(
@@ -101,7 +89,7 @@ class BBClient(BedCacheManager):
         file_path = self._bedfile_path(bedfile_id)
 
         if os.path.exists(file_path):
-            print("BED file already exists in cache.")
+            print(f"BED file {bedfile_id} already exists in cache.")
         # if not in the cache, download from BEDbase and write to file in cache
         else:
             bed_data = self._download_bed_data(bedfile_id)
@@ -118,7 +106,8 @@ class BBClient(BedCacheManager):
         :param bedset: the BED set to be added, a BedSet class
         :return: the identifier if the BedSet object
         """
-        bedset_id = bedset.compute_identifier()
+        # bedset_id = bedset.compute_bedset_identifier()
+        bedset_id = compute_bedset_identifier(bedset)
         file_path = self._bedset_path(bedset_id)
         if os.path.exists(file_path):
             print(f"{file_path} already exists in cache.")
@@ -137,7 +126,8 @@ class BBClient(BedCacheManager):
         :return: the identifier if the BedFile object
         """
 
-        bedfile_id = bedfile.compute_bed_identifier()
+        # bedfile_id = bedfile.compute_bed_identifier()
+        bedfile_id = compute_bed_identifier(bedfile)
         file_path = self._bedfile_path(bedfile_id)
         if os.path.exists(file_path):
             print(f"{file_path} already exists in cache.")
@@ -189,8 +179,8 @@ class BBClient(BedCacheManager):
         :return: the path to the .txt file
         """
 
-        subfolder_name = "bedsets"
-        file_extension = ".txt"
+        subfolder_name = DEFAULT_BEDSET_SUBFOLDER
+        file_extension = DEFAULT_BEDSET_EXT
 
         return self._cache_path(bedset_id, subfolder_name, file_extension)
 
@@ -202,8 +192,8 @@ class BBClient(BedCacheManager):
         :return: the path to the .bed.gz file
         """
 
-        subfolder_name = "bedfiles"
-        file_extension = ".bed.gz"
+        subfolder_name = DEFAULT_BEDFILE_SUBFOLDER
+        file_extension = DEFAULT_BEDFILE_EXT
 
         return self._cache_path(bedfile_id, subfolder_name, file_extension)
 

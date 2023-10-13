@@ -6,8 +6,8 @@ from typing import Tuple
 import genomicranges
 import pytest
 
-from geniml.bbclient import BBClient, BedFile, BedSet
-from geniml.io import RegionSet
+from geniml.bbclient import (BBClient, BedFile, BedSet, compute_bed_identifier,
+                             compute_bedset_identifier)
 
 
 @pytest.fixture
@@ -66,8 +66,8 @@ def test_load_bedset_from_bedbase(cache_path, bedset_id):
 
     # check the path and identifier of BED files which the loaded BED set contains
     for bedfile in bedset:
-        bedfile_path = bbclient.seek(bedfile.compute_bed_identifier())
-        assert bedfile.compute_bed_identifier() == os.path.split(bedfile_path)[1].split(".")[0]
+        bedfile_path = bbclient.seek(compute_bed_identifier(bedfile))
+        assert compute_bed_identifier(bedfile) == os.path.split(bedfile_path)[1].split(".")[0]
 
 
 def test_load_bedfile_from_bedbase(cache_path, bedfile_id):
@@ -92,7 +92,7 @@ def test_load_bedfile_from_bedbase(cache_path, bedfile_id):
 
     # check the path and identifier of BED file
     bedfile_path = bbclient.seek(bedfile_id)
-    assert bedfile.compute_bed_identifier() == os.path.split(bedfile_path)[1].split(".")[0]
+    assert compute_bed_identifier(bedfile) == os.path.split(bedfile_path)[1].split(".")[0]
 
 
 def test_load_local_bed_file(cache_path, local_bedfile_path, local_bedgz_path):
@@ -106,12 +106,12 @@ def test_load_local_bed_file(cache_path, local_bedfile_path, local_bedgz_path):
     # load a local bedfile (not from bedbase)
     bedfile = BedFile(local_bedfile_path)
     gr = bedfile.to_granges()  # should return a GenomicRanges object
-    bedfile_id = bedfile.compute_bed_identifier()  # just compute its ID, without adding to cache
+    bedfile_id = compute_bed_identifier(bedfile)  # just compute its ID, without adding to cache
 
     bedfile_id = bbclient.add_bed_to_cache(bedfile)  # compute its ID and add it to the cache
     path_in_cache = bbclient.seek(bedfile.identifier)
     # check the path and identifier of BED file
-    assert bedfile.compute_bed_identifier() == os.path.split(path_in_cache)[1].split(".")[0]
+    assert compute_bed_identifier(bedfile) == os.path.split(path_in_cache)[1].split(".")[0]
 
     # testing if same BedFile from same file but init with different conditions:
     # 1. backed or not
@@ -129,15 +129,14 @@ def test_load_local_bed_file(cache_path, local_bedfile_path, local_bedgz_path):
     bedfile_in_cache_backed = BedFile(path_in_cache, backed=True)
 
     assert (
-        bedfile.compute_bed_identifier()
-        == bedfile_gz.compute_bed_identifier()
-        == bedfile_in_cache.compute_bed_identifier()
-        == bedfile_backed.compute_bed_identifier()
-        == bedfile_backed_gz.compute_bed_identifier()
-        == bedfile_in_cache_backed.compute_bed_identifier()
+        compute_bed_identifier(bedfile)
+        == compute_bed_identifier(bedfile_gz)
+        == compute_bed_identifier(bedfile_in_cache)
+        == compute_bed_identifier(bedfile_backed)
+        == compute_bed_identifier(bedfile_backed_gz)
+        == compute_bed_identifier(bedfile_in_cache_backed)
     )
     os.remove(local_bedgz_path)
-    # shutil.rmtree(cache_path)
 
 
 def test_load_local_bedset(cache_path, local_bedfile_list):
@@ -152,7 +151,7 @@ def test_load_local_bedset(cache_path, local_bedfile_list):
     # load a local bedset file (not from bedbase)
     bedset = BedSet(local_bedfile_list)
     assert isinstance(bedset, BedSet)
-    bedset_id = bedset.compute_identifier()
+    bedset_id = compute_bedset_identifier(bedset)
 
     # check the seek result before the BED set is loaded
     bedset_seek_result = bbclient.seek(bedset_id)
@@ -163,8 +162,6 @@ def test_load_local_bedset(cache_path, local_bedfile_list):
     # check the path and identifier of BED set
     path_in_cache = bbclient.seek(bedset_id)
     assert bedset_id == os.path.split(path_in_cache)[1].split(".")[0]
-
-    # shutil.rmtree(cache_path)
 
 
 def test_removal(cache_path, bedset_id, bedfile_id):
@@ -189,8 +186,7 @@ def test_removal(cache_path, bedset_id, bedfile_id):
 
     bbclient = BBClient(cache_folder=cache_path)
     # testing removal
-    # remove bedfile:
-    # bedfile_id = bedfile.compute_bed_identifier()
+    # remove bedfile
     bedfile_cache_path = bbclient.seek(bedfile_id)
     subfolder1, subfolder2 = subfolders(bedfile_cache_path)
     bbclient.remove_bedfile_from_cache(bedfile_id)
@@ -199,7 +195,6 @@ def test_removal(cache_path, bedset_id, bedfile_id):
     assert not os.path.exists(subfolder1) or len(os.listdir(subfolder1)) > 0
 
     # remove bedset
-    # bedset_id = bedset.compute_identifier()
     bedset_cache_path = bbclient.seek(bedset_id)
     subfolder1, subfolder2 = subfolders(bedset_cache_path)
     bbclient.remove_bedset_from_cache(bedset_id)

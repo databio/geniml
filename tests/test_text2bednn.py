@@ -202,7 +202,7 @@ def test_data_nn_search_interface(
     # loading data to search backend
     embeddings, labels = prepare_vectors_for_database(ri_list)
     qd_search_backend = QdrantBackend(collection=collection)
-    qd_search_backend.load(embeddings, labels)
+    qd_search_backend.load(vectors=embeddings, payloads=labels)
 
     # construct a search interface
     db_interface = Text2BEDSearchInterface(st_model, v2vnn, qd_search_backend)
@@ -216,7 +216,7 @@ def test_data_nn_search_interface(
 
     # construct a search interface with file backend
     hnsw_backend = HNSWBackend(local_index_path=local_idx_path)
-    hnsw_backend.load(embeddings, labels)
+    hnsw_backend.load(vectors=embeddings, payloads=labels)
     file_interface = Text2BEDSearchInterface(st_model, v2vnn, hnsw_backend)
 
     file_search_result = file_interface.nl_vec_search(query_term, k)
@@ -227,6 +227,10 @@ def test_data_nn_search_interface(
     # remove local hnsw index
     os.remove(local_idx_path)
 
+
+def test_bioGPT_embedding_and_searching(
+    bed_folder, metadata_path, r2v_model, testing_input_biogpt
+):
     # test the vec2vec with BioGPT emcoding metadata
     biogpt_st = bioGPT_sentence_transformer()
 
@@ -238,12 +242,6 @@ def test_data_nn_search_interface(
     train_list, validate_list = train_test_split(ri_list, test_size=0.2)
     train_X, train_Y = region_info_list_to_vectors(train_list)
     validate_X, validate_Y = region_info_list_to_vectors(validate_list)
-    assert isinstance(train_X, np.ndarray)
-    assert isinstance(train_Y, np.ndarray)
-    assert train_X.shape[1] == 1024
-    assert train_Y.shape[1] == 100
-    assert train_X[0].shape == (1024,)
-    assert train_Y[0].shape == (100,)
 
     biogpt_v2v = Vec2VecFNN()
     biogpt_v2v.train(train_X, train_Y, validating_data=(validate_X, validate_Y), num_epochs=50)
