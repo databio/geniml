@@ -1,2 +1,6 @@
 # DEFAULT_BEDBASE_API = "https://api.bedbase.org"
 DEFAULT_BEDBASE_API = "http://bedbase.org/api"
+DEFAULT_BEDSET_SUBFOLDER = "bedsets"
+DEFAULT_BEDFILE_SUBFOLDER = "bedfiles"
+DEFAULT_BEDSET_EXT = ".txt"
+DEFAULT_BEDFILE_EXT = ".bed.gz"

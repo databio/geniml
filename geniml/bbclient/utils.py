@@ -32,66 +32,11 @@ class BedFile(RegionSet):
         """
         Return GenomicRanges contained in this BED file
         """
-        # dictionary the stores the region info
-        gr_dict = {}
-        # lists that represent each row of BED file
-        seqnames = []
-        starts = []
-        ends = []
-        # store information of regions into the lists
-        for region in self.regions:
-            seqnames.append(region.chr)
-            starts.append(region.start)
-            ends.append(region.end)
-        # store information lists into the dictionary
-        gr_dict["seqnames"] = seqnames
-        gr_dict["starts"] = starts
-        gr_dict["ends"] = ends
-
+        seqnames, starts, ends = zip(
+            *[(region.chr, region.start, region.end) for region in self.regions]
+        )
+        gr_dict = {"seqnames": seqnames, "starts": starts, "ends": ends}
         return genomicranges.GenomicRanges(gr_dict)
-
-    def compute_bed_identifier(self):
-        """
-        Return the identifier. If it is not set, compute one
-
-        from digest_bedfile in bedboss/bedstat/bedstat.py
-        https://github.com/databio/bedboss/blob/main/bedboss/bedstat/bedstat.py
-        """
-        if self.identifier is None:
-            if not self.backed:
-                # concate column values
-                chrs = ",".join([region.chr for region in self.regions])
-                starts = ",".join([str(region.start) for region in self.regions])
-                ends = ",".join([str(region.end) for region in self.regions])
-
-            else:
-                open_func = open if not is_gzipped(self.path) else gzip.open
-                mode = "r" if not is_gzipped(self.path) else "rt"
-                with open_func(self.path, mode) as f:
-                    # concate column values
-                    chrs = []
-                    starts = []
-                    ends = []
-                    for row in f:
-                        chrs.append(row.split("\t")[0])
-                        starts.append(row.split("\t")[1])
-                        ends.append(row.split("\t")[2].replace("\n", ""))
-                    chrs = ",".join(chrs)
-                    starts = ",".join(starts)
-                    ends = ",".join(ends)
-
-            # hash column values
-            chr_digest = md5(chrs.encode("utf-8")).hexdigest()
-            start_digest = md5(starts.encode("utf-8")).hexdigest()
-            end_digest = md5(ends.encode("utf-8")).hexdigest()
-            # hash column digests
-            bed_digest = md5(
-                ",".join([chr_digest, start_digest, end_digest]).encode("utf-8")
-            ).hexdigest()
-
-            self.identifier = bed_digest
-
-        return self.identifier
 
 
 class BedSet(object):
@@ -143,23 +88,6 @@ class BedSet(object):
 
     def __getitem__(self, indx: int):
         return self.region_sets[indx]
-
-    def compute_identifier(self) -> str:
-        """
-        Return the identifier. If it is not set, compute one
-
-        :return: the identifier of BED set
-        """
-        if self.bedset_identifier is None:
-            # based on get_bedset_digest() in bedbuncher/pipelines/bedbuncher.py
-            # https://github.com/databio/bedbuncher/blob/master/pipelines/bedbuncher.py
-
-            bedfile_ids = []
-            for bedfile in self.region_sets:
-                bedfile_ids.append(bedfile.compute_bed_identifier())
-            self.bedset_identifier = md5(";".join(sorted(bedfile_ids)).encode("utf-8")).hexdigest()
-
-        return self.bedset_identifier
 
     def to_grangeslist(self) -> genomicranges.GenomicRangesList:
         """
@@ -223,6 +151,72 @@ class BedCacheManager:
         gr = genomicranges.from_pandas(df)
 
         return gr
+
+
+def compute_bed_identifier(bedfile: BedFile):
+    """
+    Return the identifier. If it is not set, compute one
+
+    from digest_bedfile in bedboss/bedstat/bedstat.py
+    https://github.com/databio/bedboss/blob/main/bedboss/bedstat/bedstat.py
+    """
+    if bedfile.identifier is not None:
+        return bedfile.identifier
+    else:
+        if not bedfile.backed:
+            # concate column values
+            chrs = ",".join([region.chr for region in bedfile.regions])
+            starts = ",".join([str(region.start) for region in bedfile.regions])
+            ends = ",".join([str(region.end) for region in bedfile.regions])
+
+        else:
+            open_func = open if not is_gzipped(bedfile.path) else gzip.open
+            mode = "r" if not is_gzipped(bedfile.path) else "rt"
+            with open_func(bedfile.path, mode) as f:
+                # concate column values
+                chrs = []
+                starts = []
+                ends = []
+                for row in f:
+                    chrs.append(row.split("\t")[0])
+                    starts.append(row.split("\t")[1])
+                    ends.append(row.split("\t")[2].replace("\n", ""))
+                chrs = ",".join(chrs)
+                starts = ",".join(starts)
+                ends = ",".join(ends)
+
+        # hash column values
+        chr_digest = md5(chrs.encode("utf-8")).hexdigest()
+        start_digest = md5(starts.encode("utf-8")).hexdigest()
+        end_digest = md5(ends.encode("utf-8")).hexdigest()
+        # hash column digests
+        bed_digest = md5(
+            ",".join([chr_digest, start_digest, end_digest]).encode("utf-8")
+        ).hexdigest()
+
+        bedfile.identifier = bed_digest
+
+        return bedfile.identifier
+
+
+def compute_bedset_identifier(bedset: BedSet) -> str:
+    """
+    Return the identifier. If it is not set, compute one
+
+    :return: the identifier of BED set
+    """
+    if bedset.bedset_identifier is not None:
+        return bedset.bedset_identifier
+    if bedset.bedset_identifier is None:
+        # based on get_bedset_digest() in bedbuncher/pipelines/bedbuncher.py
+        # https://github.com/databio/bedbuncher/blob/master/pipelines/bedbuncher.py
+
+        bedfile_ids = []
+        for bedfile in bedset.region_sets:
+            bedfile_ids.append(compute_bed_identifier(bedfile))
+        bedset.bedset_identifier = md5(";".join(sorted(bedfile_ids)).encode("utf-8")).hexdigest()
+
+        return bedset.bedset_identifier
 
 
 @classmethod

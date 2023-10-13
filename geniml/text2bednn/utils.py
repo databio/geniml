@@ -162,9 +162,10 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
             _LOGGER.info(f"{ri.file_name}'s embedding is None, exclude from dataset")
             continue
         if ri.region_set_embedding.shape != DEFAULT_EMBEDDING_DIM:
-            _LOGGER.info(
-                f"{ri.file_name}'s embedding has shape of {ri.region_set_embedding.shape}, exclude from dataset"
+            _LOGGER.warning(
+                f"WARNING: {ri.file_name}'s embedding has shape of {ri.region_set_embedding.shape}, exclude from dataset"
             )
+            # _LOGGER.error()
             continue
         X.append(ri.metadata_embedding)
         # Y: bed file embedding
@@ -202,9 +203,9 @@ def prepare_vectors_for_database(
 def vectors_from_backend(
     search_backend: Union[HNSWBackend, QdrantBackend],
     encoding_model: SentenceTransformer,
-    payload_key: str = "payload",
-    vec_key: str = "vector",
-    metadata_key: str = "metadata",
+    payload_key: str = DEFAULT_PAYLOAD_KEY,
+    vec_key: str = DEFAULT_VECTOR_KEY,
+    metadata_key: str = DEFAULT_METADATA_KEY,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Load vectors from a search backend's qdrant client or hnsw index
@@ -238,13 +239,14 @@ def vectors_from_backend(
     return np.array(X), np.array(Y)
 
 
-def bioGPT_sentence_transformer(model_name: str = DEFAULT_BIOGPT_MODEL) -> SentenceTransformer:
+def bioGPT_sentence_transformer() -> SentenceTransformer:
     """
-    returns a sentencetransformer with specific model for biomedical text
+    Returns a sentencetransformer with specific model for biomedical text.
+    Based on code from https://github.com/UKPLab/sentence-transformers/issues/1824
 
     :param model_name: name of the biomedical text transformer model
     """
-    word_embedding_model = models.Transformer(model_name)
+    word_embedding_model = models.Transformer("microsoft/biogpt")
     pooling_model = models.Pooling(
         word_embedding_model.get_word_embedding_dimension(), pooling_mode="mean"
     )
