@@ -14,6 +14,7 @@ nav:
     - Evaluate embeddings: tutorials/evaluation.md
     - Train region2vec embeddings: tutorials/region2vec.md
     - Train single-cell embeddings: tutorials/train-scembed-model.md
+    - Tokenization: tutorials/tokenization.md
     - Tokenize a BED file on the command line: tutorials/cli-tokenization.md
     - Build universe: tutorials/build-universe.md
     - Create consensus peaks: tutorials/create-consensus-peaks.md
