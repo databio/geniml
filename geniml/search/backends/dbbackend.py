@@ -2,12 +2,15 @@ import os
 from typing import Dict, List, Union
 
 import numpy as np
-from geniml.search.const import *
-from geniml.search.utils import verify_load_inputs
+from ..const import *
+from ..utils import verify_load_inputs
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
+import logmuse
 
 from .abstract import EmSearchBackend
+
+_LOGGER = logmuse.init_logger("geniml")
 
 
 class QdrantBackend(EmSearchBackend):
@@ -28,6 +31,7 @@ class QdrantBackend(EmSearchBackend):
         :param config: the vector parameter
         :param collection: name of collection
         """
+        super().__init__()
         self.collection = collection
         self.config = config
         self.qd_client = QdrantClient(
@@ -35,9 +39,16 @@ class QdrantBackend(EmSearchBackend):
             port=os.environ.get("QDRANT_PORT", qdrant_port),
             api_key=os.environ.get("QDRANT_API_KEY", None),
         )
-        self.qd_client.recreate_collection(
-            collection_name=self.collection, vectors_config=self.config
-        )
+
+        # Create collection only if it does not exist
+        try: 
+            collection_info = self.qd_client.get_collection(collection_name=self.collection)
+            _LOGGER.info(f"Using collection {self.collection} with {collection_info.points_count} points.")
+        except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
+            _LOGGER.info(f"Collection {self.collection} does not exist, creating it.")
+            self.qd_client.recreate_collection(
+                collection_name=self.collection, vectors_config=self.config
+            )
 
     def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
         """

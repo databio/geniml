@@ -1,9 +1,11 @@
 from typing import Union
 
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import numpy as np
+import os
 import tensorflow as tf
-from geniml.search.backends import HNSWBackend, QdrantBackend
+from sentence_transformers import SentenceTransformer
+from ..search.backends import HNSWBackend, QdrantBackend
 
 from .const import *
 from .utils import *
@@ -145,7 +147,8 @@ class Vec2VecFNN(tf.keras.models.Sequential):
             )
         return output_vec
 
-    def plot_training_hist(self):
+    def plot_training_hist(self,
+                          save_path:Union[str, None] = None):
         """
         plot the training & validating loss of the most recent training
         :return:
@@ -158,7 +161,10 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         plt.plot(epoch_range, valid_loss, "b", label="Validation loss")
         plt.title("Training and validation loss")
         plt.legend()
-        plt.show()
+        if save_path:
+            plt.savefig(os.path.join(save_path, "train_hist.png"))
+        else:
+            plt.show()
 
 
 class Text2BEDSearchInterface(object):
@@ -210,13 +216,21 @@ class Text2BEDSearchInterface(object):
 
     def nl_vec_search(
         self, query: Union[str, np.ndarray], k: int = 10
-    ) -> Tuple[Union[List[int], List[List[int]]], Union[List[float], List[List[float]]]]:
+    ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
         Given an input natural language, suggest region sets
 
         :param query: searching input string
         :param k: number of results (nearst neighbor in vectors)
-        :return: a list of Qdrant Client search results
+        :return: a list of dictionary that contains the search results in this format:
+        {
+            "id": <id>
+            "score": <score>
+            "payload": {
+                <information of the vector>
+            }
+            "vector": [<the vector>]
+        }
         """
 
         # first, get the embedding of the query string
@@ -233,3 +247,4 @@ class Text2BEDSearchInterface(object):
 # betum = BEDEmbedTUM(RSC, universe, tokenizer)
 # embeddings = betum.compute_embeddings()
 # T2BNNSI = Text2BEDSearchInterface(betum, embeddings)  # ???
+
