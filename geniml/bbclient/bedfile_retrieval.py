@@ -217,7 +217,6 @@ class BBClient(BedCacheManager):
         :return: the path to the file
         """
         filename = f"{identifier}{file_extension}"
-
         folder_name = os.path.join(self.cache_folder, subfolder_name, identifier[0], identifier[1])
 
         self.create_cache_folder(folder_name)
