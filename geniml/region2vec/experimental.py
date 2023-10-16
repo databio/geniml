@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
 from tqdm import tqdm
 
-from ..tokenization.main import InMemTokenizer
+from ..tokenization.main import Gtokenizer
 from ..models.main import ExModel
 from ..io.io import RegionSet
 from ..const import PKG_NAME
@@ -48,10 +48,10 @@ class Word2Vec(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.projection(x)
-        x = torch.sum(x, dim=1)
+        x = torch.sum(x, dim=0)
         x = F.relu(self.hidden(x))
         x = self.output(x)
-        return F.log_softmax(x, dim=1)
+        return F.log_softmax(x, dim=0)
 
 
 class Region2Vec(Word2Vec):
@@ -65,7 +65,7 @@ class Region2Vec(Word2Vec):
 
 
 class Region2VecExModel(ExModel):
-    def __init__(self, model_path: str = None, tokenizer: InMemTokenizer = None, **kwargs):
+    def __init__(self, model_path: str = None, tokenizer: Gtokenizer = None, **kwargs):
         """
         Initialize Region2VecExModel.
 
@@ -77,7 +77,7 @@ class Region2VecExModel(ExModel):
         super().__init__()
         self.model_path = model_path
         self._model: Region2Vec = None
-        self.tokenizer: InMemTokenizer = tokenizer
+        self.tokenizer: Gtokenizer = tokenizer
 
         if model_path is not None:
             self.trained = True
@@ -116,7 +116,7 @@ class Region2VecExModel(ExModel):
         self._universe_path = universe_path
 
         # init tokenizer
-        self.tokenizer = InMemTokenizer(universe_path)
+        self.tokenizer = Gtokenizer(universe_path)
 
         # unpickle params
         params = torch.load(model_path)
@@ -169,14 +169,9 @@ class Region2VecExModel(ExModel):
         # validate the data
         data = self._validate_data_for_training(data)
 
-        # add the universe to the tokenizer
-        self.tokenizer.add_universe(data)  # this API doesnt exist yet
-
-        # tokenize the data into regions and remove Nones
+        # tokenize the data into regions
         tokens = [self.tokenizer.tokenize(rs) for rs in data]
-
-        # get actual ids from the tokens
-        tokens = self.tokenizer.convert_tokens_to_ids(tokens)
+        tokens = [t.id for t in tokens]
 
         # remove tokens falling below min count
         tokens = remove_below_min_count(tokens, min_count)
