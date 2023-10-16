@@ -176,6 +176,14 @@ class Gtokenizer(Tokenizer):
         result = self._tokenizer.tokenize(list(query))
         return result
 
+    def convert_tokens_to_ids(self, tokens: GTokenizedRegionSet) -> List[int]:
+        """
+        Convert a list of tokens to a list of ids.
+
+        :param List[TokenizedRegion] tokens: The list of tokens to convert
+        """
+        return [token.id for token in tokens]
+
     def __len__(self):
         return len(self._tokenizer)
 

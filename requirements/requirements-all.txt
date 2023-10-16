@@ -21,3 +21,4 @@ tensorflow
 torch
 sentence-transformers
 gtokenizers
+genomicranges

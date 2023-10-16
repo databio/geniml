@@ -3,12 +3,14 @@ from typing import List
 
 import pytest
 import numpy as np
+import torch
 
 from geniml.io.io import RegionSet, Region
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.utils import wordify_region, wordify_regions
 from geniml.region2vec.pooling import mean_pooling, max_pooling
 from geniml.region2vec.utils import generate_window_training_data
+from geniml.region2vec.experimental import Region2Vec
 from geniml.tokenization.main import InMemTokenizer
 
 
@@ -242,3 +244,16 @@ def test_generate_windowed_training_data(
     assert len(x_ids) == len(y_ids)
     assert all(isinstance(r, list) for r in x_ids)
     assert all(isinstance(r, int) for r in y_ids)
+
+
+def test_r2v_pytorch():
+    vocab_size = 10000
+    embedding_dim = 100
+
+    model = Region2Vec(vocab_size, embedding_dim)
+    assert model is not None
+
+    # create a random tensor with 10 tokens
+    x = torch.randint(low=0, high=100, size=(10,))
+    y = model.forward(x)
+    assert y.shape == (10000,)
