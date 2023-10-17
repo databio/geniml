@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
 from tqdm import tqdm
 
-from ..tokenization.main import Gtokenizer
+from ..tokenization.main import Gtokenizer, Tokenizer
 from ..models.main import ExModel
 from ..io.io import RegionSet
 from ..const import PKG_NAME
@@ -65,7 +65,9 @@ class Region2Vec(Word2Vec):
 
 
 class Region2VecExModel(ExModel):
-    def __init__(self, model_path: str = None, tokenizer: Gtokenizer = None, **kwargs):
+    def __init__(
+        self, model_path: str = None, tokenizer: Gtokenizer = None, device: str = None, **kwargs
+    ):
         """
         Initialize Region2VecExModel.
 
@@ -76,20 +78,49 @@ class Region2VecExModel(ExModel):
         """
         super().__init__()
         self.model_path = model_path
-        self._model: Region2Vec = None
-        self.tokenizer: Gtokenizer = tokenizer
+        self.tokenizer = tokenizer
+        self.trained = False
+        self._model = None
 
         if model_path is not None:
-            self.trained = True
             self._init_from_huggingface(model_path)
-        else:
-            self.trained = False
-            self.tokenizer = tokenizer
+            self.trained = True
+
+        elif tokenizer is not None:
+            self._init_model(**kwargs)
+
+        # set the device
+        self._target_device = torch.device(
+            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        )
+
+    def _init_model(self, **kwargs):
+        """
+        Initialize the core model. This will initialize the model from scratch.
+
+        :param kwargs: Additional keyword arguments to pass to the model.
+        """
+        if self.tokenizer:
             self._model = Word2Vec(
-                len(self.tokenizer.universe),
+                len(self.tokenizer.vocab),
                 embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
                 hidden_dim=kwargs.get("hidden_dim", DEFAULT_HIDDEN_DIM),
             )
+
+    def add_tokenizer(self, tokenizer: Tokenizer, **kwargs):
+        """
+        Add a tokenizer to the model. This should be use when the model
+        is not initialized with a tokenizer.
+
+        :param tokenizer: Tokenizer to add to the model.
+        :param kwargs: Additional keyword arguments to pass to the model.
+        """
+        if self._model is not None:
+            raise RuntimeError("Cannot add a tokenizer to a model that is already initialized.")
+
+        self.tokenizer = tokenizer
+        if not self.trained:
+            self._init_model(**kwargs)
 
     def _init_from_huggingface(
         self,
