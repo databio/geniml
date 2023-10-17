@@ -11,6 +11,7 @@ from typing import Dict, List, Union, Tuple, Any
 
 import numpy as np
 from tqdm import tqdm
+from torch.utils.data import DataLoader, Dataset
 
 from ..io import Region, RegionSet
 from .const import (
@@ -415,47 +416,57 @@ def make_wv_file_name(model_file_name: str) -> str:
     return f"{model_file_name}.wv.vectors.npy"
 
 
+class Region2VecDataset(Dataset):
+    def __init__(self, x: List[List[int]], y: List[int]):
+        self.x = x
+        self.y = y
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
+
+
 def generate_window_training_data(
-    data: List[RegionSet],
+    data: List[List[any]],
     window_size: int = DEFAULT_WINDOW_SIZE,
     n_shuffles: int = DEFAULT_N_SHUFFLES,
     threads: int = None,
-) -> Tuple[List[List[Region]], List[Region]]:
+    padding_value: any = 0,
+) -> Tuple[List[List[any]], List[any]]:
     """
     Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
 
-    :param List[RegionSet] data: The data to generate the training data from.
+    :param List[any] data: The data to generate the training data from.
     :param int window_size: The window size to use.
     :param int n_shuffles: The number of shuffles to perform.
     :param int threads: The number of threads to use.
+    :param any padding_value: The padding value to use.
 
-    :return Tuple[List[List[Region]], List[Region]]: The contexts and targets.
+    :return Tuple[List[List[any]], List[any]]: The contexts and targets.
     """
     _LOGGER.info("Generating windowed training data.")
 
     # shuffle the documents
     documents = shuffle_documents(
-        [[r for r in rs] for rs in data], n_shuffles=n_shuffles, threads=threads
+        [[t for t in tokens] for tokens in data], n_shuffles=n_shuffles, threads=threads
     )
 
-    # generate the contexts and targets
-    look_behind = look_ahead = (window_size - 1) // 2
+    # compute the context length (inputs)
+    context_len_req = 2 * window_size
     contexts = []
     targets = []
+    for document in documents:
+        for i, target in enumerate(document):
+            context = document[max(0, i - window_size) : i] + document[i + 1 : i + window_size + 1]
 
-    # iterate over the documents
-    for document in tqdm(documents, desc="Generating windowed training data"):
-        # iterate over the regions in the document
-        for i, region in enumerate(document):
-            # get the context
-            context = []
-            start = max(0, i - look_behind)
-            end = min(len(document), i + look_ahead + 1)
-            for j in range(start, end):
-                if j != i:
-                    context.append(document[j])
+            # pad the context if necessary
+            if len(context) < context_len_req:
+                context = context + [padding_value] * (context_len_req - len(context))
+
             contexts.append(context)
-            targets.append(region)
+            targets.append(target)
 
     return contexts, targets
 

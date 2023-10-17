@@ -25,7 +25,7 @@ from .const import (
     DEFAULT_CHECKPOINT_FILE_NAME,
     DEFAULT_UNIVERSE_FILE_NAME,
 )
-from .utils import generate_window_training_data
+from .utils import generate_window_training_data, Region2VecDataset
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -194,7 +194,7 @@ class Region2VecExModel(ExModel):
         Train the model.
 
         :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
-                                                       a list of RegionSets or a list of paths to bed files.
+                                                        a list of RegionSets or a list of paths to bed files.
         :param int window_size: Window size for the model.
         :param int epochs: Number of epochs to train for.
         :param int min_count: Minimum count for a region to be included in the vocabulary.
@@ -213,12 +213,14 @@ class Region2VecExModel(ExModel):
 
         # tokenize the data into regions
         tokens = [self.tokenizer.tokenize(rs) for rs in data]
-        tokens = [t.id for t in tokens]
+        tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
 
         # create the dataset of windows
-        dataloader: DataLoader = generate_window_training_data(
-            tokens, window_size, n_shuffles, min_count, batch_size
+        contexts, targets = generate_window_training_data(
+            tokens, window_size, n_shuffles, min_count
         )
+        dataset = Region2VecDataset(contexts, targets)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
         # select optimizer
         optimizer = optimizer or torch.optim.Adam(self._model.parameters())

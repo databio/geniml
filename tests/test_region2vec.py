@@ -297,31 +297,16 @@ def test_model_pooling():
 
 
 def test_generate_windowed_training_data(
-    universe_file: str,
-    bed_file2: str,
+    corpus: List[str],
 ):
-    region_sets = [RegionSet(bed_file2) for _ in range(10)]
-    tokenizer = InMemTokenizer(universe_file)
+    # tokenize by whitespace
+    tokens = [[w.lower() for w in sent.split()] for sent in corpus]
 
-    window_size = 5
-    x_regions, y_regions = generate_window_training_data(region_sets, window_size=window_size)
-
-    # convert and remove None
-    region_sets_ids = [tokenizer.tokenize_and_convert_to_ids(rs) for rs in region_sets]
-    region_sets_ids = [
-        [t for t in tokens_list if t is not None] for tokens_list in region_sets_ids
-    ]
-
-    # convert to ids
-    x_ids, y_ids = generate_window_training_data(region_sets_ids, window_size=window_size)
-
-    assert len(x_regions) == len(y_regions)
-    assert all(isinstance(r, list) for r in x_regions)
-    assert all(isinstance(r, Region) for r in y_regions)
-
-    assert len(x_ids) == len(y_ids)
-    assert all(isinstance(r, list) for r in x_ids)
-    assert all(isinstance(r, int) for r in y_ids)
+    contexts, targets = generate_window_training_data(tokens, window_size=2, padding_value="<pad>")
+    assert all([isinstance(c, list) for c in contexts])
+    assert all([isinstance(t, str) for t in targets])
+    assert all([len(c) == 4 for c in contexts])
+    assert len(contexts) == len(targets)
 
 
 def test_r2v_pytorch_forward():
