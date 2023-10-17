@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 from ..tokenization.main import Gtokenizer, Tokenizer
 from ..models.main import ExModel
-from ..io.io import RegionSet
+from ..io.io import RegionSet, Region
 from ..const import PKG_NAME
 from .const import (
     DEFAULT_BATCH_SIZE,
@@ -66,7 +66,7 @@ class Region2Vec(Word2Vec):
         super().__init__(vocab_size, embedding_dim, hidden_dim)
 
 
-class Region2VecExModel(ExModel):
+class Region2VecExModel:
     def __init__(
         self, model_path: str = None, tokenizer: Gtokenizer = None, device: str = None, **kwargs
     ):
@@ -103,9 +103,9 @@ class Region2VecExModel(ExModel):
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         if self.tokenizer:
-            self._vocab_length = len(self.tokenizer.vocab)
+            self._vocab_length = len(self.tokenizer)
             self._model = Word2Vec(
-                len(self.tokenizer.vocab),
+                len(self.tokenizer),
                 embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
                 hidden_dim=kwargs.get("hidden_dim", DEFAULT_HIDDEN_DIM),
             )
@@ -157,7 +157,7 @@ class Region2VecExModel(ExModel):
         self._model = Region2Vec.load_state_dict(params)
 
     def _validate_data_for_training(
-        self, data: Union[List[RegionSet], List[str]]
+        self, data: Union[List[RegionSet], List[str], List[List[Region]]]
     ) -> List[RegionSet]:
         """
         Validate the data for training. This will return a list of RegionSets if the data is valid.
@@ -176,6 +176,8 @@ class Region2VecExModel(ExModel):
             return data
         elif isinstance(data[0], str):
             return [RegionSet(f) for f in data]
+        elif isinstance(data[0], list) and isinstance(data[0][0], Region):
+            return [RegionSet([r for r in region_list]) for region_list in data]
 
     def train(
         self,
@@ -208,16 +210,17 @@ class Region2VecExModel(ExModel):
                 "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
             )
 
-        # validate the data
+        # validate the data - convert all to RegionSets
         data = self._validate_data_for_training(data)
 
         # tokenize the data into regions
-        tokens = [self.tokenizer.tokenize(rs) for rs in data]
+        tokens = [self.tokenizer.tokenize(list(rs)) for rs in data]
         tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
 
+        _padding_token = self.tokenizer.tokenize(self.tokenizer.padding_token)[0].id
         # create the dataset of windows
         contexts, targets = generate_window_training_data(
-            tokens, window_size, n_shuffles, min_count
+            tokens, window_size, n_shuffles, min_count, padding_value=_padding_token
         )
         dataset = Region2VecDataset(contexts, targets)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)

@@ -11,8 +11,8 @@ from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.utils import wordify_region, wordify_regions
 from geniml.region2vec.pooling import mean_pooling, max_pooling
 from geniml.region2vec.utils import generate_window_training_data
-from geniml.region2vec.experimental import Region2Vec
-from geniml.tokenization.main import InMemTokenizer
+from geniml.region2vec.experimental import Region2Vec, Region2VecExModel
+from geniml.tokenization.main import InMemTokenizer, Gtokenizer
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -374,4 +374,13 @@ def test_r2v_pytorch_train(training_data: Word2VecDataset, word_to_id: dict):
     assert losses[0] > losses[-1]  # loss should decrease over time
 
 
-# def test_r2v_pytorch_exmodel_train():
+def test_r2v_pytorch_exmodel_train(universe_file: str):
+    model = Region2VecExModel(tokenizer=Gtokenizer(universe_file))
+    assert model is not None
+
+    rs1 = list(RegionSet("tests/data/to_tokenize.bed"))
+    rs2 = list(RegionSet("tests/data/to_tokenize2.bed"))
+    rs3 = rs1[0:10] + rs2[0:10]
+
+    model.train([rs1, rs2, rs3], epochs=10)
+    assert True
