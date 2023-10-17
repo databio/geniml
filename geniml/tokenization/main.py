@@ -168,13 +168,16 @@ class Gtokenizer(Tokenizer):
             query = [query]
         elif isinstance(query, RegionSet):
             query = list(query)
-        elif isinstance(list, query) and isinstance(query[0], Region):
+        elif isinstance(query, list) and isinstance(query[0], Region):
             pass
         else:
             raise ValueError("Query must be a Region or RegionSet")
 
         result = self._tokenizer.tokenize(list(query))
         return result
+
+    def padding_token(self) -> Region:
+        return self._tokenizer.padding_token
 
     def convert_tokens_to_ids(self, tokens: GTokenizedRegionSet) -> List[int]:
         """
