@@ -387,3 +387,6 @@ def test_r2v_pytorch_train(training_data: Word2VecDataset, word_to_id: dict):
     assert len(losses) == epochs
     assert all([isinstance(l, float) for l in losses])
     assert losses[0] > losses[-1]  # loss should decrease over time
+
+
+# def test_r2v_pytorch_exmodel_train():
