@@ -5,6 +5,7 @@ import pytest
 import numpy as np
 import torch
 
+
 from geniml.io.io import RegionSet, Region
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.utils import wordify_region, wordify_regions
@@ -12,6 +13,19 @@ from geniml.region2vec.pooling import mean_pooling, max_pooling
 from geniml.region2vec.utils import generate_window_training_data
 from geniml.region2vec.experimental import Region2Vec
 from geniml.tokenization.main import InMemTokenizer
+from torch.utils.data import DataLoader, Dataset
+
+
+class Word2VecDataset(Dataset):
+    def __init__(self, x: List[List[int]], y: List[int]):
+        self.x = x
+        self.y = y
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
 
 
 @pytest.fixture
@@ -40,6 +54,70 @@ def region_sets(regions: RegionSet):
     sub_size = len(regions) // 5
     region_sets = [RegionSet(regions[i * sub_size : (i + 1) * sub_size]) for i in range(5)]
     return region_sets
+
+
+@pytest.fixture
+def corpus():
+    return [l.rstrip() for l in open("tests/data/corpus.txt").readlines()]
+
+
+@pytest.fixture
+def word_to_id(corpus: List[str]):
+    all_words = []
+    for sent in corpus:
+        for word in sent.split():
+            word = word.lower()
+            if word not in all_words:
+                all_words.append(word)
+
+    word_to_id = {w: i for i, w in enumerate(all_words)}
+
+    # add special tokens
+    if "<unk>" not in word_to_id:
+        word_to_id["<unk>"] = len(word_to_id)
+    if "<pad>" not in word_to_id:
+        word_to_id["<pad>"] = len(word_to_id)
+
+    return word_to_id
+
+
+@pytest.fixture
+def pad_indx(word_to_id: dict):
+    return word_to_id["<pad>"]
+
+
+@pytest.fixture
+def id_to_word(word_to_id):
+    return {i: w for w, i in word_to_id.items()}
+
+
+@pytest.fixture
+def training_data(corpus: List[str], word_to_id: dict, id_to_word: dict, w: int = 2):
+    # context window of 1
+    contexts = []
+    targets = []
+    context_len_req = 2 * w
+    for sent in corpus:
+        # tokenizer
+        tokens = sent.lower().split()
+        for i, target in enumerate(tokens):
+            # get context
+            context = tokens[max(0, i - w) : i] + tokens[i + 1 : i + w + 1]
+
+            # pad context if necessary
+            if len(context) < context_len_req:
+                context = context + ["<pad>"] * (context_len_req - len(context))
+
+            context = [word_to_id[w] for w in context]
+            contexts.append(context)
+            targets.append(word_to_id[target])
+
+    # for sanity checks, convert back to words
+    # this is used in the testing only
+    contexts_as_words = [[id_to_word[i] for i in c] for c in contexts]
+    targets_as_words = [id_to_word[i] for i in targets]
+
+    return Word2VecDataset(contexts, targets)
 
 
 def test_init_region2vec():
@@ -246,7 +324,7 @@ def test_generate_windowed_training_data(
     assert all(isinstance(r, int) for r in y_ids)
 
 
-def test_r2v_pytorch():
+def test_r2v_pytorch_forward():
     vocab_size = 10000
     embedding_dim = 100
 
@@ -257,3 +335,55 @@ def test_r2v_pytorch():
     x = torch.randint(low=0, high=100, size=(10,))
     y = model.forward(x)
     assert y.shape == (10000,)
+
+
+def test_r2v_pytorch_load_data(training_data: Word2VecDataset, pad_indx: int):
+    x_first, y_first = training_data[0]
+    x_second, y_second = training_data[1]
+    assert x_first == [1, 2, pad_indx, pad_indx]
+    assert y_first == 0
+    assert x_second == [0, 2, 3, pad_indx]
+    assert y_second == 1
+
+
+def test_r2v_pytorch_train(training_data: Word2VecDataset, word_to_id: dict):
+    vocab_len = len(word_to_id)
+    embedding_dim = 100
+
+    model = Region2Vec(vocab_len, embedding_dim)
+    optimizer = torch.optim.Adam(model.parameters())
+    loss_fn = torch.nn.CrossEntropyLoss()
+
+    batch_size = 4
+    loader = DataLoader(training_data, batch_size=batch_size)
+    epochs = 50
+
+    losses = []
+
+    for epoch in range(epochs):
+        for batch in iter(loader):
+            # zero the gradients
+            optimizer.zero_grad()
+
+            # get the data
+            x, y = batch
+
+            # convert y to one hot encoded vectors dtype float
+            y = torch.nn.functional.one_hot(y, vocab_len)
+            y = y.type(torch.float)
+
+            y_pred = model.forward(torch.stack(x))
+
+            # calculate loss and backprop
+            loss = loss_fn(y_pred, y)
+            loss.backward()
+
+            # update parameters
+            optimizer.step()
+
+        losses.append(loss.item())
+        print(f"Epoch {epoch + 1} loss: {loss.item()}")
+
+    assert len(losses) == epochs
+    assert all([isinstance(l, float) for l in losses])
+    assert losses[0] > losses[-1]  # loss should decrease over time
