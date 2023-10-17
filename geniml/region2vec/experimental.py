@@ -2,11 +2,13 @@ import logging
 import os
 from typing import List, Union
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
 from tqdm import tqdm
+from torch.utils.data import DataLoader
 
 from ..tokenization.main import Gtokenizer, Tokenizer
 from ..models.main import ExModel
@@ -23,7 +25,7 @@ from .const import (
     DEFAULT_CHECKPOINT_FILE_NAME,
     DEFAULT_UNIVERSE_FILE_NAME,
 )
-from .utils import generate_window_training_data, remove_below_min_count
+from .utils import generate_window_training_data
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -101,6 +103,7 @@ class Region2VecExModel(ExModel):
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         if self.tokenizer:
+            self._vocab_length = len(self.tokenizer.vocab)
             self._model = Word2Vec(
                 len(self.tokenizer.vocab),
                 embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
@@ -186,7 +189,7 @@ class Region2VecExModel(ExModel):
         optimizer: torch.optim.Optimizer = None,
         loss_fn: torch.nn.modules.loss._Loss = None,
         device: torch.device = torch.device("cpu"),
-    ):
+    ) -> np.ndarray:
         """
         Train the model.
 
@@ -196,7 +199,15 @@ class Region2VecExModel(ExModel):
         :param int epochs: Number of epochs to train for.
         :param int min_count: Minimum count for a region to be included in the vocabulary.
         :param int n_shuffles: Number of shuffles to perform on the data.
+
+        :return np.ndarray: Loss values for each epoch.
         """
+        # validate a model exists
+        if self._model is None:
+            raise RuntimeError(
+                "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
+            )
+
         # validate the data
         data = self._validate_data_for_training(data)
 
@@ -204,11 +215,10 @@ class Region2VecExModel(ExModel):
         tokens = [self.tokenizer.tokenize(rs) for rs in data]
         tokens = [t.id for t in tokens]
 
-        # remove tokens falling below min count
-        tokens = remove_below_min_count(tokens, min_count)
-
         # create the dataset of windows
-        contexts, targets = generate_window_training_data(tokens, window_size, n_shuffles)
+        dataloader: DataLoader = generate_window_training_data(
+            tokens, window_size, n_shuffles, min_count, batch_size
+        )
 
         # select optimizer
         optimizer = optimizer or torch.optim.Adam(self._model.parameters())
@@ -221,19 +231,27 @@ class Region2VecExModel(ExModel):
         targets = targets.to(device)
         self._model.to(device)
 
+        # losses
+        losses = []
+
         # train the model for the specified number of epochs
         for epoch in tqdm(range(epochs), desc="Epochs"):
-            for i in tqdm(range(0, len(contexts), batch_size), desc="Batches"):
+            for batch in tqdm(iter(dataloader), desc="Batches"):
                 # zero the gradients
                 optimizer.zero_grad()
 
-                # forward pass
-                output = self._model(contexts[i : i + batch_size])
+                context, target = batch
 
-                # calculate loss
-                loss = loss_fn(output, targets[i : i + batch_size])
+                # convert target to one-hot
+                # this is necessary for CrossEntropyLoss
+                y = torch.nn.functional.one_hot(target, len(self._vocab_length))
+                y = y.type(torch.float)
+
+                # forward pass
+                y_pred = self._model(torch.stack(context))
 
                 # backward pass
+                loss = loss_fn(y_pred, target)
                 loss.backward()
 
                 # update parameters
@@ -241,10 +259,13 @@ class Region2VecExModel(ExModel):
 
             # log out loss
             _LOGGER.info(f"Epoch {epoch + 1} loss: {loss.item()}")
+            losses.append(loss.item())
 
         # save the model
         self.trained = True
         torch.save(self._model.state_dict(), checkpoint_path)
+
+        return np.array(losses)
 
     def export(
         self,
