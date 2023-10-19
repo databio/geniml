@@ -16,7 +16,7 @@ from gtokenizers import (
     Universe as GUniverse,
 )
 from intervaltree import IntervalTree
-from tqdm.rich import tqdm
+from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
 
@@ -288,7 +288,7 @@ class InMemTokenizer(Tokenizer):
         # build trees + add regions to universe + make region to index map
         self.universe = regions
         indx = 0
-        for region in tqdm(regions, total=len(regions), desc="Adding regions to universe"):
+        for region in track(regions, total=len(regions), desc="Adding regions to universe"):
             # r_string = wordify_region(region)
             if region.chr not in self._trees:
                 self._trees[region.chr] = IntervalTree()
@@ -381,7 +381,7 @@ class InMemTokenizer(Tokenizer):
         # find the regions that overlap with the universe
         # use dynamic programming to create a boolean mask of columns to keep
         columns_to_keep = []
-        for i, row in tqdm(
+        for i, row in track(
             adata.var.iterrows(), total=adata.var.shape[0], desc="Converting to universe"
         ):
             region = f"{row['chr']}_{row['start']}_{row['end']}"
@@ -436,7 +436,7 @@ class InMemTokenizer(Tokenizer):
 
         conversion_map = dict()
 
-        for region in tqdm(a, total=len(a), desc="Generating conversion map"):
+        for region in track(a, total=len(a), desc="Generating conversion map"):
             overlaps = self.find_overlaps(region)
             region_str = f"{region.chr}_{region.start}_{region.end}"
             overlaps = [olap for olap in overlaps if olap is not None]

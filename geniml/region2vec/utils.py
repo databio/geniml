@@ -10,7 +10,7 @@ from random import shuffle
 from typing import Dict, List, Union, Tuple, Any
 
 import numpy as np
-from tqdm.rich import tqdm
+from rich.progress import track
 from torch.utils.data import DataLoader, Dataset
 
 from ..io import Region, RegionSet
@@ -383,7 +383,7 @@ def shuffle_documents(
     shuffled_documents = documents.copy()
     with ThreadPoolExecutor(max_workers=threads) as executor:
         shuffled_documents = list(
-            tqdm(
+            track(
                 executor.map(
                     shuffle_list,
                     shuffled_documents,

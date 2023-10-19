@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
-from tqdm.rich import tqdm_rich as tqdm
+from rich.progress import track
 from torch.utils.data import DataLoader
 
 from ..tokenization.main import ITTokenizer, Tokenizer
@@ -240,7 +240,7 @@ class Region2VecExModel:
 
         # tokenize the data into regions
         _LOGGER.info("Tokenizing data.")
-        tokens = [self.tokenizer.tokenize(list(rs)) for rs in tqdm(data, total=len(data))]
+        tokens = [self.tokenizer.tokenize(list(rs)) for rs in track(data, total=len(data))]
         tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
 
         _padding_token = self.tokenizer.padding_token()
@@ -254,7 +254,9 @@ class Region2VecExModel:
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
         # select optimizer
-        optimizer = optimizer or torch.optim.Adam(self._model.parameters())
+        optimizer = optimizer(self._model.parameters()) or torch.optim.Adam(
+            self._model.parameters()
+        )
 
         # select loss function - default to cross entropy
         loss_fn = loss_fn or torch.nn.CrossEntropyLoss()
@@ -267,8 +269,8 @@ class Region2VecExModel:
 
         # train the model for the specified number of epochs
         _LOGGER.info("Training begin.")
-        for epoch in tqdm(range(epochs), desc="Epochs"):
-            for batch in tqdm(iter(dataloader), desc="Batches"):
+        for epoch in track(range(epochs), desc="Epochs"):
+            for batch in track(iter(dataloader), desc="Batches"):
                 # zero the gradients
                 optimizer.zero_grad()
 
