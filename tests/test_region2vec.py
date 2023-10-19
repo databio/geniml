@@ -11,7 +11,10 @@ from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.utils import wordify_region, wordify_regions
 from geniml.region2vec.pooling import mean_pooling, max_pooling
 from geniml.region2vec.utils import generate_window_training_data
-from geniml.region2vec.experimental import Region2Vec, Region2VecExModel
+from geniml.region2vec.experimental import (
+    Region2Vec as Region2VecV2,
+    Region2VecExModel as Region2VecExModelV2,
+)
 from geniml.tokenization.main import InMemTokenizer, ITTokenizer
 from torch.utils.data import DataLoader, Dataset
 
@@ -335,7 +338,7 @@ def test_r2v_pytorch_train(training_data: Word2VecDataset, word_to_id: dict):
     vocab_len = len(word_to_id)
     embedding_dim = 100
 
-    model = Region2Vec(vocab_len, embedding_dim)
+    model = Region2VecV2(vocab_len, embedding_dim)
     optimizer = torch.optim.Adam(model.parameters())
     loss_fn = torch.nn.CrossEntropyLoss()
 
@@ -375,7 +378,7 @@ def test_r2v_pytorch_train(training_data: Word2VecDataset, word_to_id: dict):
 
 
 def test_r2v_pytorch_exmodel_train(universe_file: str):
-    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModelV2(tokenizer=ITTokenizer(universe_file))
     assert model is not None
 
     rs1 = list(RegionSet("tests/data/to_tokenize.bed"))
@@ -384,3 +387,50 @@ def test_r2v_pytorch_exmodel_train(universe_file: str):
 
     loss = model.train([rs1, rs2, rs3], epochs=10)
     assert loss[0] > loss[-1]
+
+
+def test_r2v_pytorch_encode(universe_file: str):
+    model = Region2VecExModelV2(tokenizer=ITTokenizer(universe_file))
+    assert model is not None
+    model.trained = True  # needed to bypass the training check
+
+    r = Region("chr1", 63403166, 63403785)
+    embedding = model.encode(r)
+    assert embedding is not None
+    assert isinstance(embedding, np.ndarray)
+    assert embedding.shape == (100,)
+
+
+def test_save_load_pytorch_exmodel(universe_file: str):
+    model = Region2VecExModelV2(tokenizer=ITTokenizer(universe_file))
+    assert model is not None
+
+    rs1 = list(RegionSet("tests/data/to_tokenize.bed"))
+    rs2 = list(RegionSet("tests/data/to_tokenize2.bed"))
+    rs3 = rs1[0:10] + rs2[0:10]
+
+    loss = model.train([rs1, rs2, rs3], epochs=10)
+    before_embedding = model.encode(Region("chr1", 63403166, 63403785))
+    assert loss[0] > loss[-1]
+    try:
+        # save the model
+        model.export("tests/data/test_model/")
+        assert os.path.exists("tests/data/test_model/checkpoint.pt")
+        assert os.path.exists("tests/data/test_model/universe.bed")
+
+        # load in
+        model_loaded = Region2VecExModelV2.from_pretrained("tests/data/test_model")
+
+        # the region embeddings should be the same
+        after_embedding = model_loaded.encode(Region("chr1", 63403166, 63403785))
+        assert np.allclose(before_embedding, after_embedding)
+
+    finally:
+        try:
+            os.remove("tests/data/test_model/checkpoint.pt")
+            os.remove("tests/data/test_model/universe.bed")
+            os.rmdir("tests/data/test_model/")
+        except:
+            # just try to remove it, if it doesn't work, then pass, means something
+            # else wrong occured up the stack
+            pass

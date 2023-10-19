@@ -10,6 +10,7 @@ from huggingface_hub import hf_hub_download
 from rich.progress import track
 from rich.progress import Progress
 from torch.utils.data import DataLoader
+from yaml import safe_load, safe_dump
 
 from ..tokenization.main import ITTokenizer, Tokenizer
 from ..models.main import ExModel
@@ -26,6 +27,7 @@ from .const import (
     DEFAULT_OPTIMIZER,
     DEFAULT_LOSS_FN,
     DEFAULT_INIT_LR,
+    CONFIG_FILE_NAME,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
 )
@@ -130,7 +132,7 @@ class Region2VecExModel:
         if not self.trained:
             self._init_model(**kwargs)
 
-    def _load_local_model(self, model_path: str, vocab_path: str):
+    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
         Load the model from a checkpoint.
 
@@ -140,16 +142,29 @@ class Region2VecExModel:
         self._model_path = model_path
         self._universe_path = vocab_path
 
+        # init the tokenizer - only one option for now
         self.tokenizer = ITTokenizer(vocab_path)
 
+        # load the model state dict (weights)
         params = torch.load(model_path)
-        self._model = Region2Vec.load_state_dict(params)
+
+        # get the model config (vocab size, embedding size, hidden size)
+        with open(config_path, "r") as f:
+            config = safe_load(f)
+
+        self._model = Region2Vec(
+            config["vocab_size"],
+            embedding_dim=config["embedding_size"],
+            hidden_dim=config["hidden_size"],
+        )
+        self._model.load_state_dict(params)
 
     def _init_from_huggingface(
         self,
         model_path: str,
         model_file_name: str = MODEL_FILE_NAME,
         universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
         """
@@ -162,17 +177,20 @@ class Region2VecExModel:
         :param str universe_file_name: Name of the universe file.
         :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
-        model_path = hf_hub_download(model_path, model_file_name, **kwargs)
+        model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
         universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
-        self._load_local_model(model_path, universe_path)
+        self._load_local_model(model_file_path, universe_path, config_path)
 
-    def load(
-        self,
+    @classmethod
+    def from_pretrained(
+        cls,
         path_to_files: str,
         model_file_name: str = MODEL_FILE_NAME,
         universe_file_name: str = UNIVERSE_FILE_NAME,
-    ):
+        config_file_name: str = CONFIG_FILE_NAME,
+    ) -> "Region2VecExModel":
         """
         Load the model from a set of files that were exported using the export function.
 
@@ -182,8 +200,13 @@ class Region2VecExModel:
         """
         model_file_path = os.path.join(path_to_files, model_file_name)
         universe_file_path = os.path.join(path_to_files, universe_file_name)
+        config_file_path = os.path.join(path_to_files, config_file_name)
 
-        self._load_local_model(model_file_path, universe_file_path)
+        instance = cls()
+        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
+        instance.trained = True
+
+        return instance
 
     def _validate_data_for_training(
         self, data: Union[List[RegionSet], List[str], List[List[Region]]]
@@ -224,7 +247,6 @@ class Region2VecExModel:
         device: torch.device = torch.device("cpu"),
         optimizer_params: dict = {},
         save_model: bool = False,
-        **kwargs,
     ) -> np.ndarray:
         """
         Train the model.
@@ -243,7 +265,6 @@ class Region2VecExModel:
         :param torch.device device: Device to use for training.
         :param dict optimizer_params: Additional parameters to pass to the optimizer.
         :param bool save_model: Whether or not to save the model.
-        :param kwargs: Additional keyword arguments to pass to the model training function.
 
         :return np.ndarray: Loss values for each epoch.
         """
@@ -346,6 +367,7 @@ class Region2VecExModel:
         path: str,
         checkpoint_file: str = MODEL_FILE_NAME,
         universe_file: str = UNIVERSE_FILE_NAME,
+        config_file: str = CONFIG_FILE_NAME,
     ):
         """
         Function to facilitate exporting the model in a way that can
@@ -363,9 +385,41 @@ class Region2VecExModel:
             os.makedirs(path)
 
         # export the model weights
-        torch.save(self._model.state_dict(), checkpoint_file)
+        torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
 
         # export the vocabulary
-        for regionin in self.tokenizer.universe:
+        for region in self.tokenizer.universe.regions:
             with open(os.path.join(path, universe_file), "a") as f:
-                f.write(regionin + "\n")
+                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+
+        # export the config (vocab size, embedding size)
+        config = {
+            "vocab_size": len(self.tokenizer),
+            "embedding_size": self._model.embedding_dim,
+            "hidden_size": self._model.hidden.out_features,
+        }
+
+        with open(os.path.join(path, config_file), "w") as f:
+            safe_dump(config, f)
+
+    def encode(self, region: Region, pooling: str = "mean") -> np.ndarray:
+        """
+        Get the vector for a region.
+
+        :param Region region: Region to get the vector for.
+        :return np.ndarray: Vector for the region.
+        """
+        if not self.trained:
+            raise RuntimeError("Cannot get a vector from an untrained model.")
+
+        if pooling != "mean":
+            raise NotImplementedError("Only mean pooling is currently supported.")
+
+        # tokenize the region
+        tokens = self.tokenizer.tokenize(region)
+        tokens = [t.id for t in tokens]
+
+        # get the vector
+        region_embeddings = self._model.projection(torch.tensor(tokens))
+
+        return torch.mean(region_embeddings, dim=0).detach().numpy()
