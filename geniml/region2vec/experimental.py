@@ -125,6 +125,21 @@ class Region2VecExModel:
         if not self.trained:
             self._init_model(**kwargs)
 
+    def _load_local_model(self, model_path: str, vocab_path: str):
+        """
+        Load the model from a checkpoint.
+
+        :param str model_path: Path to the model checkpoint.
+        :param str vocab_path: Path to the vocabulary file.
+        """
+        self._model_path = model_path
+        self._universe_path = vocab_path
+
+        self.tokenizer = ITTokenizer(vocab_path)
+
+        params = torch.load(model_path)
+        self._model = Region2Vec.load_state_dict(params)
+
     def _init_from_huggingface(
         self,
         model_path: str,
@@ -145,16 +160,25 @@ class Region2VecExModel:
         model_path = hf_hub_download(model_path, model_file_name, **kwargs)
         universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
 
-        # set the paths to the downloaded files
-        self._model_path = model_path
-        self._universe_path = universe_path
+        self._load_local_model(model_path, universe_path)
 
-        # init tokenizer
-        self.tokenizer = ITTokenizer(universe_path)
+    def load(
+        self,
+        path_to_files: str,
+        model_file_name: str = DEFAULT_CHECKPOINT_FILE_NAME,
+        universe_file_name: str = DEFAULT_UNIVERSE_FILE_NAME,
+    ):
+        """
+        Load the model from a set of files that were exported using the export function.
 
-        # unpickle params
-        params = torch.load(model_path)
-        self._model = Region2Vec.load_state_dict(params)
+        :param str path_to_files: Path to the directory containing the files.
+        :param str model_file_name: Name of the model file.
+        :param str universe_file_name: Name of the universe file.
+        """
+        model_file_path = os.path.join(path_to_files, model_file_name)
+        universe_file_path = os.path.join(path_to_files, universe_file_name)
+
+        self._load_local_model(model_file_path, universe_file_path)
 
     def _validate_data_for_training(
         self, data: Union[List[RegionSet], List[str], List[List[Region]]]
