@@ -148,12 +148,12 @@ def test_tokenize_anndata_backed(universe_bed_file: str, pbmc_data_backed: sc.An
     assert len(tokens) == pbmc_data_backed.shape[0]
 
 
-def test_make_gtokenizer(universe_bed_file: str):
+def test_make_ittokenizer(universe_bed_file: str):
     t = ITTokenizer(universe_bed_file)
     assert t is not None
 
 
-def test_gtokenize_region_set(universe_bed_file: str):
+def test_ittokenize_region_set(universe_bed_file: str):
     t = ITTokenizer(universe_bed_file)
     assert t is not None
 
@@ -219,7 +219,7 @@ def test_gtokenize_to_bit_vector(universe_bed_file: str):
     assert len(bit_vector) == 2_379
 
 
-def test_gtokenizer_get_padding(universe_bed_file: str):
+def test_ittokenizer_get_padding(universe_bed_file: str):
     t = ITTokenizer(universe_bed_file)
     padding = t.padding_token()
 
