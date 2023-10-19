@@ -10,7 +10,7 @@ from huggingface_hub import hf_hub_download
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 
-from ..tokenization.main import Gtokenizer, Tokenizer
+from ..tokenization.main import ITTokenizer, Tokenizer
 from ..models.main import ExModel
 from ..io.io import RegionSet, Region
 from ..const import PKG_NAME
@@ -68,7 +68,7 @@ class Region2Vec(Word2Vec):
 
 class Region2VecExModel:
     def __init__(
-        self, model_path: str = None, tokenizer: Gtokenizer = None, device: str = None, **kwargs
+        self, model_path: str = None, tokenizer: ITTokenizer = None, device: str = None, **kwargs
     ):
         """
         Initialize Region2VecExModel.
@@ -80,7 +80,7 @@ class Region2VecExModel:
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: Gtokenizer = tokenizer
+        self.tokenizer: ITTokenizer = tokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
 
@@ -150,7 +150,7 @@ class Region2VecExModel:
         self._universe_path = universe_path
 
         # init tokenizer
-        self.tokenizer = Gtokenizer(universe_path)
+        self.tokenizer = ITTokenizer(universe_path)
 
         # unpickle params
         params = torch.load(model_path)

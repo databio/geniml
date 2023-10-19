@@ -12,7 +12,7 @@ from geniml.utils import wordify_region, wordify_regions
 from geniml.region2vec.pooling import mean_pooling, max_pooling
 from geniml.region2vec.utils import generate_window_training_data
 from geniml.region2vec.experimental import Region2Vec, Region2VecExModel
-from geniml.tokenization.main import InMemTokenizer, Gtokenizer
+from geniml.tokenization.main import InMemTokenizer, ITTokenizer
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -375,7 +375,7 @@ def test_r2v_pytorch_train(training_data: Word2VecDataset, word_to_id: dict):
 
 
 def test_r2v_pytorch_exmodel_train(universe_file: str):
-    model = Region2VecExModel(tokenizer=Gtokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
     assert model is not None
 
     rs1 = list(RegionSet("tests/data/to_tokenize.bed"))

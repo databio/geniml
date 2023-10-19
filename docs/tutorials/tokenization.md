@@ -10,11 +10,11 @@ In addition to tokenizers implemented here, we also have a standalone package ca
 To start using a tokenizer, simply pass it an appropriate universe file:
 
 ```python
-from geniml.tokenization import GTokenizer # or any other tokenizer
+from geniml.tokenization import ITTokenizer # or any other tokenizer
 from geniml.io import RegionSet
 
 rs = RegionSet("/path/to/file.bed")
-t = GTokenizer("/path/to/universe.bed")
+t = ITTokenizer("/path/to/universe.bed")
 
 tokens = t.tokenize(rs)
 for token in tokens:
@@ -24,11 +24,11 @@ for token in tokens:
 You can also get token ids for the tokens:
 
 ```python
-from geniml.tokenization import GTokenizer # or any other tokenizer
+from geniml.tokenization import ITTokenizer # or any other tokenizer
 from geniml.io import RegionSet
 
 rs = RegionSet("/path/to/file.bed")
-t = GTokenizer("/path/to/universe.bed")
+t = ITTokenizer("/path/to/universe.bed")
 
 model = Region2Vec(len(t), 100) # 100 dimensional embedding
 tokens = t.tokenize(rs)

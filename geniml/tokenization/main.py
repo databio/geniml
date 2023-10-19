@@ -120,7 +120,7 @@ class GRangesTokenizer(Tokenizer):
             raise ValueError("Query must be a Region or RegionSet")
 
 
-class Gtokenizer(Tokenizer):
+class ITTokenizer(Tokenizer):
     """
     A fast, in memory, tokenizer that uses `gtokenizers` - a rust based tokenizer. This
     tokenizer is the fastest tokenizer available. It is also the most memory efficient.
@@ -136,7 +136,7 @@ class Gtokenizer(Tokenizer):
 
         Usage:
         ```
-        tokenizer = Gtokenizer.from_file("path/to/universe.bed")
+        tokenizer = ITTokenizer.from_file("path/to/universe.bed")
         ```
 
         :param str universe: The universe to use for tokenization.

@@ -3,7 +3,7 @@ import scanpy as sc
 
 
 from geniml.io.io import Region, RegionSet
-from geniml.tokenization.main import InMemTokenizer, Gtokenizer
+from geniml.tokenization.main import InMemTokenizer, ITTokenizer
 
 
 @pytest.fixture
@@ -149,12 +149,12 @@ def test_tokenize_anndata_backed(universe_bed_file: str, pbmc_data_backed: sc.An
 
 
 def test_make_gtokenizer(universe_bed_file: str):
-    t = Gtokenizer(universe_bed_file)
+    t = ITTokenizer(universe_bed_file)
     assert t is not None
 
 
 def test_gtokenize_region_set(universe_bed_file: str):
-    t = Gtokenizer(universe_bed_file)
+    t = ITTokenizer(universe_bed_file)
     assert t is not None
 
     # tokenize a bed file
@@ -176,7 +176,7 @@ def test_gtokenize_region_set(universe_bed_file: str):
 
 
 def test_yield_tokens(universe_bed_file: str):
-    t = Gtokenizer(universe_bed_file)
+    t = ITTokenizer(universe_bed_file)
 
     # tokenize a bed file
     bed_file = "tests/data/to_tokenize.bed"
@@ -202,7 +202,7 @@ def test_yield_tokens(universe_bed_file: str):
 
 
 def test_gtokenize_to_bit_vector(universe_bed_file: str):
-    t = Gtokenizer(universe_bed_file)
+    t = ITTokenizer(universe_bed_file)
     assert t is not None
 
     # tokenize a bed file
@@ -220,7 +220,7 @@ def test_gtokenize_to_bit_vector(universe_bed_file: str):
 
 
 def test_gtokenizer_get_padding(universe_bed_file: str):
-    t = Gtokenizer(universe_bed_file)
+    t = ITTokenizer(universe_bed_file)
     padding = t.padding_token()
 
     assert padding.id == 2379
