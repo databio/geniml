@@ -266,8 +266,8 @@ class Region2VecExModel:
 
         # train the model for the specified number of epochs
         _LOGGER.info("Training begin.")
-        for epoch in track(range(epochs), desc="Epochs"):
-            for batch in track(iter(dataloader), desc="Batches"):
+        for epoch in track(range(epochs), description="Epochs"):
+            for batch in track(iter(dataloader), description="Batches"):
                 # zero the gradients
                 optimizer.zero_grad()
 
