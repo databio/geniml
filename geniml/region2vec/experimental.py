@@ -240,7 +240,7 @@ class Region2VecExModel:
         _LOGGER.info("Validating data for training.")
         data = self._validate_data_for_training(data)
 
-        # tokenize the data into regions
+        # gtokenize the data into universe regions (recognized by this model's vocabulary)
         _LOGGER.info("Tokenizing data.")
         tokens = [self.tokenizer.tokenize(list(rs)) for rs in track(data, total=len(data))]
         tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
