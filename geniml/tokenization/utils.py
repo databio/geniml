@@ -87,7 +87,7 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[Region]]:
         positive_values = positive_values.toarray()
 
     regions = []
-    for i in track(range(adata.shape[0]), total=adata.shape[0], desc="Tokenizing"):
+    for i in track(range(adata.shape[0]), total=adata.shape[0], description="Tokenizing"):
         regions.append(
             [
                 Region(chr_values[j], start_values[j], end_values[j])

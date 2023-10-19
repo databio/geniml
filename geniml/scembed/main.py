@@ -207,7 +207,7 @@ class ScEmbed(ExModel):
         # encode the data
         _LOGGER.info("Encoding data.")
         enoded_data = []
-        for region_set in track(region_sets, desc="Encoding data", total=len(region_sets)):
+        for region_set in track(region_sets, description="Encoding data", total=len(region_sets)):
             vectors = self._model.forward(region_set)
             # compute the mean of the vectors
             vector = np.mean(vectors, axis=0)
