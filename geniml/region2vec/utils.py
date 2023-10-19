@@ -10,7 +10,7 @@ from random import shuffle
 from typing import Dict, List, Union, Tuple, Any
 
 import numpy as np
-from tqdm import tqdm
+from tqdm.rich import tqdm
 from torch.utils.data import DataLoader, Dataset
 
 from ..io import Region, RegionSet

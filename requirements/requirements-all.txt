@@ -22,3 +22,4 @@ torch
 sentence-transformers
 gtokenizers
 genomicranges
+rich

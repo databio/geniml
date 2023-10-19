@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
-from tqdm import tqdm
+from tqdm.rich import tqdm_rich as tqdm
 from torch.utils.data import DataLoader
 
 from ..tokenization.main import ITTokenizer, Tokenizer
@@ -22,8 +22,8 @@ from .const import (
     DEFAULT_WINDOW_SIZE,
     DEFAULT_MIN_COUNT,
     DEFAULT_N_SHUFFLES,
-    DEFAULT_CHECKPOINT_FILE_NAME,
-    DEFAULT_UNIVERSE_FILE_NAME,
+    MODEL_FILE_NAME,
+    UNIVERSE_FILE_NAME,
 )
 from .utils import generate_window_training_data, Region2VecDataset
 
@@ -143,8 +143,8 @@ class Region2VecExModel:
     def _init_from_huggingface(
         self,
         model_path: str,
-        model_file_name: str = DEFAULT_CHECKPOINT_FILE_NAME,
-        universe_file_name: str = DEFAULT_UNIVERSE_FILE_NAME,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
         **kwargs,
     ):
         """
@@ -165,8 +165,8 @@ class Region2VecExModel:
     def load(
         self,
         path_to_files: str,
-        model_file_name: str = DEFAULT_CHECKPOINT_FILE_NAME,
-        universe_file_name: str = DEFAULT_UNIVERSE_FILE_NAME,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
     ):
         """
         Load the model from a set of files that were exported using the export function.
@@ -211,7 +211,7 @@ class Region2VecExModel:
         min_count: int = DEFAULT_MIN_COUNT,
         n_shuffles: int = DEFAULT_N_SHUFFLES,
         batch_size: int = DEFAULT_BATCH_SIZE,
-        checkpoint_path: str = DEFAULT_CHECKPOINT_FILE_NAME,
+        checkpoint_path: str = MODEL_FILE_NAME,
         optimizer: torch.optim.Optimizer = None,
         loss_fn: torch.nn.modules.loss._Loss = None,
         device: torch.device = torch.device("cpu"),
@@ -302,8 +302,8 @@ class Region2VecExModel:
     def export(
         self,
         path: str,
-        checkpoint_file: str = DEFAULT_CHECKPOINT_FILE_NAME,
-        universe_file: str = DEFAULT_UNIVERSE_FILE_NAME,
+        checkpoint_file: str = MODEL_FILE_NAME,
+        universe_file: str = UNIVERSE_FILE_NAME,
     ):
         """
         Function to facilitate exporting the model in a way that can

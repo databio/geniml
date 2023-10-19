@@ -6,7 +6,7 @@ import numpy as np
 import scanpy as sc
 from huggingface_hub import hf_hub_download, upload_file, login
 from numba import config
-from tqdm import tqdm
+from tqdm.rich import tqdm
 
 from ..io import Region, RegionSet
 from ..models.main import ExModel

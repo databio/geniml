@@ -2,7 +2,7 @@ from collections import Counter
 
 import scanpy as sc
 from qdrant_client import QdrantClient
-from tqdm import tqdm
+from tqdm.rich import tqdm
 
 
 class AnnotationServer(QdrantClient):
