@@ -1,4 +1,4 @@
-from tqdm.rich import tqdm
+from rich.progress import track
 
 from ..io import Region
 
@@ -21,10 +21,10 @@ def make_vocab_from_bed(bed_file: str, vocab_file: str, n_unused: int = 10000):
         f.write("[CLS]\n")
         f.write("[SEP]\n")
         f.write("[MASK]\n")
-        for region in tqdm(regions, desc="Writing regions"):
+        for region in track(regions, desc="Writing regions"):
             r = Region(region[0], int(region[1]), int(region[2]))
             f.write(wordify_region(r) + "\n")
 
         # add unused tokens
-        for i in tqdm(range(n_unused), desc="Writing unused tokens"):
+        for i in track(range(n_unused), desc="Writing unused tokens"):
             f.write(f"[UNUSED{i}]\n")

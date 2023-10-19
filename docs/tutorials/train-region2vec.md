@@ -20,7 +20,7 @@ from multiprocessing import cpu_count
 from gitk.io import RegionSet
 from gitk.tokenization import InMemTokenizer
 from gitk.region2vec import Region2VecExModel
-from tqdm.rich import tqdm
+from rich.progress import track
 
 
 logging.basicConfig(level=logging.INFO)

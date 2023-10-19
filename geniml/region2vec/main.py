@@ -4,7 +4,7 @@ from logging import getLogger
 from typing import List, Union, Optional, Literal, Callable
 
 import numpy as np
-from tqdm.rich import tqdm
+from rich.progress import track
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
@@ -302,7 +302,7 @@ class Region2Vec(Word2Vec):
             min_count=self.min_count,
         )
 
-        for shuffle_num in tqdm(range(epochs), total=epochs, desc="Epochs"):
+        for shuffle_num in track(range(epochs), total=epochs, desc="Epochs"):
             # update current values
             current_lr = lr_scheduler.get_lr()
             current_loss = self.get_latest_training_loss()
@@ -518,7 +518,7 @@ class Region2VecExModel(ExModel):
         # remove all empty region sets
         region_sets = [
             rs
-            for rs in tqdm(region_sets, total=len(region_sets), desc="Filtering out empty sets.")
+            for rs in track(region_sets, total=len(region_sets), desc="Filtering out empty sets.")
             if len(rs) > 0
         ]
 
@@ -584,7 +584,7 @@ class Region2VecExModel(ExModel):
         _LOGGER.info("Tokenizing region sets.")
         region_sets_tokenized = [
             self.tokenizer.tokenize(rs)
-            for rs in tqdm(region_sets, total=len(region_sets), desc="Tokenizing region sets.")
+            for rs in track(region_sets, total=len(region_sets), desc="Tokenizing region sets.")
         ]
         region_sets_tokenized = self._filter_empty_region_sets(region_sets_tokenized)
 
