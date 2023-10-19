@@ -10,8 +10,10 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 from gtokenizers import (
+    Region as GRegion,
     TreeTokenizer as GTreeTokenizer,
     TokenizedRegionSet as GTokenizedRegionSet,
+    Universe as GUniverse,
 )
 from intervaltree import IntervalTree
 from tqdm import tqdm
@@ -142,7 +144,7 @@ class Gtokenizer(Tokenizer):
         return cls(universe)
 
     @property
-    def universe(self):
+    def universe(self) -> GUniverse:
         return self._tokenizer.universe
 
     def __init__(self, universe: str = None):
@@ -178,6 +180,12 @@ class Gtokenizer(Tokenizer):
 
     def padding_token(self) -> Region:
         return self._tokenizer.padding_token
+
+    def padding_token_id(self) -> int:
+        padding_token = self.padding_token()
+        return self.universe.region_to_id(
+            GRegion(padding_token.chr, padding_token.start, padding_token.end)
+        )
 
     def convert_tokens_to_ids(self, tokens: GTokenizedRegionSet) -> List[int]:
         """

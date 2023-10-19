@@ -21,7 +21,7 @@ for token in tokens:
     print(f"{t.chr}:{t.start}-{t.end}")
 ```
 
-You can also get token id's for the tokens:
+You can also get token ids for the tokens:
 
 ```python
 from geniml.tokenization import GTokenizer # or any other tokenizer

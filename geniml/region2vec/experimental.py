@@ -79,10 +79,10 @@ class Region2VecExModel:
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         super().__init__()
-        self.model_path = model_path
-        self.tokenizer = tokenizer
-        self.trained = False
-        self._model = None
+        self.model_path: str = model_path
+        self.tokenizer: Gtokenizer = tokenizer
+        self.trained: bool = False
+        self._model: Region2Vec = None
 
         if model_path is not None:
             self._init_from_huggingface(model_path)
@@ -211,16 +211,20 @@ class Region2VecExModel:
             )
 
         # validate the data - convert all to RegionSets
+        _LOGGER.info("Validating data for training.")
         data = self._validate_data_for_training(data)
 
         # tokenize the data into regions
-        tokens = [self.tokenizer.tokenize(list(rs)) for rs in data]
+        _LOGGER.info("Tokenizing data.")
+        tokens = [self.tokenizer.tokenize(list(rs)) for rs in tqdm(data, total=len(data))]
         tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
 
-        _padding_token = self.tokenizer.tokenize(self.tokenizer.padding_token)[0].id
+        _padding_token = self.tokenizer.padding_token()
+
         # create the dataset of windows
+        _LOGGER.info("Generating contexts and targets.")
         contexts, targets = generate_window_training_data(
-            tokens, window_size, n_shuffles, min_count, padding_value=_padding_token
+            tokens, window_size, n_shuffles, min_count, padding_value=_padding_token.id
         )
         dataset = Region2VecDataset(contexts, targets)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
@@ -232,14 +236,13 @@ class Region2VecExModel:
         loss_fn = loss_fn or torch.nn.CrossEntropyLoss()
 
         # move necessary things to the device
-        contexts = contexts.to(device)
-        targets = targets.to(device)
         self._model.to(device)
 
         # losses
         losses = []
 
         # train the model for the specified number of epochs
+        _LOGGER.info("Training begin.")
         for epoch in tqdm(range(epochs), desc="Epochs"):
             for batch in tqdm(iter(dataloader), desc="Batches"):
                 # zero the gradients
@@ -249,7 +252,7 @@ class Region2VecExModel:
 
                 # convert target to one-hot
                 # this is necessary for CrossEntropyLoss
-                y = torch.nn.functional.one_hot(target, len(self._vocab_length))
+                y = torch.nn.functional.one_hot(target, self._vocab_length)
                 y = y.type(torch.float)
 
                 # forward pass

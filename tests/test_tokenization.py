@@ -217,3 +217,10 @@ def test_gtokenize_to_bit_vector(universe_bed_file: str):
 
     assert all(isinstance(b, bool) for b in bit_vector)
     assert len(bit_vector) == 2_379
+
+
+def test_gtokenizer_get_padding(universe_bed_file: str):
+    t = Gtokenizer(universe_bed_file)
+    padding = t.padding_token()
+
+    assert padding.id == 2379
