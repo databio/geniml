@@ -382,5 +382,5 @@ def test_r2v_pytorch_exmodel_train(universe_file: str):
     rs2 = list(RegionSet("tests/data/to_tokenize2.bed"))
     rs3 = rs1[0:10] + rs2[0:10]
 
-    model.train([rs1, rs2, rs3], epochs=10)
-    assert True
+    loss = model.train([rs1, rs2, rs3], epochs=10)
+    assert loss[0] > loss[-1]
