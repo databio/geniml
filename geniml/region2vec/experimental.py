@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
 from rich.progress import track
+from rich.progress import Progress
 from torch.utils.data import DataLoader
 
 from ..tokenization.main import ITTokenizer, Tokenizer
@@ -24,6 +25,7 @@ from .const import (
     DEFAULT_N_SHUFFLES,
     DEFAULT_OPTIMIZER,
     DEFAULT_LOSS_FN,
+    DEFAULT_INIT_LR,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
 )
@@ -52,10 +54,11 @@ class Word2Vec(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.projection(x)
-        x = torch.sum(x, dim=0)
+        x = torch.sum(x, dim=1)
         x = F.relu(self.hidden(x))
         x = self.output(x)
-        return F.log_softmax(x, dim=0)
+        # we use CrossEntropyLoss which combines LogSoftmax and NLLLoss
+        return x
 
 
 class Region2Vec(Word2Vec):
@@ -215,8 +218,13 @@ class Region2VecExModel:
         batch_size: int = DEFAULT_BATCH_SIZE,
         checkpoint_path: str = MODEL_FILE_NAME,
         optimizer: torch.optim.Optimizer = DEFAULT_OPTIMIZER,
+        learning_rate: float = DEFAULT_INIT_LR,
+        learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         loss_fn: torch.nn.modules.loss._Loss = DEFAULT_LOSS_FN,
         device: torch.device = torch.device("cpu"),
+        optimizer_params: dict = {},
+        save_model: bool = False,
+        **kwargs,
     ) -> np.ndarray:
         """
         Train the model.
@@ -227,6 +235,15 @@ class Region2VecExModel:
         :param int epochs: Number of epochs to train for.
         :param int min_count: Minimum count for a region to be included in the vocabulary.
         :param int n_shuffles: Number of shuffles to perform on the data.
+        :param int batch_size: Batch size for training.
+        :param str checkpoint_path: Path to save the model checkpoint to.
+        :param torch.optim.Optimizer optimizer: Optimizer to use for training.
+        :param float learning_rate: Learning rate to use for training.
+        :param torch.nn.modules.loss._Loss loss_fn: Loss function to use for training.
+        :param torch.device device: Device to use for training.
+        :param dict optimizer_params: Additional parameters to pass to the optimizer.
+        :param bool save_model: Whether or not to save the model.
+        :param kwargs: Additional keyword arguments to pass to the model training function.
 
         :return np.ndarray: Loss values for each epoch.
         """
@@ -255,8 +272,19 @@ class Region2VecExModel:
         dataset = Region2VecDataset(contexts, targets)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-        # init
-        optimizer = optimizer(self._model.parameters())
+        # init the optimizer
+        optimizer = optimizer(
+            self._model.parameters(),
+            lr=learning_rate,
+            **optimizer_params,
+        )
+
+        # init scheduler if passed
+        if learning_rate_scheduler is not None:
+            learning_rate_scheduler = learning_rate_scheduler(optimizer)
+
+        # init the loss function
+        loss_fn = loss_fn()
 
         # move necessary things to the device
         self._model.to(device)
@@ -266,35 +294,50 @@ class Region2VecExModel:
 
         # train the model for the specified number of epochs
         _LOGGER.info("Training begin.")
-        for epoch in track(range(epochs), description="Epochs"):
-            for batch in track(iter(dataloader), description="Batches"):
-                # zero the gradients
-                optimizer.zero_grad()
+        with Progress() as progress_bar:
+            epoch_tid = progress_bar.add_task(f"Epochs", total=epochs)
+            batches_tid = progress_bar.add_task(f"Batches", total=len(dataloader))
+            for epoch in range(epochs):
+                for i, batch in enumerate(dataloader):
+                    # zero the gradients
+                    optimizer.zero_grad()
 
-                context, target = batch
+                    # get the context and target
+                    context, target = batch
 
-                # convert target to one-hot
-                # this is necessary for CrossEntropyLoss
-                y = torch.nn.functional.one_hot(target, self._vocab_length)
-                y = y.type(torch.float)
+                    # move to device
+                    context = context.to(device)
+                    target = target.to(device)
 
-                # forward pass
-                y_pred = self._model(torch.stack(context))
+                    # forward pass
+                    pred = self._model(context)
 
-                # backward pass
-                loss = loss_fn(y_pred, target)
-                loss.backward()
+                    # backward pass
+                    loss = loss_fn(pred, target)
+                    loss.backward()
 
-                # update parameters
-                optimizer.step()
+                    # update parameters
+                    optimizer.step()
 
-            # log out loss
-            _LOGGER.info(f"Epoch {epoch + 1} loss: {loss.item()}")
-            losses.append(loss.item())
+                    # update learning rate if necessary
+                    if learning_rate_scheduler is not None:
+                        learning_rate_scheduler.step()
+
+                    # update progress bar
+                    progress_bar.update(batches_tid, completed=i + 1)
+
+                # update progress bar
+                progress_bar.update(epoch_tid, completed=epoch + 1)
+
+                # log out loss
+                _LOGGER.info(f"Epoch {epoch + 1} loss: {loss.item()}")
+                losses.append(loss.item())
 
         # save the model
         self.trained = True
-        torch.save(self._model.state_dict(), checkpoint_path)
+
+        if save_model:
+            torch.save(self._model.state_dict(), checkpoint_path)
 
         return np.array(losses)
 
