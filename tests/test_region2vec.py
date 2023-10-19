@@ -429,6 +429,7 @@ def test_save_load_pytorch_exmodel(universe_file: str):
         try:
             os.remove("tests/data/test_model/checkpoint.pt")
             os.remove("tests/data/test_model/universe.bed")
+            os.remove("tests/data/test_model/config.yaml")
             os.rmdir("tests/data/test_model/")
         except:
             # just try to remove it, if it doesn't work, then pass, means something
