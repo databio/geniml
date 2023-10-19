@@ -229,7 +229,7 @@ class Text2BEDSearchInterface(object):
             self.vec2vec = vec2vec_model
         elif isinstance(vec2vec_model, str):
 
-            if os.path.exists(str):
+            if os.path.exists(vec2vec_model):
                 # load from disk
                 self.vec2vec = Vec2VecFNN()
                 self.vec2vec.load(vec2vec_model)
