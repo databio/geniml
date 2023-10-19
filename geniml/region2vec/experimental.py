@@ -213,7 +213,7 @@ class Region2VecExModel:
         # validate the data - convert all to RegionSets
         data = self._validate_data_for_training(data)
 
-        # tokenize the data into regions
+        # gtokenize the data into universe regions (recognized by this model's vocabulary)
         tokens = [self.tokenizer.tokenize(list(rs)) for rs in data]
         tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
 
