@@ -10,6 +10,7 @@ from random import shuffle
 from typing import Dict, List, Union, Tuple, Any
 
 import numpy as np
+import torch
 from rich.progress import track
 from torch.utils.data import DataLoader, Dataset
 
@@ -425,7 +426,8 @@ class Region2VecDataset(Dataset):
         return len(self.x)
 
     def __getitem__(self, idx):
-        return self.x[idx], self.y[idx]
+        # we need to return things as a tensor for proper batching
+        return torch.tensor(self.x[idx]), torch.tensor(self.y[idx])
 
 
 def generate_window_training_data(
