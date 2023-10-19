@@ -16,7 +16,7 @@ from gtokenizers import (
     Universe as GUniverse,
 )
 from intervaltree import IntervalTree
-from tqdm import tqdm
+from tqdm.rich import tqdm
 
 from geniml.tokenization.split_file import split_file
 

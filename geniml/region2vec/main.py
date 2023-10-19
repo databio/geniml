@@ -4,7 +4,7 @@ from logging import getLogger
 from typing import List, Union, Optional, Literal, Callable
 
 import numpy as np
-from tqdm import tqdm
+from tqdm.rich import tqdm
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
