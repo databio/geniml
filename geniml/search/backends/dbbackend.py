@@ -41,9 +41,11 @@ class QdrantBackend(EmSearchBackend):
         )
 
         # Create collection only if it does not exist
-        try: 
+        try:
             collection_info = self.qd_client.get_collection(collection_name=self.collection)
-            _LOGGER.info(f"Using collection {self.collection} with {collection_info.points_count} points.")
+            _LOGGER.info(
+                f"Using collection {self.collection} with {collection_info.points_count} points."
+            )
         except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
             _LOGGER.info(f"Collection {self.collection} does not exist, creating it.")
             self.qd_client.recreate_collection(

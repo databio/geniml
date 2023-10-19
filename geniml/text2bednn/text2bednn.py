@@ -147,8 +147,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
             )
         return output_vec
 
-    def plot_training_hist(self,
-                          save_path:Union[str, None] = None):
+    def plot_training_hist(self, save_path: Union[str, None] = None):
         """
         plot the training & validating loss of the most recent training
         :return:
@@ -247,4 +246,3 @@ class Text2BEDSearchInterface(object):
 # betum = BEDEmbedTUM(RSC, universe, tokenizer)
 # embeddings = betum.compute_embeddings()
 # T2BNNSI = Text2BEDSearchInterface(betum, embeddings)  # ???
-
