@@ -22,6 +22,8 @@ from .const import (
     DEFAULT_WINDOW_SIZE,
     DEFAULT_MIN_COUNT,
     DEFAULT_N_SHUFFLES,
+    DEFAULT_OPTIMIZER,
+    DEFAULT_LOSS_FN,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
 )
@@ -212,8 +214,8 @@ class Region2VecExModel:
         n_shuffles: int = DEFAULT_N_SHUFFLES,
         batch_size: int = DEFAULT_BATCH_SIZE,
         checkpoint_path: str = MODEL_FILE_NAME,
-        optimizer: torch.optim.Optimizer = None,
-        loss_fn: torch.nn.modules.loss._Loss = None,
+        optimizer: torch.optim.Optimizer = DEFAULT_OPTIMIZER,
+        loss_fn: torch.nn.modules.loss._Loss = DEFAULT_LOSS_FN,
         device: torch.device = torch.device("cpu"),
     ) -> np.ndarray:
         """
@@ -253,13 +255,8 @@ class Region2VecExModel:
         dataset = Region2VecDataset(contexts, targets)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-        # select optimizer
-        optimizer = optimizer(self._model.parameters()) or torch.optim.Adam(
-            self._model.parameters()
-        )
-
-        # select loss function - default to cross entropy
-        loss_fn = loss_fn or torch.nn.CrossEntropyLoss()
+        # init
+        optimizer = optimizer(self._model.parameters())
 
         # move necessary things to the device
         self._model.to(device)
