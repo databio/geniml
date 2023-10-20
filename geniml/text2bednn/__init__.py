@@ -5,5 +5,5 @@ from .utils import (
     prepare_vectors_for_database,
     region_info_list_to_vectors,
     build_regionset_info_list,
-    bioGPT_sentence_transformer
+    bioGPT_sentence_transformer,
 )

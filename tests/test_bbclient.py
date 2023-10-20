@@ -6,8 +6,13 @@ from typing import Tuple
 import genomicranges
 import pytest
 
-from geniml.bbclient import (BBClient, BedFile, BedSet, compute_bed_identifier,
-                             compute_bedset_identifier)
+from geniml.bbclient import (
+    BBClient,
+    BedFile,
+    BedSet,
+    compute_bed_identifier,
+    compute_bedset_identifier,
+)
 
 
 @pytest.fixture
@@ -26,7 +31,6 @@ def bedset_id():
 
 @pytest.fixture
 def bedfile_id():
-
     return "e7e9893792c90a7ef96be9fe333c6c1d"
 
 
