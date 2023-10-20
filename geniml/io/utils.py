@@ -56,3 +56,13 @@ def extract_maf_col_positions(file: str) -> Dict[MAF_COLUMN, Union[int, None]]:
             MAF_STRAND_COL_NAME: get_index_from_header(header, MAF_STRAND_COL_NAME),
         }
     return col_positions
+
+
+def read_bedset_file(file_path: str) -> List[str]:
+    """Load a bedset from a text file"""
+    bed_identifiers = []
+
+    with open(file_path, "r") as f:
+        for line in f:
+            bed_identifiers.append(line.strip())
+    return bed_identifiers

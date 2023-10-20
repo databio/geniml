@@ -1,16 +1,21 @@
 import gzip
 import os
 import shutil
-from typing import List, Union
-
+from typing import List
 import requests
 
 from ..io import is_gzipped
-from .const import (DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
-                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
-                    DEFAULT_BEDSET_SUBFOLDER)
-from .utils import (BedCacheManager, BedFile, BedSet, compute_bed_identifier,
-                    compute_bedset_identifier)
+from .const import (
+    DEFAULT_BEDBASE_API,
+    DEFAULT_BEDFILE_EXT,
+    DEFAULT_BEDFILE_SUBFOLDER,
+    DEFAULT_BEDSET_EXT,
+    DEFAULT_BEDSET_SUBFOLDER,
+    BEDSET_URL_PATTERN,
+    BEDFILE_URL_PATTERN,
+)
+from ..io.io import RegionSet, BedSet
+from .utils import BedCacheManager
 
 
 class BBClient(BedCacheManager):
@@ -30,8 +35,7 @@ class BBClient(BedCacheManager):
 
         :param bedfile_id: unique identifier of a BED file
         """
-        # bed_url = f"http://bedbase.org/api/bed/{bed_identifier}/file/bed"
-        bed_url = f"{self.bedbase_api}/bed/{bedfile_id}/file/bed"
+        bed_url = BEDFILE_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedfile_id=bedfile_id)
         response = requests.get(bed_url)
         response.raise_for_status()
 
@@ -65,21 +69,20 @@ class BBClient(BedCacheManager):
             identifier=bedset_id,
         )
 
-    def _download_bedset_data(self, bedset_id, file_path) -> List[str]:
+    def _download_bedset_data(self, bedset_id: str) -> List[str]:
         """
         Download BED set from BEDbase API and return the list of identifiers of BED files in the set
 
         :param bedset_id: unique identifier of a BED set
         """
-        # bed_url = f"http://bedbase.org/api/bedset/{bedset_id}/bedfiles?ids=md5sum"
-        bedset_url = f"{self.bedbase_api}/bedset/{bedset_id}/bedfiles?ids=md5sum"
+        bedset_url = BEDSET_URL_PATTERN.format(bedset_api=self.bedbase_api, bedset_id=bedset_id)
         response = requests.get(bedset_url)
         data = response.json()
         extracted_data = [entry[0] for entry in data["data"]]
 
         return extracted_data
 
-    def load_bed(self, bedfile_id: str) -> BedFile:
+    def load_bed(self, bedfile_id: str) -> RegionSet:
         """
         Loads a BED file from cache, or downloads and caches it if it doesn't exist
 
@@ -97,7 +100,7 @@ class BBClient(BedCacheManager):
                 f.write(bed_data)
             print("File downloaded and cached successfully.")
 
-        return BedFile(regions=file_path, identifier=bedfile_id)
+        return RegionSet(regions=file_path)
 
     def add_bedset_to_cache(self, bedset: BedSet) -> str:
         """
@@ -106,8 +109,7 @@ class BBClient(BedCacheManager):
         :param bedset: the BED set to be added, a BedSet class
         :return: the identifier if the BedSet object
         """
-        # bedset_id = bedset.compute_bedset_identifier()
-        bedset_id = compute_bedset_identifier(bedset)
+        bedset_id = bedset.compute_bedset_identifier()
         file_path = self._bedset_path(bedset_id)
         if os.path.exists(file_path):
             print(f"{file_path} already exists in cache.")
@@ -118,7 +120,7 @@ class BBClient(BedCacheManager):
                     file.write(bedfile_id + "\n")
         return bedset_id
 
-    def add_bed_to_cache(self, bedfile: BedFile) -> str:
+    def add_bed_to_cache(self, bedfile: RegionSet) -> str:
         """
         Add a BED file to the cache
 
@@ -127,7 +129,7 @@ class BBClient(BedCacheManager):
         """
 
         # bedfile_id = bedfile.compute_bed_identifier()
-        bedfile_id = compute_bed_identifier(bedfile)
+        bedfile_id = bedfile.compute_bed_identifier()
         file_path = self._bedfile_path(bedfile_id)
         if os.path.exists(file_path):
             print(f"{file_path} already exists in cache.")
@@ -155,9 +157,9 @@ class BBClient(BedCacheManager):
         Get local path to BED file or BED set with specific identifier
 
         :param identifier: the unique identifier
-
         :return: the local path of the file
         """
+
         # check if any BED set has that identifier
         file_path = self._bedset_path(identifier)
         if os.path.exists(file_path):
