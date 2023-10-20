@@ -1,5 +1,7 @@
-from .bedfile_retrieval import BedFetch
-from .utils import BedCacheManager, BedDownloader
+# TODO: it won't work. BedFetch and BedDownloader doesn't exist
+
+# from .bedfile_retrieval import BedFetch
+# from .utils import BedCacheManager, BedDownloader
 
 
 def download_bedset(args):
