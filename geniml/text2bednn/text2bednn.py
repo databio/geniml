@@ -261,7 +261,6 @@ class Text2BEDSearchInterface(object):
         _LOGGER.info(f"Setting sentence transformer model {hf_repo}")
         self.nl2vec = SentenceTransformer(hf_repo)
 
-
     def nl_vec_search(
         self, query: Union[str, np.ndarray], k: int = 10
     ) -> Tuple[Union[List[int], List[List[int]]], Union[List[float], List[List[float]]]]:

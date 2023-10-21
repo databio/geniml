@@ -2,19 +2,15 @@ import gzip
 import os
 import shutil
 from typing import List
+
 import requests
 
 from ..io import is_gzipped
-from .const import (
-    DEFAULT_BEDBASE_API,
-    DEFAULT_BEDFILE_EXT,
-    DEFAULT_BEDFILE_SUBFOLDER,
-    DEFAULT_BEDSET_EXT,
-    DEFAULT_BEDSET_SUBFOLDER,
-    BEDSET_URL_PATTERN,
-    BEDFILE_URL_PATTERN,
-)
-from ..io.io import RegionSet, BedSet
+from ..io.io import BedSet, RegionSet
+from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
+                    DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
+                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
+                    DEFAULT_BEDSET_SUBFOLDER)
 from .utils import BedCacheManager
 
 
