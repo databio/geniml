@@ -7,7 +7,7 @@ import genomicranges
 import pytest
 
 from geniml.bbclient import BBClient
-from geniml.io import RegionSet, BedSet
+from geniml.io import BedSet, RegionSet
 
 
 @pytest.fixture

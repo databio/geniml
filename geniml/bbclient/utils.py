@@ -3,8 +3,8 @@ import os
 from io import BytesIO
 from typing import Optional
 
-import pandas as pd
 import genomicranges
+import pandas as pd
 
 
 class BedCacheManager:

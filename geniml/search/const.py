@@ -1,5 +1,5 @@
-from qdrant_client.models import Distance, VectorParams
 from qdrant_client.http import models
+from qdrant_client.models import Distance, VectorParams
 
 DEFAULT_QDRANT_HOST = "localhost"
 DEFAULT_QDRANT_PORT = 6333
