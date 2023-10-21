@@ -1,12 +1,10 @@
 import gzip
-import requests
+import os
+from io import BytesIO
+from typing import Optional
+
 import genomicranges
 import pandas as pd
-from io import BytesIO
-from typing import Optional, List
-import os
-from .bedfile_retrieval import BedSet
-from ..io import RegionSet
 
 
 class BedCacheManager:
@@ -32,7 +30,6 @@ class BedCacheManager:
         gr_bed_local = BedCacheManager.decompress_and_convert_to_genomic_ranges(file_content)
 
         return gr_bed_local
-
 
     @staticmethod
     def decompress_and_convert_to_genomic_ranges(content: bytes) -> genomicranges.GenomicRanges:
@@ -61,42 +58,3 @@ class BedCacheManager:
         gr = genomicranges.from_pandas(df)
 
         return gr
-
-
-@classmethod
-def bedset_to_grangeslist(cls, bedset: BedSet, bedset_identifier: str) -> genomicranges.GenomicRangesList:
-    """Convert a bedset into a GenomicRangesList object"""
-    gr_dict = {}  # Create empty dict to store GenomicRanges objects
-    
-    bed_identifiers = cls.read_bed_identifiers_from_file(bedset_identifier)
-
-    for bed_identifier in bed_identifiers:
-        gr = cls.process_bed_file(bed_identifier)
-        gr_dict[bed_identifier] = gr
-        print(f"Processed {bed_identifier}")
-        print(gr)
-
-    # Create a GenomicRangesList object from the dictionary
-    grl = genomicranges.GenomicRangesList(**gr_dict)
-    return grl
-
-
-# QUESTION: should this move to the RegionSet object?
-@staticmethod
-def regionset_to_granges(regionset: RegionSet) -> genomicranges.GenomicRanges:
-    """Convert a regionset into a GenomicRanges object"""
-    with open(regionset.path, "rb") as f:
-        bed_data = f.read()
-        gr = BedCacheManager.decompress_and_convert_to_genomic_ranges(bed_data)
-
-    return gr
-
-
-def read_bedset_file(file_path: str) -> List[str]:
-    """Load a bedset from a text file"""
-    bed_identifiers = []
-
-    with open(file_path, "r") as f:
-        for line in f:
-            bed_identifiers.append(line.strip())
-    return bed_identifiers

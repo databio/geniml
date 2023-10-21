@@ -2,9 +2,9 @@ import random
 from typing import List, Union
 
 from ..io import Region
+from ..utils import unwordify_region, wordify_region
 from .const import DEFAULT_MAX_LENGTH
 from .schemas import EncodedRegions, TokenMask
-from ..utils import wordify_region, unwordify_region
 
 
 class RegionIntegerIDGenerator:

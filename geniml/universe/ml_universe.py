@@ -7,9 +7,10 @@ from functools import cmp_to_key
 import numpy as np
 from numba import njit
 
-from ..utils import natural_chr_sort, timer_func, read_chromosome_from_bw
-from .utils import predictions_to_bed, find_full
 from geniml.likelihood.build_model import ModelLH
+
+from ..utils import natural_chr_sort, read_chromosome_from_bw, timer_func
+from .utils import find_full, predictions_to_bed
 
 
 @njit

@@ -2,9 +2,9 @@ from typing import Dict, List, Tuple, Union
 
 import hnswlib
 import numpy as np
+
 from ..const import *
 from ..utils import verify_load_inputs
-
 from .abstract import EmSearchBackend
 
 
@@ -44,29 +44,40 @@ class HNSWBackend(EmSearchBackend):
         self.payloads = {}
         self.idx_path = local_index_path
 
-    def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
+    def load(
+        self,
+        vectors: np.ndarray,
+        ids: Union[np.ndarray, None] = None,
+        payloads: Union[List[Dict[str, str]], None] = None,
+    ):
         """
-        Load embedding vectors into the hnsw index, and store their hnsw index id and label into metadata
+        Upload embedding vectors into the hnsw index, and store their hnsw index id and payloads into metadata
 
-        :param embeddings: embedding vectors
-        :param labels: labels
+        :param vectors: embedding vectors, a np.ndarray with shape of (n, <vector size>)
+        :param ids: list of n point ids, or None to generate ids automatically
+        :param payloads: optional list of n dictionaries that contain vector metadata
         :return:
         """
-        # check if the number of embedding vectors and labels are same
-        verify_load_inputs(embeddings, labels)
 
         # increase max_elements to contain new loadings
         current_max = self.idx.get_max_elements()
-        new_max = current_max + embeddings.shape[0]
 
-        # set ids and store id: label into metadata
-        ids = np.arange(start=current_max, stop=new_max)
-        for i in range(len(labels)):
-            self.payloads[ids[i]] = labels[i]
+        if not ids:
+            new_max = current_max + vectors.shape[0]
+            ids = np.arange(start=current_max, stop=new_max)
+        else:
+            new_max = ids.amax()
+
+        # check if the number of embedding vectors and labels are same
+        verify_load_inputs(vectors, ids, payloads)
+
+        if payloads:
+            for i in range(len(payloads)):
+                self.payloads[ids[i]] = payloads[i]
 
         # update hnsw index and load embedding vectors
         self.idx.load_index(self.idx_path, max_elements=new_max)
-        self.idx.add_items(embeddings, ids)
+        self.idx.add_items(vectors, ids)
 
         # save hnsw index to local file
         self.idx.save_index(self.idx_path)

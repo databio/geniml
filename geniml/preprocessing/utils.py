@@ -1,7 +1,6 @@
 from tqdm import tqdm
 
 from ..io import Region
-
 from ..utils import wordify_region
 
 

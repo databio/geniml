@@ -14,7 +14,7 @@ from geniml.tokenization.split_file import split_file
 
 from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization
-from .utils import anndata_to_regionsets, time_str, Timer
+from .utils import Timer, anndata_to_regionsets, time_str
 
 
 class Tokenizer(ABC):

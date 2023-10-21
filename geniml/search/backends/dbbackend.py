@@ -1,13 +1,17 @@
+import logging
 import os
 from typing import Dict, List, Union
 
 import numpy as np
-from ..const import *
-from ..utils import verify_load_inputs
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
 
+from ...const import PKG_NAME
+from ..const import *
+from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
+
+_LOGGER = logging.getLogger(PKG_NAME)
 
 
 class QdrantBackend(EmSearchBackend):
@@ -30,30 +34,52 @@ class QdrantBackend(EmSearchBackend):
         """
         self.collection = collection
         self.config = config
+        self.url = os.environ.get("QDRANT_HOST", qdrant_host)
+        self.port = os.environ.get("QDRANT_PORT", qdrant_port)
         self.qd_client = QdrantClient(
-            url=os.environ.get("QDRANT_HOST", qdrant_host),
-            port=os.environ.get("QDRANT_PORT", qdrant_port),
+            url=self.url,
+            port=self.port,
             api_key=os.environ.get("QDRANT_API_KEY", None),
         )
-        self.qd_client.recreate_collection(
-            collection_name=self.collection, vectors_config=self.config
-        )
 
-    def load(self, embeddings: np.ndarray, labels: List[Dict[str, str]]):
+        # Create collection only if it does not exist
+        try:
+            collection_info = self.qd_client.get_collection(collection_name=self.collection)
+            _LOGGER.info(
+                f"Using collection {self.collection} with {collection_info.points_count} points"
+            )
+        except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
+            _LOGGER.info(f"Collection {self.collection} does not exist, creating it")
+            self.qd_client.recreate_collection(
+                collection_name=self.collection,
+                vectors_config=self.config,
+                quantization_config=DEFAULT_QUANTIZATION_CONFIG,
+            )
+
+    def load(
+        self,
+        vectors: np.ndarray,
+        ids: Union[List[str], None] = None,
+        payloads: Union[List[Dict[str, str]], None] = None,
+    ):
         """
-        upload vectors and their labels onto qdrant storage
+        Upload vectors and their labels into qdrant storage.
 
-        :param embeddings: embedding vectors of bed files, a np.ndarray with shape of (n, <vector size>)
-        :param labels: list of dictionaries that contain information of the vectors to be store
+        :param vectors: embedding vectors, a np.ndarray with shape of (n, <vector size>)
+        :param ids: list of n point ids, or None to generate ids automatically
+        :param payloads: optional list of n dictionaries that contain vector metadata
         :return:
         """
 
-        verify_load_inputs(embeddings, labels)
+        if not ids:
+            start = len(self)
+            ids = list(range(start, start + len(payloads)))
 
-        start = len(self)
+        verify_load_inputs(vectors, ids, payloads)
+
         points = [
-            PointStruct(id=i + start, vector=embeddings[i].tolist(), payload=labels[i])
-            for i in range(len(labels))
+            PointStruct(id=ids[i], vector=vectors[i].tolist(), payload=payloads[i])
+            for i in range(len(payloads))
         ]
         self.qd_client.upsert(
             collection_name=self.collection,
@@ -149,7 +175,19 @@ class QdrantBackend(EmSearchBackend):
             return output_list
 
     def __str__(self):
-        return "QdrantBackend with {} items".format(len(self))
+        n_items = len(self)
+        msg = f"""QdrantBackend
+            n items: {n_items}
+            url: {self.url}:{self.port},
+            collection: {self.collection}
+            """
+        return msg
 
     def __repr__(self):
-        return "QdrantBackend with {} items".format(len(self))
+        n_items = len(self)
+        msg = f"""QdrantBackend
+            n items: {n_items}
+            url: {self.url}:{self.port},
+            collection: {self.collection}
+            """
+        return msg

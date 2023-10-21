@@ -10,7 +10,7 @@ from ..const import PKG_NAME
 from ..utils import natural_chr_sort
 from .const import LAMBDAS, TRANSMAT
 from .models import PoissonModel
-from .utils import predictions_to_bed, find_full
+from .utils import find_full, predictions_to_bed
 
 _LOGGER = getLogger(PKG_NAME)
 

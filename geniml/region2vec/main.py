@@ -1,25 +1,25 @@
 import multiprocessing
 import os
 from logging import getLogger
-from typing import List, Union, Optional, Literal, Callable
+from typing import Callable, List, Literal, Optional, Union
 
 import numpy as np
-from tqdm import tqdm
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
 from huggingface_hub.utils._errors import EntryNotFoundError
 from numba import config
+from tqdm import tqdm
 
 from ..io import Region, RegionSet
 from ..models.main import ExModel
 from ..tokenization.main import InMemTokenizer
-from . import utils
 from ..utils import wordify_region, wordify_regions
+from . import utils
 from .const import *
+from .pooling import max_pooling, mean_pooling
 from .region2vec_train import main as region2_train
 from .region_shuffling import main as sent_gen
-from .pooling import mean_pooling, max_pooling
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
