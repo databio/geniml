@@ -14,11 +14,7 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 
 from .const import *
-from .utils import (
-    cosine_distance,
-    genome_distance,
-    load_genomic_embeddings,
-)
+from .utils import cosine_distance, genome_distance, load_genomic_embeddings
 
 
 def get_ctt_score(

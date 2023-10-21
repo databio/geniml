@@ -4,7 +4,7 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
-from huggingface_hub import hf_hub_download, upload_file, login
+from huggingface_hub import hf_hub_download, login, upload_file
 from numba import config
 from tqdm import tqdm
 

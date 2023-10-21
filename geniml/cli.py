@@ -1,20 +1,19 @@
-from typing import Dict
-import logmuse
 import sys
+from typing import Dict
 
+import logmuse
 from ubiquerg import VersionInHelpParser
 
-from .assess.cli import build_subparser as assess_subparser
-from .eval.cli import build_subparser as eval_subparser
-from .universe.cli import build_mode_parser as universe_subparser
-from .region2vec.cli import build_subparser as region2vec_subparser
-from .tokenization.cli import build_subparser as tokenization_subparser
-from .likelihood.cli import build_subparser as likelihood_subparser
-from .scembed.argparser import build_argparser as scembed_subparser
-from .bedspace.cli import build_argparser as bedspace_subparser
-from .bbclient.cli import build_subparser as bbclient_subparser
-
 from ._version import __version__
+from .assess.cli import build_subparser as assess_subparser
+from .bbclient.cli import build_subparser as bbclient_subparser
+from .bedspace.cli import build_argparser as bedspace_subparser
+from .eval.cli import build_subparser as eval_subparser
+from .likelihood.cli import build_subparser as likelihood_subparser
+from .region2vec.cli import build_subparser as region2vec_subparser
+from .scembed.argparser import build_argparser as scembed_subparser
+from .tokenization.cli import build_subparser as tokenization_subparser
+from .universe.cli import build_mode_parser as universe_subparser
 
 
 def build_argparser():
@@ -270,8 +269,11 @@ def main(test_args=None):
             )
             print(rct_score)
         if args.subcommand == "bin-gen":
+            import glob
+            import os
+            import pickle
+
             from geniml.eval.utils import get_bin_embeddings
-            import glob, pickle, os
 
             if os.path.exists(args.file_name):
                 print(f"{args.file_name} exists!")

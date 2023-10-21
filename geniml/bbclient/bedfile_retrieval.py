@@ -1,181 +1,268 @@
+import gzip
 import os
+import shutil
+from typing import List
+
 import requests
-import genomicranges
 
-from typing import List, Union
-from ..io import RegionSet, Region
-from .utils import BedCacheManager, bedset_to_grangeslist, create_bedset_from_file, read_bedset_file
-from .const import DEFAULT_BEDBASE_URI
-
-
-# How should I be able to use this?
-
-# bbclient = BBClient(cache_folder="cache", bedbase_api="https://api.bedbase.org")
-# bedset_identifier = "xyz" # find some interesting bedset on bedbase.org
-# bedset = bbclient.load_bedset(bedset_identifier)  # should download, cache and return a BedSet object
-# grl = bedset.to_grangeslist()  # should return a GenomicRangesList object
-
-# get region set embeddings
-# r2v_exmodel = Region2VecExModel("databio/r2v-ChIP-atlas-hg38")
-# r2v_exmodel.get_embeddings(bedset)
-
-# for bedfile in bedset:
-#     print(bedfile.identifier)
-#     r2v_exmodel.get_embeddings(bedfile)
-
-# bedfile_id = "...."  # find interesting bedfile on bedbase
-# bedfile = bbclient.load_bed(bedfile_id)  # should download, cache and return a RegionSet object
-# gr = bedfile.to_granges()  # should return a GenomicRanges object
-
-# Let's say I have a local bedfile, not on bedbase
-# bedfile = RegionSet("path/to/bedfile")
-# gr = bedfile.to_granges()  # should return a GenomicRanges object
-# compute its ID and add it to the cache
-# bbclient.add_bed_to_cache(bedfile)
-
-# Let's say I want to create a new bedset
-# bedset = BedSet(["path/to/bedfile1", "path/to/bedfile2"])
-# or:
-# rs1 = RegionSet("path/to/bedfile1")
-# rs2 = RegionSet("path/to/bedfile2")
-# rs3 = RegionSet(cool_new_identifier)  # from bedbase
-# bedset = BedSet([rs1, rs2, rs3])
-# bedset.compute_identifier() or bedset.identifier    # what's it's ID?
-# I want to add it to my local cache
-# bbclient.add_bedset_to_cache(bedset)
-# This should also cache those 2 bed files, since they're part of the bedset
-
-
-class BedSet(object):
-    def __init__(
-        self,
-        region_sets: Union[List[RegionSet], List[str], List[List[Region]], None],
-        file_path: str = None,
-        identifier: str = None,
-    ):
-        if isinstance(region_sets, List[RegionSet]):
-            self.region_sets = region_sets
-        elif isinstance(region_sets, List[str]):
-            self.region_sets = []
-            for r in region_sets:
-                self.region_sets.append(RegionSet(r))  # Needs to run through bbclient
-        elif isinstance(region_sets, List[List[Region]]):
-            self.region_sets = []
-            for r in region_sets:
-                self.region_sets.append(RegionSet(r))
-        elif file_path is not None:
-            if os.path.isfile(file_path):
-                self.region_sets = [RegionSet(r) for r in read_bedset_file(file_path)]
-            else:
-                raise FileNotFoundError(f"The specified file '{file_path}' does not exist.")
-            
-            for r in read_bedset_file(region_sets):
-                self.region_sets.append(RegionSet(r))
-
-        self.bedset_identifier = identifier or self.compute_identifier()
-
-    def __len__(self):
-        return len(self.region_sets)
-
-    def __iter__(self):
-        for region_set in self.region_sets:
-            yield region_set
-
-    def __getitem__(self, indx: int):
-        return self.region_sets[indx]
-
-    def compute_identifier(self):
-        # TODO: set the bedset identifier
-        # If the bedset identifier is not set, we should set it using
-        # the algorithm we use to compute bedset identifiers
-        # (see bedboss/bedbuncher pipeline)
-        # I believe the bedset identifier is computed in bedbuncher.py line 76 with function 'get_bedset_digest'
-
-        # something like this?
-        import hashlib as md5
-
-        if self.bedset_identifier is not None:
-            return self.bedset_identifier
-        
-        # Compute MD5 hash
-        m = md5()
-        m.update(self.identifier_string.encode('utf-8'))
-        computed_identifier = m.hexdigest()
-
-        # Set bedset identifier
-        self.bedset_identifier = computed_identifier
-        
-        return computed_identifier
-
-        # raise NotImplementedError("BedSet object does not have a bedset identifier")
-    
-
-    def to_grangeslist(self) -> genomicranges.GenomicRangesList:
-        """Process a list of BED file identifiers and returns a GenomicRangesList object"""
-        # return this bedset object
-        return bedset_to_grangeslist(self.bedset_identifier)
+from ..io import is_gzipped
+from ..io.io import BedSet, RegionSet
+from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
+                    DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
+                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
+                    DEFAULT_BEDSET_SUBFOLDER)
+from .utils import BedCacheManager
 
 
 class BBClient(BedCacheManager):
-    def __init__(self, cache_folder: str, bedbase_uri: str = DEFAULT_BEDBASE_URI):
+    def __init__(self, cache_folder: str, bedbase_api: str = DEFAULT_BEDBASE_API):
+        """
+        BBClient to deal with download files from bedbase and caching them.
+
+        :param cache_folder: path to local folder as cache of files from bedbase
+        :param bedbase_api: url to bedbase
+        """
         super().__init__(cache_folder)
-        self.bedbase_uri = bedbase_uri
+        self.bedbase_api = bedbase_api
 
-    def download_and_process_bed_region_data(
-        self, bed_identifier: str, chr_num: str, start: int, end: int
-    ) -> genomicranges.GenomicRanges:
-        """Download regions of a BED file from BEDbase API and return the file content as bytes"""
-        bed_url = f"{self.bedbase_uri}/{bed_identifier}/regions/{chr_num}?start={start}&end={end}"
-        response = requests.get(bed_url)
-        response.raise_for_status()
-        response_content = response.content
-        gr_bed_regions = self.decompress_and_convert_to_genomic_ranges(response_content)
+    def _download_bed_data(self, bedfile_id: str) -> bytes:
+        """
+        Download BED file from BEDbase API and return the file content as bytes
 
-        return gr_bed_regions
-
-    def download_bed_data(self, bed_identifier: str) -> bytes:
-        """Download BED file from BEDbase API and return the file content as bytes"""
-        bed_url = f"http://bedbase.org/api/bed/{bed_identifier}/file/bed"
+        :param bedfile_id: unique identifier of a BED file
+        """
+        bed_url = BEDFILE_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedfile_id=bedfile_id)
         response = requests.get(bed_url)
         response.raise_for_status()
 
         return response.content
 
-    def load_bedset(self, bedset_identifier: str) -> BedSet:
-        """Download BEDset (List of bedfiles) from BEDbase API and return the file content as bytes"""
-        bed_url = f"http://bedbase.org/api/bedset/{bedset_identifier}/bedfiles?ids=md5sum"
-        response = requests.get(bed_url)
-        data = response.json()
-        extracted_data = [entry[0] for entry in data["data"]]
-        filename = f"bedset_{bedset_identifier}.txt"
-        folder_name = f"bedsets"
-        os.makedirs(folder_name, exist_ok=True)
-        file_path = os.path.join(folder_name, filename)
-        # cache the file
-        with open(file_path, "w") as file:
-            for value in extracted_data:
-                file.write(value + "\n")
+    def load_bedset(self, bedset_id: str) -> BedSet:
+        """
+        Loads a BED set from cache, or downloads and caches it plus BED files in it if it doesn't exist
 
-        return BedSet(extracted_data)
+        :param bedset_id: unique identifier of BED set
+        """
 
-    def load_bed(self, bed_file_identifier: str) -> RegionSet:
-        """Loads a BED file from cachce, or downloads and caches it if it doesn't exist"""
-        cached_file_path_existing = os.path.join(
-            self.cache_folder, bed_file_identifier[0], bed_file_identifier[1], bed_file_identifier
+        file_path = self._bedset_path(bedset_id)
+
+        if os.path.exists(file_path):
+            print(f"BED set {bedset_id} already exists in cache.")
+            with open(file_path, "r") as file:
+                extracted_data = file.readlines()
+        # if the BedSet is not in cache, download it from BEDBase
+        else:
+            extracted_data = self._download_bedset_data(bedset_id)
+            # write the identifiers of BED files in the BedSet to a local .txt file
+            with open(file_path, "w") as file:
+                for value in extracted_data:
+                    file.write(value + "\n")
+            print(f"BED set {bedset_id} downloaded and cached successfully.")
+
+        # return the BedSet
+        return BedSet(
+            [self.load_bed(bedfile_id) for bedfile_id in extracted_data],
+            identifier=bedset_id,
         )
 
-        if os.path.exists(cached_file_path_existing):
-            print("File already exists in cache.")
-        else:
-            bed_data = self.download_bed_data(bed_file_identifier)
-            subfolder_path = os.path.join(
-                self.cache_folder, bed_file_identifier[0], bed_file_identifier[1]
-            )
-            self.create_cache_folder(subfolder_path=subfolder_path)
-            cached_file_path = os.path.join(subfolder_path, bed_file_identifier)
+    def _download_bedset_data(self, bedset_id: str) -> List[str]:
+        """
+        Download BED set from BEDbase API and return the list of identifiers of BED files in the set
 
-            with open(cached_file_path, "wb") as f:
+        :param bedset_id: unique identifier of a BED set
+        """
+        bedset_url = BEDSET_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedset_id=bedset_id)
+        response = requests.get(bedset_url)
+        data = response.json()
+        extracted_data = [entry[0] for entry in data["data"]]
+
+        return extracted_data
+
+    def load_bed(self, bedfile_id: str) -> RegionSet:
+        """
+        Loads a BED file from cache, or downloads and caches it if it doesn't exist
+
+        :param bedfile_id: unique identifier of a BED file
+        """
+        # the path of the .txt file of the BED set
+        file_path = self._bedfile_path(bedfile_id)
+
+        if os.path.exists(file_path):
+            print(f"BED file {bedfile_id} already exists in cache.")
+        # if not in the cache, download from BEDbase and write to file in cache
+        else:
+            bed_data = self._download_bed_data(bedfile_id)
+            with open(file_path, "wb") as f:
                 f.write(bed_data)
             print("File downloaded and cached successfully.")
 
-            return RegionSet(cached_file_path)
+        return RegionSet(regions=file_path)
+
+    def add_bedset_to_cache(self, bedset: BedSet) -> str:
+        """
+        Add a BED set to the cache
+
+        :param bedset: the BED set to be added, a BedSet class
+        :return: the identifier if the BedSet object
+        """
+        bedset_id = bedset.compute_bedset_identifier()
+        file_path = self._bedset_path(bedset_id)
+        if os.path.exists(file_path):
+            print(f"{file_path} already exists in cache.")
+        else:
+            with open(file_path, "w") as file:
+                for bedfile in bedset:
+                    bedfile_id = self.add_bed_to_cache(bedfile)
+                    file.write(bedfile_id + "\n")
+        return bedset_id
+
+    def add_bed_to_cache(self, bedfile: RegionSet) -> str:
+        """
+        Add a BED file to the cache
+
+        :param bedfile: the BED file to be added, a BedFile class
+        :return: the identifier if the BedFile object
+        """
+
+        # bedfile_id = bedfile.compute_bed_identifier()
+        bedfile_id = bedfile.compute_bed_identifier()
+        file_path = self._bedfile_path(bedfile_id)
+        if os.path.exists(file_path):
+            print(f"{file_path} already exists in cache.")
+        else:
+            if bedfile.path is None:
+                # write the regions to .bed.gz file
+                with gzip.open(file_path, "wt") as f:
+                    for region in bedfile:
+                        f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+
+            else:
+                # copy the BED file out of cache
+                if is_gzipped(bedfile.path):
+                    shutil.copyfile(bedfile.path, file_path)
+                else:
+                    # https://docs.python.org/3/library/gzip.html
+                    with open(bedfile.path, "rb") as f_in:
+                        with gzip.open(file_path, "wb") as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+
+        return bedfile_id
+
+    def seek(self, identifier: str) -> str:
+        """
+        Get local path to BED file or BED set with specific identifier
+
+        :param identifier: the unique identifier
+        :return: the local path of the file
+        """
+
+        # check if any BED set has that identifier
+        file_path = self._bedset_path(identifier)
+        if os.path.exists(file_path):
+            return file_path
+        # check if any BED file has that identifier
+        else:
+            file_path = self._bedfile_path(identifier)
+            if os.path.exists(file_path):
+                return file_path
+            # return message if the id is not cached
+            else:
+                return f"{identifier} does not exist in cache."
+
+    def _bedset_path(self, bedset_id: str) -> str:
+        """
+        Get the path of a BED set's .txt file with given identifier
+
+        :param bedset_id: the identifier of BED set
+        :return: the path to the .txt file
+        """
+
+        subfolder_name = DEFAULT_BEDSET_SUBFOLDER
+        file_extension = DEFAULT_BEDSET_EXT
+
+        return self._cache_path(bedset_id, subfolder_name, file_extension)
+
+    def _bedfile_path(self, bedfile_id: str) -> str:
+        """
+        Get the path of a BED file's .bed.gz file with given identifier
+
+        :param bedfile_id: the identifier of BED set
+        :return: the path to the .bed.gz file
+        """
+
+        subfolder_name = DEFAULT_BEDFILE_SUBFOLDER
+        file_extension = DEFAULT_BEDFILE_EXT
+
+        return self._cache_path(bedfile_id, subfolder_name, file_extension)
+
+    def _cache_path(self, identifier: str, subfolder_name: str, file_extension: str) -> str:
+        """
+        Get the path of a file in cache folder
+
+        :param identifier: the identifier of BED set or BED file
+        :param subfolder_name: "bedsets" or "bedfiles"
+        :param file_extension: ".txt" or ".bed.gz"
+        :return: the path to the file
+        """
+        filename = f"{identifier}{file_extension}"
+        folder_name = os.path.join(self.cache_folder, subfolder_name, identifier[0], identifier[1])
+
+        self.create_cache_folder(folder_name)
+        return os.path.join(folder_name, filename)
+
+    def remove_bedfile_from_cache(self, bedfile_id: str):
+        """
+        Remove a BED file from cache
+
+        :param bedfile_id: the identifier of BED file
+        """
+        file_path = self.seek(bedfile_id)
+        if "does not" in file_path:
+            print(file_path)
+        else:
+            self._remove(file_path)
+
+    def remove_bedset_from_cache(self, bedset_id: str, remove_bed_files: bool = False):
+        """
+        Remove a BED set from cache
+
+        :param bedset_id: the identifier of BED set
+        :param remove_bed_files: whether also remove BED files in the BED set
+        """
+        file_path = self.seek(bedset_id)
+        if "does not" in file_path:
+            print(file_path)
+        else:
+            if remove_bed_files:
+                with open(file_path, "r") as file:
+                    extracted_data = file.readlines()
+                for bedfile_id in extracted_data:
+                    self.remove_bed_files(bedfile_id)
+
+            self._remove(file_path)
+
+    def _remove(self, file_path: str):
+        """
+        Remove a file within the cache with given path, and remove empty subfolders after removal
+        Structure of folders in cache:
+        cache_folder
+            bedfiles
+                a/b/ab1234xyz.bed.gz
+            ..
+            bedsets
+                c/d/cd123hij.txt
+
+        :param file_path: the path to the file
+        """
+        # the subfolder that matches the second digit of the identifier
+        sub_folder_2 = os.path.split(file_path)[0]
+        # the subfolder that matches the first digit of the identifier
+        sub_folder_1 = os.path.split(sub_folder_2)[0]
+
+        os.remove(file_path)
+
+        # if the subfolders are empty after removal, remove the folders too
+        if len(os.listdir(sub_folder_2)) == 0:
+            os.rmdir(sub_folder_2)
+            if len(os.listdir(sub_folder_1)) == 0:
+                os.rmdir(sub_folder_1)
