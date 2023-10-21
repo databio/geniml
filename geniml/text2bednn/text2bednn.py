@@ -4,6 +4,7 @@ from typing import Union
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+
 from huggingface_hub import hf_hub_download
 
 from ..const import PKG_NAME
@@ -263,13 +264,21 @@ class Text2BEDSearchInterface(object):
 
     def nl_vec_search(
         self, query: Union[str, np.ndarray], k: int = 10
-    ) -> Tuple[Union[List[int], List[List[int]]], Union[List[float], List[List[float]]]]:
+    ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
         Given an input natural language, suggest region sets
 
         :param query: searching input string
         :param k: number of results (nearst neighbor in vectors)
-        :return: a list of Qdrant Client search results
+        :return: a list of dictionary that contains the search results in this format:
+        {
+            "id": <id>
+            "score": <score>
+            "payload": {
+                <information of the vector>
+            }
+            "vector": [<the vector>]
+        }
         """
 
         # first, get the embedding of the query string
