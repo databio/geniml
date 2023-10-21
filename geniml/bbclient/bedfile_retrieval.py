@@ -56,7 +56,7 @@ class BBClient(BedCacheManager):
                 extracted_data = file.readlines()
         # if the BedSet is not in cache, download it from BEDBase
         else:
-            extracted_data = self._download_bedset_data(bedset_id, file_path)
+            extracted_data = self._download_bedset_data(bedset_id)
             # write the identifiers of BED files in the BedSet to a local .txt file
             with open(file_path, "w") as file:
                 for value in extracted_data:
@@ -75,7 +75,7 @@ class BBClient(BedCacheManager):
 
         :param bedset_id: unique identifier of a BED set
         """
-        bedset_url = BEDSET_URL_PATTERN.format(bedset_api=self.bedbase_api, bedset_id=bedset_id)
+        bedset_url = BEDSET_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedset_id=bedset_id)
         response = requests.get(bedset_url)
         data = response.json()
         extracted_data = [entry[0] for entry in data["data"]]

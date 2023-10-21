@@ -15,8 +15,7 @@ DEFAULT_EMBEDDING_DIM = (100,)
 # default learning rate of Adam optimizer
 DEFAULT_LEARNING_RATE = 0.001
 
-# after patience*epoches if validation loss still not improved
-# training stop
+# if validation loss does not improve after patience*epoches, training stops
 DEFAULT_PATIENCE = 0.2
 
 DEFAULT_VEC2VEC_MODEL_FILE_NAME = "vec2vec.h5"

@@ -47,7 +47,7 @@ def build_regionset_info_list(
     :param metadata_path: path to the metadata file
     :param r2v_model: a Region2VecExModel that can embed region sets
     :param st_model: a SentenceTransformer model that can embed metadata
-    :param with_regions: whether the RegionSet will be added into each dataclass
+    :param with_regions: if false, no RegionSetInfo in the output list will contain the RegionSet object from the bedfile (replaced by None).
     :param bed_vec_necessary: whether the embedding vector of a bed file has to be valid (not None)
     to be included into the list
     :return:
@@ -70,7 +70,7 @@ def build_regionset_info_list(
     bed_folder_index = 0
 
     while metadata_file_index < len(metadata_lines):
-        # end the loop if all bed files has been go over
+        # end loop when all bed files have been processed
         if bed_folder_index == len(file_name_list):
             break
         # read the line of metadata
