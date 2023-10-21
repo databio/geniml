@@ -22,14 +22,19 @@ class Vec2VecFNN(tf.keras.models.Sequential):
 
     def __init__(self, model_path: str = None):
         """
-        initialization
+        Initializate Vec2VecFNN.
 
         :param str model_path: Path to the pre-trained model on huggingface.
         """
         super().__init__()
         # initiate a Sequential model from keras
         if model_path is not None:
-            self._load_from_huggingface(model_path)
+            if os.path.exists(model_path):
+                # load from disk
+                self.load_from_disk(model_path)
+            else:
+                # load from hugging face
+                self.load_from_huggingface(model_path)
 
         # most recent training history
         self.most_recent_train = None
@@ -56,7 +61,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         # output
         self.add(tf.keras.layers.Dense(output_dim))
 
-    def load(self, model_path: str):
+    def load_from_disk(self, model_path: str):
         """
         load pretrained model from disk
 
@@ -76,7 +81,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         for layer in local_model.layers:
             self.add(layer)
 
-    def _load_from_huggingface(
+    def load_from_huggingface(
         self,
         model_repo: str,
         model_file_name: str = DEFAULT_VEC2VEC_MODEL_FILE_NAME,
@@ -89,7 +94,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         :param str model_file_name: The name of the model file - this should almost never be changed.
         """
         model_path = hf_hub_download(model_repo, model_file_name, **kwargs)
-        self.load(model_path)
+        self.load_from_disk(model_path)
 
     def train(
         self,
@@ -228,13 +233,7 @@ class Text2BEDSearchInterface(object):
         if isinstance(vec2vec_model, Vec2VecFNN):
             self.vec2vec = vec2vec_model
         elif isinstance(vec2vec_model, str):
-            if os.path.exists(vec2vec_model):
-                # load from disk
-                self.vec2vec = Vec2VecFNN()
-                self.vec2vec.load(vec2vec_model)
-            else:
-                # load form HF
-                self.vec2vec.Vec2VecFNN(vec2vec_model)
+            self.set_vec2vec(vec2vec_model)
 
         # init search backend
         if isinstance(search_backend, type(None)):
@@ -242,6 +241,14 @@ class Text2BEDSearchInterface(object):
             self.search_backend = HNSWBackend()
         else:
             self.search_backend = search_backend
+
+    def set_vec2vec(self, model_name: str):
+        """
+        With a given model_path or huggingface repo, set the vec2vec model
+
+        :param model_name: the path where the model file is saved, or the hugging face repo
+        """
+        self.vec2vec = Vec2VecFNN(model_name)
 
     def set_sentence_transformer(self, hf_repo: str = DEFAULT_HF_ST_MODEL):
         """
@@ -253,6 +260,7 @@ class Text2BEDSearchInterface(object):
         """
         _LOGGER.info(f"Setting sentence transformer model {hf_repo}")
         self.nl2vec = SentenceTransformer(hf_repo)
+
 
     def nl_vec_search(
         self, query: Union[str, np.ndarray], k: int = 10

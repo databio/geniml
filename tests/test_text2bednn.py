@@ -186,8 +186,7 @@ def test_data_nn_search_interface(
     v2vnn.save(local_model_path, save_format="h5")
 
     # load pretrained file
-    new_e2nn = Vec2VecFNN()
-    new_e2nn.load(local_model_path)
+    new_e2nn = Vec2VecFNN(local_model_path)
 
     # testing if the loaded model is same as previously saved model
     map_vec_1 = v2vnn.embedding_to_embedding(testing_input)
