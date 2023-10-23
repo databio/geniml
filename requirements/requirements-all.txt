@@ -1,11 +1,12 @@
 gensim
-genomicranges
+genomicranges >= 0.3.6
 logmuse
 matplotlib
 hnswlib
 numba
 numpy >= 1.24.0
 paramiko >= 3.0.0
+peppy
 pyBigWig
 pyyaml
 scanpy
