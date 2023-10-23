@@ -8,12 +8,14 @@ from sklearn.model_selection import train_test_split
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
-# from geniml.text2bednn.utils import build_regionset_info_list  # data_split,
-from geniml.text2bednn.utils import (bioGPT_sentence_transformer,
-                                     build_regionset_info_list,
-                                     prepare_vectors_for_database,
-                                     region_info_list_to_vectors,
-                                     vectors_from_backend)
+from geniml.text2bednn.utils import (
+    bioGPT_sentence_transformer,
+    build_regionset_info_list_from_files,
+    build_regionset_info_list_from_PEP,
+    prepare_vectors_for_database,
+    region_info_list_to_vectors,
+    vectors_from_backend,
+)
 
 
 @pytest.fixture
@@ -130,6 +132,24 @@ def testing_input_biogpt():
     return np.random.random((1024,))
 
 
+@pytest.fixture
+def yaml_path():
+    return "./data/testing_hg38.yaml"
+
+
+@pytest.fixture
+def col_names():
+    return [
+        "tissue",
+        "cell_line",
+        "tissue_lineage",
+        "tissue_description",
+        "diagnosis",
+        "sample_name",
+        "antibody",
+    ]
+
+
 def test_data_nn_search_interface(
     bed_folder,
     metadata_path,
@@ -160,7 +180,7 @@ def test_data_nn_search_interface(
             assert np.array_equal(nl_embedding, X[i])
 
     # construct a list of RegionSetInfo
-    ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, st_model)
+    ri_list = build_regionset_info_list_from_files(bed_folder, metadata_path, r2v_model, st_model)
     assert len(ri_list) == len(os.listdir(bed_folder))
 
     # split the RegionSetInfo list to training, validating, and testing set
@@ -172,8 +192,6 @@ def test_data_nn_search_interface(
     assert isinstance(train_Y, np.ndarray)
     assert train_X.shape[1] == 384
     assert train_Y.shape[1] == 100
-    assert train_X[0].shape == (384,)
-    assert train_Y[0].shape == (100,)
 
     # fit the Vec2VecFNN model
     v2vnn = Vec2VecFNN()
@@ -233,11 +251,10 @@ def test_bioGPT_embedding_and_searching(
     # test the vec2vec with BioGPT emcoding metadata
     biogpt_st = bioGPT_sentence_transformer()
 
-    ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, biogpt_st)
+    ri_list = build_regionset_info_list_from_files(bed_folder, metadata_path, r2v_model, biogpt_st)
     assert len(ri_list) == len(os.listdir(bed_folder))
 
     # split the RegionSetInfo list to training, validating, and testing set
-    # train_list, test_list = train_test_split(ri_list, test_size=0.15)
     train_list, validate_list = train_test_split(ri_list, test_size=0.2)
     train_X, train_Y = region_info_list_to_vectors(train_list)
     validate_X, validate_Y = region_info_list_to_vectors(validate_list)
@@ -246,3 +263,15 @@ def test_bioGPT_embedding_and_searching(
     biogpt_v2v.train(train_X, train_Y, validating_data=(validate_X, validate_Y), num_epochs=50)
     map_vec_biogpt = biogpt_v2v.embedding_to_embedding(testing_input_biogpt)
     assert map_vec_biogpt.shape == (100,)
+
+
+def test_read_from_PEP(yaml_path, col_names, r2v_model, st_model):
+    """
+    The yaml file in the te
+    """
+    ri_list = build_regionset_info_list_from_PEP(yaml_path, col_names, r2v_model, st_model)
+    X, Y = region_info_list_to_vectors(ri_list)
+    assert isinstance(X, np.ndarray)
+    assert isinstance(Y, np.ndarray)
+    assert X.shape[1] == 384
+    assert Y.shape[1] == 100

@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
+import peppy
 from sentence_transformers import SentenceTransformer, models
 
 from ..const import PKG_NAME
@@ -30,7 +31,59 @@ class RegionSetInfo:
     region_set_embedding: np.ndarray  # the embedding vector of region set
 
 
-def build_regionset_info_list(
+def build_regionset_info_list_from_PEP(
+    yaml_path: str,
+    col_names: List[str],
+    r2v_model: Region2VecExModel,
+    st_model: SentenceTransformer,
+    with_regions: bool = False,
+    bed_vec_necessary: bool = True,
+) -> List[RegionSetInfo]:
+    """
+    With each bed file and its metadata and from a Portable Encapsulated Projects (PEP),
+    create a RegionSetInfo with each, and return the list containing all.
+
+    :param yaml_path: the path to the yaml file, which is the metadata validation framework of the PEP
+    :param col_names: the name of needed columns in the metadata csv
+    :param r2v_model: a Region2VecExModel that can embed region sets
+    :param st_model: a SentenceTransformer model that can embed metadata
+    :param with_regions: if false, no RegionSetInfo in the output list will contain the RegionSet object from the bedfile (replaced by None).
+    :param bed_vec_necessary: whether the embedding vector of a bed file has to be valid (not None)
+    to be included into the list
+    """
+
+    output_list = []
+    project = peppy.Project(yaml_path)
+    # assure the column list is not empty
+    if len(col_names) == 0:
+        _LOGGER.error(
+            "ValueError: please give the name of at least one column in the metadata csv"
+        )
+    for sample in project.samples:
+        # get the path to the bed file
+        bed_file_path = sample.output_file_path
+        if not os.path.exists(bed_file_path):
+            _LOGGER.warning(f"Warning: {bed_file_path}' does not exist")
+            continue
+        bed_file_name = os.path.split(bed_file_path)[1]
+        # get the metadata
+        bed_metadata = ";".join(sample[col] for col in col_names if sample[col] is not None)
+        region_set = RegionSet(bed_file_path)
+        metadata_embedding = st_model.encode(bed_metadata)
+        region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
+        if region_set_embedding is None and bed_vec_necessary:
+            _LOGGER.warning(f"Warning: {bed_file_name}'s embedding is None, exclude from dataset")
+            continue
+        if not with_regions:
+            region_set = None
+        bed_metadata_dc = RegionSetInfo(
+            bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
+        )
+        output_list.append(bed_metadata_dc)
+    return output_list
+
+
+def build_regionset_info_list_from_files(
     bed_folder: str,
     metadata_path: str,
     r2v_model: Region2VecExModel,
@@ -40,7 +93,6 @@ def build_regionset_info_list(
 ) -> List[RegionSetInfo]:
     """
     With each bed file in the given folder and its matching metadata from the metadata file,
-
     create a RegionSetInfo with each, and return the list containing all.
 
     :param bed_folder: folder where bed files are stored
@@ -103,7 +155,7 @@ def build_regionset_info_list(
         metadata_file_index += 1
         # print a message if not all bed files are matched to metadata rows
     if metadata_file_index < bed_folder_index:
-        _LOGGER.info(
+        _LOGGER.warning(
             "An incomplete list will be returned, some files cannot be matched to any rows by first column"
         )
 
