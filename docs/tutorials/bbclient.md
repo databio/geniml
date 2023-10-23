@@ -1,37 +1,34 @@
 # BED File Retrieval and Processing
 
-This client downloads, processes, and caches BED files from the BEDbase API and converts them into a GenomicRanges object. It provides various commands to interact with BED files, including downloading individual files, downloading BEDsets, processing local BED files, and processing BED file identifiers.
+This client downloads, processes, and caches BED files and BED sets from the BEDbase API and converts them into a GenomicRanges or GenomicRangesList object. It provides various commands to interact with BED files, including downloading individual files, downloading BEDsets, processing local BED files, and processing BED file identifiers.
 
 ## Usage
 
 ###
 ```python
-import geniml
+from geniml.bbclient import BBClient
+from geniml.io import RegionSet
 ```
 
-### Create an Instance of the BedProcessor Class:
+### Create an Instance of the BBClient Class:
 
 ```python
-bbc = geniml.bbclient.bedfile_retrieval
-bbc_processor = bbc.BedProcessor(cache_folder="<cache_folder_path>")
+bbc = BBClient(cache_folder="<cache_folder_path>", bedbase_api="<bedbase_api>")
 ```
 
-### Process a Local BED File
-```python 
-bbc_processor.process_local_bed_data("<local_bed_file_path>")
+### Cache a Local BED File
+```python
+bbclient.add_bed_to_cache(RegionSet("<local_bed_file_path>"))
 ```
+
 ### Download a BEDset
 ```python
-bbc_processor.download_bedset_data("<bed_identifier>")
+bedset = bbclient.load_bedset("<bed_identifier>")
 ```
 
-### Download and Process a BED Region
-```python
-result = bed_processor.download_and_process_bed_region_data("<bed_identifier>", "<chr_num>", <start>, <end>)
-```
 ### Download and Process BED File Identifiers
 ```python
-result = bed_processor.process_identifiers(<input_identifier(s)>)
+regionset = bbclient.load_bed(<input_identifier(s)>)
 ```
 
 ## For command line usage, run the CLI with appropriate subcommands and arguments as described below:
@@ -78,6 +75,15 @@ Replace <bedset_identifier> with the identifier of the BEDset you want to downlo
 ### Cache Folder
 
 By default, the downloaded and processed BED files are cached in the bed_cache folder. You can specify a different cache folder using the --cache-folder argument.
+The cache folder has this structure:
+```
+cache_folder
+  bedfiles
+    a/b/ab1234xyz.bed.gz
+    ..
+  bedsets
+    c/d/cd123hij.txt
+```
 
 
 ### Dependencies
