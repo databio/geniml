@@ -51,13 +51,13 @@ class Word2Vec(nn.Module):
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
         self.projection = nn.Embedding(vocab_size, embedding_dim)
-        self.hidden = nn.Linear(embedding_dim, hidden_dim)
-        self.output = nn.Linear(hidden_dim, vocab_size)
+        # self.hidden = nn.Linear(embedding_dim, hidden_dim)
+        self.output = nn.Linear(embedding_dim, vocab_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.projection(x)
         x = torch.sum(x, dim=1)
-        x = F.relu(self.hidden(x))
+        # x = F.relu(self.hidden(x))
         x = self.output(x)
         # we use CrossEntropyLoss which combines LogSoftmax and NLLLoss
         return x
@@ -290,14 +290,10 @@ class Region2VecExModel:
 
         # create the dataset of windows
         _LOGGER.info("Generating contexts and targets.")
-        contexts, targets = generate_window_training_data(
+        samples = generate_window_training_data(
             tokens, window_size, n_shuffles, min_count, padding_value=_padding_token.id
         )
-        dataset = Region2VecDataset(
-            # create int tenors of contexts and targets
-            torch.tensor(contexts, dtype=torch.long),
-            torch.tensor(targets, dtype=torch.long),
-        )
+        dataset = Region2VecDataset(samples)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
         # init the optimizer
