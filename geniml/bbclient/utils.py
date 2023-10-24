@@ -7,7 +7,6 @@ from typing import Optional
 import os
 
 
-
 class BedCacheManager:
     def __init__(self, cache_folder: str):
         self.cache_folder = cache_folder
@@ -59,23 +58,24 @@ class BedCacheManager:
         gr = genomicranges.from_pandas(df)
 
         return gr
-    
+
 
 def bedset_to_grangeslist(bedset: BedSet) -> genomicranges.GenomicRangesList:
-        """Convert a bedset into a GenomicRangesList object"""
-        gr_dict = {}  # Create empty dict to store GenomicRanges objects
-        
-        bed_identifiers = self.read_bed_identifiers_from_file(bedset_identifier)
+    """Convert a bedset into a GenomicRangesList object"""
+    gr_dict = {}  # Create empty dict to store GenomicRanges objects
 
-        for bed_identifier in bed_identifiers:
-            gr = self.process_bed_file(bed_identifier)
-            gr_dict[bed_identifier] = gr
-            print(f"Processed {bed_identifier}")
-            print(gr)
+    bed_identifiers = self.read_bed_identifiers_from_file(bedset_identifier)
 
-            # Create a GenomicRangesList object from the dictionary
-            grl = genomicranges.GenomicRangesList(**gr_dict)
-            return grl
+    for bed_identifier in bed_identifiers:
+        gr = self.process_bed_file(bed_identifier)
+        gr_dict[bed_identifier] = gr
+        print(f"Processed {bed_identifier}")
+        print(gr)
+
+        # Create a GenomicRangesList object from the dictionary
+        grl = genomicranges.GenomicRangesList(**gr_dict)
+        return grl
+
 
 # QUESTION: should this move to the RegionSet object?
 def regionset_to_granges(regionset: RegionSet) -> genomicranges.GenomicRanges:
@@ -85,6 +85,7 @@ def regionset_to_granges(regionset: RegionSet) -> genomicranges.GenomicRanges:
         gr = self.decompress_and_convert_to_genomic_ranges(bed_data)
 
         return gr
+
 
 def read_bedset_file(file_path: str) -> List[str]:
     """Load a bedset from a text file"""
