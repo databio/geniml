@@ -12,6 +12,7 @@ from .tokenization.cli import build_subparser as tokenization_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
 from .scembed.argparser import build_argparser as scembed_subparser
 from .bedspace.cli import build_argparser as bedspace_subparser
+from .bbclient.cli import build_subparser as bbclient_subparser
 
 from ._version import __version__
 
@@ -35,14 +36,15 @@ def build_argparser():
 
     # Individual subcommands
     msg_by_cmd = {
-        "build-universe": "Build a consensus peak set using one of provided model",
-        "lh": "Make likelihood model",
         "assess-universe": "Assess a universe",
-        "scembed": "Embed single-cell data as region vectors",
-        "region2vec": "Train a region2vec model",
-        "tokenize": "Tokenize BED files",
-        "eval": "Evaluate a set of region embeddings",
+        "bbclient": "Client for the BEDbase server",
         "bedspace": "Coembed regionsets (bed files) and labels",
+        "build-universe": "Build a consensus peak set using one of provided model",
+        "eval": "Evaluate a set of region embeddings",
+        "lh": "Make likelihood model",
+        "region2vec": "Train a region2vec model",
+        "scembed": "Embed single-cell data as region vectors",
+        "tokenize": "Tokenize BED files",
     }
 
     sp = parser.add_subparsers(dest="command")
@@ -51,14 +53,15 @@ def build_argparser():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
     # build up subparsers for modules
-    subparsers["build-universe"] = universe_subparser(subparsers["build-universe"])
     subparsers["assess-universe"] = assess_subparser(subparsers["assess-universe"])
-    subparsers["lh"] = likelihood_subparser(subparsers["lh"])
-    subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
-    subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
-    subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
-    subparsers["eval"] = eval_subparser(subparsers["eval"])
+    subparsers["bbclient"] = bbclient_subparser(subparsers["bbclient"])
     subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
+    subparsers["build-universe"] = universe_subparser(subparsers["build-universe"])
+    subparsers["eval"] = eval_subparser(subparsers["eval"])
+    subparsers["lh"] = likelihood_subparser(subparsers["lh"])
+    subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
+    subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
+    subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
 
     return parser
 
@@ -108,6 +111,37 @@ def main(test_args=None):
             args.file_no,
             args.force,
         )
+
+    if args.command == "bbclient":
+        if args.subcommand == "local":
+            from .bbclient.cli import process_local_bed_data
+
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            process_local_bed_data(args)
+
+        if args.subcommand == "bedset":
+            from .bbclient.cli import download_bedset
+
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            download_bedset(args)
+
+        if args.subcommand == "region":
+            from .bbclient.cli import download_and_process_bed_region
+
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            download_and_process_bed_region(args)
+
+        if args.subcommand == "identifier":
+            from .bbclient.cli import process_identifier
+
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            process_identifier(args)
+
+        if args.subcommand == "identifiers":
+            from .bbclient.cli import process_identifiers
+
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            process_identifiers(args)
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
