@@ -5,17 +5,17 @@ import pytest
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
 
-from geniml.region2vec.main import Region2VecExModel
+from geniml.io.io import RegionSet
+from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
-from geniml.text2bednn.utils import (
-    bioGPT_sentence_transformer,
-    build_regionset_info_list_from_files,
-    build_regionset_info_list_from_PEP,
-    prepare_vectors_for_database,
-    region_info_list_to_vectors,
-    vectors_from_backend,
-)
+from geniml.text2bednn.utils import (bioGPT_sentence_transformer,
+                                     build_regionset_info_list_from_files,
+                                     build_regionset_info_list_from_PEP,
+                                     prepare_vectors_for_database,
+                                     region_info_list_to_vectors,
+                                     vectors_from_backend)
+from geniml.tokenization.main import InMemTokenizer
 
 
 @pytest.fixture
@@ -35,6 +35,33 @@ def bed_folder():
 
 
 @pytest.fixture
+def universe_path():
+    """
+    :return: the universe file for tokenizer
+    """
+    return "./data/universe.bed"
+
+
+@pytest.fixture
+def tokenizer(universe_path):
+    """
+    :return: a tokenizer
+    """
+    return InMemTokenizer(universe_path)
+
+
+@pytest.fixture
+def r2v_model(bed_folder, tokenizer):
+    """
+    :return: a Region2VecExModel that is trained within very short of time
+    """
+    r2v_model = Region2VecExModel(model_path=None, tokenizer=tokenizer, min_count=1)
+    r2v_model.train([f"{bed_folder}/{name}" for name in os.listdir(bed_folder)], epochs=15)
+
+    return r2v_model
+
+
+@pytest.fixture
 def r2v_hf_repo():
     """
     :return: the huggingface repo of Region2VecExModel
@@ -43,7 +70,7 @@ def r2v_hf_repo():
 
 
 @pytest.fixture
-def r2v_model(r2v_hf_repo):
+def r2v_hf_model(r2v_hf_repo):
     """
     :param r2v_hf_repo:
     :return: the Region2VecExModel
@@ -73,7 +100,6 @@ def local_model_path():
     """
     :return: path to save the Vec2VecFNN model, will be deleted after testing
     """
-    # return "./testing.keras"
     return "./testing_local_model.h5"
 
 
@@ -113,16 +139,6 @@ def k():
 
 
 @pytest.fixture
-def local_idx_path():
-    """
-    :return: local file path to save hnsw index,
-    will be deleted after testing
-    """
-
-    return "./testing_idx.bin"
-
-
-@pytest.fixture
 def testing_input_biogpt():
     """
     :return: a random generated np.ndarray,
@@ -134,11 +150,17 @@ def testing_input_biogpt():
 
 @pytest.fixture
 def yaml_path():
+    """
+    :return: path to the yaml file of testing PEP
+    """
     return "./data/testing_hg38.yaml"
 
 
 @pytest.fixture
 def col_names():
+    """
+    :return: the columns that are needed in the testing PEP's csv for metadata
+    """
     return [
         "tissue",
         "cell_line",
@@ -150,10 +172,44 @@ def col_names():
     ]
 
 
+def test_reading_data(bed_folder, metadata_path, yaml_path, col_names, r2v_model, st_model):
+    """
+    The yaml file in the te
+    """
+    ri_list_PEP = build_regionset_info_list_from_PEP(
+        yaml_path,
+        col_names,
+        r2v_model,
+        st_model,
+    )
+    X, Y = region_info_list_to_vectors(ri_list_PEP)
+    assert isinstance(X, np.ndarray)
+    assert isinstance(Y, np.ndarray)
+    assert X.shape[1] == 384
+    assert Y.shape[1] == 100
+
+    ri_list_file = build_regionset_info_list_from_files(
+        bed_folder, metadata_path, r2v_model, st_model
+    )
+    X, Y = region_info_list_to_vectors(ri_list_file)
+    assert isinstance(X, np.ndarray)
+    assert isinstance(Y, np.ndarray)
+    assert X.shape[1] == 384
+    assert Y.shape[1] == 100
+
+
+@pytest.mark.skipif(
+    "not config.getoption('--r2vhf')",
+    reason="Only run when --r2vhf is given",
+)
+@pytest.mark.skipif(
+    "not config.getoption('--qdrant')",
+    reason="Only run when --qdrant is given",
+)
 def test_data_nn_search_interface(
     bed_folder,
     metadata_path,
-    r2v_model,
+    r2v_hf_model,
     st_model,
     local_model_path,
     testing_input,
@@ -161,7 +217,7 @@ def test_data_nn_search_interface(
     query_term,
     k,
     local_idx_path,
-    testing_input_biogpt,
+    tmp_path_factory,
 ):
     def test_vector_from_backend(search_backend, st_model):
         """
@@ -180,7 +236,9 @@ def test_data_nn_search_interface(
             assert np.array_equal(nl_embedding, X[i])
 
     # construct a list of RegionSetInfo
-    ri_list = build_regionset_info_list_from_files(bed_folder, metadata_path, r2v_model, st_model)
+    ri_list = build_regionset_info_list_from_files(
+        bed_folder, metadata_path, r2v_hf_model, st_model
+    )
     assert len(ri_list) == len(os.listdir(bed_folder))
 
     # split the RegionSetInfo list to training, validating, and testing set
@@ -232,7 +290,9 @@ def test_data_nn_search_interface(
     db_interface.search_backend.qd_client.delete_collection(collection_name=collection)
 
     # construct a search interface with file backend
-    hnsw_backend = HNSWBackend(local_index_path=local_idx_path)
+    temp_data_dir = tmp_path_factory.mktemp("data")
+    temp_idx_path = temp_data_dir / "testing_idx.bin"
+    hnsw_backend = HNSWBackend(local_index_path=temp_idx_path)
     hnsw_backend.load(vectors=embeddings, payloads=labels)
     file_interface = Text2BEDSearchInterface(st_model, v2vnn, hnsw_backend)
 
@@ -241,17 +301,21 @@ def test_data_nn_search_interface(
         assert isinstance(file_search_result[i], dict)
 
     test_vector_from_backend(file_interface.search_backend, st_model)
-    # remove local hnsw index
-    os.remove(local_idx_path)
 
 
+@pytest.mark.skipif(
+    "not config.getoption('--r2vhf')",
+    reason="Only run when --r2vhf is given",
+)
 def test_bioGPT_embedding_and_searching(
-    bed_folder, metadata_path, r2v_model, testing_input_biogpt
+    bed_folder, metadata_path, r2v_hf_model, testing_input_biogpt
 ):
     # test the vec2vec with BioGPT emcoding metadata
     biogpt_st = bioGPT_sentence_transformer()
 
-    ri_list = build_regionset_info_list_from_files(bed_folder, metadata_path, r2v_model, biogpt_st)
+    ri_list = build_regionset_info_list_from_files(
+        bed_folder, metadata_path, r2v_hf_model, biogpt_st
+    )
     assert len(ri_list) == len(os.listdir(bed_folder))
 
     # split the RegionSetInfo list to training, validating, and testing set
@@ -263,15 +327,3 @@ def test_bioGPT_embedding_and_searching(
     biogpt_v2v.train(train_X, train_Y, validating_data=(validate_X, validate_Y), num_epochs=50)
     map_vec_biogpt = biogpt_v2v.embedding_to_embedding(testing_input_biogpt)
     assert map_vec_biogpt.shape == (100,)
-
-
-def test_read_from_PEP(yaml_path, col_names, r2v_model, st_model):
-    """
-    The yaml file in the te
-    """
-    ri_list = build_regionset_info_list_from_PEP(yaml_path, col_names, r2v_model, st_model)
-    X, Y = region_info_list_to_vectors(ri_list)
-    assert isinstance(X, np.ndarray)
-    assert isinstance(Y, np.ndarray)
-    assert X.shape[1] == 384
-    assert Y.shape[1] == 100
