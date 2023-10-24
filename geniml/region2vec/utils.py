@@ -366,7 +366,7 @@ def shuffle_documents(
     documents: List[List[any]],
     n_shuffles: int,
     threads: int = None,
-) -> List[List[str]]:
+) -> List[List[any]]:
     """
     Shuffle around the genomic regions for each cell to generate a "context".
 
@@ -418,16 +418,15 @@ def make_wv_file_name(model_file_name: str) -> str:
 
 
 class Region2VecDataset(Dataset):
-    def __init__(self, x: torch.Tensor, y: torch.Tensor):
-        self.x = x
-        self.y = y
+    def __init__(self, samples: List[Tuple[List[any], any]]):
+        self.samples = samples
 
     def __len__(self):
-        return len(self.x)
+        return len(self.samples)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> Tuple[List[any], any]:
         # we need to return things as a tensor for proper batching
-        return self.x[idx], self.y[idx]
+        return self.samples[idx]
 
 
 def generate_window_training_data(
@@ -436,7 +435,8 @@ def generate_window_training_data(
     n_shuffles: int = DEFAULT_N_SHUFFLES,
     threads: int = None,
     padding_value: any = 0,
-) -> Tuple[List[List[any]], List[any]]:
+    return_tensor: bool = True,
+) -> List[Tuple[List[any], any]]:
     """
     Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
 
@@ -445,6 +445,7 @@ def generate_window_training_data(
     :param int n_shuffles: The number of shuffles to perform.
     :param int threads: The number of threads to use.
     :param any padding_value: The padding value to use.
+    :param bool return_tensor: Whether or not to return the data as a tensor.
 
     :return Tuple[List[List[any]], List[any]]: The contexts and targets.
     """
@@ -457,8 +458,9 @@ def generate_window_training_data(
 
     # compute the context length (inputs)
     context_len_req = 2 * window_size
-    contexts = []
-    targets = []
+    # contexts = []
+    # targets = []
+    samples = []
     for document in documents:
         for i, target in enumerate(document):
             context = document[max(0, i - window_size) : i] + document[i + 1 : i + window_size + 1]
@@ -467,10 +469,20 @@ def generate_window_training_data(
             if len(context) < context_len_req:
                 context = context + [padding_value] * (context_len_req - len(context))
 
-            contexts.append(context)
-            targets.append(target)
+            # contexts.append(context)
+            # targets.append(target)
+            if return_tensor:
+                samples.append(
+                    (
+                        torch.tensor(context, dtype=torch.long),
+                        torch.tensor(target, dtype=torch.long),
+                    )
+                )
+            else:
+                samples.append((context, target))
 
-    return contexts, targets
+    # return contexts, targets
+    return samples
 
 
 def remove_below_min_count(l: List[Any]) -> List[Any]:
