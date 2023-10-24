@@ -16,6 +16,7 @@ from geniml.region2vec.experimental import (
     Region2VecExModel as Region2VecExModelV2,
 )
 from geniml.tokenization.main import InMemTokenizer, ITTokenizer
+from rich.progress import track
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -435,3 +436,28 @@ def test_save_load_pytorch_exmodel(universe_file: str):
             # just try to remove it, if it doesn't work, then pass, means something
             # else wrong occured up the stack
             pass
+
+
+def test_train_large_model():
+    universe_path = os.path.expandvars(
+        "/Users/nathanleroy/projects.nosync/model-training/region2vec-chipatlas-v2/data/tiles1000.hg38.bed"
+    )
+    data_path = os.path.expandvars("$DATA/genomics/chip-atlas-atac/")
+    model = Region2VecExModelV2(
+        tokenizer=ITTokenizer(universe_path),
+    )
+
+    files = os.listdir(data_path)
+
+    data = []
+    for f in track(files[:100], total=len(files[:100])):
+        if ".bed" in f:
+            try:
+                data.append(RegionSet(os.path.join(data_path, f)))
+            except:
+                pass
+
+    # train the model
+    model.train(data, epochs=100, device="cpu")
+
+    model.export("out")

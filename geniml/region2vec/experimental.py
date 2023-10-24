@@ -280,7 +280,10 @@ class Region2VecExModel:
 
         # gtokenize the data into universe regions (recognized by this model's vocabulary)
         _LOGGER.info("Tokenizing data.")
-        tokens = [self.tokenizer.tokenize(list(rs)) for rs in track(data, total=len(data))]
+        tokens = [
+            self.tokenizer.tokenize(list(rs))
+            for rs in track(data, total=len(data), description="Tokenizing")
+        ]
         tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
 
         _padding_token = self.tokenizer.padding_token()
@@ -290,7 +293,11 @@ class Region2VecExModel:
         contexts, targets = generate_window_training_data(
             tokens, window_size, n_shuffles, min_count, padding_value=_padding_token.id
         )
-        dataset = Region2VecDataset(contexts, targets)
+        dataset = Region2VecDataset(
+            # create int tenors of contexts and targets
+            torch.tensor(contexts, dtype=torch.long),
+            torch.tensor(targets, dtype=torch.long),
+        )
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
         # init the optimizer
