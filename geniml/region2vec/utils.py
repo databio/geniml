@@ -461,7 +461,7 @@ def generate_window_training_data(
     # contexts = []
     # targets = []
     samples = []
-    for document in documents:
+    for document in track(documents, total=len(documents), description="Generating training data"):
         for i, target in enumerate(document):
             context = document[max(0, i - window_size) : i] + document[i + 1 : i + window_size + 1]
 
