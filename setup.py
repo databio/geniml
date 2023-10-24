@@ -38,6 +38,7 @@ setup(
         "geniml.io",
         "geniml.text2bednn",
         "geniml.preprocessing",
+        "geniml.bbclient",
         "geniml.search",
     ],
     version=version,

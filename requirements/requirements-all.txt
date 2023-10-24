@@ -1,6 +1,8 @@
 gensim
+genomicranges
 logmuse
 matplotlib
+hnswlib
 numba
 numpy >= 1.23.0 
 paramiko >= 3.0.0

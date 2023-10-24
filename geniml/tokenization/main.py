@@ -440,7 +440,7 @@ def hard_tokenization_main(
     dst_folder: str,
     universe_file: str,
     fraction: float = 1e-9,
-    file_list: list[str] = None,
+    file_list: List[str] = None,
     num_workers: int = 10,
     bedtools_path: str = "bedtools",
 ) -> int:
