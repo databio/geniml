@@ -244,7 +244,7 @@ class Region2VecExModel:
         learning_rate: float = DEFAULT_INIT_LR,
         learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         loss_fn: torch.nn.modules.loss._Loss = DEFAULT_LOSS_FN,
-        device: torch.device = torch.device("cpu"),
+        device: Union[str, List[str]] = "cpu",
         optimizer_params: dict = {},
         save_model: bool = False,
     ) -> np.ndarray:
@@ -315,10 +315,17 @@ class Region2VecExModel:
         loss_fn = loss_fn()
 
         # move necessary things to the device
-        self._model.to(device)
+        if isinstance(device, list):
+            _LOGGER.info(f"Training on {len(device)} devices.")
+            self._model = nn.DataParallel(self._model, device_ids=device)
+        else:
+            self._model.to(device)
 
         # losses
         losses = []
+
+        # this is ok for parallelism because each GPU will have its own copy of the model
+        tensor_device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
         # train the model for the specified number of epochs
         _LOGGER.info("Training begin.")
@@ -334,8 +341,8 @@ class Region2VecExModel:
                     context, target = batch
 
                     # move to device
-                    context = context.to(device)
-                    target = target.to(device)
+                    context = context.to(tensor_device)
+                    target = target.to(tensor_device)
 
                     # forward pass
                     pred = self._model(context)
