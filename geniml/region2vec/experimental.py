@@ -311,8 +311,9 @@ class Region2VecExModel:
 
         # move necessary things to the device
         if isinstance(device, list):
-            _LOGGER.info(f"Training on {len(device)} devices.")
-            self._model = nn.DataParallel(self._model, device_ids=device)
+            # _LOGGER.info(f"Training on {len(device)} devices.")
+            self._model = nn.DataParallel(self._model, device_ids=device).cuda()
+            self._model = self._model.to(device[0])
         else:
             self._model.to(device)
 
@@ -320,7 +321,10 @@ class Region2VecExModel:
         losses = []
 
         # this is ok for parallelism because each GPU will have its own copy of the model
-        tensor_device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        if isinstance(device, list):
+            tensor_device = device[0]
+        else:
+            tensor_device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # train the model for the specified number of epochs
         _LOGGER.info("Training begin.")
@@ -331,10 +335,8 @@ class Region2VecExModel:
                 for i, batch in enumerate(dataloader):
                     # zero the gradients
                     optimizer.zero_grad()
-
                     # get the context and target
                     context, target = batch
-
                     # move to device
                     context = context.to(tensor_device)
                     target = target.to(tensor_device)
