@@ -484,6 +484,59 @@ def generate_window_training_data(
     # return contexts, targets
     return samples
 
+def generate_window_training_data_wrap(
+    data: List[List[any]],
+    window_size: int = DEFAULT_WINDOW_SIZE,
+    n_shuffles: int = DEFAULT_N_SHUFFLES,
+    threads: int = None,
+    padding_value: any = 0,
+    return_tensor: bool = True,
+) -> List[Tuple[List[any], any]]:
+    """
+    Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
+
+    :param List[any] data: The data to generate the training data from.
+    :param int window_size: The window size to use.
+    :param int n_shuffles: The number of shuffles to perform.
+    :param int threads: The number of threads to use.
+    :param any padding_value: The padding value to use.
+    :param bool return_tensor: Whether or not to return the data as a tensor.
+
+    :return Tuple[List[List[any]], List[any]]: The contexts and targets.
+    """
+    _LOGGER.info("Generating windowed training data.")
+
+    # shuffle the documents
+    documents = shuffle_documents(
+        [[t for t in tokens] for tokens in data], n_shuffles=n_shuffles, threads=threads
+    )
+
+    samples = []
+
+    for document in track(documents, total=len(documents), description="Generating training data"):
+        for i in range(0, window_size):
+            target = document[i] 
+            context = document[i-window_size:] + document[0:i] + document[i+1:i+1+window_size]
+            if return_tensor:
+                samples.append((torch.tensor(context, dtype=torch.long), torch.tensor(target, dtype=torch.long)))
+            else:
+                samples.append((context, target))
+        for i in range(window_size, len(document) - window_size):
+            target = document[i]
+            context = document[i-window_size:i] + document[i+1:i+1+window_size]
+            if return_tensor:
+                samples.append((torch.tensor(context, dtype=torch.long), torch.tensor(target, dtype=torch.long)))
+            else:
+                samples.append((context, target))
+        for i in range(len(document) - window_size, len(document)):
+            target = document[i]
+            context = document[i-window_size:i] + document[i+1:] + document[0:i-len(document)+window_size+1] 
+            if return_tensor:
+                samples.append((torch.tensor(context, dtype=torch.long), torch.tensor(target, dtype=torch.long)))
+            else:
+                samples.append((context, target))
+    
+    return samples
 
 def remove_below_min_count(l: List[Any]) -> List[Any]:
     """
