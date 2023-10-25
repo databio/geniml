@@ -6,7 +6,17 @@ import numpy as np
 import pandas as pd
 from intervaltree import Interval
 
-from .const import *
+from .const import (
+    MAF_CENTER_COL_NAME,
+    MAF_CHROMOSOME_COL_NAME,
+    MAF_END_COL_NAME,
+    MAF_ENTREZ_GENE_ID_COL_NAME,
+    MAF_FILE_DELIM,
+    MAF_HUGO_SYMBOL_COL_NAME,
+    MAF_NCBI_BUILD_COL_NAME,
+    MAF_START_COL_NAME,
+    MAF_STRAND_COL_NAME,
+)
 from .utils import extract_maf_col_positions, is_gzipped
 
 
@@ -89,7 +99,7 @@ class RegionSet(object):
             self.regions = regions
             self.length = len(self.regions)
         else:
-            raise ValueError(f"regions must be a path to a bed file or a list of Region objects")
+            raise ValueError("regions must be a path to a bed file or a list of Region objects")
 
     def __len__(self):
         return self.length
@@ -283,7 +293,7 @@ class Maf(object):
                     if not chr_rep_as_int:
                         maf.chromosome = "chr" + str(maf.chromosome)
         else:
-            raise ValueError(f"mafs must be a path to a maf file")
+            raise ValueError("mafs must be a path to a maf file")
 
     def __len__(self):
         return self.length
