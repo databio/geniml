@@ -5,7 +5,6 @@ from typing import List, Union
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 from rich.progress import Progress
@@ -13,7 +12,6 @@ from torch.utils.data import DataLoader
 from yaml import safe_load, safe_dump
 
 from ..tokenization.main import ITTokenizer, Tokenizer
-from ..models.main import ExModel
 from ..io.io import RegionSet, Region
 from ..const import PKG_NAME
 from .const import (
@@ -283,6 +281,7 @@ class Region2VecExModel:
         tokens = [
             self.tokenizer.tokenize(list(rs))
             for rs in track(data, total=len(data), description="Tokenizing")
+            if len(rs) > 0  # ignore empty region sets
         ]
         tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
 
@@ -326,8 +325,8 @@ class Region2VecExModel:
         # train the model for the specified number of epochs
         _LOGGER.info("Training begin.")
         with Progress() as progress_bar:
-            epoch_tid = progress_bar.add_task(f"Epochs", total=epochs)
-            batches_tid = progress_bar.add_task(f"Batches", total=len(dataloader))
+            epoch_tid = progress_bar.add_task("Epochs", total=epochs)
+            batches_tid = progress_bar.add_task("Batches", total=len(dataloader))
             for epoch in range(epochs):
                 for i, batch in enumerate(dataloader):
                     # zero the gradients
