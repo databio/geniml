@@ -493,7 +493,7 @@ def generate_window_training_data_wrap(
     return_tensor: bool = True,
 ) -> List[Tuple[List[any], any]]:
     """
-    Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
+    Generates the windowed training data by sliding across the region sets. When the sliding window runs into the bounds of the list, it wraps around to the start or end of the array.
 
     :param List[any] data: The data to generate the training data from.
     :param int window_size: The window size to use.
