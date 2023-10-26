@@ -1,10 +1,10 @@
 import os
 from logging import getLogger
-from typing import List, Union
+from typing import Union
 
 import numpy as np
 import scanpy as sc
-from huggingface_hub import hf_hub_download, upload_file, login
+from huggingface_hub import hf_hub_download
 from numba import config
 from rich.progress import track
 
