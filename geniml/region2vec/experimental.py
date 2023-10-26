@@ -48,7 +48,7 @@ class Word2Vec(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
-        self.projection = nn.Embedding(vocab_size, embedding_dim)
+        self.projection = nn.Embedding(vocab_size, embedding_dim, sparse=True)
         # self.hidden = nn.Linear(embedding_dim, hidden_dim)
         self.output = nn.Linear(embedding_dim, vocab_size)
 
