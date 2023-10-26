@@ -6,20 +6,16 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 import argparse
 import glob
 import multiprocessing as mp
-from multiprocessing.queues import Queue
 import random
 import time
+from multiprocessing.queues import Queue
 
 import numpy as np
 from gensim.models import Word2Vec
 from sklearn.linear_model import LinearRegression
 
 from .const import *
-from .utils import (
-    cosine_distance,
-    genome_distance,
-    load_genomic_embeddings,
-)
+from .utils import cosine_distance, genome_distance, load_genomic_embeddings
 
 
 def sample_from_vocab(vocab: list[str], num_samples: int, seed: int = 42) -> list[str]:
