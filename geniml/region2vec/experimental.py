@@ -312,8 +312,8 @@ class Region2VecExModel:
         # move necessary things to the device
         if isinstance(device, list):
             # _LOGGER.info(f"Training on {len(device)} devices.")
-            self._model = nn.DataParallel(self._model, device_ids=device).cuda()
-            self._model = self._model.to(device[0])
+            self._model = nn.DataParallel(self._model)
+            self._model.to(device[0])
         else:
             self._model.to(device)
 
