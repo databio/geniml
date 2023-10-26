@@ -1,7 +1,6 @@
 import os
 
 import torch
-import torch.nn as nn
 from huggingface_hub import hf_hub_download
 from yaml import safe_load
 

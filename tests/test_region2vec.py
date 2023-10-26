@@ -1,6 +1,7 @@
 import os
 from typing import List
 
+import pytest
 import numpy as np
 import torch
 
@@ -8,16 +9,14 @@ import torch
 from geniml.io.io import Region, RegionSet
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.region2vec.pooling import max_pooling, mean_pooling
-from geniml.tokenization.main import InMemTokenizer
+from geniml.tokenization.main import InMemTokenizer, ITTokenizer
 from geniml.utils import wordify_region, wordify_regions
-from geniml.region2vec.pooling import mean_pooling, max_pooling
 from geniml.region2vec.utils import generate_window_training_data
 from geniml.region2vec.experimental import (
     Region2Vec as Region2VecV2,
     Region2VecExModel as Region2VecExModelV2,
 )
-from geniml.tokenization.main import InMemTokenizer, ITTokenizer
-from rich.progress import track
+
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -63,7 +62,7 @@ def region_sets(regions: RegionSet):
 
 @pytest.fixture
 def corpus():
-    return [l.rstrip() for l in open("tests/data/corpus.txt").readlines()]
+    return [line.rstrip() for line in open("tests/data/corpus.txt").readlines()]
 
 
 @pytest.fixture
@@ -119,8 +118,8 @@ def training_data(corpus: List[str], word_to_id: dict, id_to_word: dict, w: int 
 
     # for sanity checks, convert back to words
     # this is used in the testing only
-    contexts_as_words = [[id_to_word[i] for i in c] for c in contexts]
-    targets_as_words = [id_to_word[i] for i in targets]
+    _contexts_as_words = [[id_to_word[i] for i in c] for c in contexts]
+    _targets_as_words = [id_to_word[i] for i in targets]
 
     return Word2VecDataset(contexts, targets)
 
@@ -149,7 +148,7 @@ def test_train_region2vec(region_sets: List[RegionSet]):
 
     model.train(region_sets, epochs=100)
 
-    assert model.trained == True
+    assert model.trained is True
 
     # make sure all regions in region_sets are in the vocabulary
     for region_set in region_sets:
@@ -221,7 +220,7 @@ def test_train_exmodel(region_sets: List[RegionSet], universe_file: str):
         assert model_loaded is not None
         for region_set in region_sets:
             for region in region_set:
-                region_word = wordify_region(region)
+                _region_word = wordify_region(region)
                 assert len(model_loaded.wv) > 0
 
     finally:
@@ -375,7 +374,7 @@ def test_r2v_pytorch_train(training_data: Word2VecDataset, word_to_id: dict):
         print(f"Epoch {epoch + 1} loss: {loss.item()}")
 
     assert len(losses) == epochs
-    assert all([isinstance(l, float) for l in losses])
+    assert all([isinstance(loss, float) for loss in losses])
     assert losses[0] > losses[-1]  # loss should decrease over time
 
 
@@ -433,9 +432,10 @@ def test_save_load_pytorch_exmodel(universe_file: str):
             os.remove("tests/data/test_model/universe.bed")
             os.remove("tests/data/test_model/config.yaml")
             os.rmdir("tests/data/test_model/")
-        except:
+        except Exception as e:
             # just try to remove it, if it doesn't work, then pass, means something
             # else wrong occured up the stack
+            print(e)
             pass
 
 

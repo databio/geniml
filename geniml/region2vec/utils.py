@@ -7,23 +7,54 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from random import shuffle
-from typing import Dict, List, Union, Tuple, Any
+from typing import Dict, List, Union, Tuple
 
 import numpy as np
 import torch
+import torch.nn as nn
 from rich.progress import track
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
-from ..io import Region, RegionSet
 from .const import (
     DEFAULT_INIT_LR,
     DEFAULT_MIN_LR,
     MODULE_NAME,
     DEFAULT_WINDOW_SIZE,
     DEFAULT_N_SHUFFLES,
+    DEFAULT_NS_POWER,
 )
 
 _LOGGER = logging.getLogger(MODULE_NAME)
+
+
+class NegativeSampler:
+    def __init__(
+        self, freq_dist: torch.Tensor, power: float = DEFAULT_NS_POWER, batch_size: int = None
+    ):
+        """
+        Initialize the negative sampler.
+
+        :param torch.Tensor freq_dist: List of frequencies for each token. Must be normalized.
+        :param float power: The power to use for the negative sampling. It is not recommended to change this.
+        """
+        self.dist = freq_dist**power
+        self.dist /= self.dist.sum()
+        self.power = power
+        self.batch_size = batch_size
+
+    def sample(self, k: int = 5, batch_size: int = None) -> torch.Tensor:
+        """
+        Sample from the negative sampler.
+
+        :param int k: The number of samples to draw.
+        """
+        batch_size = batch_size or self.batch_size
+        if batch_size is None:
+            raise ValueError(
+                "Must provide batch_size to sample from negative sampler. This can be set in the constructor or in the sample method."
+            )
+        negative_samples = torch.multinomial(self.dist, batch_size * k, replacement=True)
+        return negative_samples.view(batch_size, k)
 
 
 def prRed(skk: str) -> None:
@@ -375,10 +406,10 @@ def shuffle_documents(
     :param int threads: The number of threads to use for shuffling.
     """
 
-    def shuffle_list(l: List[any], n: int) -> List[any]:
+    def shuffle_list(list: List[any], n: int) -> List[any]:
         for _ in range(n):
-            shuffle(l)
-        return l
+            shuffle(list)
+        return list
 
     _LOGGER.debug(f"Shuffling documents {n_shuffles} times.")
     shuffled_documents = documents.copy()
@@ -485,11 +516,56 @@ def generate_window_training_data(
     return samples
 
 
-def remove_below_min_count(l: List[Any]) -> List[Any]:
+def generate_frequency_distribution(tokens: List[List[int]], vocab_length: int) -> torch.Tensor:
     """
-    Remove elements from a list that fall below the minimum count.
+    Generate the frequency distribution of the tokens.
+
+    :param List[List[int]] tokens: The tokens to generate the frequency distribution from.
     """
-    counts = {}
-    for e in l:
-        counts[e] = counts.get(e, 0) + 1
-    return [e for e in l if counts[e] > 1]
+    tokens_flat = [t for tokens in tokens for t in tokens]
+
+    # create a tensor of all zeros with the length of the vocabulary
+    freq_dist = torch.zeros(vocab_length, dtype=torch.float)
+
+    # count the number of times each token appears
+    for token in track(
+        tokens_flat, total=len(tokens_flat), description="Generating frequency distribution"
+    ):
+        freq_dist[token] += 1
+
+    # normalize the frequency distribution
+    freq_dist /= freq_dist.sum()
+
+    return freq_dist
+
+
+# negative sampling loss
+class NSLoss(nn.Module):
+    def __init__(self):
+        super(NSLoss, self).__init__()
+
+    def forward(self, input, target, negative_samples):
+        """
+        :param torch.Tensor input: The input tensor. This is an embedding vector.
+        :param torch.Tensor target: The target tensor. This is an embedding vector.
+        :param torch.Tensor negative_samples: The negative samples tensor. This is a matrix of embedding vectors.
+        """
+        # get the batch size
+        batch_size = input.shape[0]
+
+        # compute the positive score
+        pos_score = torch.bmm(input.view(batch_size, 1, -1), target.view(batch_size, -1, 1)).view(
+            batch_size, 1
+        )
+
+        # compute the negative score
+        neg_score = torch.bmm(
+            input.view(batch_size, 1, -1), negative_samples.view(batch_size, -1, 1)
+        ).view(batch_size, -1)
+
+        # compute the loss
+        loss = torch.mean(
+            torch.log(torch.sigmoid(pos_score)) + torch.log(1 - torch.sigmoid(neg_score))
+        )
+
+        return -loss

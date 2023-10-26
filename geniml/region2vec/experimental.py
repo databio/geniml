@@ -17,47 +17,44 @@ from ..const import PKG_NAME
 from .const import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_EMBEDDING_SIZE,
-    DEFAULT_HIDDEN_DIM,
     DEFAULT_EPOCHS,
     DEFAULT_WINDOW_SIZE,
     DEFAULT_MIN_COUNT,
     DEFAULT_N_SHUFFLES,
     DEFAULT_OPTIMIZER,
-    DEFAULT_LOSS_FN,
     DEFAULT_INIT_LR,
     CONFIG_FILE_NAME,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
 )
-from .utils import generate_window_training_data, Region2VecDataset
+from .utils import (
+    generate_window_training_data,
+    Region2VecDataset,
+    NegativeSampler,
+    NSLoss,
+    generate_frequency_distribution,
+)
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
 class Word2Vec(nn.Module):
     """
-    Word2Vec model. This is the CBOW model.
+    Word2Vec model.
     """
 
     def __init__(
         self,
         vocab_size: int,
         embedding_dim: int = DEFAULT_EMBEDDING_SIZE,
-        hidden_dim: int = DEFAULT_HIDDEN_DIM,
     ):
         super().__init__()
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
         self.projection = nn.Embedding(vocab_size, embedding_dim)
-        # self.hidden = nn.Linear(embedding_dim, hidden_dim)
-        self.output = nn.Linear(embedding_dim, vocab_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.projection(x)
-        x = torch.sum(x, dim=1)
-        # x = F.relu(self.hidden(x))
-        x = self.output(x)
-        # we use CrossEntropyLoss which combines LogSoftmax and NLLLoss
         return x
 
 
@@ -66,9 +63,8 @@ class Region2Vec(Word2Vec):
         self,
         vocab_size: int,
         embedding_dim: int = DEFAULT_EMBEDDING_SIZE,
-        hidden_dim: int = DEFAULT_HIDDEN_DIM,
     ):
-        super().__init__(vocab_size, embedding_dim, hidden_dim)
+        super().__init__(vocab_size, embedding_dim)
 
 
 class Region2VecExModel:
@@ -112,7 +108,6 @@ class Region2VecExModel:
             self._model = Word2Vec(
                 len(self.tokenizer),
                 embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
-                hidden_dim=kwargs.get("hidden_dim", DEFAULT_HIDDEN_DIM),
             )
 
     def add_tokenizer(self, tokenizer: Tokenizer, **kwargs):
@@ -241,7 +236,6 @@ class Region2VecExModel:
         optimizer: torch.optim.Optimizer = DEFAULT_OPTIMIZER,
         learning_rate: float = DEFAULT_INIT_LR,
         learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
-        loss_fn: torch.nn.modules.loss._Loss = DEFAULT_LOSS_FN,
         device: Union[str, List[str]] = "cpu",
         optimizer_params: dict = {},
         save_model: bool = False,
@@ -285,15 +279,20 @@ class Region2VecExModel:
         ]
         tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
 
-        _padding_token = self.tokenizer.padding_token()
+        # generate frequency distribution
+        _LOGGER.info("Generating frequency distribution.")
+        freq_dist = generate_frequency_distribution(tokens, len(self._model.vocab_size))
 
         # create the dataset of windows
         _LOGGER.info("Generating contexts and targets.")
+        _padding_token = self.tokenizer.padding_token()
         samples = generate_window_training_data(
             tokens, window_size, n_shuffles, min_count, padding_value=_padding_token.id
         )
         dataset = Region2VecDataset(samples)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+        nsampler = NegativeSampler(freq_dist)
 
         # init the optimizer
         optimizer = optimizer(
@@ -307,7 +306,7 @@ class Region2VecExModel:
             learning_rate_scheduler = learning_rate_scheduler(optimizer)
 
         # init the loss function
-        loss_fn = loss_fn()
+        loss_fn = NSLoss()
 
         # move necessary things to the device
         if isinstance(device, list):
@@ -324,7 +323,7 @@ class Region2VecExModel:
         if isinstance(device, list):
             tensor_device = device[0]
         else:
-            tensor_device = "cuda" if torch.cuda.is_available() else "cpu"
+            tensor_device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
         # train the model for the specified number of epochs
         _LOGGER.info("Training begin.")
@@ -344,7 +343,7 @@ class Region2VecExModel:
                     # forward pass
                     pred = self._model(context)
 
-                    # backward pass
+                    # backward pass - SoftMax is included in the loss function
                     loss = loss_fn(pred, target)
                     loss.backward()
 
