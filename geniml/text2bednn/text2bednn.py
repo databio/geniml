@@ -1,14 +1,18 @@
+import os
 from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import tensorflow as tf
-from sentence_transformers import SentenceTransformer
-from ..search.backends import HNSWBackend, QdrantBackend
 
+from huggingface_hub import hf_hub_download
+
+from ..const import PKG_NAME
+from ..search.backends import HNSWBackend, QdrantBackend
 from .const import *
 from .utils import *
+
+_LOGGER = logging.getLogger(PKG_NAME)
 
 
 class Vec2VecFNN(tf.keras.models.Sequential):
@@ -17,9 +21,22 @@ class Vec2VecFNN(tf.keras.models.Sequential):
     to the embedding vectors of region sets
     """
 
-    def __init__(self):
-        # initiate a Sequential model from keras
+    def __init__(self, model_path: str = None):
+        """
+        Initializate Vec2VecFNN.
+
+        :param str model_path: Path to the pre-trained model on huggingface.
+        """
         super().__init__()
+        # initiate a Sequential model from keras
+        if model_path is not None:
+            if os.path.exists(model_path):
+                # load from disk
+                self.load_from_disk(model_path)
+            else:
+                # load from hugging face
+                self.load_from_huggingface(model_path)
+
         # most recent training history
         self.most_recent_train = None
 
@@ -45,9 +62,9 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         # output
         self.add(tf.keras.layers.Dense(output_dim))
 
-    def load_local_pretrained(self, model_path: str):
+    def load_from_disk(self, model_path: str):
         """
-        load pretrained model from local file
+        load pretrained model from disk
 
         :param model_path: path where the model is saved
         :return:
@@ -65,6 +82,21 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         for layer in local_model.layers:
             self.add(layer)
 
+    def load_from_huggingface(
+        self,
+        model_repo: str,
+        model_file_name: str = DEFAULT_VEC2VEC_MODEL_FILE_NAME,
+        **kwargs,
+    ):
+        """
+        Download pretrained model from huggingface
+
+        :param str model: The name of the model to download (this is the same as the repo name).
+        :param str model_file_name: The name of the model file - this should almost never be changed.
+        """
+        model_path = hf_hub_download(model_repo, model_file_name, **kwargs)
+        self.load_from_disk(model_path)
+
     def train(
         self,
         training_X: np.ndarray,
@@ -74,6 +106,8 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         loss_func: str = DEFAULT_LOSS_NAME,
         num_epochs: int = DEFAULT_NUM_EPOCHS,
         batch_size: int = DEFAULT_BATCH_SIZE,
+        learning_rate: float = DEFAULT_LEARNING_RATE,
+        patience: float = DEFAULT_PATIENCE,
         **kwargs,
     ):
         """
@@ -86,6 +120,9 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         :param loss_func: name of loss function
         :param num_epochs: number of training epoches
         :param batch_size: size of batch for training
+        :param learning_rate: learning rate of optimizer
+        :param patience: the percentage of epoches in which if no validation loss improvement,
+        the training will be stopped
         :param kwargs: see units and layers in add_layers()
         :return:
         """
@@ -106,11 +143,13 @@ class Vec2VecFNN(tf.keras.models.Sequential):
 
         # compile the model
         self.compile(optimizer=opt_name, loss=loss_func)
+        # set the learning rate
+        tf.keras.backend.set_value(self.optimizer.learning_rate, learning_rate)
         # if there is validating data, set early stoppage to prevent over-fitting
         callbacks = None
         if validating_data:
             early_stoppage = tf.keras.callbacks.EarlyStopping(
-                monitor="val_loss", patience=int(num_epochs * 0.25)
+                monitor="val_loss", patience=int(num_epochs * patience)
             )
             callbacks = [early_stoppage]
 
@@ -148,6 +187,7 @@ class Vec2VecFNN(tf.keras.models.Sequential):
         return output_vec
 
     def plot_training_hist(self, save_path: Union[str, None] = None):
+    def plot_training_hist(self, save_path: Union[str, None] = None):
         """
         plot the training & validating loss of the most recent training
         :return:
@@ -174,7 +214,7 @@ class Text2BEDSearchInterface(object):
     def __init__(
         self,
         nl2vec_model: Union[SentenceTransformer, None],
-        vec2vec_model: Union[Vec2VecFNN, None],
+        vec2vec_model: Union[Vec2VecFNN, str, None],
         search_backend: Union[QdrantBackend, HNSWBackend, None],
     ):
         """
@@ -184,34 +224,44 @@ class Text2BEDSearchInterface(object):
         :param vec2vec_model: model that map natural language embedding vectors to region set embedding vectors
         :param search_backend: search backend that can store vectors and perform KNN search
         """
-
+        # load the natural language encoder model
         if isinstance(nl2vec_model, type(None)):
             # default SentenceTransformer model
             self.set_sentence_transformer()
         else:
             self.nl2vec = nl2vec_model
 
-        if isinstance(vec2vec_model, type(None)):
-            # init an empty Vec2VecFNN model if input is None
-            self.vec2vec = Vec2VecFNN()
-        else:
+        # load the vec2vec model
+        if isinstance(vec2vec_model, Vec2VecFNN):
             self.vec2vec = vec2vec_model
+        elif isinstance(vec2vec_model, str):
+            self.set_vec2vec(vec2vec_model)
 
+        # init search backend
         if isinstance(search_backend, type(None)):
             # init a default HNSWBackend if input is None
             self.search_backend = HNSWBackend()
         else:
             self.search_backend = search_backend
 
-    def set_sentence_transformer(self, st_repo: str = DEFAULT_HF_ST_MODEL):
+    def set_vec2vec(self, model_name: str):
+        """
+        With a given model_path or huggingface repo, set the vec2vec model
+
+        :param model_name: the path where the model file is saved, or the hugging face repo
+        """
+        self.vec2vec = Vec2VecFNN(model_name)
+
+    def set_sentence_transformer(self, hf_repo: str = DEFAULT_HF_ST_MODEL):
         """
         With a given huggingface repo, set the nl2vec model as a sentence transformer
 
-        :param st_repo: the hugging face repository of sentence transformer
+        :param hf_repo: the hugging face repository of sentence transformer
         see https://huggingface.co/sentence-transformers
         :return:
         """
-        self.nl2vec = SentenceTransformer(st_repo)
+        _LOGGER.info(f"Setting sentence transformer model {hf_repo}")
+        self.nl2vec = SentenceTransformer(hf_repo)
 
     def nl_vec_search(
         self, query: Union[str, np.ndarray], k: int = 10
@@ -239,10 +289,5 @@ class Text2BEDSearchInterface(object):
         # perform the KNN search among vectors stored in backend
         return self.search_backend.search(search_vector, k)
 
-
-#
-# # Example of how to use the TextToBedNN Search Interface
-#
-# betum = BEDEmbedTUM(RSC, universe, tokenizer)
-# embeddings = betum.compute_embeddings()
-# T2BNNSI = Text2BEDSearchInterface(betum, embeddings)  # ???
+    def __repr__(self):
+        return f"Text2BEDSearchInterface(nl2vec_model={self.nl2vec}, vec2vec_model={self.vec2vec}, search_backend={self.search_backend})"

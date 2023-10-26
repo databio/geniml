@@ -1,7 +1,6 @@
 from rich.progress import track
 
 from ..io import Region
-
 from ..utils import wordify_region
 
 

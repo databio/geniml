@@ -5,14 +5,11 @@ from logging import getLogger
 import numpy as np
 import pandas as pd
 
+from ..const import PKG_NAME
 from .distance import run_distance
 from .intersection import run_intersection
-from .likelihood import (
-    hard_universe_likelihood,
-    likelihood_flexible_universe,
-)
+from .likelihood import hard_universe_likelihood, likelihood_flexible_universe
 from .utils import check_if_uni_flexible
-from ..const import PKG_NAME
 
 _LOGGER = getLogger(PKG_NAME)
 

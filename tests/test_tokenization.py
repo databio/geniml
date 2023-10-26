@@ -1,7 +1,6 @@
 import pytest
 import scanpy as sc
 
-
 from geniml.io.io import Region, RegionSet
 from geniml.tokenization.main import InMemTokenizer, ITTokenizer
 
