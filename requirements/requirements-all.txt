@@ -1,8 +1,9 @@
 gensim
 logmuse
 matplotlib
+hnswlib
 numba
-numpy >= 1.23.0 
+numpy >= 1.24.0
 paramiko >= 3.0.0
 pyBigWig
 pyyaml
@@ -18,4 +19,9 @@ intervaltree
 qdrant_client
 hnswlib
 tensorflow
-sentence_transformers
+torch
+requests>=2.31.0
+sentence-transformers
+gtokenizers
+genomicranges
+rich

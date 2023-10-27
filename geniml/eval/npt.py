@@ -5,8 +5,8 @@ from typing import Union
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 import argparse
 import multiprocessing as mp
-from multiprocessing.queues import Queue
 import time
+from multiprocessing.queues import Queue
 
 import matplotlib.pyplot as plt
 import numpy as np

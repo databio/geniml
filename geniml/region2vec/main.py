@@ -1,25 +1,26 @@
 import multiprocessing
 import os
 from logging import getLogger
-from typing import List, Union, Optional, Literal, Callable
+from typing import Callable, List, Literal, Optional, Union
 
 import numpy as np
-from tqdm import tqdm
+from rich.progress import track
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
 from huggingface_hub.utils._errors import EntryNotFoundError
 from numba import config
+from tqdm import tqdm
 
 from ..io import Region, RegionSet
 from ..models.main import ExModel
 from ..tokenization.main import InMemTokenizer
-from . import utils
 from ..utils import wordify_region, wordify_regions
+from . import utils
 from .const import *
+from .pooling import max_pooling, mean_pooling
 from .region2vec_train import main as region2_train
 from .region_shuffling import main as sent_gen
-from .pooling import mean_pooling, max_pooling
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -302,7 +303,7 @@ class Region2Vec(Word2Vec):
             min_count=self.min_count,
         )
 
-        for shuffle_num in tqdm(range(epochs), total=epochs, desc="Epochs"):
+        for shuffle_num in track(range(epochs), total=epochs, description="Epochs"):
             # update current values
             current_lr = lr_scheduler.get_lr()
             current_loss = self.get_latest_training_loss()
@@ -518,7 +519,9 @@ class Region2VecExModel(ExModel):
         # remove all empty region sets
         region_sets = [
             rs
-            for rs in tqdm(region_sets, total=len(region_sets), desc="Filtering out empty sets.")
+            for rs in track(
+                region_sets, total=len(region_sets), description="Filtering out empty sets."
+            )
             if len(rs) > 0
         ]
 
@@ -584,7 +587,9 @@ class Region2VecExModel(ExModel):
         _LOGGER.info("Tokenizing region sets.")
         region_sets_tokenized = [
             self.tokenizer.tokenize(rs)
-            for rs in tqdm(region_sets, total=len(region_sets), desc="Tokenizing region sets.")
+            for rs in track(
+                region_sets, total=len(region_sets), description="Tokenizing region sets."
+            )
         ]
         region_sets_tokenized = self._filter_empty_region_sets(region_sets_tokenized)
 
@@ -628,7 +633,7 @@ class Region2VecExModel(ExModel):
         regions: Union[str, List[Region], RegionSet, str],
         pool: Union[Literal["mean", "max"], bool, Callable] = False,
         return_none: bool = True,
-    ) -> np.ndarray:
+    ) -> Union[np.ndarray, List[np.ndarray]]:
         """
         Encode the data into a latent space.
 
@@ -638,9 +643,10 @@ class Region2VecExModel(ExModel):
                                                                    If False, will not pool. If callable, will use the callable
                                                                    function to pool the data.
         :param bool return_none: If True, will return None for regions without vectors. If False, will skip such regions. (it is highly recommended to set this to True)
-        :return np.ndarray: The encoded data.
+        :return Union[np.ndarray, List[np.ndarray]]: The encoded data.
         """
         # tokenize the data
+        _LOGGER.info("Tokenize data.")
         regions = self.tokenizer.tokenize(regions)
 
         # encode the data
