@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
 from ..io import RegionSet
 
 if TYPE_CHECKING:

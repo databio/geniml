@@ -1,12 +1,12 @@
 import os
 from logging import getLogger
-from typing import List, Union
+from typing import Union
 
 import numpy as np
 import scanpy as sc
-from huggingface_hub import hf_hub_download, upload_file, login
+from huggingface_hub import hf_hub_download
 from numba import config
-from tqdm import tqdm
+from rich.progress import track
 
 from ..io import Region, RegionSet
 from ..models.main import ExModel
@@ -207,7 +207,7 @@ class ScEmbed(ExModel):
         # encode the data
         _LOGGER.info("Encoding data.")
         enoded_data = []
-        for region_set in tqdm(region_sets, desc="Encoding data", total=len(region_sets)):
+        for region_set in track(region_sets, description="Encoding data", total=len(region_sets)):
             vectors = self._model.forward(region_set)
             # compute the mean of the vectors
             vector = np.mean(vectors, axis=0)

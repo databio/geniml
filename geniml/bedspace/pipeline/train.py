@@ -2,12 +2,7 @@ import logging
 import os
 import subprocess
 
-from ..const import (
-    DEFAULT_DIM,
-    DEFAULT_LEARNING_RATE,
-    DEFAULT_NUM_EPOCHS,
-    PKG_NAME,
-)
+from ..const import DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS, PKG_NAME
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
