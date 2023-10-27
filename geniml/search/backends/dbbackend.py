@@ -49,7 +49,7 @@ class QdrantBackend(EmSearchBackend):
         try:
             collection_info = self.qd_client.get_collection(collection_name=self.collection)
             _LOGGER.info(
-                f"Using collection {self.collection} with {collection_info.points_count} points"
+                f"Using collection {self.collection} with {collection_info.points_count} points."
             )
         except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
             _LOGGER.info(f"Collection {self.collection} does not exist, creating it.")
