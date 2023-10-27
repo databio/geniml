@@ -3,12 +3,23 @@ import os
 from typing import List, Union, NoReturn
 
 import numpy as np
+import pandas as pd
 from intervaltree import Interval
 import genomicranges
 from hashlib import md5
 
-from .const import *
-from .utils import extract_maf_col_positions, is_gzipped, read_bedset_file
+from .const import (
+    MAF_CENTER_COL_NAME,
+    MAF_CHROMOSOME_COL_NAME,
+    MAF_END_COL_NAME,
+    MAF_ENTREZ_GENE_ID_COL_NAME,
+    MAF_FILE_DELIM,
+    MAF_HUGO_SYMBOL_COL_NAME,
+    MAF_NCBI_BUILD_COL_NAME,
+    MAF_START_COL_NAME,
+    MAF_STRAND_COL_NAME,
+)
+from .utils import extract_maf_col_positions, is_gzipped
 
 
 class Region(Interval):
@@ -58,12 +69,29 @@ class RegionSet:
                 with open_func(self.path, mode) as file:
                     self.length = sum(1 for line in file if line.strip())
             else:
-                with open_func(regions, mode) as f:
-                    lines = f.readlines()
-                    for line in lines:
-                        # some bed files have more than 3 columns, so we just take the first 3
-                        chr, start, stop = line.split("\t")[:3]
-                        self.regions.append(Region(chr, int(start), int(stop)))
+                if is_gzipped(regions):
+                    # open with pandas using arrow
+                    df = pd.read_csv(
+                        regions, sep="\t", compression="gzip", header=None, engine="pyarrow"
+                    )
+                    _regions = []
+                    df.apply(
+                        lambda row: _regions.append(Region(row[0], row[1], row[2])),
+                        axis=1,
+                    )
+
+                    self.regions = _regions
+                    self.length = len(self.regions)
+                else:
+                    # open with pandas
+                    df = pd.read_csv(regions, sep="\t", header=None, engine="pyarrow")
+                    _regions = []
+                    df.apply(
+                        lambda row: _regions.append(Region(row[0], row[1], row[2])),
+                        axis=1,
+                    )
+
+                    self.regions = _regions
                     self.length = len(self.regions)
 
         # load from list
@@ -74,6 +102,8 @@ class RegionSet:
             self.length = len(self.regions)
         else:
             raise ValueError(f"regions must be a path to a bed file or a list of Region objects")
+
+        self._identifier = None
 
         self._identifier = None
 
@@ -413,7 +443,7 @@ class Maf:
                     if not chr_rep_as_int:
                         maf.chromosome = "chr" + str(maf.chromosome)
         else:
-            raise ValueError(f"mafs must be a path to a maf file")
+            raise ValueError("mafs must be a path to a maf file")
 
     def __len__(self):
         return self.length
