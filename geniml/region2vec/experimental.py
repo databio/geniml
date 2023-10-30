@@ -336,15 +336,23 @@ class Region2VecExModel:
                     optimizer.zero_grad()
                     # get the context and target
                     context, target = batch
+
                     # move to device
                     context = context.to(tensor_device)
                     target = target.to(tensor_device)
 
-                    # forward pass
-                    pred = self._model(context)
+                    # # forward pass
+                    vw = self._model(target)
+                    vc = self._model(context)
+
+                    # sample negatives
+                    neg_samples = nsampler.sample(target.shape[0], target.shape[1])
+                    neg_samples = neg_samples.to(tensor_device)
+                    vn = self._model(neg_samples)
 
                     # backward pass - SoftMax is included in the loss function
-                    loss = loss_fn(pred, target)
+                    # this is cross entropy now, needs to be negative sampling loss
+                    loss = loss_fn.forward(vc, vn, vw)
                     loss.backward()
 
                     # update parameters
