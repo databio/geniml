@@ -551,11 +551,23 @@ class NSLoss(nn.Module):
         :param torch.Tensor target: The target vectors.
         """
         # there is one target that gets mapped to each context
-        # so we need to "repeat" the target word for each context word
-        target = target.repeat(context.shape[0], 1)
+        target_v_context = target.unsqueeze(1).expand(
+            context.shape[0], context.shape[1], context.shape[2]
+        )
+        target_v_neg = target.unsqueeze(1).expand(
+            negative_samples.shape[0], negative_samples.shape[1], negative_samples.shape[2]
+        )
+
+        # target is now of shape (batch_size, num_context_vectors, embedding_size)
+        # negative_samples is of shape (batch_size, num_negative_samples, embedding_size)
+        # context is of shape (batch_size, num_context_vectors, embedding_size)
 
         # compute the dot product between the context and target
-        pos_loss = torch.log(torch.sigmoid(torch.sum(context * target, dim=1)))
-        neg_loss = torch.log(torch.sigmoid(-torch.sum(negative_samples * target, dim=1)))
+        pos_loss = torch.sum(
+            torch.log(torch.sigmoid(torch.bmm(context, target_v_context.transpose(1, 2))))
+        )
+        neg_loss = torch.sum(
+            torch.log(torch.sigmoid(-torch.bmm(context, target_v_neg.transpose(1, 2))))
+        )
 
         return -(pos_loss + neg_loss)

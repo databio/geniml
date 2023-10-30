@@ -23,6 +23,7 @@ from .const import (
     DEFAULT_N_SHUFFLES,
     DEFAULT_OPTIMIZER,
     DEFAULT_INIT_LR,
+    DEFAULT_NS_K,
     CONFIG_FILE_NAME,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
@@ -235,6 +236,7 @@ class Region2VecExModel:
         checkpoint_path: str = MODEL_FILE_NAME,
         optimizer: torch.optim.Optimizer = DEFAULT_OPTIMIZER,
         learning_rate: float = DEFAULT_INIT_LR,
+        ns_k: int = DEFAULT_NS_K,
         learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         device: Union[str, List[str]] = "cpu",
         optimizer_params: dict = {},
@@ -253,7 +255,7 @@ class Region2VecExModel:
         :param str checkpoint_path: Path to save the model checkpoint to.
         :param torch.optim.Optimizer optimizer: Optimizer to use for training.
         :param float learning_rate: Learning rate to use for training.
-        :param torch.nn.modules.loss._Loss loss_fn: Loss function to use for training.
+        :param int ns_k: Number of negative samples to use.
         :param torch.device device: Device to use for training.
         :param dict optimizer_params: Additional parameters to pass to the optimizer.
         :param bool save_model: Whether or not to save the model.
@@ -281,7 +283,7 @@ class Region2VecExModel:
 
         # generate frequency distribution
         _LOGGER.info("Generating frequency distribution.")
-        freq_dist = generate_frequency_distribution(tokens, len(self._model.vocab_size))
+        freq_dist = generate_frequency_distribution(tokens, self._model.vocab_size)
 
         # create the dataset of windows
         _LOGGER.info("Generating contexts and targets.")
@@ -292,7 +294,7 @@ class Region2VecExModel:
         dataset = Region2VecDataset(samples)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-        nsampler = NegativeSampler(freq_dist)
+        nsampler = NegativeSampler(freq_dist, batch_size=batch_size)
 
         # init the optimizer
         optimizer = optimizer(
@@ -342,11 +344,11 @@ class Region2VecExModel:
                     target = target.to(tensor_device)
 
                     # # forward pass
-                    vw = self._model(target)
                     vc = self._model(context)
+                    vw = self._model(target)
 
                     # sample negatives
-                    neg_samples = nsampler.sample(target.shape[0], target.shape[1])
+                    neg_samples = nsampler.sample(ns_k, batch_size=target.shape[0])
                     neg_samples = neg_samples.to(tensor_device)
                     vn = self._model(neg_samples)
 

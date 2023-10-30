@@ -21,6 +21,7 @@ DEFAULT_PADDING_CHR = "chrPAD"
 DEFAULT_PADDING_START = 0
 DEFAULT_PADDING_END = 0
 DEFAULT_NS_POWER = 0.75  # from Mikolov et al. 2013
+DEFAULT_NS_K = 5  # from Mikolov et al. 2013
 
 CONFIG_FILE_NAME = "config.yaml"
 MODEL_FILE_NAME = "checkpoint.pt"
