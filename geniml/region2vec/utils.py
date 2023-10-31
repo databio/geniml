@@ -539,6 +539,17 @@ class NegativeSampler:
         return negative_samples.view(batch_size, k)
 
 
+class NegativeSampleDataset(Dataset):
+    def __init__(self, samples: torch.Tensor):
+        self.samples = samples
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx) -> torch.Tensor:
+        return self.samples[idx]
+
+
 # negative sampling loss
 class NSLoss(nn.Module):
     def __init__(self):
@@ -564,10 +575,12 @@ class NSLoss(nn.Module):
 
         # compute the dot product between the context and target
         pos_loss = torch.sum(
-            torch.log(torch.sigmoid(torch.bmm(context, target_v_context.transpose(1, 2))))
+            torch.nn.functional.logsigmoid(torch.bmm(context, target_v_context.transpose(1, 2)))
         )
         neg_loss = torch.sum(
-            torch.log(torch.sigmoid(-torch.bmm(context, target_v_neg.transpose(1, 2))))
+            torch.nn.functional.logsigmoid(
+                torch.bmm(-negative_samples, target_v_neg.transpose(1, 2))
+            )
         )
 
         return -(pos_loss + neg_loss)
