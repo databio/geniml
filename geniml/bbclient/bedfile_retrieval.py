@@ -8,10 +8,16 @@ import requests
 
 from ..io import is_gzipped
 from ..io.io import BedSet, RegionSet
-from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
-                    DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
-                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
-                    DEFAULT_BEDSET_SUBFOLDER, MODULE_NAME)
+from .const import (
+    BEDFILE_URL_PATTERN,
+    BEDSET_URL_PATTERN,
+    DEFAULT_BEDBASE_API,
+    DEFAULT_BEDFILE_EXT,
+    DEFAULT_BEDFILE_SUBFOLDER,
+    DEFAULT_BEDSET_EXT,
+    DEFAULT_BEDSET_SUBFOLDER,
+    MODULE_NAME,
+)
 from .utils import BedCacheManager
 
 _LOGGER = getLogger(MODULE_NAME)
@@ -97,7 +103,7 @@ class BBClient(BedCacheManager):
             bed_data = self._download_bed_data(bedfile_id)
             with open(file_path, "wb") as f:
                 f.write(bed_data)
-            _LOGGER.info(F"BED file {bedfile_id} is downloaded and cached successfully")
+            _LOGGER.info(f"BED file {bedfile_id} is downloaded and cached successfully")
 
         return RegionSet(regions=file_path)
 
