@@ -32,6 +32,7 @@ from .utils import (
     generate_window_training_data,
     Region2VecDataset,
     NegativeSampler,
+    NegativeSampleDataset,
     NSLoss,
     generate_frequency_distribution,
 )
@@ -295,6 +296,15 @@ class Region2VecExModel:
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
         nsampler = NegativeSampler(freq_dist, batch_size=batch_size)
+        negative_samples = NegativeSampleDataset(nsampler.sample(ns_k, batch_size=len(samples)))
+        neg = DataLoader(negative_samples, batch_size=batch_size, shuffle=True)
+
+        try:
+            assert len(dataset) == len(negative_samples)
+        except AssertionError:
+            raise RuntimeError(
+                "Number of negative samples must be equal to the number of positive samples. Something went wrong."
+            )
 
         # init the optimizer
         optimizer = optimizer(
@@ -333,28 +343,29 @@ class Region2VecExModel:
             epoch_tid = progress_bar.add_task("Epochs", total=epochs)
             batches_tid = progress_bar.add_task("Batches", total=len(dataloader))
             for epoch in range(epochs):
-                for i, batch in enumerate(dataloader):
-                    # zero the gradients
-                    optimizer.zero_grad()
+                for i, batch in enumerate(zip(dataloader, neg)):
+                    # extract out the context, target, and negative samples
+                    batch, neg_samples = batch
+
                     # get the context and target
                     context, target = batch
+
+                    # zero the gradients
+                    optimizer.zero_grad()
 
                     # move to device
                     context = context.to(tensor_device)
                     target = target.to(tensor_device)
-
-                    # # forward pass
-                    vc = self._model(context)
-                    vw = self._model(target)
-
-                    # sample negatives
-                    neg_samples = nsampler.sample(ns_k, batch_size=target.shape[0])
                     neg_samples = neg_samples.to(tensor_device)
+
+                    # forward pass
+                    vc = self._model(context)
+                    vt = self._model(target)
                     vn = self._model(neg_samples)
 
                     # backward pass - SoftMax is included in the loss function
                     # this is cross entropy now, needs to be negative sampling loss
-                    loss = loss_fn.forward(vc, vn, vw)
+                    loss = loss_fn.forward(vc, vn, vt)
                     loss.backward()
 
                     # update parameters
