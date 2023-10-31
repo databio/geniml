@@ -242,6 +242,7 @@ class Region2VecExModel:
         device: Union[str, List[str]] = "cpu",
         optimizer_params: dict = {},
         save_model: bool = False,
+        export_profile: bool = False,
     ) -> np.ndarray:
         """
         Train the model.
@@ -339,59 +340,77 @@ class Region2VecExModel:
 
         # train the model for the specified number of epochs
         _LOGGER.info("Training begin.")
-        with Progress() as progress_bar:
-            epoch_tid = progress_bar.add_task("Epochs", total=epochs)
-            batches_tid = progress_bar.add_task("Batches", total=len(dataloader))
-            for epoch in range(epochs):
-                for i, batch in enumerate(zip(dataloader, neg)):
-                    # extract out the context, target, and negative samples
-                    batch, neg_samples = batch
+        with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
+            schedule=torch.profiler.schedule(
+                wait=2,
+                warmup=2,
+                active=6,
+                repeat=1,
+            ),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler(checkpoint_path),
+            with_stack=True,
+        ) as profiler:
+            with Progress() as progress_bar:
+                epoch_tid = progress_bar.add_task("Epochs", total=epochs)
+                batches_tid = progress_bar.add_task("Batches", total=len(dataloader))
+                for epoch in range(epochs):
+                    for i, batch in enumerate(zip(dataloader, neg)):
+                        # extract out the context, target, and negative samples
+                        batch, neg_samples = batch
 
-                    # get the context and target
-                    context, target = batch
+                        # get the context and target
+                        context, target = batch
 
-                    # zero the gradients
-                    optimizer.zero_grad()
+                        # zero the gradients
+                        optimizer.zero_grad()
 
-                    # move to device
-                    context = context.to(tensor_device)
-                    target = target.to(tensor_device)
-                    neg_samples = neg_samples.to(tensor_device)
+                        # move to device
+                        context = context.to(tensor_device)
+                        target = target.to(tensor_device)
+                        neg_samples = neg_samples.to(tensor_device)
 
-                    # forward pass
-                    vc = self._model(context)
-                    vt = self._model(target)
-                    vn = self._model(neg_samples)
+                        # forward pass
+                        vc = self._model(context)
+                        vt = self._model(target)
+                        vn = self._model(neg_samples)
 
-                    # backward pass - SoftMax is included in the loss function
-                    # this is cross entropy now, needs to be negative sampling loss
-                    loss = loss_fn.forward(vc, vn, vt)
-                    loss.backward()
+                        # backward pass - SoftMax is included in the loss function
+                        # this is cross entropy now, needs to be negative sampling loss
+                        loss = loss_fn.forward(vc, vn, vt)
+                        loss.backward()
 
-                    # update parameters
-                    optimizer.step()
+                        # update parameters
+                        optimizer.step()
 
-                    # update learning rate if necessary
-                    if learning_rate_scheduler is not None:
-                        learning_rate_scheduler.step()
+                        # update learning rate if necessary
+                        if learning_rate_scheduler is not None:
+                            learning_rate_scheduler.step()
+
+                        # update progress bar
+                        progress_bar.update(batches_tid, completed=i + 1)
+
+                        # step the profiler
+                        profiler.step()
 
                     # update progress bar
-                    progress_bar.update(batches_tid, completed=i + 1)
+                    progress_bar.update(epoch_tid, completed=epoch + 1)
 
-                # update progress bar
-                progress_bar.update(epoch_tid, completed=epoch + 1)
+                    # log out loss
+                    _LOGGER.info(f"Epoch {epoch + 1} loss: {loss.item()}")
+                    losses.append(loss.item())
 
-                # log out loss
-                _LOGGER.info(f"Epoch {epoch + 1} loss: {loss.item()}")
-                losses.append(loss.item())
+            # save after each epoch
+            if save_model:
+                torch.save(self._model.state_dict(), checkpoint_path)
 
         # save the model
         self.trained = True
 
-        if save_model:
-            torch.save(self._model.state_dict(), checkpoint_path)
+        if export_profile:
+            profiler.export_chrome_trace("profile.json")
 
-        return np.array(losses)
+        return np.array(losses), profiler
 
     def export(
         self,
