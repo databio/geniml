@@ -22,3 +22,5 @@ DEFAULT_VEC2VEC_MODEL_FILE_NAME = "vec2vec.h5"
 DEFAULT_PAYLOAD_KEY = "payload"
 DEFAULT_VECTOR_KEY = "vector"
 DEFAULT_METADATA_KEY = "metadata"
+
+MODULE_NAME = "text2bednn"

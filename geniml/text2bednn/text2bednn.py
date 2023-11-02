@@ -6,12 +6,190 @@ import numpy as np
 import tensorflow as tf
 from huggingface_hub import hf_hub_download
 
-from ..const import PKG_NAME
 from ..search.backends import HNSWBackend, QdrantBackend
 from .const import *
 from .utils import *
+import math
 
-_LOGGER = logging.getLogger(PKG_NAME)
+import torch
+
+from torch.nn import Sequential, Linear, ReLU, CosineEmbeddingLoss, CosineSimilarity
+
+import torch.nn.functional as F
+
+_LOGGER = logging.getLogger(MODULE_NAME)
+
+
+class Vec2VecFNNtorch(Sequential):
+    def __init__(self, trained: bool = False):
+        """
+
+        """
+        super(Vec2VecFNNtorch, self).__init__()
+        self.most_recent_train = None
+        self.optimizer = None
+        self.loss = None
+        self.compiling_info = {}
+
+    def add_layers(
+            self, input_dim: int, output_dim: int, num_units: Union[int, List[int]], num_extra_hidden_layers: int
+    ):
+        """
+        Add layers to an empty nn.Sequential model
+        """
+        if isinstance(num_units, list):
+            num_units = [num_units] * (1 + num_extra_hidden_layers)
+
+        if len(num_units) != 1 + num_extra_hidden_layers:
+            _LOGGER.error("ValueError: list of units number does not match number of layers")
+
+        current_layer_units_num = num_units.pop(0)
+        layers_list = [Linear(in_features=input_dim, out_features=current_layer_units_num), ReLU()]
+        previous_layer_units_num = current_layer_units_num
+        for i in range(num_extra_hidden_layers):
+            current_layer_units_num = num_units.pop(0)
+            layers_list.append(Linear(in_features=previous_layer_units_num, out_features=current_layer_units_num))
+            layers_list.append(ReLU())
+            previous_layer_units_num = current_layer_units_num
+        layers_list.append(Linear(in_features=previous_layer_units_num, out_features=output_dim))
+        super(Vec2VecFNNtorch, self).__init__(*layers_list)
+
+    def load_from_disk(self, model_path: str):
+        self.load_state_dict(torch.load(model_path))
+
+    def embedding_to_embedding(self, input_vecs: np.ndarray) -> np.ndarray:
+        """
+        predict the region set embedding from embedding of natural language strings
+
+        :param input_vecs:
+        :return:
+        """
+        # pytorch tensor's default dtype is float 32
+        if not isinstance(input_vecs.dtype, type(np.dtype("float32"))):
+            input_vecs = input_vecs.astype(np.float32)
+        return self(torch.from_numpy(input_vecs)).detach().numpy()
+
+    def compile(self, optimizer: str, loss: str, learning_rate: float):
+        compiling_dict = {}
+        # set optimizer
+        if optimizer == "Adam":
+            self.optimizer = torch.optim.Adam(self.parameters(), learning_rate)
+
+        else:
+            _LOGGER.error("ValueError: Please give a valid name of optimizer")
+
+
+        # set loss function
+        if loss == "cosine_embedding_loss":
+            self.loss = CosineEmbeddingLoss()
+        elif loss == "cosine_similarity":
+            self.loss == CosineSimilarity()
+        else:
+            _LOGGER.error("ValueError: Please give a valid name of loss function")
+
+        compiling_dict["optimizer"] = optimizer
+        compiling_dict["loss"] = loss
+
+    def train_with_vecs(
+            self,
+            training_X: np.ndarray,
+            training_Y: np.ndarray,
+            validating_data: Union[Tuple[np.ndarray, np.ndarray], None] = None,
+            save_best: bool = False,
+            folder_path: Union[str, None] = None,
+            early_stop: bool = True,
+            patience: float = DEFAULT_PATIENCE,
+            opt_name: str = DEFAULT_OPTIMIZER_NAME,
+            loss_func: str = DEFAULT_LOSS_NAME,
+            num_epochs: int = DEFAULT_NUM_EPOCHS,
+            batch_size: int = DEFAULT_BATCH_SIZE,
+            learning_rate: float = DEFAULT_LEARNING_RATE,
+            **kwargs,
+    ):
+        if self.__len__() == 0:
+            # dimensions of input and output
+            input_dim = training_X.shape[1]
+            output_dim = training_Y.shape[1]
+
+            self.add_layers(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                num_units=kwargs.get("num_units") or DEFAULT_NUM_UNITS,
+                num_extra_hidden_layers=kwargs.get("num_extra_hidden_layers")
+                                        or DEFAULT_NUM_EXTRA_HIDDEN_LAYERS,
+            )
+
+        if validating_data is not None:
+            validating_X, validating_Y = validating_data
+            validating_data = arrays_to_torch_dataloader(validating_X, validating_Y, shuffle=False)
+        elif save_best or early_stop:
+            _LOGGER.error("ValueError: Validating data is not provided")
+        if save_best and folder_path is None:
+            _LOGGER.error("ValueError: Path to folder where the best performance model will be saved is required")
+
+        self.compile(optimizer=opt_name, loss=loss_func, learning_rate=learning_rate)
+        training_data = arrays_to_torch_dataloader(training_X, training_Y, batch_size)
+        best_val_loss = 1_000_000.
+
+        patience_count = 0
+        for epoch in range(num_epochs):
+            self.train(True)
+            avg_loss = self.train_one_epoch(training_data)
+
+            self.eval()
+
+            if validating_data is not None:
+                running_val_loss = 0.0
+                with torch.no_grad():
+                    for i, (val_x, val_y) in enumerate(validating_data):
+                        val_output = self(val_x)
+                        val_loss = self.loss(val_output, val_y)
+                        running_val_loss += val_loss
+
+                avg_val_loss = running_val_loss / (i+1)
+                # print
+                _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss} - val_loss: -{avg_val_loss}")
+                if avg_val_loss < best_val_loss:
+                    best_val_loss = avg_val_loss
+                    if save_best:
+                        model_path = os.path.join(folder_path, f"model_{epoch}")
+                        torch.save(self.state_dict(), model_path)
+
+                if early_stop:
+                    if avg_val_loss > avg_loss:
+                        patience_count += 1
+                    if patience_count > int(math.ceil(patience * num_epochs)):
+                        break
+
+            else:
+                _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss}")
+
+    def train_one_epoch(self, training_data):
+        epoch_loss = 0.
+
+        for i, (x, y) in enumerate(training_data):
+            self.optimizer.zero_grad()
+            outputs = self(y)
+
+            batch_loss = self.loss(outputs, y, )
+            self.loss.backward()
+
+            self.optimizer.step()
+
+            epoch_loss += batch_loss.item()
+
+        return epoch_loss / (i + 1)
+
+    def calc_loss(self, outputs: torch.Tensor, y: torch.Tensor, **kwargs) -> torch.float:
+        if self.compiling_info == {}:
+            _LOGGER.error("ValueError: Please compile the model first")
+
+        if self.compiling_info["loss"] == "cosine_similarity":
+            return 1 - self.loss(outputs, y)
+
+        if self.compiling_info["loss"] == "cosine_embedding_loss":
+            target = kwargs.get("target")
+            return self.loss(outputs, y, target)
 
 
 class Vec2VecFNN(tf.keras.models.Sequential):

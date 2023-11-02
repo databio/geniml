@@ -12,8 +12,10 @@ from ..io import RegionSet
 from ..region2vec import Region2VecExModel
 from ..search.backends import HNSWBackend, QdrantBackend
 from .const import *
+import torch
+from torch.utils.data import TensorDataset, DataLoader
 
-_LOGGER = logging.getLogger(PKG_NAME)
+_LOGGER = logging.getLogger(MODULE_NAME)
 
 
 @dataclass
@@ -303,3 +305,21 @@ def bioGPT_sentence_transformer() -> SentenceTransformer:
         word_embedding_model.get_word_embedding_dimension(), pooling_mode="mean"
     )
     return SentenceTransformer(modules=[word_embedding_model, pooling_model])
+
+
+def arrays_to_torch_dataloader(X: np.ndarray, Y: np.ndarray, batch_size: int = 1, shuffle: bool = True):
+    """
+    https://stackoverflow.com/questions/44429199/how-to-load-a-list-of-numpy-arrays-to-pytorch-dataset-loader
+    """
+    tensor_X = torch.from_numpy(dtype_check(X))
+    tensor_Y = torch.from_numpy(dtype_check(Y))
+    my_dataset = TensorDataset(tensor_X, tensor_Y)  # create your datset
+
+    return DataLoader(my_dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+def dtype_check(vecs:np.ndarray) -> np.ndarray:
+    if not isinstance(vecs.dtype, type(np.dtype("float32"))):
+        vecs = vecs.astype(np.float32)
+
+    return vecs
