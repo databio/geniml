@@ -5,37 +5,24 @@ from typing import List, Union
 import numpy as np
 import torch
 import torch.nn as nn
+from gensim.models import Word2Vec as GensimWord2Vec
 from huggingface_hub import hf_hub_download
 from rich.progress import track
-from rich.progress import Progress
-from torch.utils.data import DataLoader
 from yaml import safe_load, safe_dump
 
 from ..tokenization.main import ITTokenizer, Tokenizer
 from ..io.io import RegionSet, Region
 from ..const import PKG_NAME
 from .const import (
-    DEFAULT_BATCH_SIZE,
     DEFAULT_EMBEDDING_SIZE,
     DEFAULT_EPOCHS,
     DEFAULT_WINDOW_SIZE,
     DEFAULT_MIN_COUNT,
-    DEFAULT_N_SHUFFLES,
-    DEFAULT_OPTIMIZER,
-    DEFAULT_INIT_LR,
-    DEFAULT_NS_K,
     CONFIG_FILE_NAME,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
 )
-from .utils import (
-    generate_window_training_data,
-    Region2VecDataset,
-    NegativeSampler,
-    NegativeSampleDataset,
-    NSLoss,
-    generate_frequency_distribution,
-)
+from .utils import shuffle_documents, LearningRateScheduler
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -232,17 +219,11 @@ class Region2VecExModel:
         window_size: int = DEFAULT_WINDOW_SIZE,
         epochs: int = DEFAULT_EPOCHS,
         min_count: int = DEFAULT_MIN_COUNT,
-        n_shuffles: int = DEFAULT_N_SHUFFLES,
-        batch_size: int = DEFAULT_BATCH_SIZE,
+        num_cpus: int = 1,
+        seed: int = 42,
         checkpoint_path: str = MODEL_FILE_NAME,
-        optimizer: torch.optim.Optimizer = DEFAULT_OPTIMIZER,
-        learning_rate: float = DEFAULT_INIT_LR,
-        ns_k: int = DEFAULT_NS_K,
-        learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
-        device: Union[str, List[str]] = "cpu",
-        optimizer_params: dict = {},
         save_model: bool = False,
-        export_profile: bool = False,
+        gensim_params: dict = {},
     ) -> np.ndarray:
         """
         Train the model.
@@ -274,143 +255,65 @@ class Region2VecExModel:
         _LOGGER.info("Validating data for training.")
         data = self._validate_data_for_training(data)
 
-        # gtokenize the data into universe regions (recognized by this model's vocabulary)
+        # create gensim model that will be used to train
+        _LOGGER.info("Creating gensim model.")
+        gensim_model = GensimWord2Vec(
+            vector_size=self._model.embedding_dim,
+            window=window_size,
+            min_count=min_count,
+            workers=num_cpus,
+            seed=seed,
+            **gensim_params,
+        )
+
+        # tokenize the data
+        # convert to strings for gensim
         _LOGGER.info("Tokenizing data.")
-        tokens = [
-            self.tokenizer.tokenize(list(rs))
-            for rs in track(data, total=len(data), description="Tokenizing")
-            if len(rs) > 0  # ignore empty region sets
-        ]
-        tokens = [[t.id for t in tokens_list] for tokens_list in tokens]
+        tokenized_data = [self.tokenizer.tokenize(region_set) for region_set in data]
+        tokenized_data = [[str(t.id) for t in region_set] for region_set in tokenized_data]
+        gensim_model.build_vocab(tokenized_data)
 
-        # generate frequency distribution
-        _LOGGER.info("Generating frequency distribution.")
-        freq_dist = generate_frequency_distribution(tokens, self._model.vocab_size)
-
-        # create the dataset of windows
-        _LOGGER.info("Generating contexts and targets.")
-        _padding_token = self.tokenizer.padding_token()
-        samples = generate_window_training_data(
-            tokens, window_size, n_shuffles, min_count, padding_value=_padding_token.id
-        )
-        dataset = Region2VecDataset(samples)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-        nsampler = NegativeSampler(freq_dist, batch_size=batch_size)
-        negative_samples = NegativeSampleDataset(nsampler.sample(ns_k, batch_size=len(samples)))
-        neg = DataLoader(negative_samples, batch_size=batch_size, shuffle=True)
-
-        try:
-            assert len(dataset) == len(negative_samples)
-        except AssertionError:
-            raise RuntimeError(
-                "Number of negative samples must be equal to the number of positive samples. Something went wrong."
-            )
-
-        # init the optimizer
-        optimizer = optimizer(
-            self._model.parameters(),
-            lr=learning_rate,
-            **optimizer_params,
+        # create our own learning rate scheduler
+        lr_scheduler = LearningRateScheduler(
+            n_epochs=epochs,
         )
 
-        # init scheduler if passed
-        if learning_rate_scheduler is not None:
-            learning_rate_scheduler = learning_rate_scheduler(optimizer)
-
-        # init the loss function
-        loss_fn = NSLoss()
-
-        # move necessary things to the device
-        if isinstance(device, list):
-            # _LOGGER.info(f"Training on {len(device)} devices.")
-            self._model = nn.DataParallel(self._model)
-            self._model.to(device[0])
-        else:
-            self._model.to(device)
-
-        # losses
+        # train the model
         losses = []
 
-        # this is ok for parallelism because each GPU will have its own copy of the model
-        if isinstance(device, list):
-            tensor_device = device[0]
-        else:
-            tensor_device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        for epoch in track(range(epochs), description="Training model"):
+            # shuffle the data
+            _LOGGER.info(f"Starting epoch {epoch+1}.")
+            _LOGGER.info("Shuffling data.")
+            shuffled_data = shuffle_documents(
+                tokenized_data, n_shuffles=1
+            )  # shuffle once per epoch, no need to shuffle more
+            gensim_model.train(
+                shuffled_data,
+                epochs=1,  # train for 1 epoch at a time, shuffle data each time
+                compute_loss=True,
+                total_words=gensim_model.corpus_total_words,
+            )
 
-        # train the model for the specified number of epochs
-        _LOGGER.info("Training begin.")
-        with torch.profiler.profile(
-            activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
-            schedule=torch.profiler.schedule(
-                wait=2,
-                warmup=2,
-                active=6,
-                repeat=1,
-            ),
-            on_trace_ready=torch.profiler.tensorboard_trace_handler(checkpoint_path),
-            with_stack=True,
-        ) as profiler:
-            with Progress() as progress_bar:
-                epoch_tid = progress_bar.add_task("Epochs", total=epochs)
-                batches_tid = progress_bar.add_task("Batches", total=len(dataloader))
-                for epoch in range(epochs):
-                    for i, batch in enumerate(zip(dataloader, neg)):
-                        # extract out the context, target, and negative samples
-                        batch, neg_samples = batch
+            # log out and store loss
+            _LOGGER.info(f"Loss: {gensim_model.get_latest_training_loss()}")
+            losses.append(gensim_model.get_latest_training_loss())
 
-                        # get the context and target
-                        context, target = batch
+            # update the learning rate
+            lr_scheduler.update()
 
-                        # zero the gradients
-                        optimizer.zero_grad()
+        # once done training, set the weights of the pytorch model in self._model
+        for id in gensim_model.wv.key_to_index:
+            self._model.projection.weight.data[int(id)] = torch.tensor(gensim_model.wv[id])
 
-                        # move to device
-                        context = context.to(tensor_device)
-                        target = target.to(tensor_device)
-                        neg_samples = neg_samples.to(tensor_device)
-
-                        # forward pass
-                        vc = self._model(context)
-                        vt = self._model(target)
-                        vn = self._model(neg_samples)
-
-                        # backward pass - SoftMax is included in the loss function
-                        # this is cross entropy now, needs to be negative sampling loss
-                        loss = loss_fn.forward(vc, vn, vt)
-                        loss.backward()
-
-                        # update parameters
-                        optimizer.step()
-
-                        # update learning rate if necessary
-                        if learning_rate_scheduler is not None:
-                            learning_rate_scheduler.step()
-
-                        # update progress bar
-                        progress_bar.update(batches_tid, completed=i + 1)
-
-                        # step the profiler
-                        profiler.step()
-
-                    # update progress bar
-                    progress_bar.update(epoch_tid, completed=epoch + 1)
-
-                    # log out loss
-                    _LOGGER.info(f"Epoch {epoch + 1} loss: {loss.item()}")
-                    losses.append(loss.item())
-
-            # save after each epoch
-            if save_model:
-                torch.save(self._model.state_dict(), checkpoint_path)
-
-        # save the model
+        # set the model as trained
         self.trained = True
 
-        if export_profile:
-            profiler.export_chrome_trace("profile.json")
+        # export
+        if save_model:
+            self.export(checkpoint_path)
 
-        return np.array(losses), profiler
+        return np.array(losses)
 
     def export(
         self,

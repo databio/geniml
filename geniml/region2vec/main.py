@@ -242,7 +242,7 @@ class Region2Vec(Word2Vec):
         report_loss: bool = True,
         lr: float = DEFAULT_INIT_LR,
         min_lr: float = DEFAULT_MIN_LR,
-        lr_schedule: Union[str, utils.ScheduleType] = "linear",
+        lr_schedule: LR_TYPES = "linear",
     ):
         """
         Train the model. This is done in two steps: First, we shuffle the documents.
@@ -254,7 +254,7 @@ class Region2Vec(Word2Vec):
         :param bool report_loss: Whether or not to report the loss after each epoch.
         :param float lr: The initial learning rate.
         :param float min_lr: The minimum learning rate.
-        :param Union[str, ScheduleType] lr_schedule: The learning rate schedule to use.
+        :param LR_TYPEs lr_schedule: The learning rate schedule to use.
         """
         # force to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205683978)
         n_shuffles = 1
