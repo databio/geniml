@@ -1,6 +1,9 @@
+from typing import Literal
+
 import torch
 
 MODULE_NAME = "region2vec"
+LR_TYPES = Literal["constant", "exponential", "step"]
 MAX_WAIT_TIME = 10800
 
 DEFAULT_EPOCHS = 100

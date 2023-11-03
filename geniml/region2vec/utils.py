@@ -5,23 +5,16 @@ import shutil
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from enum import Enum
 from random import shuffle
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union
 
 import numpy as np
-import torch
-import torch.nn as nn
-from rich.progress import track
-from torch.utils.data import Dataset
 
 from .const import (
+    LR_TYPES,
     DEFAULT_INIT_LR,
     DEFAULT_MIN_LR,
     MODULE_NAME,
-    DEFAULT_WINDOW_SIZE,
-    DEFAULT_N_SHUFFLES,
-    DEFAULT_NS_POWER,
 )
 
 _LOGGER = logging.getLogger(MODULE_NAME)
@@ -274,13 +267,6 @@ def ensure_dir(folder: str, default: str = "y") -> None:
     os.makedirs(folder, exist_ok=True)
 
 
-class ScheduleType(Enum):
-    """Learning rate schedule types"""
-
-    LINEAR = "linear"
-    EXPONENTIAL = "exponential"
-
-
 class LearningRateScheduler:
     """
     Simple class to track learning rates of the training procedure
@@ -292,7 +278,7 @@ class LearningRateScheduler:
         self,
         init_lr: float = DEFAULT_INIT_LR,
         min_lr: float = DEFAULT_MIN_LR,
-        type: Union[str, ScheduleType] = ScheduleType.EXPONENTIAL,
+        type: LR_TYPES = "exponential",
         decay: float = None,
         n_epochs: int = None,
     ):
@@ -308,13 +294,12 @@ class LearningRateScheduler:
         self.n_epochs = n_epochs
 
         # convert type to learning rate if necessary
-        if isinstance(type, str):
-            try:
-                self.type = ScheduleType[type.upper()]
-            except KeyError:
-                raise ValueError(
-                    f"Unknown schedule type: {type}. Must be one of ['linear', 'exponential']."
-                )
+        if type not in ["constant", "linear", "exponential"]:
+            raise ValueError(
+                f"Unknown schedule type: {type}. Must be one of ['constant', 'linear', 'exponential']."
+            )
+
+        self.type = type
 
         # init the current lr and iteration
         self._current_lr = init_lr
@@ -350,12 +335,14 @@ class LearningRateScheduler:
 
     def update(self):
         # update the learning rate according to the type
-        if self.type == ScheduleType.LINEAR:
+        if self.type == "linear":
             self._current_lr = self._update_linear(self._iter)
             self._iter += 1
-        elif self.type == ScheduleType.EXPONENTIAL:
+        elif self.type == "exponential":
             self._current_lr = self._update_exponential(self._iter)
             self._iter += 1
+        elif self.type == "constant":
+            pass  # do nothing
         else:
             raise ValueError(f"Unknown schedule type: {self.type}")
 
@@ -365,7 +352,7 @@ class LearningRateScheduler:
 
 def shuffle_documents(
     documents: List[List[any]],
-    n_shuffles: int,
+    n_shuffles: int = 1,
     threads: int = None,
 ) -> List[List[any]]:
     """
@@ -373,7 +360,6 @@ def shuffle_documents(
 
     :param List[List[str]] documents: the document list to shuffle.
     :param int n_shuffles: The number of shuffles to conduct.
-    :param int threads: The number of threads to use for shuffling.
     """
 
     def shuffle_list(list: List[any], n: int) -> List[any]:
@@ -385,15 +371,11 @@ def shuffle_documents(
     shuffled_documents = documents.copy()
     with ThreadPoolExecutor(max_workers=threads) as executor:
         shuffled_documents = list(
-            track(
-                executor.map(
-                    shuffle_list,
-                    shuffled_documents,
-                    [n_shuffles] * len(documents),
-                ),
-                total=len(documents),
-                description="Shuffling documents",
-            )
+            executor.map(
+                shuffle_list,
+                shuffled_documents,
+                [n_shuffles] * len(documents),
+            ),
         )
     return shuffled_documents
 
@@ -416,224 +398,3 @@ def make_wv_file_name(model_file_name: str) -> str:
     :return str: The wv file name.
     """
     return f"{model_file_name}.wv.vectors.npy"
-
-
-class Region2VecDataset(Dataset):
-    def __init__(self, samples: List[Tuple[List[any], any]]):
-        self.samples = samples
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, idx) -> Tuple[List[any], any]:
-        # we need to return things as a tensor for proper batching
-        return self.samples[idx]
-
-
-def generate_window_training_data(
-    data: List[List[any]],
-    window_size: int = DEFAULT_WINDOW_SIZE,
-    n_shuffles: int = DEFAULT_N_SHUFFLES,
-    threads: int = None,
-    padding_value: any = 0,
-    return_tensor: bool = True,
-) -> List[Tuple[List[any], any]]:
-    """
-    Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
-
-    :param List[any] data: The data to generate the training data from.
-    :param int window_size: The window size to use.
-    :param int n_shuffles: The number of shuffles to perform.
-    :param int threads: The number of threads to use.
-    :param any padding_value: The padding value to use.
-    :param bool return_tensor: Whether or not to return the data as a tensor.
-
-    :return Tuple[List[List[any]], List[any]]: The contexts and targets.
-    """
-    _LOGGER.info("Generating windowed training data.")
-
-    # shuffle the documents
-    documents = shuffle_documents(
-        [[t for t in tokens] for tokens in data], n_shuffles=n_shuffles, threads=threads
-    )
-
-    # compute the context length (inputs)
-    context_len_req = 2 * window_size
-    # contexts = []
-    # targets = []
-    samples = []
-    for document in track(documents, total=len(documents), description="Generating training data"):
-        for i, target in enumerate(document):
-            context = document[max(0, i - window_size) : i] + document[i + 1 : i + window_size + 1]
-
-            # pad the context if necessary
-            if len(context) < context_len_req:
-                context = context + [padding_value] * (context_len_req - len(context))
-
-            # contexts.append(context)
-            # targets.append(target)
-            if return_tensor:
-                samples.append(
-                    (
-                        torch.tensor(context, dtype=torch.long),
-                        torch.tensor(target, dtype=torch.long),
-                    )
-                )
-            else:
-                samples.append((context, target))
-
-    # return contexts, targets
-    return samples
-
-def generate_window_training_data_wrap(
-    data: List[List[any]],
-    window_size: int = DEFAULT_WINDOW_SIZE,
-    n_shuffles: int = DEFAULT_N_SHUFFLES,
-    threads: int = None,
-    padding_value: any = 0,
-    return_tensor: bool = True,
-) -> List[Tuple[List[any], any]]:
-    """
-    Generates the windowed training data by sliding across the region sets. When the sliding window runs into the bounds of the list, it wraps around to the start or end of the array.
-
-    :param List[any] data: The data to generate the training data from.
-    :param int window_size: The window size to use.
-    :param int n_shuffles: The number of shuffles to perform.
-    :param int threads: The number of threads to use.
-    :param any padding_value: The padding value to use.
-    :param bool return_tensor: Whether or not to return the data as a tensor.
-
-    :return Tuple[List[List[any]], List[any]]: The contexts and targets.
-    """
-    _LOGGER.info("Generating windowed training data.")
-
-    # shuffle the documents
-    documents = shuffle_documents(
-        [[t for t in tokens] for tokens in data], n_shuffles=n_shuffles, threads=threads
-    )
-
-    samples = []
-
-    for document in track(documents, total=len(documents), description="Generating training data"):
-        for i in range(0, window_size):
-            target = document[i] 
-            context = document[i-window_size:] + document[0:i] + document[i+1:i+1+window_size]
-            if return_tensor:
-                samples.append((torch.tensor(context, dtype=torch.long), torch.tensor(target, dtype=torch.long)))
-            else:
-                samples.append((context, target))
-        for i in range(window_size, len(document) - window_size):
-            target = document[i]
-            context = document[i-window_size:i] + document[i+1:i+1+window_size]
-            if return_tensor:
-                samples.append((torch.tensor(context, dtype=torch.long), torch.tensor(target, dtype=torch.long)))
-            else:
-                samples.append((context, target))
-        for i in range(len(document) - window_size, len(document)):
-            target = document[i]
-            context = document[i-window_size:i] + document[i+1:] + document[0:i-len(document)+window_size+1] 
-            if return_tensor:
-                samples.append((torch.tensor(context, dtype=torch.long), torch.tensor(target, dtype=torch.long)))
-            else:
-                samples.append((context, target))
-    
-    return samples
-
-def generate_frequency_distribution(tokens: List[List[int]], vocab_length: int) -> torch.Tensor:
-    """
-    Generate the frequency distribution of the tokens.
-
-    :param List[List[int]] tokens: The tokens to generate the frequency distribution from.
-    """
-    tokens_flat = [t for tokens in tokens for t in tokens]
-
-    # create a tensor of all zeros with the length of the vocabulary
-    freq_dist = torch.zeros(vocab_length, dtype=torch.float)
-
-    # count the number of times each token appears
-    for token in track(
-        tokens_flat, total=len(tokens_flat), description="Generating frequency distribution"
-    ):
-        freq_dist[token] += 1
-
-    # normalize the frequency distribution
-    freq_dist /= freq_dist.sum()
-
-    return freq_dist
-
-
-class NegativeSampler:
-    def __init__(
-        self, freq_dist: torch.Tensor, power: float = DEFAULT_NS_POWER, batch_size: int = None
-    ):
-        """
-        Initialize the negative sampler.
-
-        :param torch.Tensor freq_dist: List of frequencies for each token. Must be normalized.
-        :param float power: The power to use for the negative sampling. It is not recommended to change this.
-        """
-        self.dist = freq_dist**power
-        self.dist /= self.dist.sum()
-        self.power = power
-        self.batch_size = batch_size
-
-    def sample(self, k: int = 5, batch_size: int = None) -> torch.Tensor:
-        """
-        Sample from the negative sampler.
-
-        :param int k: The number of samples to draw.
-        """
-        batch_size = batch_size or self.batch_size
-        if batch_size is None:
-            raise ValueError(
-                "Must provide batch_size to sample from negative sampler. This can be set in the constructor or in the sample method."
-            )
-        negative_samples = torch.multinomial(self.dist, batch_size * k, replacement=True)
-        return negative_samples.view(batch_size, k)
-
-
-class NegativeSampleDataset(Dataset):
-    def __init__(self, samples: torch.Tensor):
-        self.samples = samples
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, idx) -> torch.Tensor:
-        return self.samples[idx]
-
-
-# negative sampling loss
-class NSLoss(nn.Module):
-    def __init__(self):
-        super(NSLoss, self).__init__()
-
-    def forward(self, context: torch.Tensor, negative_samples: torch.Tensor, target: torch.Tensor):
-        """
-        :param torch.Tensor context: The context vectors.
-        :param torch.Tensor negative_samples: The negative sample vectors.
-        :param torch.Tensor target: The target vectors.
-        """
-        # there is one target that gets mapped to each context
-        target_v_context = target.unsqueeze(1).expand(
-            context.shape[0], context.shape[1], context.shape[2]
-        )
-        target_v_neg = target.unsqueeze(1).expand(
-            negative_samples.shape[0], negative_samples.shape[1], negative_samples.shape[2]
-        )
-
-        # target is now of shape (batch_size, num_context_vectors, embedding_size)
-        # negative_samples is of shape (batch_size, num_negative_samples, embedding_size)
-        # context is of shape (batch_size, num_context_vectors, embedding_size)
-
-        # compute the dot product between the context and target
-        pos_loss = torch.sum(
-            torch.nn.functional.logsigmoid(torch.bmm(context, target_v_context.transpose(1, 2)))
-        )
-        neg_loss = torch.sum(
-            torch.nn.functional.logsigmoid(
-                torch.bmm(-negative_samples, target_v_neg.transpose(1, 2))
-            )
-        )
-
-        return -(pos_loss + neg_loss)
