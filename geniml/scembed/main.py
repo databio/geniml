@@ -5,7 +5,6 @@ from typing import Union
 import numpy as np
 import scanpy as sc
 from huggingface_hub import hf_hub_download
-from numba import config
 from rich.progress import track
 
 from ..io import Region, RegionSet
@@ -20,9 +19,6 @@ _LOGGER = getLogger(MODULE_NAME)
 
 # demote gensim logger to warning
 _GENSIM_LOGGER.setLevel("WARNING")
-
-# set the threading layer before any parallel target compilation
-config.THREADING_LAYER = "threadsafe"  # type: ignore
 
 
 class ScEmbed(ExModel):
