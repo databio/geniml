@@ -270,7 +270,10 @@ class Region2VecExModel:
         # tokenize the data
         # convert to strings for gensim
         _LOGGER.info("Tokenizing data.")
-        tokenized_data = [self.tokenizer.tokenize(list(region_set)) for region_set in data]
+        tokenized_data = [
+            self.tokenizer.tokenize(list(region_set))
+            for region_set in track(data, description="Tokenizing data", total=len(data))
+        ]
         tokenized_data = [[str(t.id) for t in region_set] for region_set in tokenized_data]
         gensim_model.build_vocab(tokenized_data)
 
