@@ -5,7 +5,6 @@ from typing import List, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from gensim.models import Word2Vec as GensimWord2Vec
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 from yaml import safe_load, safe_dump
@@ -21,6 +20,7 @@ from .const import (
     CONFIG_FILE_NAME,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
+    POOLING_TYPES,
 )
 from .utils import shuffle_documents, LearningRateScheduler
 
@@ -245,6 +245,9 @@ class Region2VecExModel:
 
         :return np.ndarray: Loss values for each epoch.
         """
+        # we only need gensim if we are training
+        from gensim.models import Word2Vec as GensimWord2Vec
+
         # validate a model exists
         if self._model is None:
             raise RuntimeError(
@@ -355,24 +358,36 @@ class Region2VecExModel:
         with open(os.path.join(path, config_file), "w") as f:
             safe_dump(config, f)
 
-    def encode(self, region: Region, pooling: str = "mean") -> np.ndarray:
+    def encode(
+        self, regions: Union[Region, List[Region]], pooling: POOLING_TYPES = "mean"
+    ) -> np.ndarray:
         """
         Get the vector for a region.
 
         :param Region region: Region to get the vector for.
+        :param str pooling: Pooling type to use.
+
         :return np.ndarray: Vector for the region.
         """
-        if not self.trained:
-            raise RuntimeError("Cannot get a vector from an untrained model.")
+        if not isinstance(regions, list):
+            regions = [regions]
+        if not isinstance(regions[0], Region):
+            raise TypeError("regions must be a list of Region objects.")
 
-        if pooling != "mean":
-            raise NotImplementedError("Only mean pooling is currently supported.")
+        if pooling not in ["mean", "max"]:
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         # tokenize the region
-        tokens = self.tokenizer.tokenize(region)
-        tokens = [t.id for t in tokens]
+        tokens = [self.tokenizer.tokenize(r) for r in regions]
+        tokens = [t.id for sublist in tokens for t in sublist]
 
         # get the vector
         region_embeddings = self._model.projection(torch.tensor(tokens))
 
-        return torch.mean(region_embeddings, dim=0).detach().numpy()
+        if pooling == "mean":
+            return torch.mean(region_embeddings, axis=0).detach().numpy()
+        elif pooling == "max":
+            return torch.max(region_embeddings, axis=0).values.detach().numpy()
+        else:
+            # this should be unreachable
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
