@@ -1,5 +1,4 @@
 import os
-import sys
 
 from setuptools import setup
 
@@ -37,7 +36,6 @@ setup(
         "geniml.universe",
         "geniml.io",
         "geniml.text2bednn",
-        "geniml.preprocessing",
         "geniml.bbclient",
         "geniml.search",
         "geniml.search.backends",
