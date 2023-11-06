@@ -65,7 +65,6 @@ class Region2VecExModel:
 
         :param str model_path: Path to the pre-trained model on huggingface.
         :param embedding_dim: Dimension of the embedding.
-        :param hidden_dim: Dimension of the hidden layer.
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         super().__init__()
@@ -130,14 +129,13 @@ class Region2VecExModel:
         # load the model state dict (weights)
         params = torch.load(model_path)
 
-        # get the model config (vocab size, embedding size, hidden size)
+        # get the model config (vocab size, embedding size)
         with open(config_path, "r") as f:
             config = safe_load(f)
 
         self._model = Region2Vec(
             config["vocab_size"],
             embedding_dim=config["embedding_size"],
-            hidden_dim=config["hidden_size"],
         )
         self._model.load_state_dict(params)
 
@@ -352,7 +350,6 @@ class Region2VecExModel:
         config = {
             "vocab_size": len(self.tokenizer),
             "embedding_size": self._model.embedding_dim,
-            "hidden_size": self._model.hidden.out_features,
         }
 
         with open(os.path.join(path, config_file), "w") as f:

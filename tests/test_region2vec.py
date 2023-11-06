@@ -12,6 +12,7 @@ from geniml.region2vec.pooling import max_pooling, mean_pooling
 from geniml.tokenization.main import InMemTokenizer, ITTokenizer
 from geniml.utils import wordify_region, wordify_regions
 from geniml.region2vec.experimental import (
+    Region2Vec as Region2VecV2,
     Region2VecExModel as Region2VecExModelV2,
 )
 
@@ -224,13 +225,13 @@ def test_r2v_pytorch_forward():
     vocab_size = 10000
     embedding_dim = 100
 
-    model = Region2Vec(vocab_size, embedding_dim)
+    model = Region2VecV2(vocab_size, embedding_dim)
     assert model is not None
 
     # create a random tensor with 10 tokens
     x = torch.randint(low=0, high=100, size=(10,))
     y = model.forward(x)
-    assert y.shape == (10000,)
+    assert y.shape == (10, 100)
 
 
 def test_r2v_pytorch_exmodel_train(universe_file: str):
