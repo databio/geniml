@@ -273,6 +273,7 @@ class Region2VecExModel:
         tokenized_data = [
             self.tokenizer.tokenize(list(region_set))
             for region_set in track(data, description="Tokenizing data", total=len(data))
+            if len(region_set) > 0
         ]
         tokenized_data = [[str(t.id) for t in region_set] for region_set in tokenized_data]
         gensim_model.build_vocab(tokenized_data)
