@@ -9,14 +9,25 @@ from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
 from huggingface_hub.utils._errors import EntryNotFoundError
-from tqdm import tqdm
 
 from ..io import Region, RegionSet
 from ..models.main import ExModel
 from ..tokenization.main import InMemTokenizer
 from ..utils import wordify_region, wordify_regions
 from . import utils
-from .const import *
+from .const import (
+    MODULE_NAME,
+    DEFAULT_WINDOW_SIZE,
+    DEFAULT_EMBEDDING_SIZE,
+    DEFAULT_MIN_COUNT,
+    DEFAULT_EPOCHS,
+    DEFAULT_N_SHUFFLES,
+    DEFAULT_INIT_LR,
+    DEFAULT_MIN_LR,
+    LR_TYPES,
+    UNIVERSE_FILE_NAME,
+    MODEL_FILE_NAME,
+)
 from .pooling import max_pooling, mean_pooling
 from .region2vec_train import main as region2_train
 from .region_shuffling import main as sent_gen
@@ -655,10 +666,10 @@ class Region2VecExModel(ExModel):
         _pool_fn: callable
 
         # pool the data if requested
-        if pool == True:
+        if pool is True:
             pool = "mean"
             _pool_fn = mean_pooling
-        elif pool == False:
+        elif pool is False:
             _pool_fn = None
         elif isinstance(pool, str):
             if pool.lower() == "mean":
