@@ -5,12 +5,13 @@ import sys
 import pytest
 import scanpy as sc
 
-# add parent directory to path
-sys.path.append("../")
-
 from geniml.io.io import Region
 from geniml.scembed.main import ScEmbed
 from geniml.utils import wordify_regions
+
+# add parent directory to path
+sys.path.append("../")
+
 
 # set to DEBUG to see more info
 logging.basicConfig(level=logging.INFO)
@@ -84,7 +85,7 @@ def test_model_train_and_export(pbmc_data: sc.AnnData):
         os.remove("tests/data/model-tests/universe.bed")
 
 
-# @pytest.mark.skip(reason="Need to get a pretrained model first")
+@pytest.mark.skip(reason="Need to get a pretrained model first")
 def test_pretrained_scembed_model(hf_model: str, pbmc_data: sc.AnnData):
     model = ScEmbed(hf_model)
     embeddings = model.encode(pbmc_data)

@@ -44,41 +44,6 @@ def region_sets(regions: RegionSet):
     return region_sets
 
 
-@pytest.fixture
-def corpus():
-    return [line.rstrip() for line in open("tests/data/corpus.txt").readlines()]
-
-
-@pytest.fixture
-def word_to_id(corpus: List[str]):
-    all_words = []
-    for sent in corpus:
-        for word in sent.split():
-            word = word.lower()
-            if word not in all_words:
-                all_words.append(word)
-
-    word_to_id = {w: i for i, w in enumerate(all_words)}
-
-    # add special tokens
-    if "<unk>" not in word_to_id:
-        word_to_id["<unk>"] = len(word_to_id)
-    if "<pad>" not in word_to_id:
-        word_to_id["<pad>"] = len(word_to_id)
-
-    return word_to_id
-
-
-@pytest.fixture
-def pad_indx(word_to_id: dict):
-    return word_to_id["<pad>"]
-
-
-@pytest.fixture
-def id_to_word(word_to_id):
-    return {i: w for w, i in word_to_id.items()}
-
-
 def test_init_region2vec():
     model = Region2Vec()
     assert model is not None
@@ -327,34 +292,3 @@ def test_save_load_pytorch_exmodel(universe_file: str):
             # else wrong occured up the stack
             print(e)
             pass
-
-
-@pytest.mark.skip(reason="This is debugging stuff.")
-def test_train_large_model():
-    from rich.progress import track
-
-    universe_path = os.path.expandvars(
-        "$CODE/model-training/region2vec-chipatlas-v2/data/tiles1000.hg38.pruned.bed"
-    )
-    # universe_path = os.path.expandvars("/scratch/xjk5hp/tiles1000.hg38.pruned.bed")
-    data_path = os.path.expandvars("$DATA/genomics/chip-atlas-atac")
-
-    model = Region2VecExModelV2(
-        tokenizer=ITTokenizer(universe_path),
-    )
-
-    files = os.listdir(data_path)
-
-    data = []
-    for f in track(files[:1000], total=len(files[:1000])):
-        if ".bed" in f:
-            try:
-                data.append(RegionSet(os.path.join(data_path, f)))
-            except Exception as e:
-                print(f"Failed to load {f}: {e}")
-                pass
-
-    # train the model
-    model.train(data, epochs=100)
-
-    model.export("out")
