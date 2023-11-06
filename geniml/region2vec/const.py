@@ -4,6 +4,7 @@ import torch
 
 MODULE_NAME = "region2vec"
 LR_TYPES = Literal["constant", "exponential", "step"]
+POOLING_TYPES = Literal["mean", "max"]
 MAX_WAIT_TIME = 10800
 
 DEFAULT_EPOCHS = 100

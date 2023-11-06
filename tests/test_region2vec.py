@@ -248,10 +248,15 @@ def test_r2v_pytorch_exmodel_train(universe_file: str):
 def test_r2v_pytorch_encode(universe_file: str):
     model = Region2VecExModelV2(tokenizer=ITTokenizer(universe_file))
     assert model is not None
-    model.trained = True  # needed to bypass the training check
 
     r = Region("chr1", 63403166, 63403785)
     embedding = model.encode(r)
+    assert embedding is not None
+    assert isinstance(embedding, np.ndarray)
+    assert embedding.shape == (100,)
+
+    rs = RegionSet("tests/data/to_tokenize.bed")
+    embedding = model.encode(list(rs))
     assert embedding is not None
     assert isinstance(embedding, np.ndarray)
     assert embedding.shape == (100,)
