@@ -1,6 +1,6 @@
 import math
 import os
-import pprint
+
 from typing import Union
 
 import matplotlib.pyplot as plt
@@ -138,7 +138,6 @@ class Vec2VecFNNtorch:
 
         # export the model config
         with open(os.path.join(path, config_file), "w") as f:
-            pprint.pprint(self.config)
             safe_dump(self.config, f)
 
     def embedding_to_embedding(self, input_vecs: np.ndarray) -> np.ndarray:
@@ -154,11 +153,20 @@ class Vec2VecFNNtorch:
         return self.model(torch.from_numpy(input_vecs)).detach().numpy()
 
     def compile(self, optimizer: str, loss: str, learning_rate: float):
-        """ """
-        compiling_dict = {}
+        """
+        Configures the model for training.
+
+        :param optimizer: the name of optimizer
+        :param loss: the name of loss function
+        :param learning_rate: the learning rate of model backpropagation
+        """
+
         # set optimizer
         if optimizer == "Adam":
             self.optimizer = torch.optim.Adam(self.model.parameters(), learning_rate)
+
+        elif optimizer == "SGD":
+            self.optimizer
 
         else:
             raise ValueError("Please give a valid name of optimizer")
@@ -239,18 +247,15 @@ class Vec2VecFNNtorch:
             self.model.eval()
 
             if validating_data is not None:
-                # print("start to validate")
                 running_val_loss = 0.0
                 with torch.no_grad():
                     for i, (val_x, val_y) in enumerate(validating_data):
                         val_output = self.model(val_x)
                         val_loss = self.calc_loss(val_output, val_y)
-                        print("val loss: ", val_loss)
                         running_val_loss += val_loss
 
                 avg_val_loss = running_val_loss / (i + 1)
                 self.most_recent_train["val_loss"].append(avg_val_loss)
-                # print(f"EPOCH {epoch + 1}: loss: -{avg_loss} - val_loss: -{avg_val_loss}")
                 _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss} - val_loss: -{avg_val_loss}")
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
@@ -279,8 +284,7 @@ class Vec2VecFNNtorch:
                         break
 
             else:
-                # _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss}")
-                print(f"EPOCH {epoch + 1}: loss: -{avg_loss}")
+                _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss}")
         self.trained = True
 
     def train_one_epoch(self, training_data):
