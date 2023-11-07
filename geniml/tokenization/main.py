@@ -117,10 +117,6 @@ class ITTokenizer(Tokenizer):
             regions = features[non_zeros]
             tokenized.append(self._tokenizer.tokenize(regions.tolist()))
 
-        tokenized = [
-            [t.id for t in sublist]
-            for sublist in track(tokenized, total=len(tokenized), description="Converting to ids")
-        ]
         return tokenized
 
     def tokenize(self, query: Union[Region, RegionSet]) -> GTokenizedRegionSet:
