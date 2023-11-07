@@ -19,7 +19,7 @@ from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
 
-from .const import UNIVERSE_FILE_NAME
+from .const import UNIVERSE_FILE_NAME, CHR_KEY, START_KEY, END_KEY
 from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization
 from .utils import anndata_to_regionsets, time_str, Timer
@@ -87,12 +87,50 @@ class ITTokenizer(Tokenizer):
         else:
             self._tokenizer = None
 
+    def _tokenize_anndata(self, adata: sc.AnnData) -> List[GTokenizedRegionSet]:
+        """
+        Tokenize an AnnData object. This is more involved, so it gets its own function.
+
+        :param sc.AnnData query: The query to tokenize.
+        """
+        # extract regions from AnnData
+        # its weird because of how numpy handle Intervals, the parent class of Region,
+        # see here:
+        # https://stackoverflow.com/a/43722306/13175187
+        adata_features = [
+            Region(chr, int(start), int(end))
+            for chr, start, end in track(
+                zip(adata.var[CHR_KEY], adata.var[START_KEY], adata.var[END_KEY]),
+                total=adata.var.shape[0],
+                description="Extracting regions from AnnData",
+            )
+        ]
+        features = np.ndarray(len(adata_features), dtype=object)
+        for i, region in enumerate(adata_features):
+            features[i] = region
+        del adata_features
+
+        # tokenize
+        tokenized = []
+        for row in track(range(adata.shape[0]), total=adata.shape[0], description="Tokenizing"):
+            _, non_zeros = adata.X[row].nonzero()
+            regions = features[non_zeros]
+            tokenized.append(self._tokenizer.tokenize(regions.tolist()))
+
+        tokenized = [
+            [t.id for t in sublist]
+            for sublist in track(tokenized, total=len(tokenized), description="Converting to ids")
+        ]
+        return tokenized
+
     def tokenize(self, query: Union[Region, RegionSet]) -> GTokenizedRegionSet:
         """
         Tokenize a Region or RegionSet into the universe
 
         :param Union[Region, RegionSet] query: The query to tokenize.
         """
+        if isinstance(query, sc.AnnData):
+            return self._tokenize_anndata(query)
         if isinstance(query, Region):
             query = [query]
         elif isinstance(query, RegionSet):
