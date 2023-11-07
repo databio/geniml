@@ -1,4 +1,4 @@
-# How to fine-tune a Region2Vec model
+# How to fine-tune a Region2Vec model (Very experimental)
 ## Overview
 Fine-tuning a model is a way to adapt a pre-trained model to a new task. For example, we may want to fine-tune a model trained on ChIP-seq data to predict enhancers. This tutorial discusses how to fine-tune a pre-trained model. To learn how to train a new model see the [region2vec training documentation](./train-region2vec.md)
 
@@ -25,6 +25,7 @@ class Region2VecClassifier(nn.Module):
         
     def forward(self, x: torch.Tensor):
         x = self.region2vec(x)  # Get the embeddings from Region2Vec
+        x = x.mean(dim=1)  # Average the embeddings (if multiple regions are passed in, this can occur due to tokenization)
         x = F.relu(x)  # Pass through a non-linear activation function
         x = self.classification(x)  # Pass through additional layers
         return x
@@ -37,10 +38,22 @@ from geniml.tokenization import ITTokenizer
 r = Region("chr1", 100_000, 100_500) # some enhancer region (maybe)
 
 tokenizer = ITTokenizer.from_pretrained("databio/r2v-ChIP-atlas-v2")
-
 classifier = Region2VecClassifier(model.model) # get the inner core of the model
-out = classifier(torch.tensor([42])) # pass in a region_id tensor
+
+x = tokenizer.tokenize(r)
+x = torch.tensor([t.id for r in x])
+out = classifier(x)
 
 out.shape # torch.Size([1])
+
+# apply sigmoid
+out = torch.sigmoid(out)
+
+print("Enhancer probability:", out.item())
 ```
 
+## Saving the fine-tuned embeddings
+`torch`'s computational graph links the original region2vec model back to the `Region2VecExModel`. Therefore, if we want to save the fine-tuned embeddings, we simply ned to call `export` on the original model:
+```python
+model.export("my-fine-tuned-model")
+```
