@@ -300,7 +300,7 @@ class Region2VecExModel:
         # train the model
         losses = []
 
-        for epoch in track(range(epochs), description="Training model"):
+        for epoch in track(range(epochs), description="Training model", total=epochs):
             # shuffle the data
             _LOGGER.info(f"Starting epoch {epoch+1}.")
             _LOGGER.info("Shuffling data.")
