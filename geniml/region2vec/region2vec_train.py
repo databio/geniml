@@ -54,9 +54,7 @@ def main(args: argparse.Namespace) -> None:
     data_folder = os.path.join(
         save_dir, "shuffled_datasets"
     )  # shuffled datasets are stored in the shuffled_datasets folder
-    model_dir = os.path.join(
-        save_dir, "models"
-    )  # model snapshots are stored in the models folder
+    model_dir = os.path.join(save_dir, "models")  # model snapshots are stored in the models folder
     os.makedirs(save_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
     utils.set_log_path(save_dir)  # specify the path to the log file
@@ -73,9 +71,7 @@ def main(args: argparse.Namespace) -> None:
         msg_model += "hierarchical softmax\033[00m"
     else:
         hs = 0
-        msg_model += (
-            f"negative sampling with {args.neg_samples} negative samples\033[00m"
-        )
+        msg_model += f"negative sampling with {args.neg_samples} negative samples\033[00m"
     if not os.path.exists(args.resume):
         vocab_update = False
         model = Word2Vec(
@@ -171,9 +167,7 @@ def main(args: argparse.Namespace) -> None:
 
     elasped_time = run_timer.t()
     cur_time = datetime.datetime.now().strftime("%x-%X")
-    utils.log(
-        f"[{cur_time}] Training finished, training Time {utils.time_str(elasped_time)}"
-    )
+    utils.log(f"[{cur_time}] Training finished, training Time {utils.time_str(elasped_time)}")
     # remove intermediate datasets
     os.system(f"rm -rf {data_folder}")  # remove the generated shuffled datasets
 
@@ -184,9 +178,7 @@ if __name__ == "__main__":
         "--num-shuffle", type=int, help="number of shuffled datasets used for training"
     )
     parser.add_argument("--embed-dim", type=int, help="dimension of embedding vectors")
-    parser.add_argument(
-        "--context-len", type=int, help="length of the moving context window"
-    )
+    parser.add_argument("--context-len", type=int, help="length of the moving context window")
     parser.add_argument(
         "--nworkers", type=int, help="number of parallel processes used in training"
     )
@@ -198,9 +190,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--save-dir", help="the folder that saves the Region2Vec model")
     parser.add_argument("--resume", help="path to a previously trained model")
-    parser.add_argument(
-        "--train-alg", help="training algorithm, select from [cbow, skip-gram]"
-    )
+    parser.add_argument("--train-alg", help="training algorithm, select from [cbow, skip-gram]")
     parser.add_argument(
         "--min-count",
         type=int,

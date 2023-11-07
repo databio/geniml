@@ -164,9 +164,7 @@ def main(args: argparse.Namespace) -> None:
             matrix = pickle.load(f)
         dataset = MatrixDataset(matrix)
     pool = args.pool
-    utils.log(
-        f"[{worker_id}] Creating shuffled datasets in \033[93m{DATA_FOLDER}\033[00m"
-    )
+    utils.log(f"[{worker_id}] Creating shuffled datasets in \033[93m{DATA_FOLDER}\033[00m")
 
     for i in range(pool):
         name_used = os.path.join(DATA_FOLDER, f"pool{worker_id}-{i}used")
@@ -225,9 +223,7 @@ if __name__ == "__main__":
         "--tokenization-folder",
         help="path to the folder that saves tokenized regions",
     )
-    parser.add_argument(
-        "--save-dir", help="parent folder to generated shuffled datasets"
-    )
+    parser.add_argument("--save-dir", help="parent folder to generated shuffled datasets")
     parser.add_argument(
         "--pool",
         type=int,
