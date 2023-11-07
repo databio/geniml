@@ -193,7 +193,7 @@ class Vec2VecFNNtorch:
         validating_data: Union[Tuple[np.ndarray, np.ndarray], None] = None,
         save_best: bool = False,
         folder_path: Union[str, None] = None,
-        model_file_name: Union[str, None] = None,
+        best_model_file_name: Union[str, None] = None,
         early_stop: bool = True,
         patience: float = DEFAULT_PATIENCE,
         opt_name: str = DEFAULT_OPTIMIZER_NAME,
@@ -262,7 +262,7 @@ class Vec2VecFNNtorch:
                     if save_best:
                         self.export(
                             folder_path,
-                            model_file_name
+                            best_model_file_name
                             or TORCH_MODEL_FILE_NAME_PATTERN.format(
                                 callback="best", checkpoint=str(epoch)
                             ),
@@ -273,14 +273,6 @@ class Vec2VecFNNtorch:
                     if avg_val_loss > avg_loss:
                         patience_count += 1
                     if patience_count > int(math.ceil(patience * num_epochs)):
-                        self.export(
-                            folder_path,
-                            model_file_name
-                            or TORCH_MODEL_FILE_NAME_PATTERN.format(
-                                callback="early_stop", checkpoint=str(epoch)
-                            ),
-                            must_trained=False,
-                        )
                         break
 
             else:
