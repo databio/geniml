@@ -5,10 +5,10 @@ Region2Vec is an unsupervised method for creating embeddings of genomic regions 
 To use one of our pre-trained models, simply import the `Region2VecExModel` and download the model from huggingface:
 
 ```python
-from gitk.io import Region
-from gitk.region2vec import Region2VecExModel
+from geniml.io import Region
+from geniml.region2vec.experimental import Region2VecExModel
 
-model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38")
+model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38-v2")
 ```
 
 > Note: We use the `Region2VecExModel` class to load the model because it is an extension of the `Region2Vec` class that comes with its own tokenizer. This ensures that the model and tokenizer are compatible.
