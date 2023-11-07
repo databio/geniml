@@ -381,6 +381,13 @@ class Region2VecExModel:
 
         :return np.ndarray: Vector for the region.
         """
+        # data validation
+        if isinstance(regions, Region):
+            regions = [regions]
+        if isinstance(regions, str):
+            regions = list(RegionSet(regions))
+        if isinstance(regions, RegionSet):
+            regions = list(regions)
         if not isinstance(regions, list):
             regions = [regions]
         if not isinstance(regions[0], Region):
