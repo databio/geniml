@@ -23,5 +23,5 @@ torch
 requests>=2.31.0
 sentence-transformers
 gtokenizers
-genomicranges
+genomicranges >= 0.3.6
 rich
