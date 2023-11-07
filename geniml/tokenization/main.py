@@ -214,7 +214,6 @@ class InMemTokenizer(Tokenizer):
 
         # build trees + add regions to universe + make region to index map
         self.universe = regions
-        indx = 0
         for region in track(regions, total=len(regions), description="Adding regions to universe"):
             # r_string = wordify_region(region)
             if region.chr not in self._trees:
@@ -529,7 +528,7 @@ def hard_tokenization_main(
     if bedtools_path == "bedtools":
         try:
             rval = subprocess.call([bedtools_path, "--version"])
-        except:
+        except Exception:
             raise Exception("No bedtools executable found")
         if rval != 0:
             raise Exception("No bedtools executable found")
@@ -567,7 +566,7 @@ def hard_tokenization_main(
             args_arr.append(tokenization_args)
         with multiprocessing.Pool(nworkers) as pool:
             processes = [pool.apply_async(hard_tokenization, args=(param,)) for param in args_arr]
-            results = [r.get() for r in processes]
+            _ = [r.get() for r in processes]
         # move tokenized files in different folders to expr_tokens
         shutil.rmtree(dest_folder)
         for param in args_arr:
