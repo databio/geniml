@@ -1,34 +1,30 @@
 import multiprocessing
 import os
 from logging import getLogger
-from typing import Callable, List, Literal, Optional, Union
+from typing import List, Union
 
 import numpy as np
+import torch
+import torch.nn as nn
 from rich.progress import track
-from gensim.models import Word2Vec
-from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
-from huggingface_hub.utils._errors import EntryNotFoundError
+from yaml import safe_dump, safe_load
 
 from ..io import Region, RegionSet
-from ..models.main import ExModel
-from ..tokenization.main import InMemTokenizer
-from ..utils import wordify_region, wordify_regions
+from ..tokenization.main import ITTokenizer, Tokenizer
 from . import utils
+from .utils import LearningRateScheduler, shuffle_documents
 from .const import (
     MODULE_NAME,
     DEFAULT_WINDOW_SIZE,
     DEFAULT_EMBEDDING_SIZE,
     DEFAULT_MIN_COUNT,
     DEFAULT_EPOCHS,
-    DEFAULT_N_SHUFFLES,
-    DEFAULT_INIT_LR,
-    DEFAULT_MIN_LR,
-    LR_TYPES,
     UNIVERSE_FILE_NAME,
     MODEL_FILE_NAME,
+    CONFIG_FILE_NAME,
+    POOLING_TYPES,
 )
-from .pooling import max_pooling, mean_pooling
 from .region2vec_train import main as region2_train
 from .region_shuffling import main as sent_gen
 
@@ -37,20 +33,6 @@ _LOGGER = getLogger(MODULE_NAME)
 
 # demote gensim logger to warning
 _GENSIM_LOGGER.setLevel("WARNING")
-
-
-class ReportLossCallback(CallbackAny2Vec):
-    """
-    Callback to report loss after each epoch.
-    """
-
-    def __init__(self):
-        self.epoch = 0
-
-    def on_epoch_end(self, model: Word2Vec):
-        loss = model.get_latest_training_loss()
-        _LOGGER.info(f"Epoch {self.epoch} complete. Loss: {loss}")
-        self.epoch += 1
 
 
 class Namespace:
@@ -209,509 +191,399 @@ def region2vec(
     print(f"[Training] {utils.time_str(elapsed_time)}/{utils.time_str(timer.t())}")
 
 
-class Region2Vec(Word2Vec):
-    def __init__(self, **kwargs):
-        """
-        A class that implements Region2Vec. Region2Vec is a model that learns
-        embedding vectors for genomic regions. It works by by considering each
-        region set as a text document, with each region as a word inside that
-        document.
+class Word2Vec(nn.Module):
+    """
+    Word2Vec model.
+    """
 
-        :param window_size: The size of the window to use for the skip-gram
-            model. Defaults to 5.
-        :param vector_size: The size of the embedding vectors. Defaults to 100.
-        :param min_count: The minimum number of times a region must occur in
-            the dataset to be included in the vocabulary. Defaults to 5.
-        :param threads: The number of threads to use for training. Defaults to
-            the number of CPUs - 2.
-        :param seed: The seed to use for training. Defaults to 42.
-        :param callbacks: A list of callbacks to use for training. Defaults to
-            an empty list.
-        """
-        self.trained = False
-        self.callbacks = kwargs.get("callbacks") or []
-
-        # instantiate the Word2Vec model
-        super().__init__(
-            window=kwargs.get("window_size") or DEFAULT_WINDOW_SIZE,
-            vector_size=kwargs.get("vector_size") or DEFAULT_EMBEDDING_SIZE,
-            min_count=kwargs.get("min_count") or DEFAULT_MIN_COUNT,
-            workers=kwargs.get("threads") or multiprocessing.cpu_count() - 2,
-            seed=kwargs.get("seed") or 42,  #
-            callbacks=kwargs.get("callbacks") or [],
-        )
-
-    def train(
-        self,
-        data: Union[List[str], List[RegionSet], List[List[Region]]],
-        epochs: int = DEFAULT_EPOCHS,  # training cycles
-        n_shuffles: int = DEFAULT_N_SHUFFLES,  # not the number of traiing cycles, actual shufle num
-        report_loss: bool = True,
-        lr: float = DEFAULT_INIT_LR,
-        min_lr: float = DEFAULT_MIN_LR,
-        lr_schedule: LR_TYPES = "linear",
-    ):
-        """
-        Train the model. This is done in two steps: First, we shuffle the documents.
-        Second, we train the model.
-
-        :param int epochs: The number of epochs to train for (note: this is the number of times regions are shuffled, then fed to the model for training).
-        :param int n_shuffles: The number of times to shuffle the regions within each document.
-        :param int gensim_epochs: The number of epochs to train for within each shuffle (or main epoch).
-        :param bool report_loss: Whether or not to report the loss after each epoch.
-        :param float lr: The initial learning rate.
-        :param float min_lr: The minimum learning rate.
-        :param LR_TYPEs lr_schedule: The learning rate schedule to use.
-        """
-        # force to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205683978)
-        n_shuffles = 1
-
-        # verify data is a list of strings, region sets or a list of list of regions
-        if not isinstance(data, list):
-            raise TypeError(
-                f"Data must be a list of strings, RegionSets, or a list of list of Regions. Got {type(data)}."
-            )
-        else:
-            # list of strings? files?
-            if all([isinstance(d, str) for d in data]):
-                data = [RegionSet(d) for d in data]
-            # list of RegionSets? Great.
-            elif all([isinstance(d, RegionSet) for d in data if len(d) > 0]):
-                pass
-            # list of list of Regions? Great. Some might be empty, but that's ok.
-            elif all([isinstance(d, list) for d in data]) and all(
-                [isinstance(d[0], Region) for d in data if len(d) > 0]
-            ):
-                data = [RegionSet(d) for d in data]
-            # something else? error.
-            else:
-                raise TypeError(
-                    f"Data must be a list of strings, RegionSets, or a list of list of Regions. Got {type(data)}."
-                )
-
-        if report_loss:
-            self.callbacks.append(ReportLossCallback())
-
-        # create a learning rate scheduler
-        lr_scheduler = utils.LearningRateScheduler(
-            init_lr=lr, min_lr=min_lr, type=lr_schedule, n_epochs=epochs
-        )
-
-        # "wordify" the regions
-        region_sets = [wordify_regions(rs) for rs in data]
-
-        # train the model using these shuffled documents
-        _LOGGER.info("Training starting.")
-
-        # build up the vocab
-        super().build_vocab(
-            region_sets,
-            update=False if not self.trained else True,
-            min_count=self.min_count,
-        )
-
-        for shuffle_num in track(range(epochs), total=epochs, description="Epochs"):
-            # update current values
-            current_lr = lr_scheduler.get_lr()
-            current_loss = self.get_latest_training_loss()
-
-            # update user
-            _LOGGER.info(
-                f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}"
-            )
-            _LOGGER.info("Shuffling documents.")
-
-            # shuffle regions
-            region_sets = utils.shuffle_documents(region_sets, n_shuffles=n_shuffles)
-
-            # train the model on one iteration
-            super().train(
-                region_sets,
-                total_examples=len(region_sets),
-                epochs=1,  # for to 1 for now (see: https://github.com/databio/gitk/pull/20#discussion_r1205692089)
-                callbacks=self.callbacks,
-                compute_loss=report_loss,
-                start_alpha=current_lr,
-            )
-
-            # update learning rates
-            lr_scheduler.update()
-
-            self.trained = True
-
-    def save(self, filepath: str):
-        """
-        Save the current model to disk
-
-        :param str filepath: The path to save the model to.
-        """
-        super().save(filepath)
-
-    @classmethod
-    def load(cls, filepath: str) -> "Region2Vec":
-        """
-        Load a model from disk. This should return a
-        Region2Vec object.
-
-        :param str filepath: The path to load the model from.
-        """
-        # I feel like this shouldnt work, but it does?
-        return super().load(filepath)
-
-    def forward(
-        self, regions: Union[Region, RegionSet, List[Region], str, None, List[None]]
-    ) -> Union[np.ndarray, List[Optional[np.ndarray]]]:
-        """
-        Get the embedding vector(s) for a given region or region set.
-
-        :param Union[Region, RegionSet, List[Region], str, None, List[None]] regions: The region(s) to get the embedding vector(s) for.
-        :param bool skip_missing: If True, regions without vectors will be skipped. If False, will return None for such regions.
-        """
-        if regions is None:
-            return None
-
-        def get_vector(region_word: Union[str, None]) -> Optional[np.ndarray]:
-            """Helper function to get vector for a region word or return None."""
-            if region_word is None:
-                return None
-            return self.wv[region_word] if region_word in self.wv else None
-
-        # If it's a single region
-        if isinstance(regions, Region):
-            region_word = wordify_region(regions)
-            return get_vector(region_word)
-
-        # If it's a RegionSet or list, or a str path to a bed file (assuming you have a function `load_from_bed`)
-        elif isinstance(regions, (RegionSet, list, str)):
-            # Convert str path to a RegionSet
-            if isinstance(regions, str):
-                regions = RegionSet(str)  # Assuming you have a function like this
-
-            # For RegionSet or List
-            if isinstance(regions, RegionSet):
-                region_words = wordify_regions(regions)
-            else:
-                region_words = []
-                for region in regions:
-                    if region is not None:
-                        region_words.append(wordify_region(region))
-                    else:
-                        region_words.append(None)
-
-            vectors = [get_vector(r) for r in region_words]
-
-            return vectors
-
-        else:
-            raise TypeError(
-                f"Regions must be of type Region, RegionSet, list, or str (path to bed file), not {type(regions).__name__}"
-            )
-
-    def __call__(self, regions: Union[Region, RegionSet, List[Region]]) -> np.ndarray:
-        """
-        Get the embedding vector(s) for a given region or region set.
-
-        :param Union[Region, RegionSet, List[Region]] regions: The region(s) to get the embedding vector(s) for.
-        """
-        return self.forward(regions)
-
-    def __repr__(self) -> str:
-        return f"Region2Vec(window={self.window}, vector_size={self.vector_size})"
-
-
-class Region2VecExModel(ExModel):
     def __init__(
-        self, model_path: str = None, tokenizer: InMemTokenizer = None, **kwargs
+        self,
+        vocab_size: int,
+        embedding_dim: int = DEFAULT_EMBEDDING_SIZE,
+    ):
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.projection = nn.Embedding(vocab_size, embedding_dim)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.projection(x)
+        return x
+
+
+class Region2Vec(Word2Vec):
+    def __init__(
+        self,
+        vocab_size: int,
+        embedding_dim: int = DEFAULT_EMBEDDING_SIZE,
+    ):
+        super().__init__(vocab_size, embedding_dim)
+
+
+class Region2VecExModel:
+    def __init__(
+        self,
+        model_path: str = None,
+        tokenizer: ITTokenizer = None,
+        device: str = None,
+        **kwargs,
     ):
         """
         Initialize Region2VecExModel.
 
         :param str model_path: Path to the pre-trained model on huggingface.
+        :param embedding_dim: Dimension of the embedding.
         :param kwargs: Additional keyword arguments to pass to the model.
         """
-        self.model_path = model_path
+        super().__init__()
+        self.model_path: str = model_path
+        self.tokenizer: ITTokenizer = tokenizer
+        self.trained: bool = False
         self._model: Region2Vec = None
-        self.tokenizer: InMemTokenizer = tokenizer
 
         if model_path is not None:
             self._init_from_huggingface(model_path)
-        else:
-            self._model = Region2Vec(**kwargs)
-            self.tokenizer = tokenizer
+            self.trained = True
+
+        elif tokenizer is not None:
+            self._init_model(**kwargs)
+
+        # set the device
+        self._target_device = torch.device(
+            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        )
+
+    def _init_model(self, **kwargs):
+        """
+        Initialize the core model. This will initialize the model from scratch.
+
+        :param kwargs: Additional keyword arguments to pass to the model.
+        """
+        if self.tokenizer:
+            self._vocab_length = len(self.tokenizer)
+            self._model = Region2Vec(
+                len(self.tokenizer),
+                embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
+            )
 
     @property
-    def wv(self):
+    def model(self):
         """
-        Return the word vectors. Similar to the `wv` property of a gensim Word2Vec model.
+        Get the core Region2Vec model.
         """
-        return self._model.wv
+        return self._model
 
-    @property
-    def trained(self) -> bool:
+    def add_tokenizer(self, tokenizer: Tokenizer, **kwargs):
         """
-        Return whether or not the model is trained.
-        """
-        return self._model.trained
+        Add a tokenizer to the model. This should be use when the model
+        is not initialized with a tokenizer.
 
-    def add_tokenizer_from_universe(self, universe: Union[str, RegionSet]):
+        :param tokenizer: Tokenizer to add to the model.
+        :param kwargs: Additional keyword arguments to pass to the model.
         """
-        Add a universe file to the model.
+        if self._model is not None:
+            raise RuntimeError("Cannot add a tokenizer to a model that is already initialized.")
 
-        :param str universe_file_path: Path to the universe file.
-        """
-        self.tokenizer = InMemTokenizer(universe)
+        self.tokenizer = tokenizer
+        if not self.trained:
+            self._init_model(**kwargs)
 
-    def from_pretrained(self, model_file_path: str, universe_file_path: str):
+    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
-        Initialize ScEmbed model from pretrained model.
+        Load the model from a checkpoint.
 
-        :param str model_file_path: Path to the pre-trained model.
-        :param str universe_file_path: Path to the universe file.
+        :param str model_path: Path to the model checkpoint.
+        :param str vocab_path: Path to the vocabulary file.
         """
-        self._model = Region2Vec.load(model_file_path)
-        self.tokenizer = InMemTokenizer(universe_file_path)
+        self._model_path = model_path
+        self._universe_path = vocab_path
+
+        # init the tokenizer - only one option for now
+        self.tokenizer = ITTokenizer(vocab_path)
+
+        # load the model state dict (weights)
+        params = torch.load(model_path)
+
+        # get the model config (vocab size, embedding size)
+        with open(config_path, "r") as f:
+            config = safe_load(f)
+
+        self._model = Region2Vec(
+            config["vocab_size"],
+            embedding_dim=config["embedding_size"],
+        )
+        self._model.load_state_dict(params)
 
     def _init_from_huggingface(
         self,
-        model_repo: str,
+        model_path: str,
         model_file_name: str = MODEL_FILE_NAME,
         universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
         """
-        Download a pretrained model from the HuggingFace Hub. We need to download
-        the actual model + weights, and the universe file.
+        Initialize the model from a huggingface model. This uses the model path
+        to download the necessary files and then "build itself up" from those. This
+        includes both the actual model and the tokenizer.
 
-        :param str model: The name of the model to download (this is the same as the repo name).
-        :param str model_file_name: The name of the model file - this should almost never be changed.
-        :param str universe_file_name: The name of the universe file - this should almost never be changed.
+        :param str model_path: Path to the pre-trained model on huggingface.
+        :param str model_file_name: Name of the model file.
+        :param str universe_file_name: Name of the universe file.
+        :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
-        model_path = hf_hub_download(model_repo, model_file_name, **kwargs)
-        universe_path = hf_hub_download(model_repo, universe_file_name, **kwargs)
+        model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
+        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
-        syn1reg_file_name = utils.make_syn1neg_file_name(model_file_name)
-        wv_file_name = utils.make_wv_file_name(model_file_name)
+        self._load_local_model(model_file_path, universe_path, config_path)
 
-        # get the syn1neg and wv files
-        try:
-            hf_hub_download(model_repo, wv_file_name, **kwargs)
-        except EntryNotFoundError:
-            _LOGGER.error(
-                "Could not find wv file. This is ok - skipping. Likely means model is small."
-            )
+    @classmethod
+    def from_pretrained(
+        cls,
+        path_to_files: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
+    ) -> "Region2VecExModel":
+        """
+        Load the model from a set of files that were exported using the export function.
 
-        try:
-            hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
-        except EntryNotFoundError:
-            _LOGGER.error(
-                "Could not find syn1neg file. This is ok - skipping. Likely means model is small."
-            )
+        :param str path_to_files: Path to the directory containing the files.
+        :param str model_file_name: Name of the model file.
+        :param str universe_file_name: Name of the universe file.
+        """
+        model_file_path = os.path.join(path_to_files, model_file_name)
+        universe_file_path = os.path.join(path_to_files, universe_file_name)
+        config_file_path = os.path.join(path_to_files, config_file_name)
 
-        # set the paths to the downloaded files
-        self._model_path = model_path
-        self._universe_path = universe_path
+        instance = cls()
+        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
+        instance.trained = True
 
-        # load the model
-        self._model = Region2Vec.load(model_path)
-        self.tokenizer = InMemTokenizer(universe_path)
+        return instance
 
-    def _filter_empty_region_sets(
-        self, region_sets: List[RegionSet]
+    def _validate_data_for_training(
+        self, data: Union[List[RegionSet], List[str], List[List[Region]]]
     ) -> List[RegionSet]:
         """
-        Filter out any empty region sets. This includes empty lists and lists of None
+        Validate the data for training. This will return a list of RegionSets if the data is valid.
 
-        :param List[RegionSet] region_sets: The region sets to filter.
-        :return: The filtered region sets.
+        :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
+                                                       a list of RegionSets or a list of paths to bed files.
+        :return: List of RegionSets.
         """
-        # remove all None's from all region sets
-        region_sets = [
-            [region for region in region_set if region is not None]
-            for region_set in region_sets
-        ]
+        if not isinstance(data, list):
+            raise TypeError("data must be a list or RegionSets or a list of paths to bed files.")
+        if len(data) == 0:
+            raise ValueError("data must not be empty.")
 
-        # remove all empty region sets
-        region_sets = [
-            rs
-            for rs in track(
-                region_sets,
-                total=len(region_sets),
-                description="Filtering out empty sets.",
-            )
-            if len(rs) > 0
-        ]
-
-        return region_sets
-
-    def _validate_data(
-        self, data: Union[List[str], List[RegionSet], List[List[Region]]]
-    ) -> List[RegionSet]:
-        """
-        Validate that the user sent in the correct data. this could be one of three things:
-        1. A list of paths to bed files
-        2. A list of RegionSets
-        3. A list of lists of Regions
-
-        :param Union[List[str], List[RegionSet], List[List[Region]]] data: The data to validate.
-        :return: The validated data as a list of RegionSets.
-        """
-        if isinstance(data, list):
-            if len(data) == 0:
-                raise ValueError("Data cannot be empty.")
-            elif isinstance(data[0], str):
-                # we have a list of paths to bed files
-                region_sets = [RegionSet(path) for path in data]
-            elif isinstance(data[0], RegionSet):
-                # we have a list of RegionSets
-                region_sets = data
-            elif isinstance(data[0], list):
-                # we have a list of lists of Regions
-                region_sets = [RegionSet(regions) for regions in data]
-            else:
-                raise TypeError(
-                    f"Data must be of type List[str], List[RegionSet], or List[List[Region]], not {type(data).__name__}"
-                )
-        else:
-            raise TypeError(
-                f"Data must be of type List[str], List[RegionSet], or List[List[Region]], not {type(data).__name__}"
-            )
-
-        # filter out empty region sets
-        return self._filter_empty_region_sets(region_sets)
-
-        return region_sets
+        # check if the data is a list of RegionSets
+        if isinstance(data[0], RegionSet):
+            return data
+        elif isinstance(data[0], str):
+            return [RegionSet(f) for f in data]
+        elif isinstance(data[0], list) and isinstance(data[0][0], Region):
+            return [RegionSet([r for r in region_list]) for region_list in data]
 
     def train(
-        self, data: Union[List[str], List[RegionSet], List[List[Region]]], **kwargs
-    ):
+        self,
+        data: Union[List[RegionSet], List[str]],
+        window_size: int = DEFAULT_WINDOW_SIZE,
+        epochs: int = DEFAULT_EPOCHS,
+        min_count: int = DEFAULT_MIN_COUNT,
+        num_cpus: int = 1,
+        seed: int = 42,
+        checkpoint_path: str = MODEL_FILE_NAME,
+        save_model: bool = False,
+        gensim_params: dict = {},
+    ) -> np.ndarray:
         """
         Train the model.
 
-        :param sc.AnnData data: The AnnData object containing the data to train on (can be path to AnnData).
-        :param kwargs: Keyword arguments to pass to the model training function.
+        :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
+                                                        a list of RegionSets or a list of paths to bed files.
+        :param int window_size: Window size for the model.
+        :param int epochs: Number of epochs to train for.
+        :param int min_count: Minimum count for a region to be included in the vocabulary.
+        :param int n_shuffles: Number of shuffles to perform on the data.
+        :param int batch_size: Batch size for training.
+        :param str checkpoint_path: Path to save the model checkpoint to.
+        :param torch.optim.Optimizer optimizer: Optimizer to use for training.
+        :param float learning_rate: Learning rate to use for training.
+        :param int ns_k: Number of negative samples to use.
+        :param torch.device device: Device to use for training.
+        :param dict optimizer_params: Additional parameters to pass to the optimizer.
+        :param bool save_model: Whether or not to save the model.
+
+        :return np.ndarray: Loss values for each epoch.
         """
-        _LOGGER.info("Validating data.")
-        region_sets = self._validate_data(data)
+        # we only need gensim if we are training
+        from gensim.models import Word2Vec as GensimWord2Vec
 
-        _LOGGER.info("Extracting region sets.")
-
-        # check for empty tokenizer
-        if self.tokenizer is None or len(self.tokenizer.universe) == 0:
-            raise ValueError(
-                "Cannot train model without a universe. Please call `add_universe` first."
+        # validate a model exists
+        if self._model is None:
+            raise RuntimeError(
+                "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
             )
 
-        # tokenize each region set
-        _LOGGER.info("Tokenizing region sets.")
-        region_sets_tokenized = [
-            self.tokenizer.tokenize(rs)
-            for rs in track(
-                region_sets,
-                total=len(region_sets),
-                description="Tokenizing region sets.",
+        # validate the data - convert all to RegionSets
+        _LOGGER.info("Validating data for training.")
+        data = self._validate_data_for_training(data)
+
+        # create gensim model that will be used to train
+        _LOGGER.info("Creating gensim model.")
+        gensim_model = GensimWord2Vec(
+            vector_size=self._model.embedding_dim,
+            window=window_size,
+            min_count=min_count,
+            workers=num_cpus,
+            seed=seed,
+            **gensim_params,
+        )
+
+        # tokenize the data
+        # convert to strings for gensim
+        _LOGGER.info("Tokenizing data.")
+        tokenized_data = [
+            self.tokenizer.tokenize(list(region_set))
+            for region_set in track(data, description="Tokenizing data", total=len(data))
+            if len(region_set) > 0
+        ]
+
+        _LOGGER.info("Building vocabulary.")
+        tokenized_data = [
+            [str(t.id) for t in region_set]
+            for region_set in track(
+                tokenized_data,
+                total=len(tokenized_data),
+                description="Converting to strings.",
             )
         ]
-        region_sets_tokenized = self._filter_empty_region_sets(region_sets_tokenized)
+        gensim_model.build_vocab(tokenized_data)
 
-        _LOGGER.info("Training begin.")
+        # create our own learning rate scheduler
+        lr_scheduler = LearningRateScheduler(
+            n_epochs=epochs,
+        )
 
-        self._model.train(region_sets_tokenized, **kwargs)
+        # train the model
+        losses = []
 
-        _LOGGER.info("Training complete.")
+        for epoch in track(range(epochs), description="Training model", total=epochs):
+            # shuffle the data
+            _LOGGER.info(f"Starting epoch {epoch+1}.")
+            _LOGGER.info("Shuffling data.")
+            shuffled_data = shuffle_documents(
+                tokenized_data, n_shuffles=1
+            )  # shuffle once per epoch, no need to shuffle more
+            gensim_model.train(
+                shuffled_data,
+                epochs=1,  # train for 1 epoch at a time, shuffle data each time
+                compute_loss=True,
+                total_words=gensim_model.corpus_total_words,
+            )
 
-    def export(self, path: str):
+            # log out and store loss
+            _LOGGER.info(f"Loss: {gensim_model.get_latest_training_loss()}")
+            losses.append(gensim_model.get_latest_training_loss())
+
+            # update the learning rate
+            lr_scheduler.update()
+
+        # once done training, set the weights of the pytorch model in self._model
+        for id in track(
+            gensim_model.wv.key_to_index,
+            total=len(gensim_model.wv.key_to_index),
+            description="Setting weights.",
+        ):
+            self._model.projection.weight.data[int(id)] = torch.tensor(gensim_model.wv[id])
+
+        # set the model as trained
+        self.trained = True
+
+        # export
+        if save_model:
+            self.export(checkpoint_path)
+
+        return np.array(losses)
+
+    def export(
+        self,
+        path: str,
+        checkpoint_file: str = MODEL_FILE_NAME,
+        universe_file: str = UNIVERSE_FILE_NAME,
+        config_file: str = CONFIG_FILE_NAME,
+    ):
         """
-        Export a model for direct upload to the HuggingFace Hub.
+        Function to facilitate exporting the model in a way that can
+        be directly uploaded to huggingface. This exports the model
+        weights and the vocabulary.
 
-        :param str path: The path to save the model to.
+        :param str path: Path to export the model to.
         """
+        # make sure the model is trained
+        if not self.trained:
+            raise RuntimeError("Cannot export an untrained model.")
+
+        # make sure the path exists
         if not os.path.exists(path):
             os.makedirs(path)
 
-        model_file_path = os.path.join(path, MODEL_FILE_NAME)
-        universe_file_path = os.path.join(path, UNIVERSE_FILE_NAME)
+        # export the model weights
+        torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
 
-        # save the model
-        self._model.save(model_file_path)
-
-        # save universe (vocab)
-        with open(universe_file_path, "w") as f:
-            for region in self.tokenizer.universe:
+        # export the vocabulary
+        with open(os.path.join(path, universe_file), "a") as f:
+            for region in self.tokenizer.universe.regions:
                 f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
-    def upload_to_huggingface(self, model_name: str, token: str = None, **kwargs):
-        """
-        Upload the model to the HuggingFace Hub.
+        # export the config (vocab size, embedding size)
+        config = {
+            "vocab_size": len(self.tokenizer),
+            "embedding_size": self._model.embedding_dim,
+        }
 
-        :param str model_name: The name of the model to upload.
-        :param kwargs: Additional keyword arguments to pass to the upload function.
-        """
-        raise NotImplementedError("This method is not yet implemented.")
+        with open(os.path.join(path, config_file), "w") as f:
+            safe_dump(config, f)
 
     def encode(
-        self,
-        regions: Union[str, List[Region], RegionSet, str],
-        pool: Union[Literal["mean", "max"], bool, Callable] = False,
-        return_none: bool = True,
-    ) -> Union[np.ndarray, List[np.ndarray]]:
-        """
-        Encode the data into a latent space.
-
-        :param Union[str, List[Region], RegionSet, str] regions: The regions to encode.
-        :param bool skip_missing: If True, regions without vectors will be skipped. If False, will return None for such regions.
-        :param Union[Literal["mean", "max"], bool, callable] pool: Whether or not to pool the data. If True, will use mean pooling.
-                                                                   If False, will not pool. If callable, will use the callable
-                                                                   function to pool the data.
-        :param bool return_none: If True, will return None for regions without vectors. If False, will skip such regions. (it is highly recommended to set this to True)
-        :return Union[np.ndarray, List[np.ndarray]]: The encoded data.
-        """
-        # tokenize the data
-        _LOGGER.info("Tokenize data.")
-        regions = self.tokenizer.tokenize(regions)
-
-        # encode the data
-        _LOGGER.info("Encoding data.")
-        region_vectors = self._model.forward(regions)
-
-        if len(region_vectors) == 1:
-            return region_vectors[0]
-
-        _pool_fn: callable
-
-        # pool the data if requested
-        if pool is True:
-            pool = "mean"
-            _pool_fn = mean_pooling
-        elif pool is False:
-            _pool_fn = None
-        elif isinstance(pool, str):
-            if pool.lower() == "mean":
-                _pool_fn = mean_pooling
-            elif pool.lower() == "max":
-                _pool_fn = max_pooling
-            else:
-                raise ValueError(
-                    f"Invalid pooling function. Must be one of ['mean', 'max']. Got {pool}."
-                )
-        elif callable(pool):
-            _pool_fn = pool
-        else:
-            raise ValueError(
-                f"Invalid pooling function. Must be str (['mean', 'max']), or callable. Got {pool}."
-            )
-
-        # use pool function if specified
-        if _pool_fn is not None:
-            result = _pool_fn(region_vectors)
-        # otherwise, return the region vectors, filtering out None values if requested
-        else:
-            if return_none:
-                result = region_vectors
-            else:
-                result = [rv for rv in region_vectors if rv is not None]
-        return result
-
-    def __call__(
-        self, regions: Union[List[Region], RegionSet, str], skip_missing: bool = False
+        self, regions: Union[Region, List[Region]], pooling: POOLING_TYPES = "mean"
     ) -> np.ndarray:
-        return self.encode(regions, skip_missing=skip_missing)
+        """
+        Get the vector for a region.
+
+        :param Region region: Region to get the vector for.
+        :param str pooling: Pooling type to use.
+
+        :return np.ndarray: Vector for the region.
+        """
+        # data validation
+        if isinstance(regions, Region):
+            regions = [regions]
+        if isinstance(regions, str):
+            regions = list(RegionSet(regions))
+        if isinstance(regions, RegionSet):
+            regions = list(regions)
+        if not isinstance(regions, list):
+            regions = [regions]
+        if not isinstance(regions[0], Region):
+            raise TypeError("regions must be a list of Region objects.")
+
+        if pooling not in ["mean", "max"]:
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+
+        # tokenize the region
+        tokens = [self.tokenizer.tokenize(r) for r in regions]
+        tokens = [t.id for sublist in tokens for t in sublist]
+
+        # get the vector
+        region_embeddings = self._model.projection(torch.tensor(tokens))
+
+        if pooling == "mean":
+            return torch.mean(region_embeddings, axis=0).detach().numpy()
+        elif pooling == "max":
+            return torch.max(region_embeddings, axis=0).values.detach().numpy()
+        else:
+            # this should be unreachable
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")

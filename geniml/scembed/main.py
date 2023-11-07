@@ -1,6 +1,6 @@
 import os
 from logging import getLogger
-from typing import Union, List
+from typing import Union
 
 import numpy as np
 import scanpy as sc
@@ -10,7 +10,7 @@ from rich.progress import track
 from yaml import safe_load
 
 from ..region2vec.utils import LearningRateScheduler, shuffle_documents
-from ..region2vec.experimental import Region2Vec
+from ..region2vec.main import Region2Vec
 from ..tokenization import ITTokenizer, Tokenizer
 from ..region2vec.const import (
     POOLING_TYPES,
@@ -22,7 +22,7 @@ from ..region2vec.const import (
     UNIVERSE_FILE_NAME,
     CONFIG_FILE_NAME,
 )
-from ..io.io import Region, RegionSet
+
 from .const import (
     CHR_KEY,
     END_KEY,
@@ -337,7 +337,7 @@ class ScEmbed:
                 f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
     def encode(
-        self, regions: Union[Region, List[Region]], pooling: POOLING_TYPES = "mean"
+        self, regions: Union[sc.AnnData, str], pooling: POOLING_TYPES = "mean"
     ) -> np.ndarray:
         """
         Get the vector for a region.
@@ -348,35 +348,31 @@ class ScEmbed:
         :return np.ndarray: Vector for the region.
         """
         # data validation
-        if isinstance(regions, sc.AnnData):
-            pass  # sc.AnnData is a valid input
-        elif isinstance(regions, Region):
-            regions = [regions]
-        elif isinstance(regions, str):
-            regions = list(RegionSet(regions))
-        elif isinstance(regions, RegionSet):
-            regions = list(regions)
-        elif not isinstance(regions, list):
-            regions = [regions]
-        elif not isinstance(regions[0], Region):
-            raise TypeError("regions must be a list of Region objects.")
-        else:
-            pass
+        if not (isinstance(regions, sc.AnnData) or isinstance(regions, str)):
+            raise TypeError(
+                f"Regions must be of type AnnData or str, not {type(regions).__name__}"
+            )
+        if isinstance(regions, str):
+            regions = sc.read_h5ad(regions)
 
         if pooling not in ["mean", "max"]:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         # tokenize the region
-        tokens = [self.tokenizer.tokenize(r) for r in regions]
-        tokens = [t.id for sublist in tokens for t in sublist]
+        tokens = self.tokenizer.tokenize(regions)
+        tokens = [[t.id for t in sublist] for sublist in tokens]
 
         # get the vector
-        region_embeddings = self._model.projection(torch.tensor(tokens))
+        embeddings = []
+        for token_set in track(tokens, total=len(tokens), description="Getting embeddings"):
+            region_embeddings = self._model.projection(torch.tensor(token_set))
+            if pooling == "mean":
+                region_embeddings = torch.mean(region_embeddings, axis=0).detach().numpy()
+            elif pooling == "max":
+                region_embeddings = torch.max(region_embeddings, axis=0).values.detach().numpy()
+            else:
+                # this should be unreachable
+                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+            embeddings.append(region_embeddings)
 
-        if pooling == "mean":
-            return torch.mean(region_embeddings, axis=0).detach().numpy()
-        elif pooling == "max":
-            return torch.max(region_embeddings, axis=0).values.detach().numpy()
-        else:
-            # this should be unreachable
-            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+        return np.vstack(embeddings)

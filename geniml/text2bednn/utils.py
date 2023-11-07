@@ -192,7 +192,6 @@ def prepare_vectors_for_database(
     embeddings = []
     labels = []
     for ri in ri_list:
-        # region set embedding
         embeddings.append(ri.region_set_embedding)
         # file name and metadata
         labels.append({"name": ri.file_name, "metadata": ri.metadata})
