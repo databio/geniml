@@ -24,8 +24,11 @@ from .utils import extract_maf_col_positions, is_gzipped, read_bedset_file
 class Region:
     def __init__(self, chr: str, start: int, stop: int):
         """
-        Instantiate a Region object. This is a wrapper around the Interval class from the intervaltree package.
-        This makes it easier to work with regions.
+        Instantiate a Region object.
+
+        :param str chr: chromosome
+        :param int start: start position
+        :param int stop: stop position
         """
         self.chr = chr
         self.start = start
