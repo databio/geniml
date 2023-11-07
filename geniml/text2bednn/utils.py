@@ -5,15 +5,15 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import peppy
+import torch
 from sentence_transformers import SentenceTransformer, models
+from torch.utils.data import DataLoader, TensorDataset
 
 from ..const import PKG_NAME
 from ..io import RegionSet
 from ..region2vec import Region2VecExModel
 from ..search.backends import HNSWBackend, QdrantBackend
 from .const import *
-import torch
-from torch.utils.data import TensorDataset, DataLoader
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 
@@ -307,7 +307,9 @@ def bioGPT_sentence_transformer() -> SentenceTransformer:
     return SentenceTransformer(modules=[word_embedding_model, pooling_model])
 
 
-def arrays_to_torch_dataloader(X: np.ndarray, Y: np.ndarray, batch_size: int = 1, shuffle: bool = True):
+def arrays_to_torch_dataloader(
+    X: np.ndarray, Y: np.ndarray, batch_size: int = 1, shuffle: bool = True
+) -> DataLoader:
     """
     https://stackoverflow.com/questions/44429199/how-to-load-a-list-of-numpy-arrays-to-pytorch-dataset-loader
     """
@@ -318,7 +320,8 @@ def arrays_to_torch_dataloader(X: np.ndarray, Y: np.ndarray, batch_size: int = 1
     return DataLoader(my_dataset, batch_size=batch_size, shuffle=shuffle)
 
 
-def dtype_check(vecs:np.ndarray) -> np.ndarray:
+def dtype_check(vecs: np.ndarray) -> np.ndarray:
+    """ """
     if not isinstance(vecs.dtype, type(np.dtype("float32"))):
         vecs = vecs.astype(np.float32)
 

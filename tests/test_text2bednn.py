@@ -1,14 +1,17 @@
 import os
+import pickle
 
 import numpy as np
 import pytest
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
+from torchsummary import summary
 
 from geniml.io.io import RegionSet
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
-from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
+from geniml.text2bednn.text2bednn import (Text2BEDSearchInterface, Vec2VecFNN,
+                                          Vec2VecFNNtorch)
 from geniml.text2bednn.utils import (bioGPT_sentence_transformer,
                                      build_regionset_info_list_from_files,
                                      build_regionset_info_list_from_PEP,
@@ -173,9 +176,7 @@ def col_names():
 
 
 def test_reading_data(bed_folder, metadata_path, yaml_path, col_names, r2v_model, st_model):
-    """
-    The yaml file in the te
-    """
+    """ """
     ri_list_PEP = build_regionset_info_list_from_PEP(
         yaml_path,
         col_names,
@@ -196,6 +197,49 @@ def test_reading_data(bed_folder, metadata_path, yaml_path, col_names, r2v_model
     assert isinstance(Y, np.ndarray)
     assert X.shape[1] == 384
     assert Y.shape[1] == 100
+
+
+def test_torch_running(tmp_path_factory):
+    training_X = np.random.random((90, 1024))
+    training_Y = np.random.random((90, 100))
+
+    validating_X = np.random.random((10, 1024))
+    validating_Y = np.random.random((10, 100))
+
+    best_model_folder = tmp_path_factory.mktemp("best_model")
+
+    v2v_torch1 = Vec2VecFNNtorch()
+
+    v2v_torch1.train(
+        training_X,
+        training_Y,
+        (validating_X, validating_Y),
+        save_best=False,
+        folder_path=best_model_folder,
+        early_stop=True,
+        patience=0.1,
+        model_file_name="v2c2v2c_best_epoch.pt",
+        loss_func="cosine_embedding_loss",
+        num_epochs=100,
+        batch_size=16,
+        num_units=[512, 256],
+        num_extra_hidden_layers=1,
+    )
+    v2v_torch1.plot_training_hist(best_model_folder)
+    summary(v2v_torch1.model)
+
+    v2v_torch2 = Vec2VecFNNtorch()
+    v2v_torch2.load_from_disk(
+        os.path.join(best_model_folder, "v2c2v2c_best_epoch.pt"),
+        os.path.join(best_model_folder, "config.yaml"),
+    )
+
+    input_vecs = np.random.random((5, 1024))
+
+    output1 = v2v_torch1.embedding_to_embedding(input_vecs)
+    output2 = v2v_torch2.embedding_to_embedding(input_vecs)
+
+    assert np.array_equal(output1, output2)
 
 
 @pytest.mark.skipif(
