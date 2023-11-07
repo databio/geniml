@@ -4,7 +4,6 @@ from typing import List, Union, NoReturn
 
 import numpy as np
 import pandas as pd
-from intervaltree import Interval
 import genomicranges
 from hashlib import md5
 
@@ -19,24 +18,18 @@ from .const import (
     MAF_START_COL_NAME,
     MAF_STRAND_COL_NAME,
 )
-from .utils import extract_maf_col_positions, is_gzipped
+from .utils import extract_maf_col_positions, is_gzipped, read_bedset_file
 
 
-class Region(Interval):
-    def __new__(cls, chr: str, start: int, stop: int, data=None):
-        return super(Region, cls).__new__(cls, start, stop, data)
-
-    def __init__(self, chr: str, start: int, stop: int, data=None):
+class Region:
+    def __init__(self, chr: str, start: int, stop: int):
         """
         Instantiate a Region object. This is a wrapper around the Interval class from the intervaltree package.
         This makes it easier to work with regions.
         """
-        # no need to call super().__init__() because namedtuple doesn't have __init__()
         self.chr = chr
-
-    @property
-    def start(self):
-        return self.begin
+        self.start = start
+        self.end = stop
 
     def __repr__(self):
         return f"Region({self.chr}, {self.start}, {self.end})"
@@ -101,7 +94,7 @@ class RegionSet:
             self.regions = regions
             self.length = len(self.regions)
         else:
-            raise ValueError(f"regions must be a path to a bed file or a list of Region objects")
+            raise ValueError("regions must be a path to a bed file or a list of Region objects")
 
         self._identifier = None
 

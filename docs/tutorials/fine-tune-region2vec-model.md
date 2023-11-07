@@ -5,7 +5,7 @@ Fine-tuning a model is a way to adapt a pre-trained model to a new task. For exa
 ## Get a pretrained model
 To begin, we need to get a pretrained model. We can get one from huggingface:
 ```python
-from geniml.region2vec.experimental import Region2VecExModel
+from geniml.region2vec import Region2VecExModel
 
 model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38-v2")
 ```

@@ -6,7 +6,7 @@ To use one of our pre-trained models, simply import the `Region2VecExModel` and 
 
 ```python
 from geniml.io import Region
-from geniml.region2vec.experimental import Region2VecExModel
+from geniml.region2vec import Region2VecExModel
 
 model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38-v2")
 ```
