@@ -315,7 +315,7 @@ class Region2VecExModel:
             lr_scheduler.update()
 
         # once done training, set the weights of the pytorch model in self._model
-        for id in gensim_model.wv.key_to_index:
+        for id in track(gensim_model.wv.key_to_index, total=len(gensim_model.wv.key_to_index), description="Setting weights.")):
             self._model.projection.weight.data[int(id)] = torch.tensor(gensim_model.wv[id])
 
         # set the model as trained
@@ -353,8 +353,8 @@ class Region2VecExModel:
         torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
 
         # export the vocabulary
-        for region in self.tokenizer.universe.regions:
-            with open(os.path.join(path, universe_file), "a") as f:
+        with open(os.path.join(path, universe_file), "a") as f:
+            for region in self.tokenizer.universe.regions:
                 f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
         # export the config (vocab size, embedding size)
