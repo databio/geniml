@@ -1,6 +1,6 @@
 import os
 from logging import getLogger
-from typing import Union
+from typing import Union, List
 
 import numpy as np
 import scanpy as sc
@@ -9,10 +9,11 @@ from huggingface_hub import hf_hub_download
 from rich.progress import track
 from yaml import safe_load
 
-from ..models.main import ExModel
 from ..region2vec.utils import LearningRateScheduler, shuffle_documents
 from ..region2vec.experimental import Word2Vec
-from ..tokenization import InMemTokenizer, Tokenizer
+from ..tokenization import ITTokenizer, Tokenizer
+from ..region2vec.const import POOLING_TYPES
+from ..io.io import Region, RegionSet
 from .const import (
     CHR_KEY,
     END_KEY,
@@ -34,7 +35,7 @@ _LOGGER = getLogger(MODULE_NAME)
 _GENSIM_LOGGER.setLevel("WARNING")
 
 
-class ScEmbed(ExModel):
+class ScEmbed:
     """
     ScEmbed extended model for single-cell ATAC-seq data. It is a single-cell
     extension of Region2Vec.
@@ -43,7 +44,7 @@ class ScEmbed(ExModel):
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: InMemTokenizer = None,
+        tokenizer: ITTokenizer = None,
         device: str = None,
         **kwargs,
     ):
@@ -56,7 +57,7 @@ class ScEmbed(ExModel):
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: InMemTokenizer = tokenizer
+        self.tokenizer: ITTokenizer = tokenizer
         self.trained: bool = False
         self._model: Word2Vec = None
 
@@ -118,7 +119,7 @@ class ScEmbed(ExModel):
         self._universe_path = vocab_path
 
         # init the tokenizer - only one option for now
-        self.tokenizer = InMemTokenizer(vocab_path)
+        self.tokenizer = ITTokenizer(vocab_path)
 
         # load the model state dict (weights)
         params = torch.load(model_path)
@@ -330,25 +331,50 @@ class ScEmbed(ExModel):
         """
         raise NotImplementedError("This method is not yet implemented.")
 
-    def encode(self, adata: sc.AnnData) -> np.ndarray:
+    def encode(
+        self, regions: Union[Region, List[Region]], pooling: POOLING_TYPES = "mean"
+    ) -> np.ndarray:
         """
-        Encode the data into a latent space.
+        Get the vector for a region.
 
-        :param sc.AnnData adata: The AnnData object containing the data to encode.
-        :return np.ndarray: The encoded data.
+        :param Region region: Region to get the vector for.
+        :param str pooling: Pooling type to use.
+
+        :return np.ndarray: Vector for the region.
         """
-        # tokenize the data
-        region_sets = self.tokenizer.tokenize(adata)
+        # data validation
+        if isinstance(regions, sc.AnnData):
+            pass  # sc.AnnData is a valid input
+        elif isinstance(regions, Region):
+            regions = [regions]
+        elif isinstance(regions, str):
+            regions = list(RegionSet(regions))
+        elif isinstance(regions, RegionSet):
+            regions = list(regions)
+        elif not isinstance(regions, list):
+            regions = [regions]
+        elif not isinstance(regions[0], Region):
+            raise TypeError("regions must be a list of Region objects.")
+        else:
+            pass
 
-        # encode the data
-        _LOGGER.info("Encoding data.")
-        enoded_data = []
-        for region_set in track(region_sets, description="Encoding data", total=len(region_sets)):
-            vectors = self._model.forward(region_set)
-            # compute the mean of the vectors
-            vector = np.mean(vectors, axis=0)
-            enoded_data.append(vector)
-        return np.array(enoded_data)
+        if pooling not in ["mean", "max"]:
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+
+        # tokenize the region
+        tokens = [self.tokenizer.tokenize(r) for r in regions]
+        tokens = [t.id for sublist in tokens for t in sublist]
+
+        # get the vector
+        region_embeddings = self._model.projection(torch.tensor(tokens))
+
+        if pooling == "mean":
+            return torch.mean(region_embeddings, axis=0).detach().numpy()
+        elif pooling == "max":
+            return torch.max(region_embeddings, axis=0).values.detach().numpy()
+        else:
+            # this should be unreachable
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
     def __call__(self, adata: sc.AnnData) -> np.ndarray:
         return self.encode(adata)
