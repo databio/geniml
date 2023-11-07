@@ -5,54 +5,100 @@ import os
 from functools import cmp_to_key
 
 import numpy as np
-from numba import njit
 
 from ..utils import natural_chr_sort, timer_func, read_chromosome_from_bw
 from .utils import predictions_to_bed, find_full
 from geniml.likelihood.build_model import ModelLH
 
 
-@njit
-def process_part(
-    cove,
-    model_start=np.array([[]]),
-    model_core=np.array([[]]),
-    model_end=np.array([[]]),
-):
-    """
-    Finding ML path through matrix using dynamic programing
-    :param ndarray cove: coverage tracks
-    :param ndarray model_start: lh model for starts
-    :param ndarray model_core: lh model for core
-    :param ndarray model_end: lh model for ends
-    :return ndarray: ML path through matrix
-    """
-    mat = np.zeros((len(cove), 4))
-    (N, M) = mat.shape
-    for i in range(N):
-        start_b = model_start[cove[i, 0], 0]
-        core_b = model_core[cove[i, 1], 0]
-        end_b = model_end[cove[i, 2], 0]
-        start = model_start[cove[i, 0], 1]
-        core = model_core[cove[i, 1], 1]
-        end = model_end[cove[i, 2], 1]
-        mat[i, 0] = start + core_b + end_b
-        mat[i, 1] = start_b + core + end_b
-        mat[i, 2] = start_b + core_b + end
-        mat[i, 3] = start_b + core_b + end_b
+import importlib.util
+ 
+package_name = 'numba'
+ 
+if importlib.util.find_spec(package_name) is None:
+    def process_part(
+        cove,
+        model_start=np.array([[]]),
+        model_core=np.array([[]]),
+        model_end=np.array([[]]),
+    ):
+        """
+        Finding ML path through matrix using dynamic programing without numba
+        :param ndarray cove: coverage tracks
+        :param ndarray model_start: lh model for starts
+        :param ndarray model_core: lh model for core
+        :param ndarray model_end: lh model for ends
+        :return ndarray: ML path through matrix
+        """
+        mat = np.zeros((len(cove), 4))
+        (N, M) = mat.shape
+        start_b = model_start[cove[:, 0], 0]
+        core_b = model_core[cove[:, 1], 0]
+        end_b = model_end[cove[:, 2], 0]
+        start = model_start[cove[:, 0], 1]
+        core = model_core[cove[:, 1], 1]
+        end = model_end[cove[:, 2], 1]
+        mat[:, 0] = start + core_b + end_b
+        mat[:, 1] = start_b + core + end_b
+        mat[:, 2] = start_b + core_b + end
+        mat[:, 3] = start_b + core_b + end_b
 
-    for i in range(1, N):
-        for j in range(M):
-            mat[i, j] += max(mat[i - 1, j], mat[i - 1, j - 1])
-    path = np.zeros(len(mat), dtype=np.int8)
-    path[-1] = np.argmax(mat[-1])
-    for i in range(len(mat) - 2, -1, -1):
-        prev_index = path[i + 1]
-        new_index = prev_index - (mat[i, prev_index - 1] > mat[i, prev_index])
-        if new_index == -1:
-            new_index = 3
-        path[i] = new_index
-    return path
+        for i in range(1, N):
+            for j in range(M):
+                mat[i, j] += max(mat[i - 1, j], mat[i - 1, j - 1])
+        path = np.zeros(len(mat), dtype=np.int8)
+        path[-1] = np.argmax(mat[-1])
+        for i in range(len(mat) - 2, -1, -1):
+            prev_index = path[i + 1]
+            new_index = prev_index - (mat[i, prev_index - 1] > mat[i, prev_index])
+            if new_index == -1:
+                new_index = 3
+            path[i] = new_index
+        return path
+else:
+    from numba import njit
+    @njit
+    def process_part(
+        cove,
+        model_start=np.array([[]]),
+        model_core=np.array([[]]),
+        model_end=np.array([[]]),
+    ):
+        """
+        Finding ML path through matrix using dynamic programing with numba
+        :param ndarray cove: coverage tracks
+        :param ndarray model_start: lh model for starts
+        :param ndarray model_core: lh model for core
+        :param ndarray model_end: lh model for ends
+        :return ndarray: ML path through matrix
+        """
+        mat = np.zeros((len(cove), 4))
+        (N, M) = mat.shape
+        for i in range(N):
+            start_b = model_start[cove[i, 0], 0]
+            core_b = model_core[cove[i, 1], 0]
+            end_b = model_end[cove[i, 2], 0]
+            start = model_start[cove[i, 0], 1]
+            core = model_core[cove[i, 1], 1]
+            end = model_end[cove[i, 2], 1]
+            mat[i, 0] = start + core_b + end_b
+            mat[i, 1] = start_b + core + end_b
+            mat[i, 2] = start_b + core_b + end
+            mat[i, 3] = start_b + core_b + end_b
+        for i in range(1, N):
+            for j in range(M):
+                mat[i, j] += max(mat[i - 1, j], mat[i - 1, j - 1])
+        path = np.zeros(len(mat), dtype=np.int8)
+        path[-1] = np.argmax(mat[-1])
+        for i in range(len(mat) - 2, -1, -1):
+            prev_index = path[i + 1]
+            new_index = prev_index - (mat[i, prev_index - 1] > mat[i, prev_index])
+            if new_index == -1:
+                new_index = 3
+            path[i] = new_index
+        return path
+    
+
 
 
 def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_out):
