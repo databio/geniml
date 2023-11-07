@@ -12,10 +12,11 @@ from geniml.likelihood.build_model import ModelLH
 
 
 import importlib.util
- 
-package_name = 'numba'
- 
+
+package_name = "numba"
+
 if importlib.util.find_spec(package_name) is None:
+
     def process_part(
         cove,
         model_start=np.array([[]]),
@@ -55,8 +56,10 @@ if importlib.util.find_spec(package_name) is None:
                 new_index = 3
             path[i] = new_index
         return path
+
 else:
     from numba import njit
+
     @njit
     def process_part(
         cove,
@@ -97,8 +100,6 @@ else:
                 new_index = 3
             path[i] = new_index
         return path
-    
-
 
 
 def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_out):
