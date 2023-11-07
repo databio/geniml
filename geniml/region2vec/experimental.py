@@ -98,6 +98,13 @@ class Region2VecExModel:
                 embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
             )
 
+    @property
+    def model(self):
+        """
+        Get the core Region2Vec model.
+        """
+        return self._model
+
     def add_tokenizer(self, tokenizer: Tokenizer, **kwargs):
         """
         Add a tokenizer to the model. This should be use when the model

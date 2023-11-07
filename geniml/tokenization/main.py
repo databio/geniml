@@ -5,9 +5,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Dict, List, Union
 
-import genomicranges as gr
 import numpy as np
-import pandas as pd
 import scanpy as sc
 from gtokenizers import (
     Region as GRegion,
@@ -15,11 +13,13 @@ from gtokenizers import (
     TokenizedRegionSet as GTokenizedRegionSet,
     Universe as GUniverse,
 )
+from huggingface_hub import hf_hub_download
 from intervaltree import IntervalTree
 from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
 
+from .const import UNIVERSE_FILE_NAME
 from ..io import Region, RegionSet, RegionSetCollection
 from .hard_tokenization_batch import main as hard_tokenization
 from .utils import anndata_to_regionsets, time_str, Timer
@@ -54,6 +54,21 @@ class ITTokenizer(Tokenizer):
         :param str universe: The universe to use for tokenization.
         """
         return cls(universe)
+
+    @classmethod
+    def from_pretrained(cls, model_path: str, **kwargs):
+        """
+        Create a new tokenizer from a pretrained model's vocabulary.
+
+        Usage:
+        ```
+        tokenizer = ITTokenizer.from_pretrained("path/to/universe.bed")
+        ```
+
+        :param str model_path: The path to the pretrained model on huggingface.
+        """
+        universe_file_path = hf_hub_download(model_path, UNIVERSE_FILE_NAME, **kwargs)
+        return cls(universe_file_path)
 
     @property
     def universe(self) -> GUniverse:
