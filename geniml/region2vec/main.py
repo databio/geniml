@@ -316,7 +316,9 @@ class Region2Vec(Word2Vec):
             current_loss = self.get_latest_training_loss()
 
             # update user
-            _LOGGER.info(f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}")
+            _LOGGER.info(
+                f"SHUFFLE {shuffle_num} - lr: {current_lr}, loss: {current_loss}"
+            )
             _LOGGER.info("Shuffling documents.")
 
             # shuffle regions
@@ -418,7 +420,9 @@ class Region2Vec(Word2Vec):
 
 
 class Region2VecExModel(ExModel):
-    def __init__(self, model_path: str = None, tokenizer: InMemTokenizer = None, **kwargs):
+    def __init__(
+        self, model_path: str = None, tokenizer: InMemTokenizer = None, **kwargs
+    ):
         """
         Initialize Region2VecExModel.
 
@@ -511,7 +515,9 @@ class Region2VecExModel(ExModel):
         self._model = Region2Vec.load(model_path)
         self.tokenizer = InMemTokenizer(universe_path)
 
-    def _filter_empty_region_sets(self, region_sets: List[RegionSet]) -> List[RegionSet]:
+    def _filter_empty_region_sets(
+        self, region_sets: List[RegionSet]
+    ) -> List[RegionSet]:
         """
         Filter out any empty region sets. This includes empty lists and lists of None
 
@@ -520,14 +526,17 @@ class Region2VecExModel(ExModel):
         """
         # remove all None's from all region sets
         region_sets = [
-            [region for region in region_set if region is not None] for region_set in region_sets
+            [region for region in region_set if region is not None]
+            for region_set in region_sets
         ]
 
         # remove all empty region sets
         region_sets = [
             rs
             for rs in track(
-                region_sets, total=len(region_sets), description="Filtering out empty sets."
+                region_sets,
+                total=len(region_sets),
+                description="Filtering out empty sets.",
             )
             if len(rs) > 0
         ]
@@ -572,7 +581,9 @@ class Region2VecExModel(ExModel):
 
         return region_sets
 
-    def train(self, data: Union[List[str], List[RegionSet], List[List[Region]]], **kwargs):
+    def train(
+        self, data: Union[List[str], List[RegionSet], List[List[Region]]], **kwargs
+    ):
         """
         Train the model.
 
@@ -595,7 +606,9 @@ class Region2VecExModel(ExModel):
         region_sets_tokenized = [
             self.tokenizer.tokenize(rs)
             for rs in track(
-                region_sets, total=len(region_sets), description="Tokenizing region sets."
+                region_sets,
+                total=len(region_sets),
+                description="Tokenizing region sets.",
             )
         ]
         region_sets_tokenized = self._filter_empty_region_sets(region_sets_tokenized)

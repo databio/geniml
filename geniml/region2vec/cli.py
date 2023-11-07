@@ -1,7 +1,9 @@
 def build_subparser(parser):
     """Builds an argument parser to support the region2vec command line interface."""
     parser.add_argument("--token-folder", type=str, help="path to tokenized files")
-    parser.add_argument("--num-shuffle", type=int, help="number of shufflings/training epochs")
+    parser.add_argument(
+        "--num-shuffle", type=int, help="number of shufflings/training epochs"
+    )
     parser.add_argument("--embed-dim", type=int, help="embedding dimension")
     parser.add_argument("--context-len", type=int, help="Context window size (half)")
     parser.add_argument("--nworkers", type=int, default=10, help="number of workers")
@@ -40,7 +42,9 @@ def build_subparser(parser):
         default=5,
         help="number of noise words in negative sampling, usually between 5-20",
     )
-    parser.add_argument("--init-lr", type=float, default=0.1, help="initial learning rate")
+    parser.add_argument(
+        "--init-lr", type=float, default=0.1, help="initial learning rate"
+    )
     parser.add_argument("--milestones", nargs="+", type=int, default=[100, 200])
     parser.add_argument(
         "--lr-mode",
@@ -55,7 +59,9 @@ def build_subparser(parser):
         default="once",
         help="[every] update at every epoch; [once] Update once since the vocabulary does not change",
     )
-    parser.add_argument("--min-lr", type=float, default=1.0e-6, help="minimum learning rate")
+    parser.add_argument(
+        "--min-lr", type=float, default=1.0e-6, help="minimum learning rate"
+    )
     parser.add_argument("--seed", type=int, default=42, help="random seed")
 
     return parser

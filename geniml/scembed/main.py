@@ -10,22 +10,24 @@ from rich.progress import track
 from yaml import safe_load
 
 from ..region2vec.utils import LearningRateScheduler, shuffle_documents
-from ..region2vec.experimental import Word2Vec
+from ..region2vec.experimental import Region2Vec
 from ..tokenization import ITTokenizer, Tokenizer
-from ..region2vec.const import POOLING_TYPES
+from ..region2vec.const import (
+    POOLING_TYPES,
+    DEFAULT_EMBEDDING_SIZE,
+    DEFAULT_WINDOW_SIZE,
+    DEFAULT_MIN_COUNT,
+    DEFAULT_EPOCHS,
+    MODEL_FILE_NAME,
+    UNIVERSE_FILE_NAME,
+    CONFIG_FILE_NAME,
+)
 from ..io.io import Region, RegionSet
 from .const import (
     CHR_KEY,
     END_KEY,
-    MODEL_FILE_NAME,
-    MODULE_NAME,
     START_KEY,
-    UNIVERSE_FILE_NAME,
-    DEFAULT_EMBEDDING_SIZE,
-    DEFAULT_EPOCHS,
-    DEFAULT_WINDOW_SIZE,
-    DEFAULT_MIN_COUNT,
-    CONFIG_FILE_NAME,
+    MODULE_NAME,
 )
 
 _GENSIM_LOGGER = getLogger("gensim")
@@ -36,11 +38,6 @@ _GENSIM_LOGGER.setLevel("WARNING")
 
 
 class ScEmbed:
-    """
-    ScEmbed extended model for single-cell ATAC-seq data. It is a single-cell
-    extension of Region2Vec.
-    """
-
     def __init__(
         self,
         model_path: str = None,
@@ -59,7 +56,7 @@ class ScEmbed:
         self.model_path: str = model_path
         self.tokenizer: ITTokenizer = tokenizer
         self.trained: bool = False
-        self._model: Word2Vec = None
+        self._model: Region2Vec = None
 
         if model_path is not None:
             self._init_from_huggingface(model_path)
@@ -81,7 +78,7 @@ class ScEmbed:
         """
         if self.tokenizer:
             self._vocab_length = len(self.tokenizer)
-            self._model = Word2Vec(
+            self._model = Region2Vec(
                 len(self.tokenizer),
                 embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
             )
@@ -128,7 +125,7 @@ class ScEmbed:
         with open(config_path, "r") as f:
             config = safe_load(f)
 
-        self._model = Word2Vec(
+        self._model = Region2Vec(
             config["vocab_size"],
             embedding_dim=config["embedding_size"],
         )
@@ -183,7 +180,7 @@ class ScEmbed:
 
         return instance
 
-    def _validate_data(self, data: Union[sc.AnnData, str]) -> sc.AnnData:
+    def _validate_data_for_training(self, data: Union[sc.AnnData, str]) -> sc.AnnData:
         """
         Validate the data is of the correct type and has the required columns
 
@@ -225,12 +222,27 @@ class ScEmbed:
         Train the model.
 
         :param sc.AnnData data: The AnnData object containing the data to train on (can be path to AnnData).
-        :param kwargs: Keyword arguments to pass to the model training function.
+        :param int window_size: The window size to use for training.
+        :param int epochs: The number of epochs to train for.
+        :param int min_count: The minimum count for a region to be included in the vocabulary.
+        :param int num_cpus: The number of cpus to use for training.
+        :param int seed: The seed to use for training.
+        :param str checkpoint_path: The path to save the model to.
+        :param bool save_model: Whether to save the model after training.
+        :param dict gensim_params: Additional keyword arguments to pass to the gensim model.
+
+        :return np.ndarray: The losses for each epoch.
         """
         from gensim.models import Word2Vec as GensimWord2Vec
 
+        # validate a model exists
+        if self._model is None:
+            raise RuntimeError(
+                "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
+            )
+
         _LOGGER.info("Validating data.")
-        data = self._validate_data(data)
+        data = self._validate_data_for_training(data)
 
         # create gensim model that will be used to train
         _LOGGER.info("Creating gensim model.")
@@ -250,7 +262,9 @@ class ScEmbed:
         tokenized_data = [
             [str(t.id) for t in region_set]
             for region_set in track(
-                tokenized_data, total=len(tokenized_data), description="Converting to strings."
+                tokenized_data,
+                total=len(tokenized_data),
+                description="Converting to strings.",
             )
         ]
         gensim_model.build_vocab(tokenized_data)
@@ -322,15 +336,6 @@ class ScEmbed:
             for region in self.tokenizer.universe:
                 f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
-    def upload_to_huggingface(self, model_name: str, token: str = None, **kwargs):
-        """
-        Upload the model to the HuggingFace Hub.
-
-        :param str model_name: The name of the model to upload.
-        :param kwargs: Additional keyword arguments to pass to the upload function.
-        """
-        raise NotImplementedError("This method is not yet implemented.")
-
     def encode(
         self, regions: Union[Region, List[Region]], pooling: POOLING_TYPES = "mean"
     ) -> np.ndarray:
@@ -375,6 +380,3 @@ class ScEmbed:
         else:
             # this should be unreachable
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
-
-    def __call__(self, adata: sc.AnnData) -> np.ndarray:
-        return self.encode(adata)

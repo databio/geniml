@@ -58,7 +58,11 @@ class Region2Vec(Word2Vec):
 
 class Region2VecExModel:
     def __init__(
-        self, model_path: str = None, tokenizer: ITTokenizer = None, device: str = None, **kwargs
+        self,
+        model_path: str = None,
+        tokenizer: ITTokenizer = None,
+        device: str = None,
+        **kwargs,
     ):
         """
         Initialize Region2VecExModel.
@@ -93,7 +97,7 @@ class Region2VecExModel:
         """
         if self.tokenizer:
             self._vocab_length = len(self.tokenizer)
-            self._model = Word2Vec(
+            self._model = Region2Vec(
                 len(self.tokenizer),
                 embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
             )
@@ -287,7 +291,9 @@ class Region2VecExModel:
         tokenized_data = [
             [str(t.id) for t in region_set]
             for region_set in track(
-                tokenized_data, total=len(tokenized_data), description="Converting to strings."
+                tokenized_data,
+                total=len(tokenized_data),
+                description="Converting to strings.",
             )
         ]
         gensim_model.build_vocab(tokenized_data)

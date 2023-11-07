@@ -232,7 +232,10 @@ class lr_scheduler:
         self.count += 1
         if self.mode == "linear":
             if self.count % self.freq == 0:
-                self.lr = self.init_lr - (self.init_lr - self.end_lr) / self.epochs * self.count
+                self.lr = (
+                    self.init_lr
+                    - (self.init_lr - self.end_lr) / self.epochs * self.count
+                )
         elif self.mode == "milestone":
             milestones = np.array(self.lr_info["milestones"])
             power = (milestones <= self.count).sum()
