@@ -275,7 +275,14 @@ class Region2VecExModel:
             for region_set in track(data, description="Tokenizing data", total=len(data))
             if len(region_set) > 0
         ]
-        tokenized_data = [[str(t.id) for t in region_set] for region_set in tokenized_data]
+
+        _LOGGER.info("Building vocabulary.")
+        tokenized_data = [
+            [str(t.id) for t in region_set]
+            for region_set in track(
+                tokenized_data, total=len(tokenized_data), description="Converting to strings."
+            )
+        ]
         gensim_model.build_vocab(tokenized_data)
 
         # create our own learning rate scheduler
