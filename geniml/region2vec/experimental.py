@@ -315,7 +315,11 @@ class Region2VecExModel:
             lr_scheduler.update()
 
         # once done training, set the weights of the pytorch model in self._model
-        for id in track(gensim_model.wv.key_to_index, total=len(gensim_model.wv.key_to_index), description="Setting weights.")):
+        for id in track(
+            gensim_model.wv.key_to_index,
+            total=len(gensim_model.wv.key_to_index),
+            description="Setting weights.",
+        ):
             self._model.projection.weight.data[int(id)] = torch.tensor(gensim_model.wv[id])
 
         # set the model as trained
