@@ -16,7 +16,7 @@ import torch.nn as nn
 import torch.functional as F
 
 # enhancer classifier
-class Region2VecClassifier(nn.Module):
+class EnhancerClassifier(nn.Module):
     def __init__(self, region2vec_model: torch.nn.Module):
         super().__init__()
         self.region2vec = region2vec_model
@@ -39,7 +39,7 @@ from geniml.tokenization import ITTokenizer
 r = Region("chr1", 1_000_000, 1_000_500) # some enhancer region (maybe)
 
 tokenizer = ITTokenizer.from_pretrained("databio/r2v-ChIP-atlas-hg38-v2")
-classifier = Region2VecClassifier(model.model) # get the inner core of the model
+classifier = EnhancerClassifier(model.model) # get the inner core of the model
 
 x = tokenizer.tokenize(r)
 x = torch.tensor([t.id for t in x], dtype=torch.long)
