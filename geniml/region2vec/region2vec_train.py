@@ -14,8 +14,6 @@ from gensim.models.word2vec import LineSentence
 from . import utils
 from .const import *
 
-logging.basicConfig(format="%(asctime)s : %(levelname)s : %(message)s", level=logging.ERROR)
-
 
 def find_dataset(data_folder: str) -> Union[str, int]:
     """Finds an available dataset in data_folder.
