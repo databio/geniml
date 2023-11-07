@@ -1,195 +1,347 @@
+import math
 import os
+import pprint
 from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import torch
 from huggingface_hub import hf_hub_download
+from torch.nn import (CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss,
+                      ReLU, Sequential)
+from yaml import safe_dump, safe_load
 
 from ..search.backends import HNSWBackend, QdrantBackend
 from .const import *
 from .utils import *
-import math
-
-import torch
-
-from torch.nn import Sequential, Linear, ReLU, CosineEmbeddingLoss, CosineSimilarity
-
-import torch.nn.functional as F
 
 _LOGGER = logging.getLogger(MODULE_NAME)
+# _TORCH_LOGGER = logging.getLogger("torch")
 
 
-class Vec2VecFNNtorch(Sequential):
-    def __init__(self, trained: bool = False):
+class Vec2VecFNNtorch:
+    def __init__(self):
         """
-
+        Initializate Vec2VecFNNtorch.
         """
-        super(Vec2VecFNNtorch, self).__init__()
-        self.most_recent_train = None
+        # initialize the feedforward neural network model, which is a torch.nn.Sequential
+        self.model = Sequential()
+        # whether the model is trained
+        self.trained = False
+        # optimizer
         self.optimizer = None
-        self.loss = None
-        self.compiling_info = {}
+        # loss function
+        self.loss_fn = None
+        # model configure
+        self.config = {}
+        #
+        self.most_recent_train = {}
 
-    def add_layers(
-            self, input_dim: int, output_dim: int, num_units: Union[int, List[int]], num_extra_hidden_layers: int
+    def reinit_model(
+        self,
+        input_dim: int,
+        output_dim: int,
+        num_units: Union[int, List[int]],
+        num_extra_hidden_layers: int,
     ):
         """
-        Add layers to an empty nn.Sequential model
+        Re-initiate self.model(a torch.nn.Sequential model) with list of layers
+
+        :param input_dim: dimension of input layer
+        :param output_dim: dimension of output layer
+        :param num_units: number of units in each hidden layer, if it is an integer, each hidden layer has same
+        number of units
+        :param num_extra_hidden_layers: number of extra hidden layers
+        :return:
         """
-        if isinstance(num_units, list):
+
+        # convert the integer value of num_units to a list
+        if not isinstance(num_units, list):
             num_units = [num_units] * (1 + num_extra_hidden_layers)
 
+        # update model config
+        self.config["input_dim"] = input_dim
+        self.config["output_dim"] = output_dim
+        self.config["num_units"] = num_units
+        self.config["num_extra_hidden_layers"] = num_extra_hidden_layers
+
+        # check if number of layers match length of num_units
         if len(num_units) != 1 + num_extra_hidden_layers:
             _LOGGER.error("ValueError: list of units number does not match number of layers")
 
-        current_layer_units_num = num_units.pop(0)
+        # input and first hiden layer
+        current_layer_units_num = num_units[0]
         layers_list = [Linear(in_features=input_dim, out_features=current_layer_units_num), ReLU()]
         previous_layer_units_num = current_layer_units_num
+
+        # extra hidden layer
         for i in range(num_extra_hidden_layers):
-            current_layer_units_num = num_units.pop(0)
-            layers_list.append(Linear(in_features=previous_layer_units_num, out_features=current_layer_units_num))
+            current_layer_units_num = num_units[i + 1]
+            layers_list.append(
+                Linear(in_features=previous_layer_units_num, out_features=current_layer_units_num)
+            )
             layers_list.append(ReLU())
             previous_layer_units_num = current_layer_units_num
-        layers_list.append(Linear(in_features=previous_layer_units_num, out_features=output_dim))
-        super(Vec2VecFNNtorch, self).__init__(*layers_list)
 
-    def load_from_disk(self, model_path: str):
-        self.load_state_dict(torch.load(model_path))
+        # output layer
+        layers_list.append(Linear(in_features=previous_layer_units_num, out_features=output_dim))
+
+        # reinitiate self.model
+        self.model = Sequential(*layers_list)
+
+    def load_from_disk(self, model_path: str, config_path: str):
+        """
+        Load model from local files
+
+        :param model_path: path of saved model file (usually in format of .pt)
+        :param config_path: path of saved config file (in format of yaml)
+        """
+        # get the model config (layer structure)
+        with open(config_path, "r") as f:
+            config = safe_load(f)
+
+        # reinitiate the self.model
+        self.reinit_model(
+            config["input_dim"],
+            config["output_dim"],
+            config["num_units"],
+            config["num_extra_hidden_layers"],
+        )
+        # load the Sequential model from saved files
+        self.model.load_state_dict(torch.load(model_path))
+
+    def export(
+        self,
+        path: str,
+        checkpoint_file: str,
+        config_file: str = CONFIG_FILE_NAME,
+        must_trained: bool = DEFAULT_MUST_TRAINED,
+    ):
+        """
+        Save model weights and config
+
+        :param path: path to export the model to
+        :param checkpoint_file: name of model checkpoint file
+        :param config_file: name of model config file
+        :param must_trained: whether the model needs training to be exported
+        """
+        # whether the model must be finished training to export
+        if must_trained and not self.trained:
+            raise RuntimeError("Cannot export an untrained model.")
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        # export the model weights
+        torch.save(self.model.state_dict(), os.path.join(path, checkpoint_file))
+
+        # export the model config
+        with open(os.path.join(path, config_file), "w") as f:
+            pprint.pprint(self.config)
+            safe_dump(self.config, f)
 
     def embedding_to_embedding(self, input_vecs: np.ndarray) -> np.ndarray:
         """
         predict the region set embedding from embedding of natural language strings
 
-        :param input_vecs:
+        :param input_vecs: input embedding vectors
         :return:
         """
         # pytorch tensor's default dtype is float 32
         if not isinstance(input_vecs.dtype, type(np.dtype("float32"))):
             input_vecs = input_vecs.astype(np.float32)
-        return self(torch.from_numpy(input_vecs)).detach().numpy()
+        return self.model(torch.from_numpy(input_vecs)).detach().numpy()
 
     def compile(self, optimizer: str, loss: str, learning_rate: float):
+        """ """
         compiling_dict = {}
         # set optimizer
         if optimizer == "Adam":
-            self.optimizer = torch.optim.Adam(self.parameters(), learning_rate)
+            self.optimizer = torch.optim.Adam(self.model.parameters(), learning_rate)
 
         else:
-            _LOGGER.error("ValueError: Please give a valid name of optimizer")
-
+            raise ValueError("Please give a valid name of optimizer")
+            # _LOGGER.error("ValueError: Please give a valid name of optimizer")
 
         # set loss function
         if loss == "cosine_embedding_loss":
-            self.loss = CosineEmbeddingLoss()
+            self.loss_fn = CosineEmbeddingLoss()
         elif loss == "cosine_similarity":
-            self.loss == CosineSimilarity()
+            self.loss_fn = CosineSimilarity()
+        elif loss == "mean_squared_error":
+            self.loss_fn = MSELoss()
         else:
-            _LOGGER.error("ValueError: Please give a valid name of loss function")
+            raise ValueError("Please give a valid name of loss function")
+            # _LOGGER.error("ValueError: Please give a valid name of loss function")
 
-        compiling_dict["optimizer"] = optimizer
-        compiling_dict["loss"] = loss
+        self.config["optimizer"] = optimizer
+        self.config["loss"] = loss
 
-    def train_with_vecs(
-            self,
-            training_X: np.ndarray,
-            training_Y: np.ndarray,
-            validating_data: Union[Tuple[np.ndarray, np.ndarray], None] = None,
-            save_best: bool = False,
-            folder_path: Union[str, None] = None,
-            early_stop: bool = True,
-            patience: float = DEFAULT_PATIENCE,
-            opt_name: str = DEFAULT_OPTIMIZER_NAME,
-            loss_func: str = DEFAULT_LOSS_NAME,
-            num_epochs: int = DEFAULT_NUM_EPOCHS,
-            batch_size: int = DEFAULT_BATCH_SIZE,
-            learning_rate: float = DEFAULT_LEARNING_RATE,
-            **kwargs,
+    def train(
+        self,
+        training_X: np.ndarray,
+        training_Y: np.ndarray,
+        validating_data: Union[Tuple[np.ndarray, np.ndarray], None] = None,
+        save_best: bool = False,
+        folder_path: Union[str, None] = None,
+        model_file_name: Union[str, None] = None,
+        early_stop: bool = True,
+        patience: float = DEFAULT_PATIENCE,
+        opt_name: str = DEFAULT_OPTIMIZER_NAME,
+        loss_func: str = DEFAULT_LOSS_NAME,
+        num_epochs: int = DEFAULT_NUM_EPOCHS,
+        batch_size: int = DEFAULT_BATCH_SIZE,
+        learning_rate: float = DEFAULT_LEARNING_RATE,
+        **kwargs,
     ):
-        if self.__len__() == 0:
+        """
+        Based on https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
+
+        """
+        if len(self.model) == 0:
             # dimensions of input and output
             input_dim = training_X.shape[1]
             output_dim = training_Y.shape[1]
 
-            self.add_layers(
+            self.reinit_model(
                 input_dim=input_dim,
                 output_dim=output_dim,
                 num_units=kwargs.get("num_units") or DEFAULT_NUM_UNITS,
                 num_extra_hidden_layers=kwargs.get("num_extra_hidden_layers")
-                                        or DEFAULT_NUM_EXTRA_HIDDEN_LAYERS,
+                or DEFAULT_NUM_EXTRA_HIDDEN_LAYERS,
             )
 
         if validating_data is not None:
             validating_X, validating_Y = validating_data
-            validating_data = arrays_to_torch_dataloader(validating_X, validating_Y, shuffle=False)
+            validating_data = arrays_to_torch_dataloader(
+                validating_X, validating_Y, batch_size=batch_size, shuffle=False
+            )
+            self.most_recent_train["val_loss"] = []
         elif save_best or early_stop:
             _LOGGER.error("ValueError: Validating data is not provided")
         if save_best and folder_path is None:
-            _LOGGER.error("ValueError: Path to folder where the best performance model will be saved is required")
+            _LOGGER.error(
+                "ValueError: Path to folder where the best performance model will be saved is required"
+            )
 
         self.compile(optimizer=opt_name, loss=loss_func, learning_rate=learning_rate)
         training_data = arrays_to_torch_dataloader(training_X, training_Y, batch_size)
-        best_val_loss = 1_000_000.
+        best_val_loss = 1_000_000.0
 
         patience_count = 0
-        for epoch in range(num_epochs):
-            self.train(True)
-            avg_loss = self.train_one_epoch(training_data)
+        self.most_recent_train["loss"] = []
 
-            self.eval()
+        for epoch in range(num_epochs):
+            self.model.train(True)
+            avg_loss = self.train_one_epoch(training_data)
+            self.most_recent_train["loss"].append(avg_loss)
+            self.model.eval()
 
             if validating_data is not None:
+                # print("start to validate")
                 running_val_loss = 0.0
                 with torch.no_grad():
                     for i, (val_x, val_y) in enumerate(validating_data):
-                        val_output = self(val_x)
-                        val_loss = self.loss(val_output, val_y)
+                        val_output = self.model(val_x)
+                        val_loss = self.calc_loss(val_output, val_y)
+                        print("val loss: ", val_loss)
                         running_val_loss += val_loss
 
-                avg_val_loss = running_val_loss / (i+1)
-                # print
+                avg_val_loss = running_val_loss / (i + 1)
+                self.most_recent_train["val_loss"].append(avg_val_loss)
+                # print(f"EPOCH {epoch + 1}: loss: -{avg_loss} - val_loss: -{avg_val_loss}")
                 _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss} - val_loss: -{avg_val_loss}")
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
                     if save_best:
-                        model_path = os.path.join(folder_path, f"model_{epoch}")
-                        torch.save(self.state_dict(), model_path)
+                        self.export(
+                            folder_path,
+                            model_file_name
+                            or TORCH_MODEL_FILE_NAME_PATTERN.format(
+                                callback="best", checkpoint=str(epoch)
+                            ),
+                            must_trained=False,
+                        )
 
                 if early_stop:
                     if avg_val_loss > avg_loss:
                         patience_count += 1
                     if patience_count > int(math.ceil(patience * num_epochs)):
+                        self.export(
+                            folder_path,
+                            model_file_name
+                            or TORCH_MODEL_FILE_NAME_PATTERN.format(
+                                callback="early_stop", checkpoint=str(epoch)
+                            ),
+                            must_trained=False,
+                        )
                         break
 
             else:
-                _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss}")
+                # _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss}")
+                print(f"EPOCH {epoch + 1}: loss: -{avg_loss}")
+        self.trained = True
 
     def train_one_epoch(self, training_data):
-        epoch_loss = 0.
+        epoch_loss = 0.0
 
         for i, (x, y) in enumerate(training_data):
             self.optimizer.zero_grad()
-            outputs = self(y)
-
-            batch_loss = self.loss(outputs, y, )
-            self.loss.backward()
-
+            outputs = self.model(x)
+            batch_loss = self.calc_loss(outputs, y)
+            batch_loss.backward()
+            # adjust learning weights
             self.optimizer.step()
 
+            # geather loss and report
             epoch_loss += batch_loss.item()
-
         return epoch_loss / (i + 1)
 
     def calc_loss(self, outputs: torch.Tensor, y: torch.Tensor, **kwargs) -> torch.float:
-        if self.compiling_info == {}:
-            _LOGGER.error("ValueError: Please compile the model first")
+        """
+        Calculating loss when different loss funcion is given
 
-        if self.compiling_info["loss"] == "cosine_similarity":
-            return 1 - self.loss(outputs, y)
+        :param outputs: the output of model
+        :param y: the correct label
+        """
 
-        if self.compiling_info["loss"] == "cosine_embedding_loss":
-            target = kwargs.get("target")
-            return self.loss(outputs, y, target)
+        if not self.config["loss"]:
+            raise ValueError("Please compile the model first")
+            # _LOGGER.error("ValueError: Please compile the model first")
+
+        # when all targets are 1
+        # loss = 1 - cos(output, y)
+        # https://pytorch.org/docs/stable/generated/torch.nn.CosineEmbeddingLoss.html
+        elif self.config["loss"] == "cosine_embedding_loss":
+            target = kwargs.get("target") or torch.tensor(1.0).repeat(len(y))
+            return self.loss_fn(outputs, y, target)
+        else:
+            return self.loss_fn(outputs, y)
+
+    def plot_training_hist(
+        self,
+        save_path: Union[str, None] = None,
+        plot_file_name: Union[str, None] = DEFAULT_PLOT_FILE_NAME,
+        title: Union[str, None] = DEFAULT_PLOT_TITLE,
+    ):
+        """
+        Plot the training & validating loss of the most recent training
+        :return:
+        """
+
+        epoch_range = range(1, len(self.most_recent_train["loss"]) + 1)
+        train_loss = self.most_recent_train["loss"]
+        plt.plot(epoch_range, train_loss, "r", label="Training loss")
+        if self.most_recent_train["val_loss"]:
+            valid_loss = self.most_recent_train["val_loss"]
+            plt.plot(epoch_range, valid_loss, "b", label="Validation loss")
+        plt.title(title)
+        plt.legend()
+        if save_path:
+            plt.savefig(os.path.join(save_path, plot_file_name))
+        else:
+            plt.show()
 
 
 class Vec2VecFNN(tf.keras.models.Sequential):

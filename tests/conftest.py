@@ -25,3 +25,4 @@ def pytest_addoption(parser):
         default=False,
         help="Run tests that needs importing Region2Vec models form huggingface",
     )
+    # add an --all option to set other option as True

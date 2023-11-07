@@ -24,3 +24,8 @@ DEFAULT_VECTOR_KEY = "vector"
 DEFAULT_METADATA_KEY = "metadata"
 
 MODULE_NAME = "text2bednn"
+CONFIG_FILE_NAME = "config.yaml"
+TORCH_MODEL_FILE_NAME_PATTERN = "v2c2v2c_{callback}_{checkpoint}.pt"
+DEFAULT_MUST_TRAINED = True
+DEFAULT_PLOT_FILE_NAME = "training_history"
+DEFAULT_PLOT_TITLE = "Diagram of loss and epochs"
