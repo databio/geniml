@@ -304,7 +304,7 @@ class Vec2VecFNN:
                 # logging training and validating loss
                 _LOGGER.info(f"EPOCH {epoch + 1}: loss: -{avg_loss} - val_loss: -{avg_val_loss}")
 
-                # save the best performance model
+                # save the best-performing model
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
                     if save_best:
