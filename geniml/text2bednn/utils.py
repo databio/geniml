@@ -101,7 +101,7 @@ def build_regionset_info_list_from_files(
     :param bed_folder: folder where bed files are stored
     :param metadata_path: path to the metadata file
     :param r2v_model: a Region2VecExModel that can embed region sets
-    :param nl_embed: a SentenceTransformer model that can embed metadata
+    :param nl_embed: a model that can embed natural language
     :param with_regions: if false, no RegionSetInfo in the output list will contain the RegionSet object from the bedfile (replaced by None).
     :param bed_vec_necessary: whether the embedding vector of a bed file has to be valid (not None)
     to be included into the list
