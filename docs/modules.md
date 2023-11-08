@@ -8,7 +8,7 @@ Many genomic interval analysis methods, particularly those used by `geniml` requ
 
 ## Module `bbclient`
 
-The `bbclient` module can download BED files or BED sets from [BEDbase](https://bedbase.org/#/) and cache them into local folders.
+The `bbclient` module can download BED files or BED sets from [BEDbase](https://bedbase.org/) and cache them into local folders.
 
 ## Module `bedspace`
 
