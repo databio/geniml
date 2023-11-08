@@ -20,7 +20,10 @@ def universe_file():
 
 
 def test_init_region2vec():
-    model = Region2Vec()
+    model = Region2Vec(
+        vocab_size=10000,
+        embedding_dim=100,
+    )
     assert model is not None
 
 

@@ -7,7 +7,7 @@ import scanpy as sc
 import torch
 from huggingface_hub import hf_hub_download
 from rich.progress import track
-from yaml import safe_load
+from yaml import safe_load, safe_dump
 
 from ..region2vec.utils import LearningRateScheduler, shuffle_documents
 from ..region2vec.main import Region2Vec
@@ -315,26 +315,44 @@ class ScEmbed:
 
         return np.array(losses)
 
-    def export(self, path: str):
+    def export(
+        self,
+        path: str,
+        checkpoint_file: str = MODEL_FILE_NAME,
+        universe_file: str = UNIVERSE_FILE_NAME,
+        config_file: str = CONFIG_FILE_NAME,
+    ):
         """
-        Export a model for direct upload to the HuggingFace Hub.
+        Function to facilitate exporting the model in a way that can
+        be directly uploaded to huggingface. This exports the model
+        weights and the vocabulary.
 
-        :param str path: The path to save the model to.
+        :param str path: Path to export the model to.
         """
-        # make folder path if it doesn't exist
+        # make sure the model is trained
+        if not self.trained:
+            raise RuntimeError("Cannot export an untrained model.")
+
+        # make sure the path exists
         if not os.path.exists(path):
             os.makedirs(path)
 
-        model_file_path = os.path.join(path, MODEL_FILE_NAME)
-        universe_file_path = os.path.join(path, UNIVERSE_FILE_NAME)
+        # export the model weights
+        torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
 
-        # save the model
-        self._model.save(model_file_path)
-
-        # save universe (vocab)
-        with open(universe_file_path, "w") as f:
-            for region in self.tokenizer.universe:
+        # export the vocabulary
+        with open(os.path.join(path, universe_file), "a") as f:
+            for region in self.tokenizer.universe.regions:
                 f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+
+        # export the config (vocab size, embedding size)
+        config = {
+            "vocab_size": len(self.tokenizer),
+            "embedding_size": self._model.embedding_dim,
+        }
+
+        with open(os.path.join(path, config_file), "w") as f:
+            safe_dump(config, f)
 
     def encode(
         self, regions: Union[sc.AnnData, str], pooling: POOLING_TYPES = "mean"

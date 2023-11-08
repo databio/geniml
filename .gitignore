@@ -184,3 +184,5 @@ examples/scembed/luecken2021
 
 # vector db stuff
 qdrant_storage/
+
+.ruff_cache/
