@@ -1,3 +1,4 @@
+fastembed
 gensim
 genomicranges >= 0.3.6
 logmuse
@@ -11,6 +12,7 @@ pyBigWig
 pyyaml
 scanpy
 seaborn
+torch
 tqdm
 umap-learn
 ubiquerg
@@ -20,5 +22,4 @@ huggingface_hub
 intervaltree
 qdrant_client
 hnswlib
-tensorflow
 requests>=2.31.0
