@@ -23,7 +23,7 @@ def universe_file():
 
 @pytest.fixture
 def hf_model():
-    return "databio/r2v-pbmc-hg38-small"
+    return "databio/r2v-ChIP-atlas-hg38-v2"
 
 
 @pytest.fixture
