@@ -7,15 +7,54 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from random import shuffle
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import numpy as np
-from tqdm import tqdm
+import torch
+import torch.nn as nn
+from rich.progress import track
+from torch.utils.data import Dataset
 
-from ..io import Region, RegionSet
-from .const import DEFAULT_INIT_LR, DEFAULT_MIN_LR, MODULE_NAME
+from .const import (
+    DEFAULT_INIT_LR,
+    DEFAULT_MIN_LR,
+    MODULE_NAME,
+    DEFAULT_WINDOW_SIZE,
+    DEFAULT_N_SHUFFLES,
+    DEFAULT_NS_POWER,
+)
 
 _LOGGER = logging.getLogger(MODULE_NAME)
+
+
+class NegativeSampler:
+    def __init__(
+        self, freq_dist: torch.Tensor, power: float = DEFAULT_NS_POWER, batch_size: int = None
+    ):
+        """
+        Initialize the negative sampler.
+
+        :param torch.Tensor freq_dist: List of frequencies for each token. Must be normalized.
+        :param float power: The power to use for the negative sampling. It is not recommended to change this.
+        """
+        self.dist = freq_dist**power
+        self.dist /= self.dist.sum()
+        self.power = power
+        self.batch_size = batch_size
+
+    def sample(self, k: int = 5, batch_size: int = None) -> torch.Tensor:
+        """
+        Sample from the negative sampler.
+
+        :param int k: The number of samples to draw.
+        """
+        batch_size = batch_size or self.batch_size
+        if batch_size is None:
+            raise ValueError(
+                "Must provide batch_size to sample from negative sampler. This can be set in the constructor or in the sample method."
+            )
+        negative_samples = torch.multinomial(self.dist, batch_size * k, replacement=True)
+        return negative_samples.view(batch_size, k)
 
 
 def prRed(skk: str) -> None:
@@ -355,10 +394,10 @@ class LearningRateScheduler:
 
 
 def shuffle_documents(
-    documents: List[List[str]],
+    documents: List[List[any]],
     n_shuffles: int,
     threads: int = None,
-) -> List[List[str]]:
+) -> List[List[any]]:
     """
     Shuffle around the genomic regions for each cell to generate a "context".
 
@@ -367,23 +406,23 @@ def shuffle_documents(
     :param int threads: The number of threads to use for shuffling.
     """
 
-    def shuffle_list(l: List[str], n: int) -> List[str]:
+    def shuffle_list(list: List[any], n: int) -> List[any]:
         for _ in range(n):
-            shuffle(l)
-        return l
+            shuffle(list)
+        return list
 
     _LOGGER.debug(f"Shuffling documents {n_shuffles} times.")
     shuffled_documents = documents.copy()
     with ThreadPoolExecutor(max_workers=threads) as executor:
         shuffled_documents = list(
-            tqdm(
+            track(
                 executor.map(
                     shuffle_list,
                     shuffled_documents,
                     [n_shuffles] * len(documents),
                 ),
                 total=len(documents),
-                desc="Shuffling documents",
+                description="Shuffling documents",
             )
         )
     return shuffled_documents
@@ -407,3 +446,126 @@ def make_wv_file_name(model_file_name: str) -> str:
     :return str: The wv file name.
     """
     return f"{model_file_name}.wv.vectors.npy"
+
+
+class Region2VecDataset(Dataset):
+    def __init__(self, samples: List[Tuple[List[any], any]]):
+        self.samples = samples
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx) -> Tuple[List[any], any]:
+        # we need to return things as a tensor for proper batching
+        return self.samples[idx]
+
+
+def generate_window_training_data(
+    data: List[List[any]],
+    window_size: int = DEFAULT_WINDOW_SIZE,
+    n_shuffles: int = DEFAULT_N_SHUFFLES,
+    threads: int = None,
+    padding_value: any = 0,
+    return_tensor: bool = True,
+) -> List[Tuple[List[any], any]]:
+    """
+    Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
+
+    :param List[any] data: The data to generate the training data from.
+    :param int window_size: The window size to use.
+    :param int n_shuffles: The number of shuffles to perform.
+    :param int threads: The number of threads to use.
+    :param any padding_value: The padding value to use.
+    :param bool return_tensor: Whether or not to return the data as a tensor.
+
+    :return Tuple[List[List[any]], List[any]]: The contexts and targets.
+    """
+    _LOGGER.info("Generating windowed training data.")
+
+    # shuffle the documents
+    documents = shuffle_documents(
+        [[t for t in tokens] for tokens in data], n_shuffles=n_shuffles, threads=threads
+    )
+
+    # compute the context length (inputs)
+    context_len_req = 2 * window_size
+    # contexts = []
+    # targets = []
+    samples = []
+    for document in track(documents, total=len(documents), description="Generating training data"):
+        for i, target in enumerate(document):
+            context = document[max(0, i - window_size) : i] + document[i + 1 : i + window_size + 1]
+
+            # pad the context if necessary
+            if len(context) < context_len_req:
+                context = context + [padding_value] * (context_len_req - len(context))
+
+            # contexts.append(context)
+            # targets.append(target)
+            if return_tensor:
+                samples.append(
+                    (
+                        torch.tensor(context, dtype=torch.long),
+                        torch.tensor(target, dtype=torch.long),
+                    )
+                )
+            else:
+                samples.append((context, target))
+
+    # return contexts, targets
+    return samples
+
+
+def generate_frequency_distribution(tokens: List[List[int]], vocab_length: int) -> torch.Tensor:
+    """
+    Generate the frequency distribution of the tokens.
+
+    :param List[List[int]] tokens: The tokens to generate the frequency distribution from.
+    """
+    tokens_flat = [t for tokens in tokens for t in tokens]
+
+    # create a tensor of all zeros with the length of the vocabulary
+    freq_dist = torch.zeros(vocab_length, dtype=torch.float)
+
+    # count the number of times each token appears
+    for token in track(
+        tokens_flat, total=len(tokens_flat), description="Generating frequency distribution"
+    ):
+        freq_dist[token] += 1
+
+    # normalize the frequency distribution
+    freq_dist /= freq_dist.sum()
+
+    return freq_dist
+
+
+# negative sampling loss
+class NSLoss(nn.Module):
+    def __init__(self):
+        super(NSLoss, self).__init__()
+
+    def forward(self, input, target, negative_samples):
+        """
+        :param torch.Tensor input: The input tensor. This is an embedding vector.
+        :param torch.Tensor target: The target tensor. This is an embedding vector.
+        :param torch.Tensor negative_samples: The negative samples tensor. This is a matrix of embedding vectors.
+        """
+        # get the batch size
+        batch_size = input.shape[0]
+
+        # compute the positive score
+        pos_score = torch.bmm(input.view(batch_size, 1, -1), target.view(batch_size, -1, 1)).view(
+            batch_size, 1
+        )
+
+        # compute the negative score
+        neg_score = torch.bmm(
+            input.view(batch_size, 1, -1), negative_samples.view(batch_size, -1, 1)
+        ).view(batch_size, -1)
+
+        # compute the loss
+        loss = torch.mean(
+            torch.log(torch.sigmoid(pos_score)) + torch.log(1 - torch.sigmoid(neg_score))
+        )
+
+        return -loss
