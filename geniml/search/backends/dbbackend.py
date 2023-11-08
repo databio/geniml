@@ -5,11 +5,13 @@ from typing import Dict, List, Union
 import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
+import logmuse
 
 from ...const import PKG_NAME
 from ..const import *
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
+
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -32,6 +34,7 @@ class QdrantBackend(EmSearchBackend):
         :param config: the vector parameter
         :param collection: name of collection
         """
+        super().__init__()
         self.collection = collection
         self.config = config
         self.url = os.environ.get("QDRANT_HOST", qdrant_host)
@@ -46,10 +49,10 @@ class QdrantBackend(EmSearchBackend):
         try:
             collection_info = self.qd_client.get_collection(collection_name=self.collection)
             _LOGGER.info(
-                f"Using collection {self.collection} with {collection_info.points_count} points"
+                f"Using collection {self.collection} with {collection_info.points_count} points."
             )
         except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
-            _LOGGER.info(f"Collection {self.collection} does not exist, creating it")
+            _LOGGER.info(f"Collection {self.collection} does not exist, creating it.")
             self.qd_client.recreate_collection(
                 collection_name=self.collection,
                 vectors_config=self.config,
