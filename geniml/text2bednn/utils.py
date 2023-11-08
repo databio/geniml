@@ -6,10 +6,9 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import peppy
 import torch
-from sentence_transformers import SentenceTransformer, models
+from fastembed.embedding import FlagEmbedding
 from torch.utils.data import DataLoader, TensorDataset
 
-from ..const import PKG_NAME
 from ..io import RegionSet
 from ..region2vec import Region2VecExModel
 from ..search.backends import HNSWBackend, QdrantBackend
@@ -37,7 +36,7 @@ def build_regionset_info_list_from_PEP(
     yaml_path: str,
     col_names: List[str],
     r2v_model: Region2VecExModel,
-    st_model: SentenceTransformer,
+    nl_embed: FlagEmbedding,
     with_regions: bool = False,
     bed_vec_necessary: bool = True,
 ) -> List[RegionSetInfo]:
@@ -48,10 +47,12 @@ def build_regionset_info_list_from_PEP(
     :param yaml_path: the path to the yaml file, which is the metadata validation framework of the PEP
     :param col_names: the name of needed columns in the metadata csv
     :param r2v_model: a Region2VecExModel that can embed region sets
-    :param st_model: a SentenceTransformer model that can embed metadata
+    :param nl_embed: a FlagEmbedding that can embed metadata
     :param with_regions: if false, no RegionSetInfo in the output list will contain the RegionSet object from the bedfile (replaced by None).
     :param bed_vec_necessary: whether the embedding vector of a bed file has to be valid (not None)
     to be included into the list
+
+    :return: a list of RegionSetInfo
     """
 
     output_list = []
@@ -71,7 +72,7 @@ def build_regionset_info_list_from_PEP(
         # get the metadata
         bed_metadata = ";".join(sample[col] for col in col_names if sample[col] is not None)
         region_set = RegionSet(bed_file_path)
-        metadata_embedding = st_model.encode(bed_metadata)
+        metadata_embedding = next(nl_embed.embed(bed_metadata))
         region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
         if region_set_embedding is None and bed_vec_necessary:
             _LOGGER.warning(f"Warning: {bed_file_name}'s embedding is None, exclude from dataset")
@@ -89,7 +90,7 @@ def build_regionset_info_list_from_files(
     bed_folder: str,
     metadata_path: str,
     r2v_model: Region2VecExModel,
-    st_model: SentenceTransformer,
+    nl_embed: FlagEmbedding,
     with_regions: bool = False,
     bed_vec_necessary: bool = True,
 ) -> List[RegionSetInfo]:
@@ -100,11 +101,12 @@ def build_regionset_info_list_from_files(
     :param bed_folder: folder where bed files are stored
     :param metadata_path: path to the metadata file
     :param r2v_model: a Region2VecExModel that can embed region sets
-    :param st_model: a SentenceTransformer model that can embed metadata
+    :param nl_embed: a SentenceTransformer model that can embed metadata
     :param with_regions: if false, no RegionSetInfo in the output list will contain the RegionSet object from the bedfile (replaced by None).
     :param bed_vec_necessary: whether the embedding vector of a bed file has to be valid (not None)
     to be included into the list
-    :return:
+
+    :return: a list of RegionSetInfo
     """
 
     file_name_list = os.listdir(bed_folder)
@@ -139,7 +141,7 @@ def build_regionset_info_list_from_files(
             bed_file_path = os.path.join(bed_folder, bed_file_name)
             bed_metadata = clean_escape_characters(metadata_line)
             region_set = RegionSet(bed_file_path)
-            metadata_embedding = st_model.encode(bed_metadata)
+            metadata_embedding = next(nl_embed.embed(bed_metadata))
             region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
             if region_set_embedding is None and bed_vec_necessary:
                 _LOGGER.info(f"{bed_file_name}'s embedding is None, exclude from dataset")
@@ -172,6 +174,7 @@ def update_bed_metadata_list(
     then return the list of new RegionSetInfo with re-embedded region set vectors.
     :param old_list:
     :param r2v_model:
+
     :return:
     """
     new_list = []
@@ -190,6 +193,7 @@ def clean_escape_characters(metadata_line: str) -> str:
     Remove formatting characters from metadata
 
     :param metadata_line: the metadata text
+
     :return: the metadata text without interval set name and formatting characters
     """
 
@@ -206,6 +210,7 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
     used as data preprocessing for fitting models.
 
     :param ri_list: RegionSetInfo list
+
     :return: two np.ndarray with shape (n, <embedding dimension>)
     """
     X = []
@@ -229,6 +234,8 @@ def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarra
 
 def prepare_vectors_for_database(
     ri_list: List[RegionSetInfo],
+    filename_key: str = DEFAULT_FILENAME_KEY,
+    metadata_key: str = DEFAULT_METADATA_KEY,
 ) -> Tuple[np.ndarray, List[Dict[str, str]]]:
     """
     With a given list of RegionSetInfo, returns one np.ndarray representing bed files embeddings,
@@ -236,11 +243,12 @@ def prepare_vectors_for_database(
     used as data preprocessing for upload to search backend (geniml.search)
 
     :param ri_list: RegionSetInfo list
+
     :return: one np.ndarray with shape (n, <Region2vec embedding dimension>),
     and one list of dictionary in the format of:
     {
-        "name": <bed file name>,
-        "metadata": <region set metadata>
+        <filename_key>: <bed file name>,
+        <metadata_key>>: <region set metadata>
     }
     """
     embeddings = []
@@ -249,14 +257,14 @@ def prepare_vectors_for_database(
         # region set embedding
         embeddings.append(ri.region_set_embedding)
         # file name and metadata
-        labels.append({"name": ri.file_name, "metadata": ri.metadata})
+        labels.append({filename_key: ri.file_name, metadata_key: ri.metadata})
 
     return np.array(embeddings), labels
 
 
 def vectors_from_backend(
     search_backend: Union[HNSWBackend, QdrantBackend],
-    encoding_model: SentenceTransformer,
+    encoding_model: FlagEmbedding,
     payload_key: str = DEFAULT_PAYLOAD_KEY,
     vec_key: str = DEFAULT_VECTOR_KEY,
     metadata_key: str = DEFAULT_METADATA_KEY,
@@ -272,7 +280,8 @@ def vectors_from_backend(
     :param payload_key: the key of payload in the retrieval output
     :param vec_key: the key of vector in the retrieval output
     :param metadata_key: the key of metadata content in the payload dictionary
-    :param encoding_model: model that can encode natural language, like SentenceTransformer
+    :param encoding_model: model that can encode natural language, like FastEmbedding
+
     :return: two np.ndarray with shape (n, <embedding dimension>)
     """
     X = []
@@ -286,32 +295,23 @@ def vectors_from_backend(
         Y.append(vec)
         # embed metadata and add embedding vector to output list
         metadata = vec_info[payload_key][metadata_key]
-        metadata_vec = encoding_model.encode(metadata)
+        metadata_vec = next(encoding_model.embed(metadata))
         X.append(metadata_vec)
 
     # return output in np.ndarray format
     return np.array(X), np.array(Y)
 
 
-def bioGPT_sentence_transformer() -> SentenceTransformer:
-    """
-    Returns a sentencetransformer with specific model for biomedical text.
-    Based on code from https://github.com/UKPLab/sentence-transformers/issues/1824
-
-    :param model_name: name of the biomedical text transformer model
-    """
-    word_embedding_model = models.Transformer("microsoft/biogpt")
-    pooling_model = models.Pooling(
-        word_embedding_model.get_word_embedding_dimension(), pooling_mode="mean"
-    )
-    return SentenceTransformer(modules=[word_embedding_model, pooling_model])
-
-
 def arrays_to_torch_dataloader(
-    X: np.ndarray, Y: np.ndarray, batch_size: int = 1, shuffle: bool = True
+    X: np.ndarray,
+    Y: np.ndarray,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+    shuffle: bool = DEFAULT_DATALOADER_SHUFFLE,
 ) -> DataLoader:
     """
-    https://stackoverflow.com/questions/44429199/how-to-load-a-list-of-numpy-arrays-to-pytorch-dataset-loader
+    Based on https://stackoverflow.com/questions/44429199/how-to-load-a-list-of-numpy-arrays-to-pytorch-dataset-loader
+
+    Store np.ndarray of X and Y into a torch.DataLoader
     """
     tensor_X = torch.from_numpy(dtype_check(X))
     tensor_Y = torch.from_numpy(dtype_check(Y))
@@ -321,7 +321,12 @@ def arrays_to_torch_dataloader(
 
 
 def dtype_check(vecs: np.ndarray) -> np.ndarray:
-    """ """
+    """
+    Since the default float in np is float64, but in pytorch tensor it's float32,
+    to avoid errors, the dtype will be switched
+
+    :return: np.ndarray with dtype of float32
+    """
     if not isinstance(vecs.dtype, type(np.dtype("float32"))):
         vecs = vecs.astype(np.float32)
 
