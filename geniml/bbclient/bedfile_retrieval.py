@@ -1,6 +1,7 @@
 import gzip
 import os
 import shutil
+from logging import getLogger
 from typing import List
 
 import requests
@@ -10,8 +11,10 @@ from ..io.io import BedSet, RegionSet
 from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
                     DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
                     DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
-                    DEFAULT_BEDSET_SUBFOLDER)
+                    DEFAULT_BEDSET_SUBFOLDER, MODULE_NAME)
 from .utils import BedCacheManager
+
+_LOGGER = getLogger(MODULE_NAME)
 
 
 class BBClient(BedCacheManager):
@@ -47,7 +50,7 @@ class BBClient(BedCacheManager):
         file_path = self._bedset_path(bedset_id)
 
         if os.path.exists(file_path):
-            print(f"BED set {bedset_id} already exists in cache.")
+            _LOGGER.info(f"BED set {bedset_id} already exists in cache.")
             with open(file_path, "r") as file:
                 extracted_data = file.readlines()
         # if the BedSet is not in cache, download it from BEDBase
@@ -57,7 +60,7 @@ class BBClient(BedCacheManager):
             with open(file_path, "w") as file:
                 for value in extracted_data:
                     file.write(value + "\n")
-            print(f"BED set {bedset_id} downloaded and cached successfully.")
+            _LOGGER.info(f"BED set {bedset_id} downloaded and cached successfully.")
 
         # return the BedSet
         return BedSet(
@@ -88,13 +91,13 @@ class BBClient(BedCacheManager):
         file_path = self._bedfile_path(bedfile_id)
 
         if os.path.exists(file_path):
-            print(f"BED file {bedfile_id} already exists in cache.")
+            _LOGGER.info(f"BED file {bedfile_id} already exists in cache.")
         # if not in the cache, download from BEDbase and write to file in cache
         else:
             bed_data = self._download_bed_data(bedfile_id)
             with open(file_path, "wb") as f:
                 f.write(bed_data)
-            print("File downloaded and cached successfully.")
+            _LOGGER.info(f"BED file {bedfile_id} is downloaded and cached successfully")
 
         return RegionSet(regions=file_path)
 
@@ -108,7 +111,7 @@ class BBClient(BedCacheManager):
         bedset_id = bedset.compute_bedset_identifier()
         file_path = self._bedset_path(bedset_id)
         if os.path.exists(file_path):
-            print(f"{file_path} already exists in cache.")
+            _LOGGER.info(f"{file_path} already exists in cache.")
         else:
             with open(file_path, "w") as file:
                 for bedfile in bedset:
@@ -128,7 +131,7 @@ class BBClient(BedCacheManager):
         bedfile_id = bedfile.compute_bed_identifier()
         file_path = self._bedfile_path(bedfile_id)
         if os.path.exists(file_path):
-            print(f"{file_path} already exists in cache.")
+            _LOGGER.info(f"{file_path} already exists in cache.")
         else:
             if bedfile.path is None:
                 # write the regions to .bed.gz file
@@ -218,7 +221,7 @@ class BBClient(BedCacheManager):
         """
         file_path = self.seek(bedfile_id)
         if "does not" in file_path:
-            print(file_path)
+            _LOGGER.warning(f"Warning: {file_path}")
         else:
             self._remove(file_path)
 
@@ -231,7 +234,7 @@ class BBClient(BedCacheManager):
         """
         file_path = self.seek(bedset_id)
         if "does not" in file_path:
-            print(file_path)
+            _LOGGER.warning(f"Warning: {file_path}")
         else:
             if remove_bed_files:
                 with open(file_path, "r") as file:
