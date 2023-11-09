@@ -12,8 +12,6 @@ from yaml import safe_dump, safe_load
 
 from .const import (
     MODULE_NAME,
-    EMBEDDING_DIM_KEY,
-    NUM_CLASSES_KEY,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
     CONFIG_FILE_NAME,
@@ -50,7 +48,6 @@ class SingleCellTypeClassifier(nn.Module):
             for param in self.region2vec.parameters():
                 param.requires_grad = False
 
-        self.embedding_dim = self.region2vec.embedding_dim
         self.num_classes = num_classes
         self.output_layer = nn.Linear(self.region2vec.embedding_dim, self.num_classes)
 
@@ -110,7 +107,8 @@ class SingleCellTypeClassifierExModel:
             config["vocab_size"],
             embedding_dim=config["embedding_size"],
         )
-        self.region2vec.load_state_dict(params)
+        self._model = SingleCellTypeClassifier(self.region2vec, config["num_classes"])
+        self._model.load_state_dict(params)
 
     def _init_region2vec_from_huggingface(
         self,
@@ -172,7 +170,22 @@ class SingleCellTypeClassifierExModel:
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
         """
-        raise NotImplementedError("In progress...")
+        # init the tokenizer - only one option for now
+        self.tokenizer = ITTokenizer(vocab_path, verbose=False)
+
+        # load the model state dict (weights)
+        params = torch.load(model_path)
+
+        # get the model config (vocab size, embedding size)
+        with open(config_path, "r") as f:
+            config = safe_load(f)
+
+        self.region2vec = Region2Vec(
+            config["vocab_size"],
+            embedding_dim=config["embedding_size"],
+        )
+        self._label_mapping = config["label_mapping"]
+        self.region2vec.load_state_dict(params)
 
     def _init_from_huggingface(
         self,
@@ -198,6 +211,34 @@ class SingleCellTypeClassifierExModel:
 
         self._load_local_model(model_file_path, universe_path, config_path)
 
+    @classmethod
+    def from_pretrained(
+        cls,
+        path_to_files: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
+    ) -> "SingleCellTypeClassifierExModel":
+        """
+        Load the model from a set of files that were exported using the export function.
+
+        :param str path_to_files: Path to the directory containing the files.
+        :param str model_file_name: Name of the model file.
+        :param str universe_file_name: Name of the universe file.
+        :param str config_file_name: Name of the config file.
+
+        :return: The loaded model.
+        """
+        model_file_path = os.path.join(path_to_files, model_file_name)
+        universe_file_path = os.path.join(path_to_files, universe_file_name)
+        config_file_path = os.path.join(path_to_files, config_file_name)
+
+        instance = cls()
+        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
+        instance.trained = True
+
+        return instance
+
     def _validate_data(self, data: Union[sc.AnnData, str], label_key: str) -> sc.AnnData:
         """
         Validate the data passed to the training function.
@@ -215,6 +256,21 @@ class SingleCellTypeClassifierExModel:
             )
         assert label_key in data.obs.columns, f"Label key {label_key} not found in data."
         return data
+
+    def class_to_label(self, class_id: int) -> str:
+        """
+        Convert a class id to a label.
+
+        :param int class_id: The class id to convert.
+
+        :return: The label.
+        """
+        try:
+            return self._label_mapping[class_id]
+        except AttributeError:
+            raise RuntimeError("Model has not label mapping, are you sure it is trained?")
+        except KeyError:
+            raise ValueError(f"Class id {class_id} not found in label mapping.")
 
     def train(
         self,
