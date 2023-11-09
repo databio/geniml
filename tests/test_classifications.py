@@ -1,15 +1,14 @@
 import os
 
 import pytest
-import numpy as np
+import scanpy as sc
 import torch
 
 from huggingface_hub.utils._errors import RepositoryNotFoundError
 
-from geniml.io.io import Region, RegionSet
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.tokenization.main import ITTokenizer
-from geniml.classification.main import SingleCellTypeClassifier
+from geniml.classification.main import SingleCellTypeClassifier, SingleCellTypeClassifierExModel
 
 
 def test_init_singlecell_classifier_from_scratch():
@@ -59,3 +58,24 @@ def test_init_singlecell_classifier_from_region2vecexmodel():
 
     assert classifier.embedding_dim == 100
     assert classifier.num_classes == 10
+
+
+def test_singlecell_classifier_forward():
+    """
+    Test the forward pass of a SingleCellTypeClassifier.
+    """
+    region2vec = Region2Vec(1000, 100)  # 1000 vocab size, 100 embedding size
+    classifier = SingleCellTypeClassifier(region2vec, 10)
+
+    # create some fake regions, simulate a batch
+    ids = torch.tensor([42, 111, 432, 123, 543])
+    ids = ids.unsqueeze(0)  # add a batch dimension
+
+    # run the forward pass
+    probs = classifier(ids)
+
+    # check the output
+    assert probs.shape == (1, 10)
+
+def test_train_singlecell_classifier():
+    data = 

@@ -38,7 +38,7 @@ class ITTokenizer(Tokenizer):
 
     # class based method to insantiate the tokenizer from file
     @classmethod
-    def from_file(cls, universe: str):
+    def from_file(cls, universe: str, **kwargs):
         """
         Create a new tokenizer from a file.
 
@@ -49,7 +49,7 @@ class ITTokenizer(Tokenizer):
 
         :param str universe: The universe to use for tokenization.
         """
-        return cls(universe)
+        return cls(universe, **kwargs)
 
     @classmethod
     def from_pretrained(cls, model_path: str, **kwargs):
@@ -63,14 +63,14 @@ class ITTokenizer(Tokenizer):
 
         :param str model_path: The path to the pretrained model on huggingface.
         """
-        universe_file_path = hf_hub_download(model_path, UNIVERSE_FILE_NAME, **kwargs)
-        return cls(universe_file_path)
+        universe_file_path = hf_hub_download(model_path, UNIVERSE_FILE_NAME)
+        return cls(universe_file_path, **kwargs)
 
     @property
     def universe(self) -> GUniverse:
         return self._tokenizer.universe
 
-    def __init__(self, universe: str = None):
+    def __init__(self, universe: str = None, verbose: bool = True):
         """
         Create a new tokenizer.
 
@@ -78,6 +78,7 @@ class ITTokenizer(Tokenizer):
 
         :param str universe: The universe to use for tokenization.
         """
+        self.verbose = verbose
         if universe is not None:
             self._tokenizer: GTreeTokenizer = GTreeTokenizer(universe)
         else:
@@ -99,6 +100,7 @@ class ITTokenizer(Tokenizer):
                 zip(adata.var[CHR_KEY], adata.var[START_KEY], adata.var[END_KEY]),
                 total=adata.var.shape[0],
                 description="Extracting regions from AnnData",
+                disable=not self.verbose,
             )
         ]
         features = np.ndarray(len(adata_features), dtype=object)
@@ -108,7 +110,12 @@ class ITTokenizer(Tokenizer):
 
         # tokenize
         tokenized = []
-        for row in track(range(adata.shape[0]), total=adata.shape[0], description="Tokenizing"):
+        for row in track(
+            range(adata.shape[0]),
+            total=adata.shape[0],
+            description="Tokenizing",
+            disable=not self.verbose,
+        ):
             _, non_zeros = adata.X[row].nonzero()
             regions = features[non_zeros]
             tokenized.append(self._tokenizer.tokenize(regions.tolist()))
