@@ -77,6 +77,7 @@ class SingleCellTypeClassifierExModel:
         """
 
         self._model = SingleCellTypeClassifier
+        self.region2vec: Region2Vec
         self.device = device
 
         # try to load the model from huggingface
@@ -135,9 +136,6 @@ class SingleCellTypeClassifierExModel:
 
         self._load_local_region2vec_model(model_file_path, universe_path, config_path)
 
-    def _init_from_huggingface(self, model_path: str):
-        raise NotImplementedError("Not implemented yet.")
-
     def _init_model(self, region2vec, num_classes, tokenizer, freeze_r2v: bool = False, **kwargs):
         if isinstance(region2vec, str):
             # is it a local model?
@@ -151,10 +149,11 @@ class SingleCellTypeClassifierExModel:
                 # assume its a huggingface model
                 self._init_region2vec_from_huggingface(region2vec)
         elif isinstance(region2vec, Region2Vec):
+            # ideal case - they passed a Region2Vec instance
             self.region2vec = region2vec
         else:
             # they didn't pass anything valid, so we try to build
-            # a region2vec model from scratch
+            # a region2vec model from scratch, bad place to be :(
             if tokenizer is None:
                 raise ValueError(
                     "Can't build a Region2Vec model from scratch without a tokenizer. A vobab size is needed."
@@ -173,24 +172,7 @@ class SingleCellTypeClassifierExModel:
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
         """
-        self._model_path = model_path
-        self._universe_path = vocab_path
-
-        # init the tokenizer - only one option for now
-        self.tokenizer = ITTokenizer(vocab_path, verbose=False)
-
-        # load the model state dict (weights)
-        params = torch.load(model_path)
-
-        # get the model config (vocab size, embedding size)
-        with open(config_path, "r") as f:
-            config = safe_load(f)
-
-        self._model = Region2Vec(
-            config["vocab_size"],
-            embedding_dim=config["embedding_size"],
-        )
-        self._model.load_state_dict(params)
+        raise NotImplementedError("In progress...")
 
     def _init_from_huggingface(
         self,
