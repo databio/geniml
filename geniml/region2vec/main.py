@@ -237,7 +237,7 @@ class Region2VecExModel:
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: ITTokenizer = tokenizer
+        self.tokenizer: ITTokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
 
@@ -246,25 +246,43 @@ class Region2VecExModel:
             self.trained = True
 
         elif tokenizer is not None:
-            self._init_model(**kwargs)
+            self._init_model(tokenizer, **kwargs)
 
         # set the device
         self._target_device = torch.device(
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_model(self, **kwargs):
+    def _init_tokenizer(self, tokenizer: Union[ITTokenizer, str]):
+        """
+        Initialize the tokenizer.
+
+        :param tokenizer: Tokenizer to initialize.
+        """
+        if isinstance(tokenizer, str):
+            if os.path.exists(tokenizer):
+                self.tokenizer = ITTokenizer(tokenizer)
+            else:
+                self.tokenizer = ITTokenizer.from_pretrained(
+                    tokenizer
+                )  # download from huggingface (or at least try to)
+        elif isinstance(tokenizer, ITTokenizer):
+            self.tokenizer = tokenizer
+        else:
+            raise TypeError("tokenizer must be a path to a bed file or an ITTokenizer object.")
+
+    def _init_model(self, tokenizer, **kwargs):
         """
         Initialize the core model. This will initialize the model from scratch.
 
         :param kwargs: Additional keyword arguments to pass to the model.
         """
-        if self.tokenizer:
-            self._vocab_length = len(self.tokenizer)
-            self._model = Region2Vec(
-                len(self.tokenizer),
-                embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
-            )
+        self._init_tokenizer(tokenizer)
+        self._vocab_length = len(self.tokenizer)
+        self._model = Region2Vec(
+            len(self.tokenizer),
+            embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
+        )
 
     @property
     def model(self):

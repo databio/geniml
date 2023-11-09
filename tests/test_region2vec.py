@@ -51,6 +51,18 @@ def test_r2v_pytorch_forward():
     assert y.shape == (10, 100)
 
 
+def test_r2v_pytorch_tokenizer_is_file_on_disk(universe_file: str):
+    model = Region2VecExModelV2(tokenizer=universe_file)
+    assert model is not None
+    assert len(model.tokenizer) == 2380
+
+
+def test_r2v_pytorch_tokenizer_is_on_hf():
+    model = Region2VecExModelV2(tokenizer="databio/r2v-ChIP-atlas-hg38-v2")
+    assert model is not None
+    assert len(model.tokenizer) == 1_698_713
+
+
 def test_r2v_pytorch_exmodel_train(universe_file: str):
     model = Region2VecExModelV2(tokenizer=ITTokenizer(universe_file))
     assert model is not None
