@@ -1,14 +1,15 @@
 import logging
 import math
 import os
-from typing import List, Tuple, Union, Dict
+from typing import Dict, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from fastembed.embedding import FlagEmbedding
 from huggingface_hub import hf_hub_download
-from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
+from torch.nn import (CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss,
+                      ReLU, Sequential)
 from yaml import safe_dump, safe_load
 
 from ..search.backends import HNSWBackend, QdrantBackend
@@ -468,7 +469,10 @@ class Text2BEDSearchInterface(object):
         self.nl2vec = FlagEmbedding(model_name=model_repo)
 
     def nl_vec_search(
-        self, query: Union[str, np.ndarray], k: int = 10
+        self,
+        query: Union[str, np.ndarray],
+        k: int = 10,
+        with_payloads: bool = False,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
         Given an input natural language, suggest region sets
@@ -491,7 +495,7 @@ class Text2BEDSearchInterface(object):
             query = next(self.nl2vec.embed(query))
         search_vector = self.vec2vec.embedding_to_embedding(query)
         # perform the KNN search among vectors stored in backend
-        return self.search_backend.search(search_vector, k)
+        return self.search_backend.search(search_vector, k, with_payload=with_payloads)
 
     def __repr__(self):
         return f"Text2BEDSearchInterface(nl2vec_model={self.nl2vec}, vec2vec_model={self.vec2vec}, search_backend={self.search_backend})"
