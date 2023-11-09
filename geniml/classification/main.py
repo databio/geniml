@@ -7,7 +7,9 @@ import torch.nn as nn
 import scanpy as sc
 from rich.progress import Progress
 from huggingface_hub import hf_hub_download
+from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 from yaml import safe_dump, safe_load
 
 from .const import (
@@ -22,7 +24,7 @@ from .const import (
     DEFAULT_OPTIMIZER,
     DEFAULT_TEST_TRAIN_SPLIT,
 )
-from .utils import SingleCellClassificationDataset
+from .utils import SingleCellClassificationDataset, collate_batch
 from ..region2vec.const import DEFAULT_EMBEDDING_SIZE
 from ..region2vec.main import Region2Vec
 from ..tokenization.main import ITTokenizer
@@ -30,10 +32,10 @@ from ..tokenization.main import ITTokenizer
 _LOGGER = logging.getLogger(MODULE_NAME)
 
 
-class SingleCellTypeClassifier(nn.Module):
+class Region2VecClassifier(nn.Module):
     def __init__(self, region2vec: Region2Vec, num_classes: int, freeze_r2v: bool = False):
         """
-        Initialize the SingleCellTypeClassifier.
+        Initialize the Region2VecClassifier.
 
         :param Union[Region2Vec, str] region2vec: Either a Region2Vec instance or a path to a huggingface model.
         :param int num_classes: Number of classes to classify.
@@ -42,6 +44,7 @@ class SingleCellTypeClassifier(nn.Module):
         super().__init__()
 
         self.region2vec: Region2Vec = region2vec
+        self.relu = nn.ReLU()
 
         # freeze the weights of the Region2Vec model
         if freeze_r2v:
@@ -54,11 +57,12 @@ class SingleCellTypeClassifier(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.region2vec(x)
         x = x.sum(dim=1)
+        # x = self.relu(x)
         x = self.output_layer(x)
         return x
 
 
-class SingleCellTypeClassifierExModel:
+class SingleCellTypeClassifier:
     def __init__(
         self,
         model_path: str = None,
@@ -76,7 +80,7 @@ class SingleCellTypeClassifierExModel:
         # there really are two models here, the Region2Vec model and the SingleCellTypeClassifier model
         # which holds the Region2Vec model. The Region2Vec model ideally is pre-trained, but can be trained
         # from scratch if a tokenizer is passed. The SingleCellTypeClassifier model is always trained from scratch.
-        self._model = SingleCellTypeClassifier
+        self._model = Region2VecClassifier
         self.region2vec: Region2Vec
         self.device = device
         self.trained = False
@@ -232,7 +236,7 @@ class SingleCellTypeClassifierExModel:
         self.num_classes = num_classes
 
         # build the model, finally using the region2vec model
-        self._model = SingleCellTypeClassifier(self.region2vec, num_classes, freeze_r2v)
+        self._model = Region2VecClassifier(self.region2vec, num_classes, freeze_r2v)
 
     def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
@@ -259,7 +263,7 @@ class SingleCellTypeClassifierExModel:
         self._label_mapping = config["label_mapping"]
         self.num_classes = config["num_classes"]
 
-        self._model = SingleCellTypeClassifier(self.region2vec, config["num_classes"])
+        self._model = Region2VecClassifier(self.region2vec, config["num_classes"])
         self._model.load_state_dict(params)
 
     def _init_from_huggingface(
@@ -293,7 +297,7 @@ class SingleCellTypeClassifierExModel:
         model_file_name: str = MODEL_FILE_NAME,
         universe_file_name: str = UNIVERSE_FILE_NAME,
         config_file_name: str = CONFIG_FILE_NAME,
-    ) -> "SingleCellTypeClassifierExModel":
+    ) -> "SingleCellTypeClassifier":
         """
         Load the model from a set of files that were exported using the export function.
 
@@ -387,6 +391,8 @@ class SingleCellTypeClassifierExModel:
 
         # convert labels to integers
         data.obs[f"{label_key}_code"] = data.obs[label_key].astype("category").cat.codes
+        encoder_celltype = LabelEncoder()
+        encoder_celltype.fit(data.obs[label_key])
 
         # get mapping from integer to label
         self._label_mapping = dict(
@@ -394,26 +400,34 @@ class SingleCellTypeClassifierExModel:
         )
 
         # split the data into train and test
-        train, test, _, _ = train_test_split(
-            data, data.obs[label_key], train_size=test_train_split, random_state=seed
+        X_train, X_test, Y_train, Y_test = train_test_split(
+            data,
+            data.obs[f"{label_key}_code"].values.tolist(),
+            train_size=test_train_split,
+            random_state=seed,
         )
         del data
 
         # convert to better datatypes
         # the labels are stored in the `.obs` attribute
-        train = train.to_memory()
-        test = test.to_memory()
+        X_train = X_train.to_memory()
+        X_test = X_test.to_memory()
+
+        train_tokens = [[t.id for t in sublist] for sublist in self.tokenizer.tokenize(X_train)]
+        test_tokens = [[t.id for t in sublist] for sublist in self.tokenizer.tokenize(X_test)]
 
         # create the datasets
-        train_dataset = SingleCellClassificationDataset(train, label_key=f"{label_key}_code")
-        test_dataset = SingleCellClassificationDataset(test, label_key=f"{label_key}_code")
-
-        # create the dataloaders
-        train_dataloader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True
+        train_dataloader = DataLoader(
+            SingleCellClassificationDataset(train_tokens, Y_train),
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=lambda x: collate_batch(x, self.tokenizer.padding_token_id()),
         )
-        test_dataloader = torch.utils.data.DataLoader(
-            test_dataset, batch_size=batch_size, shuffle=True
+        test_dataloader = DataLoader(
+            SingleCellClassificationDataset(test_tokens, Y_test),
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=lambda x: collate_batch(x, self.tokenizer.padding_token_id()),
         )
 
         losses = []
@@ -446,19 +460,19 @@ class SingleCellTypeClassifierExModel:
             batches_tid = progress_bar.add_task("Batches", total=len(train_dataloader))
             for epoch in range(epochs):
                 for _, batch in enumerate(train_dataloader):
-                    x, y = batch
+                    tokens, label = batch
 
                     # zero the gradients
                     optimizer.zero_grad()
 
                     # move the data to the device
-                    x = x.to(tensor_device)
-                    y = y.to(tensor_device)
+                    tokens = tokens.to(tensor_device)
+                    label = label.to(tensor_device)
 
                     # forward pass
-                    y_pred = self._model(x)
+                    y_pred = self._model(tokens)
 
-                    loss = loss_fn(y_pred, y)
+                    loss = loss_fn(y_pred, label)
                     loss.backward()
                     losses.append(loss.item())
 
@@ -497,14 +511,17 @@ class SingleCellTypeClassifierExModel:
                 "Data must be either a scanpy AnnData object or a path to a h5ad file."
             )
 
-        tokens = self.tokenizer.tokenize(data)
-        tokens = torch.tensor(tokens)
+        tokens = [
+            torch.tensor([t.id for t in sublist]) for sublist in self.tokenizer.tokenize(data)
+        ]
 
-        predictions = self._model(tokens)
-        predictions = torch.argmax(predictions, dim=1)
+        outputs = [self._model(t.unsqueeze(0)) for t in tokens]
+        # remove batch dimension
+        outputs = [torch.softmax(o, dim=1) for o in outputs]
+        predictions = [torch.argmax(o, dim=1) for o in outputs]
 
         # convert the predictions to labels
-        predictions = [self._label_mapping[p.item()] for p in predictions]
+        predictions = [self.class_to_label(p.item()) for p in predictions]
 
         return predictions
 
