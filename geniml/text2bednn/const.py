@@ -17,8 +17,6 @@ DEFAULT_LEARNING_RATE = 0.001
 
 # if validation loss does not improve after patience*epoches, training stops
 DEFAULT_PATIENCE = 0.2
-
-DEFAULT_VEC2VEC_MODEL_FILE_NAME = "vec2vec.h5"
 DEFAULT_PAYLOAD_KEY = "payload"
 DEFAULT_VECTOR_KEY = "vector"
 DEFAULT_METADATA_KEY = "metadata"
