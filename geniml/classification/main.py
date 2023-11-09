@@ -73,6 +73,9 @@ class SingleCellTypeClassifierExModel:
         Initialize the SingleCellTypeClassifierExModel from a huggingface model or from scratch.
         """
 
+        # there really are two models here, the Region2Vec model and the SingleCellTypeClassifier model
+        # which holds the Region2Vec model. The Region2Vec model ideally is pre-trained, but can be trained
+        # from scratch if a tokenizer is passed. The SingleCellTypeClassifier model is always trained from scratch.
         self._model = SingleCellTypeClassifier
         self.region2vec: Region2Vec
         self.device = device
@@ -134,8 +137,61 @@ class SingleCellTypeClassifierExModel:
 
         self._load_local_region2vec_model(model_file_path, universe_path, config_path)
 
+    def _init_tokenizer(self, tokenizer: Union[ITTokenizer, str]):
+        """
+        Initialize the tokenizer.
+
+        :param Union[ITTokenizer, str] tokenizer: Either a tokenizer instance, a huggingface repo, or a path to a tokenizer.
+        """
+        # they didn't pass anything valid, so we try to build
+        # a region2vec model from scratch, please pass a tokenizer :(
+        if tokenizer is None:
+            raise ValueError(
+                "Can't build a Region2Vec model from scratch without a tokenizer. A vobab size is needed!"
+            )
+        elif isinstance(tokenizer, str):
+            # is path to a local vocab?
+            if os.path.exists(tokenizer):
+                self.tokenizer = ITTokenizer(tokenizer, verbose=False)
+            else:
+                # assume its a huggingface tokenizer, try to load it
+                self.tokenizer = ITTokenizer.from_pretrained(tokenizer)
+        elif isinstance(tokenizer, ITTokenizer):
+            # ideal case - they passed a tokenizer instance
+            self.tokenizer = tokenizer
+        else:
+            raise ValueError(
+                "Invalid tokenizer passed. Must be either a path to a tokenizer, a huggingface tokenizer, or a tokenizer instance."
+            )
+
     def _init_model(self, region2vec, num_classes, tokenizer, freeze_r2v: bool = False, **kwargs):
-        if isinstance(region2vec, str):
+        """
+        Initialize a new model from scratch. Ideally, someone is passing in a Region2Vec instance,
+        but in theory we can build one from scratch if we have a tokenizer and a `num_classes` parameter.
+        In the "build from scratch" scenario, someone is probably training a new model from scratch on some new data.
+
+        The most important aspect is initializing the inner Region2Vec model. For this, the order of operations
+        is as follows:
+
+        1. If a Region2Vec instance is passed, use that.
+        2. If a path to a local Region2Vec model is passed, use that.
+        3. If a path to a huggingface Region2Vec model is passed, use that.
+        4. Nothing was passed? Try from scratch... if a tokenizer is passed, build a Region2Vec model from scratch.
+        5. If no tokenizer was passed, raise an error, because we need a vocab size to build a Region2Vec model.
+
+        :param Union[Region2Vec, str] region2vec: Either a Region2Vec instance or a path to a huggingface model.
+        :param int num_classes: Number of classes to classify. This is **required**.
+        :param ITTokenizer tokenizer: The tokenizer to use. This is **required** if building a Region2Vec model from scratch.
+        :param bool freeze_r2v: Whether or not to freeze the Region2Vec model.
+        :param kwargs: Additional keyword arguments to pass to the Region2Vec model.
+        """
+        self._init_tokenizer(tokenizer)
+
+        if isinstance(region2vec, Region2Vec):
+            # ideal case - they passed a Region2Vec instance
+            self.region2vec = region2vec
+
+        elif isinstance(region2vec, str):
             # is it a local model?
             if os.path.exists(region2vec):
                 self._load_local_region2vec_model(
@@ -144,23 +200,21 @@ class SingleCellTypeClassifierExModel:
                     os.path.join(region2vec, CONFIG_FILE_NAME),
                 )
             else:
-                # assume its a huggingface model
+                # assume its a huggingface model, try to load it
                 self._init_region2vec_from_huggingface(region2vec)
-        elif isinstance(region2vec, Region2Vec):
-            # ideal case - they passed a Region2Vec instance
-            self.region2vec = region2vec
+
         else:
-            # they didn't pass anything valid, so we try to build
-            # a region2vec model from scratch, bad place to be :(
-            if tokenizer is None:
-                raise ValueError(
-                    "Can't build a Region2Vec model from scratch without a tokenizer. A vobab size is needed."
-                )
             self.region2vec = Region2Vec(
-                len(tokenizer),
-                embedding_dim=kwargs.get("embedding_dim" or DEFAULT_EMBEDDING_SIZE),
+                len(self.tokenizer),
+                embedding_dim=kwargs.get("embedding_dim") or DEFAULT_EMBEDDING_SIZE,
             )
 
+        if num_classes is None:
+            raise ValueError("Must pass a number of classes to build classifier!")
+
+        self.num_classes = num_classes
+
+        # build the model, finally using the region2vec model
         self._model = SingleCellTypeClassifier(self.region2vec, num_classes, freeze_r2v)
 
     def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
@@ -184,8 +238,12 @@ class SingleCellTypeClassifierExModel:
             config["vocab_size"],
             embedding_dim=config["embedding_size"],
         )
+
         self._label_mapping = config["label_mapping"]
         self.region2vec.load_state_dict(params)
+        self.num_classes = config["num_classes"]
+
+        self._model = SingleCellTypeClassifier(self.region2vec, config["num_classes"])
 
     def _init_from_huggingface(
         self,
@@ -271,6 +329,13 @@ class SingleCellTypeClassifierExModel:
             raise RuntimeError("Model has not label mapping, are you sure it is trained?")
         except KeyError:
             raise ValueError(f"Class id {class_id} not found in label mapping.")
+
+    def freeze_r2v(self):
+        """
+        Freeze the weights of the Region2Vec model.
+        """
+        for param in self.region2vec.parameters():
+            param.requires_grad = False
 
     def train(
         self,
