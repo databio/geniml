@@ -416,18 +416,20 @@ class SingleCellTypeClassifier:
         train_tokens = [[t.id for t in sublist] for sublist in self.tokenizer.tokenize(X_train)]
         test_tokens = [[t.id for t in sublist] for sublist in self.tokenizer.tokenize(X_test)]
 
+        pad_token_id = self.tokenizer.padding_token_id()
+
         # create the datasets
         train_dataloader = DataLoader(
             SingleCellClassificationDataset(train_tokens, Y_train),
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=lambda x: collate_batch(x, self.tokenizer.padding_token_id()),
+            collate_fn=lambda x: collate_batch(x, pad_token_id),
         )
         test_dataloader = DataLoader(
             SingleCellClassificationDataset(test_tokens, Y_test),
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=lambda x: collate_batch(x, self.tokenizer.padding_token_id()),
+            collate_fn=lambda x: collate_batch(x, pad_token_id),
         )
 
         losses = []
@@ -436,14 +438,14 @@ class SingleCellTypeClassifier:
         if isinstance(device, list):
             self._model = nn.DataParallel(self._model, device_ids=device)
             self._model.to(device[0])
-        elif isinstance(device, str):
+        else:
             self._model.to(device)
 
         # tensor device
         if isinstance(device, list):
             tensor_device = device[0]
         else:
-            tensor_device = "cuda:0" if torch.cuda.is_available() else "cpu"
+            tensor_device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # move the loss function to the device
         loss_fn = loss_fn()
@@ -459,7 +461,7 @@ class SingleCellTypeClassifier:
             epoch_tid = progress_bar.add_task("Epochs", total=epochs)
             batches_tid = progress_bar.add_task("Batches", total=len(train_dataloader))
             for epoch in range(epochs):
-                for _, batch in enumerate(train_dataloader):
+                for i, batch in enumerate(train_dataloader):
                     tokens, label = batch
 
                     # zero the gradients
@@ -481,12 +483,11 @@ class SingleCellTypeClassifier:
 
                     if learning_rate_scheduler is not None:
                         learning_rate_scheduler.step()
-
                     # update the progress bar
-                    progress_bar.update(batches_tid, advance=1)
+                    progress_bar.update(batches_tid, completed=i + 1)
 
-            # update the progress bar
-            progress_bar.update(epoch_tid, advance=1)
+                # update the progress bar
+                progress_bar.update(epoch_tid, completed=epoch + 1)
 
             _LOGGER.info("Finished training.")
 
