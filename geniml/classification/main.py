@@ -79,12 +79,25 @@ class SingleCellTypeClassifierExModel:
         self._model = SingleCellTypeClassifier
         self.region2vec: Region2Vec
         self.device = device
+        self.trained = False
+        self._label_mapping: dict
 
+        # check for completely blank initialization
+        if all(
+            [
+                model_path is None,
+                tokenizer is None,
+                region2vec is None,
+            ]
+        ):
+            pass
         # try to load the model from huggingface
-        if model_path is not None:
+        elif model_path is not None:
             self._init_from_huggingface(model_path)
+            self.trained = True
         else:
             self._init_model(region2vec, num_classes, tokenizer, freeze_r2v, **kwargs)
+            self._label_mapping = {}
 
     def _load_local_region2vec_model(self, model_path: str, vocab_path: str, config_path: str):
         """
@@ -110,8 +123,7 @@ class SingleCellTypeClassifierExModel:
             config["vocab_size"],
             embedding_dim=config["embedding_size"],
         )
-        self._model = SingleCellTypeClassifier(self.region2vec, config["num_classes"])
-        self._model.load_state_dict(params)
+        self.region2vec.load_state_dict(params)
 
     def _init_region2vec_from_huggingface(
         self,
@@ -185,6 +197,7 @@ class SingleCellTypeClassifierExModel:
         :param bool freeze_r2v: Whether or not to freeze the Region2Vec model.
         :param kwargs: Additional keyword arguments to pass to the Region2Vec model.
         """
+        # first init the tokenizer they passed in
         self._init_tokenizer(tokenizer)
 
         if isinstance(region2vec, Region2Vec):
@@ -208,6 +221,10 @@ class SingleCellTypeClassifierExModel:
                 len(self.tokenizer),
                 embedding_dim=kwargs.get("embedding_dim") or DEFAULT_EMBEDDING_SIZE,
             )
+
+        assert (
+            len(self.tokenizer) == self.region2vec.vocab_size
+        ), "Tokenizer and Region2Vec vocab size mismatch. Are you sure they are compatible?"
 
         if num_classes is None:
             raise ValueError("Must pass a number of classes to build classifier!")
@@ -240,10 +257,10 @@ class SingleCellTypeClassifierExModel:
         )
 
         self._label_mapping = config["label_mapping"]
-        self.region2vec.load_state_dict(params)
         self.num_classes = config["num_classes"]
 
         self._model = SingleCellTypeClassifier(self.region2vec, config["num_classes"])
+        self._model.load_state_dict(params)
 
     def _init_from_huggingface(
         self,
@@ -505,10 +522,6 @@ class SingleCellTypeClassifierExModel:
 
         :param str path: Path to export the model to.
         """
-        # make sure the model is trained
-        if not self.trained:
-            raise RuntimeError("Cannot export an untrained model.")
-
         # make sure the path exists
         if not os.path.exists(path):
             os.makedirs(path)
@@ -524,9 +537,9 @@ class SingleCellTypeClassifierExModel:
         # export the config (vocab size, embedding size)
         config = {
             "vocab_size": len(self.tokenizer),
-            "embedding_size": self._model.embedding_dim,
+            "embedding_size": self._model.region2vec.embedding_dim,
             "num_classes": self._model.num_classes,
-            "label_mapping": self._label_mapping,
+            "label_mapping": self._label_mapping or {},
         }
 
         with open(os.path.join(path, config_file), "w") as f:

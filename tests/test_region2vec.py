@@ -8,10 +8,6 @@ import torch
 from geniml.io.io import Region, RegionSet
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.tokenization.main import ITTokenizer
-from geniml.region2vec.main import (
-    Region2Vec as Region2VecV2,
-    Region2VecExModel as Region2VecExModelV2,
-)
 
 
 @pytest.fixture
@@ -42,7 +38,7 @@ def test_r2v_pytorch_forward():
     vocab_size = 10000
     embedding_dim = 100
 
-    model = Region2VecV2(vocab_size, embedding_dim)
+    model = Region2Vec(vocab_size, embedding_dim)
     assert model is not None
 
     # create a random tensor with 10 tokens
@@ -52,19 +48,19 @@ def test_r2v_pytorch_forward():
 
 
 def test_r2v_pytorch_tokenizer_is_file_on_disk(universe_file: str):
-    model = Region2VecExModelV2(tokenizer=universe_file)
+    model = Region2VecExModel(tokenizer=universe_file)
     assert model is not None
     assert len(model.tokenizer) == 2380
 
 
 def test_r2v_pytorch_tokenizer_is_on_hf():
-    model = Region2VecExModelV2(tokenizer="databio/r2v-ChIP-atlas-hg38-v2")
+    model = Region2VecExModel(tokenizer="databio/r2v-ChIP-atlas-hg38-v2")
     assert model is not None
     assert len(model.tokenizer) == 1_698_713
 
 
 def test_r2v_pytorch_exmodel_train(universe_file: str):
-    model = Region2VecExModelV2(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
     assert model is not None
 
     rs1 = list(RegionSet("tests/data/to_tokenize.bed"))
@@ -76,7 +72,7 @@ def test_r2v_pytorch_exmodel_train(universe_file: str):
 
 
 def test_r2v_pytorch_encode(universe_file: str):
-    model = Region2VecExModelV2(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
     assert model is not None
 
     r = Region("chr1", 63403166, 63403785)
@@ -93,7 +89,7 @@ def test_r2v_pytorch_encode(universe_file: str):
 
 
 def test_save_load_pytorch_exmodel(universe_file: str):
-    model = Region2VecExModelV2(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
     assert model is not None
 
     rs1 = list(RegionSet("tests/data/to_tokenize.bed"))
@@ -110,7 +106,7 @@ def test_save_load_pytorch_exmodel(universe_file: str):
         assert os.path.exists("tests/data/test_model/universe.bed")
 
         # load in
-        model_loaded = Region2VecExModelV2.from_pretrained("tests/data/test_model")
+        model_loaded = Region2VecExModel.from_pretrained("tests/data/test_model")
 
         # the region embeddings should be the same
         after_embedding = model_loaded.encode(Region("chr1", 63403166, 63403785))
