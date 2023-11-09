@@ -169,6 +169,9 @@ class ScEmbed:
         :param str path_to_files: Path to the directory containing the files.
         :param str model_file_name: Name of the model file.
         :param str universe_file_name: Name of the universe file.
+        :param str config_file_name: Name of the config file.
+
+        :return: The loaded model.
         """
         model_file_path = os.path.join(path_to_files, model_file_name)
         universe_file_path = os.path.join(path_to_files, universe_file_name)

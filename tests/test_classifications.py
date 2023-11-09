@@ -77,5 +77,6 @@ def test_singlecell_classifier_forward():
     # check the output
     assert probs.shape == (1, 10)
 
+
 def test_train_singlecell_classifier():
-    data = 
+    data = SingleCellTypeClassifierExModel()

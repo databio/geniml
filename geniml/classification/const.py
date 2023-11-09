@@ -2,6 +2,7 @@ import torch
 
 MODULE_NAME = "geniml.classification"
 
+VOCAB_SIZE_KEY = "vocab_size"
 NUM_CLASSES_KEY = "num_classes"
 EMBEDDING_DIM_KEY = "embedding_dim"
 
