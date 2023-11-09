@@ -1,7 +1,7 @@
 import logging
 import math
 import os
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
