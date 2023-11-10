@@ -1,23 +1,19 @@
 import os
 from typing import List
 
-import pytest
 import numpy as np
+import pytest
 import torch
-
+from torch.utils.data import DataLoader, Dataset
 
 from geniml.io.io import Region, RegionSet
+from geniml.region2vec.experimental import Region2Vec as Region2VecV2
+from geniml.region2vec.experimental import Region2VecExModel as Region2VecExModelV2
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.region2vec.pooling import max_pooling, mean_pooling
+from geniml.region2vec.utils import generate_window_training_data
 from geniml.tokenization.main import InMemTokenizer, ITTokenizer
 from geniml.utils import wordify_region, wordify_regions
-from geniml.region2vec.utils import generate_window_training_data
-from geniml.region2vec.experimental import (
-    Region2Vec as Region2VecV2,
-    Region2VecExModel as Region2VecExModelV2,
-)
-
-from torch.utils.data import DataLoader, Dataset
 
 
 class Word2VecDataset(Dataset):
