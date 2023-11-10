@@ -4,7 +4,7 @@ Region2Vec is an unsupervised method for creating embeddings of genomic regions 
 ## Training data and tokenization
 Training a model requires two things: 1) a set of genomic regions and 2) a tokenizer. The tokenizer is used to convert the genomic regions into tokens. The tokens are then used to train the model. A safe choice for the tokenizer is the tiled hg38 genome. However, you can define your own tokenizer if you want to use a different genome or if you want to use a different tokenization strategy.
 
-You can download the 1000 tiles hg38 genome [here](https://big.databio.org/gitk/universes/tiles1000.hg38.bed).
+You can download the 1000 tiles hg38 genome [here](https://big.databio.org/geniml/universes/tiles1000.hg38.bed).
 
 ## Training a model
 ### Instantiate a new model
@@ -17,9 +17,9 @@ import logging
 import os
 from multiprocessing import cpu_count
 
-from gitk.io import RegionSet
-from gitk.tokenization import InMemTokenizer
-from gitk.region2vec import Region2VecExModel
+from geniml.io import RegionSet
+from geniml.tokenization import ITTokenizer
+from geniml.region2vec import Region2VecExModel
 from rich.progress import track
 
 
@@ -30,8 +30,7 @@ universe_path = os.path.expandvars("$RESOURCES/regions/genome_tiles/tiles1000.hg
 data_path = os.path.expandvars("$DATA/ChIP-Atlas/hg38/ATAC_seq/")
 
 model = Region2VecExModel(
-    threads=cpu_count() - 2,
-    tokenizer=InMemTokenizer(universe_path),
+    tokenizer=ITTokenizer(universe_path),
 )
 ```
 
@@ -43,7 +42,7 @@ Create a list of `RegionSet`s by supplying paths to bed files:
 files = os.listdir(data_path)
 data = [
     RegionSet(os.path.join(data_path, f), backed=True)
-    for f in tqdm(files, total=len(files))
+    for f in track(files, total=len(files))
 ]
 ```
 

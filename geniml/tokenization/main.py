@@ -3,11 +3,9 @@ import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
-from typing import Dict, List, Union
+from typing import List, Union
 
-import genomicranges as gr
 import numpy as np
-import pandas as pd
 import scanpy as sc
 from gtokenizers import (
     Region as GRegion,
@@ -15,15 +13,15 @@ from gtokenizers import (
     TokenizedRegionSet as GTokenizedRegionSet,
     Universe as GUniverse,
 )
-from intervaltree import IntervalTree
+from huggingface_hub import hf_hub_download
 from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
 
-from ..io import Region, RegionSet, RegionSetCollection
+from .const import UNIVERSE_FILE_NAME, CHR_KEY, START_KEY, END_KEY
+from ..io import Region, RegionSet
 from .hard_tokenization_batch import main as hard_tokenization
-from .utils import anndata_to_regionsets, time_str, Timer
-from ..utils import wordify_region
+from .utils import time_str, Timer
 
 
 class Tokenizer(ABC):
@@ -36,13 +34,11 @@ class ITTokenizer(Tokenizer):
     """
     A fast, in memory, tokenizer that uses `gtokenizers` - a rust based tokenizer. This
     tokenizer is the fastest tokenizer available. It is also the most memory efficient.
-
-    It should be a near dropin replacement for InMemTokenizer.
     """
 
     # class based method to insantiate the tokenizer from file
     @classmethod
-    def from_file(cls, universe: str):
+    def from_file(cls, universe: str, **kwargs):
         """
         Create a new tokenizer from a file.
 
@@ -53,13 +49,28 @@ class ITTokenizer(Tokenizer):
 
         :param str universe: The universe to use for tokenization.
         """
-        return cls(universe)
+        return cls(universe, **kwargs)
+
+    @classmethod
+    def from_pretrained(cls, model_path: str, **kwargs):
+        """
+        Create a new tokenizer from a pretrained model's vocabulary.
+
+        Usage:
+        ```
+        tokenizer = ITTokenizer.from_pretrained("path/to/universe.bed")
+        ```
+
+        :param str model_path: The path to the pretrained model on huggingface.
+        """
+        universe_file_path = hf_hub_download(model_path, UNIVERSE_FILE_NAME)
+        return cls(universe_file_path, **kwargs)
 
     @property
     def universe(self) -> GUniverse:
         return self._tokenizer.universe
 
-    def __init__(self, universe: str = None):
+    def __init__(self, universe: str = None, verbose: bool = True):
         """
         Create a new tokenizer.
 
@@ -67,10 +78,49 @@ class ITTokenizer(Tokenizer):
 
         :param str universe: The universe to use for tokenization.
         """
+        self.verbose = verbose
         if universe is not None:
             self._tokenizer: GTreeTokenizer = GTreeTokenizer(universe)
         else:
             self._tokenizer = None
+
+    def _tokenize_anndata(self, adata: sc.AnnData) -> List[GTokenizedRegionSet]:
+        """
+        Tokenize an AnnData object. This is more involved, so it gets its own function.
+
+        :param sc.AnnData query: The query to tokenize.
+        """
+        # extract regions from AnnData
+        # its weird because of how numpy handle Intervals, the parent class of Region,
+        # see here:
+        # https://stackoverflow.com/a/43722306/13175187
+        adata_features = [
+            Region(chr, int(start), int(end))
+            for chr, start, end in track(
+                zip(adata.var[CHR_KEY], adata.var[START_KEY], adata.var[END_KEY]),
+                total=adata.var.shape[0],
+                description="Extracting regions from AnnData",
+                disable=not self.verbose,
+            )
+        ]
+        features = np.ndarray(len(adata_features), dtype=object)
+        for i, region in enumerate(adata_features):
+            features[i] = region
+        del adata_features
+
+        # tokenize
+        tokenized = []
+        for row in track(
+            range(adata.shape[0]),
+            total=adata.shape[0],
+            description="Tokenizing",
+            disable=not self.verbose,
+        ):
+            _, non_zeros = adata.X[row].nonzero()
+            regions = features[non_zeros]
+            tokenized.append(self._tokenizer.tokenize(regions.tolist()))
+
+        return tokenized
 
     def tokenize(self, query: Union[Region, RegionSet]) -> GTokenizedRegionSet:
         """
@@ -78,6 +128,8 @@ class ITTokenizer(Tokenizer):
 
         :param Union[Region, RegionSet] query: The query to tokenize.
         """
+        if isinstance(query, sc.AnnData):
+            return self._tokenize_anndata(query)
         if isinstance(query, Region):
             query = [query]
         elif isinstance(query, RegionSet):
@@ -109,325 +161,6 @@ class ITTokenizer(Tokenizer):
 
     def __len__(self):
         return len(self._tokenizer)
-
-
-class InMemTokenizer(Tokenizer):
-    """
-    Tokenize new regions into a vocabulary.
-
-    This is done using hard tokenization which is just a query to the universe, or
-    simple overlap detection. Computation occurs in memory. This is the fastest
-    tokenizer, but it is not scalable to large universes.
-    """
-
-    def __init__(self, universe: Union[str, RegionSet, None] = None):
-        """
-        Create a new InMemTokenizer.
-
-        You can either pass a RegionSet object or a path to a BED file containing regions.
-
-        :param Union[str, RegionSet] universe: The universe to use for tokenization.
-        """
-        self._trees: Dict[str, IntervalTree] = dict()
-        self._region_to_index: Dict[str, int] = dict()
-
-        if isinstance(universe, str):
-            self.universe = RegionSet(universe)  # load from file
-        elif isinstance(universe, RegionSet):
-            self.universe = universe  # load from memory (probably rare?)
-        else:
-            self.universe = None
-
-        if self.universe is not None:
-            # build interval trees
-            self.build_trees()
-
-    def get_tree(self, tree: str):
-        """
-        Get the interval tree for a given chromosome.
-
-        :param str tree: The chromosome to get the tree for.
-        """
-        return self._trees[tree]
-
-    @property
-    def trees(self) -> Dict[str, IntervalTree]:
-        return self._trees
-
-    @property
-    def region_to_index(self) -> Dict[str, int]:
-        return self._region_to_index
-
-    def build_trees(
-        self,
-        regions: Union[
-            str, List[str], List[Region], RegionSet, List[RegionSet], List[List[Region]]
-        ] = None,
-    ):
-        """
-        Builds the interval tree from the regions. The tree is a dictionary that maps chromosomes to
-        interval trees.
-
-        We read in the regions (either from memory or from a BED file) and convert them to an
-        interval tree.
-
-        :param str regions: The regions to use for tokenization. This can be thought of as a vocabulary.
-        """
-        # just return if we already have a universe
-        if regions is None:
-            regions = self.universe  # use the universe passed in the constructor
-        # check for bed file
-        elif isinstance(regions, str):
-            regions = RegionSet(regions)  # load from file
-        # check for list of bed files
-        elif isinstance(regions, list) and isinstance(regions[0], str):
-            regions = []
-            for bedfile in regions:
-                regions.extend([region for region in RegionSet(bedfile)])
-        # check for regionset
-        elif isinstance(regions, RegionSet):
-            pass
-        # check for list of regionsets
-        elif isinstance(regions, list) and isinstance(regions[0], RegionSet):
-            regions = [region for regionset in regions for region in regionset]
-        # check for list of lists of regions
-        elif isinstance(regions, list) and isinstance(regions[0], list):
-            regions = [region for regionlist in regions for region in regionlist]
-        # check for list of regions
-        elif isinstance(regions, list) and isinstance(regions[0], Region):
-            pass
-
-        # build trees + add regions to universe + make region to index map
-        self.universe = regions
-        indx = 0
-        for region in track(regions, total=len(regions), description="Adding regions to universe"):
-            # r_string = wordify_region(region)
-            if region.chr not in self._trees:
-                self._trees[region.chr] = IntervalTree()
-            self._trees[region.chr][region.start : region.end] = None
-
-            # # add to region to index map
-            # if r_string not in self._region_to_index:
-            #     self._region_to_index[r_string] = indx
-            #     indx += 1
-
-        # count total regions
-        self.total_regions = sum([len(self._trees[tree]) for tree in self._trees])
-
-    def find_overlaps(
-        self,
-        regions: Union[str, List[Region], Region, RegionSet],
-        f: float = None,  # not implemented yet,
-        return_all: bool = False,
-    ) -> List[Region]:
-        """
-        Query the interval tree for the given regions. That is, find all regions that overlap with the given regions.
-
-        :param Union[str, List[str], List[Region], Region, RegionSet] regions: The regions to query for. this can be either a bed file,
-                                                                            a list of regions (chr_start_end), or a list of tuples of chr, start, end.
-        :param float f: The fraction of the region that must overlap to be considered an overlap. Not yet implemented.
-        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to False. (in the future, we can change this to return the top k or best)
-        """
-        # validate input
-        if isinstance(regions, Region):
-            regions = [regions]
-        elif isinstance(regions, str):
-            regions = RegionSet(regions)
-        else:
-            pass
-
-        overlapping_regions = []
-        for region in regions:
-            if region.chr not in self._trees:
-                print(f"Warning: Could not find {region.chr} in universe.")
-                continue
-
-            overlaps = self._trees[region.chr][region.start : region.end]
-            if not overlaps:
-                overlapping_regions.append(None)
-            else:
-                overlaps = list(overlaps)
-                if return_all:
-                    overlapping_regions.extend(
-                        [Region(region.chr, olap.begin, olap.end) for olap in overlaps]
-                    )
-                else:
-                    olap = overlaps[0]
-                    overlapping_regions.append(Region(region.chr, olap.begin, olap.end))
-
-        return overlapping_regions
-
-    def __len__(self, *args, **kwargs):
-        if self.universe is None:
-            return 0
-        else:
-            return len(self.universe)
-
-    def convert_anndata_to_universe(self, adata: sc.AnnData) -> sc.AnnData:
-        """
-        Converts the consensus peak set (.var) attributes of the AnnData object
-        to a universe representation. This is done through interval overlap
-        analysis with bedtools.
-
-        For each region in the `.var` attribute of the AnnData object, we
-        either 1) map it to a region in the universe, or 2) map it to `None`.
-        If it is mapped to `None`, it is not in the universe and will be dropped
-        from the AnnData object. If it is mapped to a region, it will be updated
-        to the region in the universe for downstream analysis.
-        """
-        # ensure adata has chr, start, and end
-        if not all([x in adata.var.columns for x in ["chr", "start", "end"]]):
-            raise ValueError("AnnData object must have `chr`, `start`, and `end` columns in .var")
-
-        # create list of regions from adata
-        query_set: List[tuple[str, int, int]] = adata.var.apply(
-            lambda x: Region(x["chr"], int(x["start"]), int(x["end"])), axis=1
-        ).tolist()
-
-        # generate conversion map
-        _map = self.generate_var_conversion_map(query_set)
-
-        # create a new DataFrame with the updated values
-        updated_var = adata.var.copy()
-
-        # find the regions that overlap with the universe
-        # use dynamic programming to create a boolean mask of columns to keep
-        columns_to_keep = []
-        for i, row in track(
-            adata.var.iterrows(), total=adata.var.shape[0], description="Converting to universe"
-        ):
-            region = f"{row['chr']}_{row['start']}_{row['end']}"
-            if _map[region] is None:
-                columns_to_keep.append(False)
-                continue
-
-            # if it is, change the region to the universe region,
-            # grab the first for now
-            # TODO - this is a simplification, we should be able to handle multiple
-            universe_region = _map[region]
-            try:
-                chr, start, end = universe_region.split("_")
-                start = int(start)
-                end = int(end)
-            except ValueError:
-                raise ValueError(f"Could not parse region {universe_region}")
-
-            updated_var.at[i, "chr"] = chr
-            updated_var.at[i, "start"] = start
-            updated_var.at[i, "end"] = end
-
-            columns_to_keep.append(True)
-
-        # update adata with the new DataFrame and filtered columns
-        adata = adata[:, columns_to_keep]
-        adata.var = updated_var[columns_to_keep]
-
-        return adata
-
-    def generate_var_conversion_map(
-        self,
-        a: List[Region],
-        fraction: float = 1.0e-9,  # not used
-    ) -> Dict[str, Union[str, None]]:
-        """
-        Create a conversion map to convert regions from a to b. This is used to convert the
-        consensus peak set of one AnnData object to another.
-
-        For each region in a, we will either find a matching region in b, or None. If a matching
-        region is found, we will store the region in b. If no matching region is found, we will
-        store `None`.
-
-        Intuitively, think of this as converting `A` --> `B`. If a region in `A` is found in `B`,
-        we will change the region in `A` to the region in `B`. If a region in `A` is not found in
-        `B`, we will drop that region in `A` altogether.
-
-        :param List[tuple[str, int, int]] a: the first list of regions
-        :param Universe: the second list of regions as a Universe object
-        :param float fraction: the fraction of the region that must overlap to be considered an overlap. Not used.
-        """
-
-        conversion_map = dict()
-
-        for region in track(a, total=len(a), description="Generating conversion map"):
-            overlaps = self.find_overlaps(region)
-            region_str = f"{region.chr}_{region.start}_{region.end}"
-            overlaps = [olap for olap in overlaps if olap is not None]
-            if len(overlaps) > 0:
-                olap = overlaps[0]  # take the first overlap for now, we can change this later
-                olap_str = f"{olap.chr}_{olap.start}_{olap.end}"
-                conversion_map[region_str] = olap_str
-            else:
-                conversion_map[region_str] = None
-
-        return conversion_map
-
-    def tokenize(
-        self, regions: Union[str, List[Region], RegionSet, sc.AnnData], return_all: bool = True
-    ) -> Union[List[Region], List[List[Region]], List[RegionSet]]:
-        """
-        Tokenize a RegionSet.
-
-        This is achieved using hard tokenization which is just a query to the universe, or
-        simple overlap detection.
-
-        :param str | List[Region] | sc.AnnData regions: The list of regions to tokenize
-        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to True. (in the future, we can change this to return the top k or best)
-                                Note that returning all might return more than one region per region in the input. Thus, you lose the 1:1 mapping.
-        """
-        if isinstance(regions, sc.AnnData):
-            # step 1 is to convert the AnnData object to the universe
-            regions = self.convert_anndata_to_universe(regions)
-
-            # step 2 is to convert the AnnData object to a list of lists of regions
-            return anndata_to_regionsets(regions)
-        else:
-            return self.find_overlaps(regions, return_all=return_all)
-
-    def convert_tokens_to_ids(
-        self, tokens: List[Region], missing_token_id: any = None
-    ) -> List[int]:
-        """
-        Convert a list of tokens to a list of ids.
-
-        :param List[Region] tokens: The list of tokens to convert
-        """
-        return [
-            missing_token_id if token is None else self._region_to_index[wordify_region(token)]
-            for token in tokens
-        ]
-
-    def tokenize_and_convert_to_ids(
-        self, regions: Union[str, List[Region], RegionSet, sc.AnnData], return_all: bool = False
-    ) -> List[int]:
-        """
-        Tokenize a RegionSet and convert to ids.
-
-        This is achieved using hard tokenization which is just a query to the universe, or
-        simple overlap detection.
-
-        :param str | List[Region] | sc.AnnData regions: The list of regions to tokenize
-        :param bool return_all: Whether to return all overlapping regions or just the first. Defaults to False. (in the future, we can change this to return the top k or best)
-                                Note that returning all might return more than one region per region in the input. Thus, you lose the 1:1 mapping.
-        """
-        tokens = self.tokenize(regions, return_all=return_all)
-        return self.convert_tokens_to_ids(tokens)
-
-    # not sure what this looks like, multiple RegionSets?
-    def tokenize_rsc(self, rsc: RegionSetCollection) -> RegionSetCollection:
-        """Tokenize a RegionSetCollection"""
-        raise NotImplementedError
-
-
-class FileTokenizer(Tokenizer):
-    """Tokenizer that tokenizes files"""
-
-    @abstractmethod
-    def __init__(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def tokenize(input_globs: List[str], output_folder: str, universe_path: str):
-        raise NotImplementedError
 
 
 class Namespace:
@@ -514,7 +247,7 @@ def hard_tokenization_main(
     if bedtools_path == "bedtools":
         try:
             rval = subprocess.call([bedtools_path, "--version"])
-        except:
+        except Exception:
             raise Exception("No bedtools executable found")
         if rval != 0:
             raise Exception("No bedtools executable found")
@@ -552,7 +285,7 @@ def hard_tokenization_main(
             args_arr.append(tokenization_args)
         with multiprocessing.Pool(nworkers) as pool:
             processes = [pool.apply_async(hard_tokenization, args=(param,)) for param in args_arr]
-            results = [r.get() for r in processes]
+            _ = [r.get() for r in processes]
         # move tokenized files in different folders to expr_tokens
         shutil.rmtree(dest_folder)
         for param in args_arr:

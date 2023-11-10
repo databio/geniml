@@ -1,27 +1,7 @@
 from time import time
-from typing import List
 
 import numpy as np
 import pyBigWig
-
-from .io.io import Region
-
-
-def wordify_region(region: Region):
-    return f"{region.chr}_{region.start}_{region.end}"
-
-
-def unwordify_region(word: str):
-    chr, start, end = word.split("_")
-    return Region(chr, int(start), int(end))
-
-
-def wordify_regions(regions: List[Region]):
-    return [wordify_region(r) for r in regions]
-
-
-def unwordify_regions(words: List[str]):
-    return [unwordify_region(w) for w in words]
 
 
 def natural_chr_sort(a, b):
