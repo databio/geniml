@@ -486,8 +486,21 @@ class SingleCellTypeClassifier:
                     # update the progress bar
                     progress_bar.update(batches_tid, completed=i + 1)
 
-                # update the progress bar
-                progress_bar.update(epoch_tid, completed=epoch + 1)
+                # validation loss after each epoch
+                with torch.no_grad():
+                    val_loss = []
+                    for i, batch in enumerate(test_dataloader):
+                        tokens, label = batch
+                        # move the data to the device
+                        tokens = tokens.to(tensor_device)
+                        label = label.to(tensor_device)
+                        # forward pass
+                        y_pred = self._model(tokens)
+                        loss = loss_fn(y_pred, label)
+                        val_loss.append(loss.item())
+
+                        # update the progress bar
+                        progress_bar.update(epoch_tid, completed=epoch + 1)
 
             _LOGGER.info("Finished training.")
 
