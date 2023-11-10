@@ -25,6 +25,7 @@ from .const import (
     DEFAULT_TEST_TRAIN_SPLIT,
 )
 from .utils import SingleCellClassificationDataset, collate_batch
+from ..nn.main import Attention
 from ..region2vec.const import DEFAULT_EMBEDDING_SIZE
 from ..region2vec.main import Region2Vec
 from ..tokenization.main import ITTokenizer
@@ -44,20 +45,17 @@ class Region2VecClassifier(nn.Module):
         super().__init__()
 
         self.region2vec: Region2Vec = region2vec
-        self.relu = nn.ReLU()
+        self.attention = Attention(self.region2vec.embedding_dim)
+        self.output_layer = nn.Linear(self.region2vec.embedding_dim, num_classes)
+        self.num_classes = num_classes
 
-        # freeze the weights of the Region2Vec model
         if freeze_r2v:
             for param in self.region2vec.parameters():
                 param.requires_grad = False
 
-        self.num_classes = num_classes
-        self.output_layer = nn.Linear(self.region2vec.embedding_dim, self.num_classes)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         x = self.region2vec(x)
-        x = x.sum(dim=1)
-        # x = self.relu(x)
+        x = self.attention(x)
         x = self.output_layer(x)
         return x
 
