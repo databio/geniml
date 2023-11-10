@@ -58,15 +58,6 @@ def labels(filenames, metadata):
     return output_list
 
 
-# @pytest.fixture
-# def config():
-#     """
-#     config of Qdrant client
-#     """
-#
-#     return VectorParams(size=100, distance=Distance.COSINE)
-
-
 @pytest.fixture
 def collection():
     """
@@ -86,15 +77,10 @@ def ids(filenames):
     return random.sample(range(len(filenames)), 5)
 
 
-@pytest.fixture
-def local_idx_path():
-    """
-    local file path to save hnsw index
-    """
-
-    return "./testing_idx.bin"
-
-
+@pytest.mark.skipif(
+    "not config.getoption('--qdrant')",
+    reason="Only run when --qdrant is given",
+)
 def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
     qd_search_backend = QdrantBackend(collection=collection)
     # load data
@@ -136,7 +122,7 @@ def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
     qd_search_backend.qd_client.delete_collection(qd_search_backend.collection)
 
 
-def test_HNSWBackend(filenames, embeddings, labels, local_idx_path, ids):
+def test_HNSWBackend(filenames, embeddings, labels, tmp_path_factory, ids):
     def test_hnsw_search_result(
         dict_list: List[Dict], index: hnswlib.Index, with_dist: bool = False
     ):
@@ -160,8 +146,11 @@ def test_HNSWBackend(filenames, embeddings, labels, local_idx_path, ids):
             for num in result["vector"]:
                 assert isinstance(num, float)
 
+    # temporal index file
+    temp_data_dir = tmp_path_factory.mktemp("data")
+    temp_idx_path = temp_data_dir / "testing_idx.bin"
     # init backend
-    hnswb = HNSWBackend(local_index_path=local_idx_path)
+    hnswb = HNSWBackend(local_index_path=str(temp_idx_path))
     num_upload = len(filenames)
 
     # batches to load
@@ -199,6 +188,3 @@ def test_HNSWBackend(filenames, embeddings, labels, local_idx_path, ids):
     # test information retrieval / get items
     retrieval_results = hnswb.retrieve_info(ids, True)
     test_hnsw_search_result(retrieval_results, hnswb.idx, False)
-
-    # remove local file of saved index
-    os.remove(local_idx_path)
