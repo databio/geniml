@@ -1,0 +1,10 @@
+,file,genome,tissue,cell_line,tissue_lineage,tissue_description,diagnosis,sample_name,antibody
+0,Example1,hg38,Lung,LC-2/ad,,,Adenocarcinoma,DRS014846,H3K79me2
+1,Example2,hg38,Lung,A549,,,Carinoma,ATAC-seq_A549_48h_C08_Nocodazole (Inhibitor_beta-tubulin)_0.1,
+2,Example3,hg38,Lung,A549,,,Carcinoma,ATAC-seq_A549_48h_E01_3-Deazaneplanocin A hydrochloride,
+3,Example4,hg38,Blood,B Lymphoblastoid cell line,,,,ERS1200004,
+4,Example5,hg38,Blood,Lymphoblastoid cell line,mesoderm,parental cell type to lymphoblastoid cell lines,,ERS3197906,H3K4me1
+5,Example6,hg38,Blood,Lymphoblastoid cell line,mesoderm,parental cell type to lymphoblastoid cell lines,,GSM593365: H3K4me3 H1,H3K4me3
+6,SRX038632,hg38,Blood,K-562,,,Leukemia Chronic Myelogenous,GSM646442: K562 H3K4me2 rep1,H3K4me2
+7,SRX038633,hg38,Blood,K-562,,,Leukemia Chronic Myelogenous,GSM646443: K562 H3K4me2 rep2,H3K4me2
+8,SRX067409,hg38,Blood,K-562,,,Leukemia Chronic Myelogenous,GSM733658: Bernstein K562 H3K27me3,H3K27me3

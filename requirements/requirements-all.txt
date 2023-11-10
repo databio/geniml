@@ -1,27 +1,23 @@
+fastembed
 gensim
+genomicranges >= 0.3.6
+gtokenizers
+huggingface_hub
+intervaltree
 logmuse
 matplotlib
-hnswlib
-numba
-numpy>=1.24.0
-paramiko>=3.0.0
+numpy >= 1.24.0
+paramiko >= 3.0.0
+peppy
 pyBigWig
+pydantic
 pyyaml
+qdrant_client
+requests>=2.31.0
 scanpy
 seaborn
+torch
 tqdm
 umap-learn
 ubiquerg
 yacman
-pydantic
-huggingface_hub
-qdrant_client
-hnswlib
-tensorflow
-torch
-requests>=2.31.0
-sentence-transformers
-gtokenizers
-genomicranges >= 0.3.6
-pyarrow
-rich
