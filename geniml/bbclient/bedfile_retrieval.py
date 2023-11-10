@@ -103,7 +103,7 @@ class BBClient(BedCacheManager):
             bed_data = self._download_bed_data(bedfile_id)
             with open(file_path, "wb") as f:
                 f.write(bed_data)
-            _LOGGER.info(f"BED file {bedfile_id} is downloaded and cached successfully")
+            _LOGGER.info(f"BED file {bedfile_id} was downloaded and cached successfully")
 
         return RegionSet(regions=file_path)
 
