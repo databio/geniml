@@ -4,16 +4,31 @@ from typing import Union
 
 import numpy as np
 import scanpy as sc
+import torch
 from huggingface_hub import hf_hub_download
-from numba import config
 from rich.progress import track
+from yaml import safe_load, safe_dump
 
-from ..io import Region, RegionSet
-from ..models.main import ExModel
-from ..region2vec import Region2Vec
-from ..tokenization import InMemTokenizer
-from .const import CHR_KEY, END_KEY, MODEL_FILE_NAME, MODULE_NAME, START_KEY, UNIVERSE_FILE_NAME
-from .utils import make_syn1neg_file_name, make_wv_file_name
+from ..region2vec.utils import LearningRateScheduler, shuffle_documents
+from ..region2vec.main import Region2Vec
+from ..tokenization import ITTokenizer, Tokenizer
+from ..region2vec.const import (
+    POOLING_TYPES,
+    DEFAULT_EMBEDDING_SIZE,
+    DEFAULT_WINDOW_SIZE,
+    DEFAULT_MIN_COUNT,
+    DEFAULT_EPOCHS,
+    MODEL_FILE_NAME,
+    UNIVERSE_FILE_NAME,
+    CONFIG_FILE_NAME,
+)
+
+from .const import (
+    CHR_KEY,
+    END_KEY,
+    START_KEY,
+    MODULE_NAME,
+)
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -21,93 +36,173 @@ _LOGGER = getLogger(MODULE_NAME)
 # demote gensim logger to warning
 _GENSIM_LOGGER.setLevel("WARNING")
 
-# set the threading layer before any parallel target compilation
-config.THREADING_LAYER = "threadsafe"  # type: ignore
 
-
-class ScEmbed(ExModel):
-    """
-    ScEmbed extended model for single-cell ATAC-seq data. It is a single-cell
-    extension of Region2Vec.
-    """
-
-    def __init__(self, model_repo: str = None, tokenizer: InMemTokenizer = None, **kwargs):
-        """
-        Initialize ScEmbed model.
-
-        :param str model_path: Path to the pre-trained model on huggingface.
-        :param kwargs: Additional keyword arguments to pass to the model.
-        """
-        self.model_path = model_repo
-        self._model: Region2Vec = None
-        self.tokenizer: InMemTokenizer = None
-
-        if model_repo is not None:
-            self._init_from_huggingface(model_repo)
-        else:
-            self._model = Region2Vec(**kwargs)
-            self.tokenizer = tokenizer
-
-    @property
-    def wv(self):
-        return self._model.wv
-
-    @property
-    def trained(self):
-        return self._model.trained
-
-    def add_tokenizer_from_file(self, universe_file_path: str):
-        """
-        Add a tokenizer from a file.
-
-        :param str universe_file_path: Path to the universe file.
-        """
-        self.tokenizer = InMemTokenizer(universe_file_path)
-
-    def from_pretrained(self, model_file_path: str, universe_file_path: str):
-        """
-        Initialize ScEmbed model from pretrained model.
-
-        :param str model_file_path: Path to the pre-trained model.
-        :param str universe_file_path: Path to the universe file.
-        """
-        self._model = Region2Vec.load(model_file_path)
-        self.tokenizer = InMemTokenizer(universe_file_path)
-
-    def _init_from_huggingface(
+class ScEmbed:
+    def __init__(
         self,
-        model_repo: str,
-        model_file_name: str = MODEL_FILE_NAME,
-        universe_file_name: str = UNIVERSE_FILE_NAME,
+        model_path: str = None,
+        tokenizer: ITTokenizer = None,
+        device: str = None,
         **kwargs,
     ):
         """
-        Download a pretrained model from the HuggingFace Hub. We need to download
-        the actual model + weights, and the universe file.
+        Initialize ScEmbed.
 
-        :param str model: The name of the model to download (this is the same as the repo name).
-        :param str model_file_name: The name of the model file - this should almost never be changed.
-        :param str universe_file_name: The name of the universe file - this should almost never be changed.
+        :param str model_path: Path to the pre-trained model on huggingface.
+        :param embedding_dim: Dimension of the embedding.
+        :param kwargs: Additional keyword arguments to pass to the model.
         """
-        model_path = hf_hub_download(model_repo, model_file_name, **kwargs)
-        universe_path = hf_hub_download(model_repo, universe_file_name, **kwargs)
+        super().__init__()
+        self.model_path: str = model_path
+        self.tokenizer: ITTokenizer
+        self.trained: bool = False
+        self._model: Region2Vec = None
 
-        syn1reg_file_name = make_syn1neg_file_name(model_file_name)
-        wv_file_name = make_wv_file_name(model_file_name)
+        if model_path is not None:
+            self._init_from_huggingface(model_path)
+            self.trained = True
 
-        # get the syn1neg and wv files
-        hf_hub_download(model_repo, wv_file_name, **kwargs)
-        hf_hub_download(model_repo, syn1reg_file_name, **kwargs)
+        elif tokenizer is not None:
+            self._init_model(tokenizer, **kwargs)
 
-        # set the paths to the downloaded files
+        # set the device
+        self._target_device = torch.device(
+            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        )
+
+    def _init_tokenizer(self, tokenizer: Union[ITTokenizer, str]):
+        """
+        Initialize the tokenizer.
+
+        :param tokenizer: Tokenizer to add to the model.
+        """
+        if isinstance(tokenizer, str):
+            if os.path.exists(tokenizer):
+                self.tokenizer = ITTokenizer(tokenizer)
+            else:
+                self.tokenizer = ITTokenizer.from_pretrained(
+                    tokenizer
+                )  # download from huggingface (or at least try to)
+        elif isinstance(tokenizer, ITTokenizer):
+            self.tokenizer = tokenizer
+        else:
+            raise TypeError("tokenizer must be of type ITTokenizer or str.")
+
+    def _init_model(self, tokenizer, **kwargs):
+        """
+        Initialize the core model. This will initialize the model from scratch.
+
+        :param kwargs: Additional keyword arguments to pass to the model.
+        """
+        self._init_tokenizer(tokenizer)
+
+        self._vocab_length = len(self.tokenizer)
+        self._model = Region2Vec(
+            len(self.tokenizer),
+            embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
+        )
+
+    @property
+    def model(self):
+        """
+        Get the core Region2Vec model.
+        """
+        return self._model
+
+    def add_tokenizer(self, tokenizer: Tokenizer, **kwargs):
+        """
+        Add a tokenizer to the model. This should be use when the model
+        is not initialized with a tokenizer.
+
+        :param tokenizer: Tokenizer to add to the model.
+        :param kwargs: Additional keyword arguments to pass to the model.
+        """
+        if self._model is not None:
+            raise RuntimeError("Cannot add a tokenizer to a model that is already initialized.")
+
+        self.tokenizer = tokenizer
+        if not self.trained:
+            self._init_model(**kwargs)
+
+    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
+        """
+        Load the model from a checkpoint.
+
+        :param str model_path: Path to the model checkpoint.
+        :param str vocab_path: Path to the vocabulary file.
+        """
         self._model_path = model_path
-        self._universe_path = universe_path
+        self._universe_path = vocab_path
 
-        # load the model
-        self._model = Region2Vec.load(model_path)
-        self.tokenizer = InMemTokenizer(universe_path)
+        # init the tokenizer - only one option for now
+        self.tokenizer = ITTokenizer(vocab_path)
 
-    def _validate_data(self, data: Union[sc.AnnData, str]) -> sc.AnnData:
+        # load the model state dict (weights)
+        params = torch.load(model_path)
+
+        # get the model config (vocab size, embedding size)
+        with open(config_path, "r") as f:
+            config = safe_load(f)
+
+        self._model = Region2Vec(
+            config["vocab_size"],
+            embedding_dim=config["embedding_size"],
+        )
+        self._model.load_state_dict(params)
+
+    def _init_from_huggingface(
+        self,
+        model_path: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
+        **kwargs,
+    ):
+        """
+        Initialize the model from a huggingface model. This uses the model path
+        to download the necessary files and then "build itself up" from those. This
+        includes both the actual model and the tokenizer.
+
+        :param str model_path: Path to the pre-trained model on huggingface.
+        :param str model_file_name: Name of the model file.
+        :param str universe_file_name: Name of the universe file.
+        :param kwargs: Additional keyword arguments to pass to the hf download function.
+        """
+        model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
+        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        config_path = hf_hub_download(model_path, config_file_name, **kwargs)
+
+        self._load_local_model(model_file_path, universe_path, config_path)
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        path_to_files: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
+    ) -> "ScEmbed":
+        """
+        Load the model from a set of files that were exported using the export function.
+
+        :param str path_to_files: Path to the directory containing the files.
+        :param str model_file_name: Name of the model file.
+        :param str universe_file_name: Name of the universe file.
+        :param str config_file_name: Name of the config file.
+
+        :return: The loaded model.
+        """
+        model_file_path = os.path.join(path_to_files, model_file_name)
+        universe_file_path = os.path.join(path_to_files, universe_file_name)
+        config_file_path = os.path.join(path_to_files, config_file_name)
+
+        instance = cls()
+        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
+        instance.trained = True
+
+        return instance
+
+    def _validate_data_for_training(self, data: Union[sc.AnnData, str]) -> sc.AnnData:
         """
         Validate the data is of the correct type and has the required columns
 
@@ -133,86 +228,191 @@ class ScEmbed(ExModel):
 
         return data
 
-    def train(self, data: Union[sc.AnnData, str], **kwargs):
+    def train(
+        self,
+        data: Union[sc.AnnData, str],
+        window_size: int = DEFAULT_WINDOW_SIZE,
+        epochs: int = DEFAULT_EPOCHS,
+        min_count: int = DEFAULT_MIN_COUNT,
+        num_cpus: int = 1,
+        seed: int = 42,
+        checkpoint_path: str = MODEL_FILE_NAME,
+        save_model: bool = False,
+        gensim_params: dict = {},
+    ):
         """
         Train the model.
 
         :param sc.AnnData data: The AnnData object containing the data to train on (can be path to AnnData).
-        :param kwargs: Keyword arguments to pass to the model training function.
+        :param int window_size: The window size to use for training.
+        :param int epochs: The number of epochs to train for.
+        :param int min_count: The minimum count for a region to be included in the vocabulary.
+        :param int num_cpus: The number of cpus to use for training.
+        :param int seed: The seed to use for training.
+        :param str checkpoint_path: The path to save the model to.
+        :param bool save_model: Whether to save the model after training.
+        :param dict gensim_params: Additional keyword arguments to pass to the gensim model.
+
+        :return np.ndarray: The losses for each epoch.
         """
+        from gensim.models import Word2Vec as GensimWord2Vec
+
+        # validate a model exists
+        if self._model is None:
+            raise RuntimeError(
+                "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
+            )
+
         _LOGGER.info("Validating data.")
-        data = self._validate_data(data)
+        data = self._validate_data_for_training(data)
 
-        # extract out the chr, start, end columns
-        chrs = data.var[CHR_KEY].values.tolist()
-        starts = data.var[START_KEY].values.tolist()
-        ends = data.var[END_KEY].values.tolist()
-        regions = [Region(c, int(s), int(e)) for c, s, e in zip(chrs, starts, ends)]
+        # create gensim model that will be used to train
+        _LOGGER.info("Creating gensim model.")
+        gensim_model = GensimWord2Vec(
+            vector_size=self._model.embedding_dim,
+            window=window_size,
+            min_count=min_count,
+            workers=num_cpus,
+            seed=seed,
+            **gensim_params,
+        )
 
-        _LOGGER.info("Extracting region sets.")
+        # convert to tokens for training
+        tokenized_data = self.tokenizer.tokenize(data)
 
-        # check if we already have a tokenizer, if not create one
-        # from the regions
-        if self.tokenizer is None:
-            self.tokenizer = InMemTokenizer(RegionSet(regions))
+        _LOGGER.info("Building vocabulary.")
+        tokenized_data = [
+            [str(t.id) for t in region_set]
+            for region_set in track(
+                tokenized_data,
+                total=len(tokenized_data),
+                description="Converting to strings.",
+            )
+        ]
+        gensim_model.build_vocab(tokenized_data)
 
-        # convert the data to a list of documents
-        region_sets = self.tokenizer.tokenize(data)
+        # create our own learning rate scheduler
+        lr_scheduler = LearningRateScheduler(
+            n_epochs=epochs,
+        )
 
-        _LOGGER.info("Training begin.")
-        self._model.train(region_sets, **kwargs)
+        # train the model
+        losses = []
 
-        _LOGGER.info("Training complete.")
+        for epoch in track(range(epochs), description="Training model", total=epochs):
+            # shuffle the data
+            _LOGGER.info(f"Starting epoch {epoch+1}.")
+            _LOGGER.info("Shuffling data.")
+            shuffled_data = shuffle_documents(
+                tokenized_data, n_shuffles=1
+            )  # shuffle once per epoch, no need to shuffle more
+            gensim_model.train(
+                shuffled_data,
+                epochs=1,  # train for 1 epoch at a time, shuffle data each time
+                compute_loss=True,
+                total_words=gensim_model.corpus_total_words,
+            )
 
-    def export(self, path: str):
+            # log out and store loss
+            _LOGGER.info(f"Loss: {gensim_model.get_latest_training_loss()}")
+            losses.append(gensim_model.get_latest_training_loss())
+
+            # update the learning rate
+            lr_scheduler.update()
+
+        # once done training, set the weights of the pytorch model in self._model
+        for id in track(
+            gensim_model.wv.key_to_index,
+            total=len(gensim_model.wv.key_to_index),
+            description="Setting weights.",
+        ):
+            self._model.projection.weight.data[int(id)] = torch.tensor(gensim_model.wv[id])
+
+        # set the model as trained
+        self.trained = True
+
+        # export
+        if save_model:
+            self.export(checkpoint_path)
+
+        return np.array(losses)
+
+    def export(
+        self,
+        path: str,
+        checkpoint_file: str = MODEL_FILE_NAME,
+        universe_file: str = UNIVERSE_FILE_NAME,
+        config_file: str = CONFIG_FILE_NAME,
+    ):
         """
-        Export a model for direct upload to the HuggingFace Hub.
+        Function to facilitate exporting the model in a way that can
+        be directly uploaded to huggingface. This exports the model
+        weights and the vocabulary.
 
-        :param str path: The path to save the model to.
+        :param str path: Path to export the model to.
         """
-        # make folder path if it doesn't exist
+        # make sure the model is trained
+        if not self.trained:
+            raise RuntimeError("Cannot export an untrained model.")
+
+        # make sure the path exists
         if not os.path.exists(path):
             os.makedirs(path)
 
-        model_file_path = os.path.join(path, MODEL_FILE_NAME)
-        universe_file_path = os.path.join(path, UNIVERSE_FILE_NAME)
+        # export the model weights
+        torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
 
-        # save the model
-        self._model.save(model_file_path)
-
-        # save universe (vocab)
-        with open(universe_file_path, "w") as f:
-            for region in self.tokenizer.universe:
+        # export the vocabulary
+        with open(os.path.join(path, universe_file), "a") as f:
+            for region in self.tokenizer.universe.regions:
                 f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
-    def upload_to_huggingface(self, model_name: str, token: str = None, **kwargs):
+        # export the config (vocab size, embedding size)
+        config = {
+            "vocab_size": len(self.tokenizer),
+            "embedding_size": self._model.embedding_dim,
+        }
+
+        with open(os.path.join(path, config_file), "w") as f:
+            safe_dump(config, f)
+
+    def encode(
+        self, regions: Union[sc.AnnData, str], pooling: POOLING_TYPES = "mean"
+    ) -> np.ndarray:
         """
-        Upload the model to the HuggingFace Hub.
+        Get the vector for a region.
 
-        :param str model_name: The name of the model to upload.
-        :param kwargs: Additional keyword arguments to pass to the upload function.
+        :param Region region: Region to get the vector for.
+        :param str pooling: Pooling type to use.
+
+        :return np.ndarray: Vector for the region.
         """
-        raise NotImplementedError("This method is not yet implemented.")
+        # data validation
+        if not (isinstance(regions, sc.AnnData) or isinstance(regions, str)):
+            raise TypeError(
+                f"Regions must be of type AnnData or str, not {type(regions).__name__}"
+            )
+        if isinstance(regions, str):
+            regions = sc.read_h5ad(regions)
 
-    def encode(self, adata: sc.AnnData) -> np.ndarray:
-        """
-        Encode the data into a latent space.
+        if pooling not in ["mean", "max"]:
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
-        :param sc.AnnData adata: The AnnData object containing the data to encode.
-        :return np.ndarray: The encoded data.
-        """
-        # tokenize the data
-        region_sets = self.tokenizer.tokenize(adata)
+        # tokenize the region
+        tokens = self.tokenizer.tokenize(regions)
+        tokens = [[t.id for t in sublist] for sublist in tokens]
 
-        # encode the data
-        _LOGGER.info("Encoding data.")
-        enoded_data = []
-        for region_set in track(region_sets, description="Encoding data", total=len(region_sets)):
-            vectors = self._model.forward(region_set)
-            # compute the mean of the vectors
-            vector = np.mean(vectors, axis=0)
-            enoded_data.append(vector)
-        return np.array(enoded_data)
+        # get the vector
+        embeddings = []
+        for token_set in track(tokens, total=len(tokens), description="Getting embeddings"):
+            region_embeddings = self._model.projection(torch.tensor(token_set))
+            if pooling == "mean":
+                region_embeddings = torch.mean(region_embeddings, axis=0).detach().numpy()
+            elif pooling == "max":
+                region_embeddings = torch.max(region_embeddings, axis=0).values.detach().numpy()
+            else:
+                # this should be unreachable
+                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+            embeddings.append(region_embeddings)
 
-    def __call__(self, adata: sc.AnnData) -> np.ndarray:
-        return self.encode(adata)
+        return np.vstack(embeddings)

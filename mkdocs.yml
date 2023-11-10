@@ -18,6 +18,7 @@ nav:
     - Tokenize a BED file on the command line: tutorials/cli-tokenization.md
     - Build universe: tutorials/build-universe.md
     - Create consensus peaks: tutorials/create-consensus-peaks.md
+    - Fine-tune embeddings: tutorials/fine-tune-region2vec-model.md
   - Reference:
     - API: autodoc_build/geniml.md
     - Support: support.md
