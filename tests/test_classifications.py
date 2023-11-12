@@ -15,10 +15,12 @@ def test_init_singlecell_classifier_from_scratch():
     """
     Test the initialization of a SingleCellTypeClassifier from scratch.
     """
-    region2vec = Region2Vec(1000, 100)  # 1000 vocab size, 100 embedding size
-    classifier = SingleCellTypeClassifier(region2vec, 10)  # 10 classes
+    region2vec = Region2Vec(2380, 100)  # 1000 vocab size, 100 embedding size
+    classifier = SingleCellTypeClassifier(
+        tokenizer="tests/data/universe.bed", region2vec=region2vec, num_classes=10
+    )  # 10 classes
 
-    assert classifier.embedding_dim == 100
+    assert classifier.region2vec.embedding_dim == 100
     assert classifier.num_classes == 10
     assert classifier.region2vec == region2vec
 
@@ -113,10 +115,10 @@ def test_train_ex_model():
         tokenizer="tests/data/universe.bed",
         num_classes=data.obs["cell_type"].nunique(),
     )
-
-    losses = model.train(data, label_key="cell_type", batch_size=2, epochs=3)
+    torch.manual_seed(0)  # for reproducibility
+    result = model.train(data, label_key="cell_type", batch_size=2, epochs=3)
     assert model.trained
-    assert losses[0] > losses[-1]
+    assert result.all_loss[0] > result.all_loss[-1]
 
 
 def test_train_ex_model_save_load():
@@ -126,10 +128,10 @@ def test_train_ex_model_save_load():
         tokenizer="tests/data/universe.bed",
         num_classes=data.obs["cell_type"].nunique(),
     )
-
-    losses = model.train(data, label_key="cell_type", batch_size=2, epochs=3)
+    torch.manual_seed(0)  # for reproducibility
+    result = model.train(data, label_key="cell_type", batch_size=2, epochs=3)
     assert model.trained
-    assert losses[0] > losses[-1]
+    assert result.all_loss[0] > result.all_loss[-1]
 
     input_tokens = [t.id for t in model.tokenizer.tokenize(data[0, :].to_memory())[0]]
     input_tokens = torch.tensor(input_tokens).unsqueeze(0)
@@ -155,6 +157,6 @@ def test_train_and_run_predictions():
     _ = model.train(data, label_key="cell_type", batch_size=2, epochs=3)
     assert model.trained
 
-    predictions = model.predict(data, label_key="cell_type")
+    predictions = model.predict(data)
     assert len(predictions) == len(data)
     assert all([p in data.obs["cell_type"].cat.categories for p in predictions])

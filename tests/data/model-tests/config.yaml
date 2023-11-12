@@ -1,0 +1,10 @@
+embedding_size: 100
+label_mapping:
+  0: BCell
+  1: CD4+
+  2: Dendritic_cell
+  3: Erythrocyte
+  4: NK_Cell
+  5: Normoblast
+num_classes: 6
+vocab_size: 2380
