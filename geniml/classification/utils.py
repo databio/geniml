@@ -53,4 +53,4 @@ class TrainingResult(BaseModel):
 
     validation_loss: List[float]
     epoch_loss: List[float]
-    all_loss = List[float]
+    all_loss: List[float]

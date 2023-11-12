@@ -553,16 +553,16 @@ class SingleCellTypeClassifier:
         # no need to compute gradients - we are just predicting
         with torch.no_grad():
             outputs = []
+            predictions = []
             for t in track(tokens, total=len(tokens)):
                 # remove batch dimension
                 output = self._model(torch.tensor(t).unsqueeze(0))
                 output = torch.softmax(output, dim=1)
                 outputs.append(output)
-
-            predictions = [torch.argmax(o, dim=1).detach().tolist() for o in outputs]
+                predictions.append(torch.argmax(output, dim=1).item())
 
         # convert the predictions to labels
-        predictions = [self.class_to_label(p.item()) for p in predictions]
+        predictions = [self.class_to_label(p) for p in predictions]
 
         return predictions
 
