@@ -5,7 +5,7 @@ from typing import Union, List
 import torch
 import torch.nn as nn
 import scanpy as sc
-from rich.progress import Progress
+from rich.progress import Progress, track
 from huggingface_hub import hf_hub_download
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
@@ -24,7 +24,7 @@ from .const import (
     DEFAULT_OPTIMIZER,
     DEFAULT_TEST_TRAIN_SPLIT,
 )
-from .utils import SingleCellClassificationDataset, collate_batch
+from .utils import SingleCellClassificationDataset, TrainingResult, collate_batch
 from ..nn.main import Attention
 from ..region2vec.const import DEFAULT_EMBEDDING_SIZE
 from ..region2vec.main import Region2Vec
@@ -112,7 +112,7 @@ class SingleCellTypeClassifier:
         self._universe_path = vocab_path
 
         # init the tokenizer - only one option for now
-        self.tokenizer = ITTokenizer(vocab_path, verbose=False)
+        self.tokenizer = ITTokenizer(vocab_path)
 
         # load the model state dict (weights)
         params = torch.load(model_path)
@@ -166,7 +166,7 @@ class SingleCellTypeClassifier:
         elif isinstance(tokenizer, str):
             # is path to a local vocab?
             if os.path.exists(tokenizer):
-                self.tokenizer = ITTokenizer(tokenizer, verbose=False)
+                self.tokenizer = ITTokenizer(tokenizer)
             else:
                 # assume its a huggingface tokenizer, try to load it
                 self.tokenizer = ITTokenizer.from_pretrained(tokenizer)
@@ -244,7 +244,7 @@ class SingleCellTypeClassifier:
         :param str vocab_path: Path to the vocabulary file.
         """
         # init the tokenizer - only one option for now
-        self.tokenizer = ITTokenizer(vocab_path, verbose=False)
+        self.tokenizer = ITTokenizer(vocab_path)
 
         # load the model state dict (weights)
         params = torch.load(model_path)
@@ -369,7 +369,8 @@ class SingleCellTypeClassifier:
         seed: any = 42,
         learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         device: Union[List, str] = None,
-    ):
+        early_stopping: bool = False,
+    ) -> TrainingResult:
         """
         Train the model. The training loop assumes your data is a scanpy AnnData object,
         with the cell type labels in the `.obs` attribute. The cell type labels are
@@ -383,6 +384,11 @@ class SingleCellTypeClassifier:
         :param int batch_size: Batch size to use.
         :param dict optimizer_kwargs: Additional keyword arguments to pass to the optimizer.
         :param float test_train_split: Fraction of data to use for training (defaults to 0.8).
+        :param any seed: Random seed to use.
+        :param torch.optim.lr_scheduler._LRScheduler learning_rate_scheduler: Learning rate scheduler to use.
+        :param Union[List, str] device: Device to use for training.
+        :param bool early_stopping: Whether or not to use early stopping. The training loop will stop if the validation loss
+                                    does not improve for 5 epochs. This is an indicator of overfitting.
         """
         # validate the data
         data = self._validate_data(data, label_key)
@@ -430,8 +436,6 @@ class SingleCellTypeClassifier:
             collate_fn=lambda x: collate_batch(x, pad_token_id),
         )
 
-        losses = []
-
         # move the model to the device
         if isinstance(device, list):
             self._model = nn.DataParallel(self._model, device_ids=device)
@@ -455,6 +459,11 @@ class SingleCellTypeClassifier:
         if learning_rate_scheduler is not None:
             learning_rate_scheduler = learning_rate_scheduler(optimizer)
 
+        all_loss = []
+        epoch_loss = []
+        validation_loss = []
+        consecutive_no_improvement = 0
+
         with Progress() as progress_bar:
             epoch_tid = progress_bar.add_task("Epochs", total=epochs)
             batches_tid = progress_bar.add_task("Batches", total=len(train_dataloader))
@@ -474,7 +483,7 @@ class SingleCellTypeClassifier:
 
                     loss = loss_fn(y_pred, label)
                     loss.backward()
-                    losses.append(loss.item())
+                    all_loss.append(loss.item())
 
                     # update the weights
                     optimizer.step()
@@ -483,6 +492,8 @@ class SingleCellTypeClassifier:
                         learning_rate_scheduler.step()
                     # update the progress bar
                     progress_bar.update(batches_tid, completed=i + 1)
+
+                epoch_loss.append(sum(all_loss) / len(all_loss))  # training loss after each epoch
 
                 # validation loss after each epoch
                 with torch.no_grad():
@@ -500,21 +511,35 @@ class SingleCellTypeClassifier:
                         # update the progress bar
                         progress_bar.update(epoch_tid, completed=epoch + 1)
 
+                    validation_loss.append(
+                        sum(val_loss) / len(val_loss)
+                    )  # validation loss after each epoch
+
+                if early_stopping:
+                    if validation_loss[-1] > validation_loss[-2]:
+                        consecutive_no_improvement += 1
+                    else:
+                        consecutive_no_improvement = 0
+
+                if consecutive_no_improvement >= 5 and early_stopping:
+                    _LOGGER.info("Early stopping due to overfitting.")
+                    break
+
             _LOGGER.info("Finished training.")
 
         self.trained = True
 
-        # run testing
-        # TODO: add testing
+        return TrainingResult(
+            validation_loss=validation_loss,
+            epoch_loss=epoch_loss,
+            all_loss=all_loss,
+        )
 
-        return losses
-
-    def predict(self, data: Union[sc.AnnData, str], label_key: str = DEFAULT_LABEL_KEY):
+    def predict(self, data: Union[sc.AnnData, str]):
         """
         Predict the cell types of the given data.
 
         :param Union[sc.AnnData, str] data: Either a scanpy AnnData object or a path to a h5ad file.
-        :param str label_key: The key in the `.obs` attribute that contains the cell type labels.
         """
         if isinstance(data, str):
             data = sc.read_h5ad(data)
@@ -523,14 +548,18 @@ class SingleCellTypeClassifier:
                 "Data must be either a scanpy AnnData object or a path to a h5ad file."
             )
 
-        tokens = [
-            torch.tensor([t.id for t in sublist]) for sublist in self.tokenizer.tokenize(data)
-        ]
+        tokens = [[t.id for t in sublist] for sublist in self.tokenizer.tokenize(data)]
 
-        outputs = [self._model(t.unsqueeze(0)) for t in tokens]
-        # remove batch dimension
-        outputs = [torch.softmax(o, dim=1) for o in outputs]
-        predictions = [torch.argmax(o, dim=1) for o in outputs]
+        # no need to compute gradients - we are just predicting
+        with torch.no_grad():
+            outputs = []
+            for t in track(tokens, total=len(tokens)):
+                # remove batch dimension
+                output = self._model(torch.tensor(t).unsqueeze(0))
+                output = torch.softmax(output, dim=1)
+                outputs.append(output)
+
+            predictions = [torch.argmax(o, dim=1).detach().tolist() for o in outputs]
 
         # convert the predictions to labels
         predictions = [self.class_to_label(p.item()) for p in predictions]
@@ -555,6 +584,13 @@ class SingleCellTypeClassifier:
         if not os.path.exists(path):
             os.makedirs(path)
 
+        # detach the model from the data parallel
+        if isinstance(self._model, nn.DataParallel):
+            self._model = self._model.module
+
+        # move model to cpu
+        self._model.cpu()
+
         # export the model weights
         torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
 
@@ -564,11 +600,55 @@ class SingleCellTypeClassifier:
                 f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
         # export the config (vocab size, embedding size)
+        embedding_size = self._model.region2vec.embedding_dim
+
         config = {
             "vocab_size": len(self.tokenizer),
-            "embedding_size": self._model.region2vec.embedding_dim,
-            "num_classes": self._model.num_classes,
+            "embedding_size": embedding_size,
+            "num_classes": self.num_classes,
             "label_mapping": self._label_mapping or {},
+        }
+
+        with open(os.path.join(path, config_file), "w") as f:
+            safe_dump(config, f)
+
+    def export_region2vec(
+        self,
+        path: str,
+        checkpoint_file: str = MODEL_FILE_NAME,
+        universe_file: str = UNIVERSE_FILE_NAME,
+        config_file: str = CONFIG_FILE_NAME,
+    ):
+        """
+        Export the core Region2Vec model that has been fine-tuned through the classification model.
+
+        This is useful if you want to use the Region2Vec model for other purposes.
+        """
+        # make sure the path exists
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        # detach the model from the data parallel
+        if isinstance(self._model, nn.DataParallel):
+            self._model = self._model.module
+
+        # move model to cpu
+        self._model.cpu()
+
+        # export the model weights
+        torch.save(self._model.region2vec.state_dict(), os.path.join(path, checkpoint_file))
+
+        # export the vocabulary
+        with open(os.path.join(path, universe_file), "a") as f:
+            for region in self.tokenizer.universe.regions:
+                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+
+        # export the config (vocab size, embedding size)
+        embedding_size = self._model.region2vec.embedding_dim
+
+        config = {
+            "vocab_size": len(self.tokenizer),
+            "embedding_size": embedding_size,
         }
 
         with open(os.path.join(path, config_file), "w") as f:
