@@ -1,6 +1,7 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import torch
+from pydantic import BaseModel
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
@@ -39,3 +40,17 @@ class SingleCellClassificationDataset(Dataset):
 
     def __getitem__(self, idx):
         return torch.tensor(self.tokens[idx]), torch.tensor(self.labels[idx])
+
+
+class TrainingResult(BaseModel):
+    """
+    Results of a region2VecClassification training run.
+
+    :param List[float] validation_loss: The validation loss for each epoch.
+    :param List[float] epoch_loss: The training loss for each epoch.
+    :param List[float] all_loss: The training loss for each batch.
+    """
+
+    validation_loss: List[float]
+    epoch_loss: List[float]
+    all_loss = List[float]
