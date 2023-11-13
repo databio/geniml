@@ -529,10 +529,35 @@ class SingleCellTypeClassifier:
 
         self.trained = True
 
+        with torch.no_grad():
+            training_accuracy = sum(
+                [
+                    1 if torch.argmax(self._model(torch.tensor(t).unsqueeze(0))) == label else 0
+                    for t, label in track(
+                        zip(train_tokens, Y_train),
+                        total=len(train_tokens),
+                        description="Training accuracy",
+                    )
+                ]
+            ) / len(tokens)
+
+            validation_accuracy = sum(
+                [
+                    1 if torch.argmax(self._model(torch.tensor(t).unsqueeze(0))) == label else 0
+                    for t, label in track(
+                        zip(test_tokens, Y_test),
+                        total=len(test_tokens),
+                        description="Validation accuracy",
+                    )
+                ]
+            ) / len(test_tokens)
+
         return TrainingResult(
             validation_loss=validation_loss,
             epoch_loss=epoch_loss,
             all_loss=all_loss,
+            training_accuracy=training_accuracy,
+            validation_accuracy=validation_accuracy,
         )
 
     def predict(self, data: Union[sc.AnnData, str]):
