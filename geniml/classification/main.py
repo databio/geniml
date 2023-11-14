@@ -370,6 +370,7 @@ class SingleCellTypeClassifier:
         learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         device: Union[List, str] = None,
         early_stopping: bool = False,
+        r2v_gradient_ramp: List[float] = None,
     ) -> TrainingResult:
         """
         Train the model. The training loop assumes your data is a scanpy AnnData object,
@@ -389,6 +390,7 @@ class SingleCellTypeClassifier:
         :param Union[List, str] device: Device to use for training.
         :param bool early_stopping: Whether or not to use early stopping. The training loop will stop if the validation loss
                                     does not improve for 5 epochs. This is an indicator of overfitting.
+        :param List[float] r2v_gradient_ramp: List of floats between 0 and 1. If passed, the Region2Vec model will be
         """
         # validate the data
         data = self._validate_data(data, label_key)
@@ -487,6 +489,14 @@ class SingleCellTypeClassifier:
                     loss = loss_fn(y_pred, label)
                     loss.backward()
                     all_loss.append(loss.item())
+
+                    if r2v_gradient_ramp is not None:
+                        for param in self._model.region2vec.parameters():
+                            try:
+                                scaling_factor = r2v_gradient_ramp[epoch]
+                            except IndexError:
+                                scaling_factor = r2v_gradient_ramp[-1]
+                            param.grad *= scaling_factor
 
                     # update the weights
                     optimizer.step()
