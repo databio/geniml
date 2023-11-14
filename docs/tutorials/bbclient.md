@@ -33,6 +33,14 @@ regionset = bbclient.load_bed(<input_identifier(s)>)
 
 ## For command line usage, run the CLI with appropriate subcommands and arguments as described below:
 
+### Cache local BED file / BED set
+
+```bash
+geniml bbclient local --input-identifier <path_to_BED_file_or_folder_of_BED_files>
+```
+
+Replace <path_to_BED_file_or_folder_of_BED_files> with the path to the local BED file or folder of BED files you want to cache.
+
 ### Download and Process BED File Identifiers
 
 ```bash
