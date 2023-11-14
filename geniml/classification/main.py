@@ -491,7 +491,11 @@ class SingleCellTypeClassifier:
                     all_loss.append(loss.item())
 
                     if r2v_gradient_ramp is not None:
-                        for param in self._model.region2vec.parameters():
+                        if isinstance(self._model, nn.DataParallel):
+                            parameters = self._model.module.region2vec.parameters()
+                        else:
+                            parameters = self._model.region2vec.parameters()
+                        for param in parameters:
                             try:
                                 scaling_factor = r2v_gradient_ramp[epoch]
                             except IndexError:
