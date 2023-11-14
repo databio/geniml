@@ -2,9 +2,11 @@ import gzip
 import os
 import shutil
 from logging import getLogger
-from typing import List
+from typing import List, NoReturn
 
+import tempfile
 import requests
+import urllib.request
 
 from ..io import is_gzipped
 from ..io.io import BedSet, RegionSet
@@ -18,7 +20,7 @@ from .const import (
     DEFAULT_BEDSET_SUBFOLDER,
     MODULE_NAME,
 )
-from .utils import BedCacheManager
+from .utils import BedCacheManager, is_valid_url
 
 _LOGGER = getLogger(MODULE_NAME)
 
@@ -33,18 +35,6 @@ class BBClient(BedCacheManager):
         """
         super().__init__(cache_folder)
         self.bedbase_api = bedbase_api
-
-    def _download_bed_data(self, bedfile_id: str) -> bytes:
-        """
-        Download BED file from BEDbase API and return the file content as bytes
-
-        :param bedfile_id: unique identifier of a BED file
-        """
-        bed_url = BEDFILE_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedfile_id=bedfile_id)
-        response = requests.get(bed_url)
-        response.raise_for_status()
-
-        return response.content
 
     def load_bedset(self, bedset_id: str) -> BedSet:
         """
@@ -79,31 +69,47 @@ class BBClient(BedCacheManager):
         Download BED set from BEDbase API and return the list of identifiers of BED files in the set
 
         :param bedset_id: unique identifier of a BED set
+        :return: the list of identifiers of BED files in the set
         """
         bedset_url = BEDSET_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedset_id=bedset_id)
         response = requests.get(bedset_url)
         data = response.json()
-        extracted_data = [entry[0] for entry in data["data"]]
+        extracted_data = [entry.get("record_identifier") for entry in data["bedfile_metadata"]]
 
         return extracted_data
 
-    def load_bed(self, bedfile_id: str) -> RegionSet:
+    def load_bed(self, bedfile: str) -> RegionSet:
         """
         Loads a BED file from cache, or downloads and caches it if it doesn't exist
 
-        :param bedfile_id: unique identifier of a BED file
+        :param bedfile: unique identifier of a BED file, or url to a BED file
         """
-        # the path of the .txt file of the BED set
-        file_path = self._bedfile_path(bedfile_id)
+        # if the input is a URL, download the file and cache it
+        if is_valid_url(bedfile):
+            file_content = self._download_file_from_url(bedfile)
+            with tempfile.NamedTemporaryFile("w+b", suffix=".bed.gz") as f:
+                f.write(file_content)
+                bed_identifier = RegionSet(regions=f.name).identifier
 
-        if os.path.exists(file_path):
-            _LOGGER.info(f"BED file {bedfile_id} already exists in cache.")
-        # if not in the cache, download from BEDbase and write to file in cache
+            file_path = self._bedfile_path(bed_identifier)
+            if os.path.exists(file_path):
+                _LOGGER.info(f"BED file {bedfile} already exists in cache.")
+            else:
+                with open(file_path, "wb") as f:
+                    f.write(file_content)
+                _LOGGER.info(f"BED file {bedfile} was downloaded and cached successfully")
+
         else:
-            bed_data = self._download_bed_data(bedfile_id)
-            with open(file_path, "wb") as f:
-                f.write(bed_data)
-            _LOGGER.info(f"BED file {bedfile_id} was downloaded and cached successfully")
+            file_path = self._bedfile_path(bedfile)
+
+            if os.path.exists(file_path):
+                _LOGGER.info(f"BED file {bedfile} already exists in cache.")
+            # if not in the cache, download from BEDbase and write to file in cache
+            else:
+                bed_data = self._download_bed_file_from_bb(bedfile)
+                with open(file_path, "wb") as f:
+                    f.write(bed_data)
+                _LOGGER.info(f"BED file {bedfile} was downloaded and cached successfully")
 
         return RegionSet(regions=file_path)
 
@@ -133,7 +139,6 @@ class BBClient(BedCacheManager):
         :return: the identifier if the BedFile object
         """
 
-        # bedfile_id = bedfile.compute_bed_identifier()
         bedfile_id = bedfile.compute_bed_identifier()
         file_path = self._bedfile_path(bedfile_id)
         if os.path.exists(file_path):
@@ -178,6 +183,53 @@ class BBClient(BedCacheManager):
             else:
                 return f"{identifier} does not exist in cache."
 
+    def remove_bedset_from_cache(self, bedset_id: str, remove_bed_files: bool = False):
+        """
+        Remove a BED set from cache
+
+        :param bedset_id: the identifier of BED set
+        :param remove_bed_files: whether also remove BED files in the BED set
+        """
+        file_path = self.seek(bedset_id)
+        if "does not" in file_path:
+            _LOGGER.warning(f"Warning: {file_path}")
+        else:
+            if remove_bed_files:
+                with open(file_path, "r") as file:
+                    extracted_data = file.readlines()
+                for bedfile_id in extracted_data:
+                    self.remove_bedfile_from_cache(bedfile_id)
+
+            self._remove(file_path)
+
+    def _download_bed_file_from_bb(self, bedfile: str) -> bytes:
+        """
+        Download BED file from BEDbase API and return the file content as bytes
+
+        :param bedfile: unique identifier of a BED file
+        :return: the file content as bytes
+        """
+
+        bed_url = BEDFILE_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedfile_id=bedfile)
+        response = requests.get(bed_url)
+        response.raise_for_status()
+        return response.content
+
+    @staticmethod
+    def _download_file_from_url(bedfile: str) -> bytes:
+        """
+        Download BED file from a URL and return the file content as bytes
+
+        :param bedfile: URL to a BED file
+        :return: the file content as bytes
+        """
+        if bedfile.startswith("ftp"):
+            response = urllib.request.urlopen(bedfile)
+            return response.read()
+        else:
+            response = requests.get(bedfile)
+            response.raise_for_status()
+
     def _bedset_path(self, bedset_id: str) -> str:
         """
         Get the path of a BED set's .txt file with given identifier
@@ -219,7 +271,7 @@ class BBClient(BedCacheManager):
         self.create_cache_folder(folder_name)
         return os.path.join(folder_name, filename)
 
-    def remove_bedfile_from_cache(self, bedfile_id: str):
+    def remove_bedfile_from_cache(self, bedfile_id: str) -> NoReturn:
         """
         Remove a BED file from cache
 
@@ -231,37 +283,19 @@ class BBClient(BedCacheManager):
         else:
             self._remove(file_path)
 
-    def remove_bedset_from_cache(self, bedset_id: str, remove_bed_files: bool = False):
-        """
-        Remove a BED set from cache
-
-        :param bedset_id: the identifier of BED set
-        :param remove_bed_files: whether also remove BED files in the BED set
-        """
-        file_path = self.seek(bedset_id)
-        if "does not" in file_path:
-            _LOGGER.warning(f"Warning: {file_path}")
-        else:
-            if remove_bed_files:
-                with open(file_path, "r") as file:
-                    extracted_data = file.readlines()
-                for bedfile_id in extracted_data:
-                    self.remove_bed_files(bedfile_id)
-
-            self._remove(file_path)
-
-    def _remove(self, file_path: str):
+    @staticmethod
+    def _remove(file_path: str) -> NoReturn:
         """
         Remove a file within the cache with given path, and remove empty subfolders after removal
         Structure of folders in cache:
         cache_folder
             bedfiles
                 a/b/ab1234xyz.bed.gz
-            ..
             bedsets
                 c/d/cd123hij.txt
 
         :param file_path: the path to the file
+        :return: NoReturn
         """
         # the subfolder that matches the second digit of the identifier
         sub_folder_2 = os.path.split(file_path)[0]

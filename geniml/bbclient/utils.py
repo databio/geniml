@@ -2,6 +2,7 @@ import gzip
 import os
 from io import BytesIO
 from typing import Optional
+import urllib.parse
 
 import genomicranges
 import pandas as pd
@@ -58,3 +59,18 @@ class BedCacheManager:
         gr = genomicranges.from_pandas(df)
 
         return gr
+
+
+def is_valid_url(url: str) -> bool:
+    """
+    Check if a URL is valid
+
+    :param url: URL to be checked
+    :return: True if the URL is valid, False otherwise
+    """
+    try:
+        if urllib.parse.urlparse(url).hostname:
+            return True
+        return False
+    except Exception:
+        return False
