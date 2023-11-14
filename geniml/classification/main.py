@@ -468,6 +468,9 @@ class SingleCellTypeClassifier:
             epoch_tid = progress_bar.add_task("Epochs", total=epochs)
             batches_tid = progress_bar.add_task("Batches", total=len(train_dataloader))
             for epoch in range(epochs):
+                # set the model to train mode
+                self._model.train()
+
                 for i, batch in enumerate(train_dataloader):
                     tokens, label = batch
 
@@ -497,6 +500,9 @@ class SingleCellTypeClassifier:
 
                 # validation loss after each epoch
                 with torch.no_grad():
+                    # set the model to eval mode
+                    self._model.eval()
+
                     val_loss = []
                     for i, batch in enumerate(test_dataloader):
                         tokens, label = batch
