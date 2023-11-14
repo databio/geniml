@@ -8,8 +8,7 @@ import numpy as np
 import torch
 from fastembed.embedding import FlagEmbedding
 from huggingface_hub import hf_hub_download
-from torch.nn import (CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss,
-                      ReLU, Sequential)
+from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
 from yaml import safe_dump, safe_load
 
 from ..search.backends import HNSWBackend, QdrantBackend
@@ -471,24 +470,28 @@ class Text2BEDSearchInterface(object):
     def nl_vec_search(
         self,
         query: Union[str, np.ndarray],
-        k: int = 10,
-        with_payload: bool = False,
+        limit: int = 10,
+        offset: int = 0,
+        with_payload: bool = True,
+        with_vectors: bool = False,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
         Given an input natural language, suggest region sets
 
         :param query: searching input string
-        :param k: number of results (nearst neighbor in vectors)
-        :param with_payload: whether payloads of vectors in database will be returned
+        :param limit: number of results (nearst neighbor in vectors)
+        :param offset: the offset of the search results
+        :param with_payload: whether payloads of vectors in database will be returned [Default: True]
+        :param with_vectors: whether vectors in database will be returned [Default: False]
         :return: a list of dictionary that contains the search results in this format:
-        {
-            "id": <id>
-            "score": <score>
-            "payload": {
-                <information of the vector>
+            {
+                "id": <id>
+                "score": <score>
+                "payload": {
+                    <information of the vector>
+                }
+                "vector": [<the vector>]
             }
-            "vector": [<the vector>]
-        }
         """
 
         # first, get the embedding of the query string
@@ -496,7 +499,8 @@ class Text2BEDSearchInterface(object):
             query = next(self.nl2vec.embed(query))
         search_vector = self.vec2vec.embedding_to_embedding(query)
         # perform the KNN search among vectors stored in backend
-        return self.search_backend.search(search_vector, k, with_payload=with_payload)
+        return self.search_backend.search(search_vector, limit, with_payload=with_payload, with_vectors=with_vectors,
+                                          offset=offset)
 
     def __repr__(self):
         return f"Text2BEDSearchInterface(nl2vec_model={self.nl2vec}, vec2vec_model={self.vec2vec}, search_backend={self.search_backend})"
