@@ -68,7 +68,11 @@ class RegionSet:
                 if is_gzipped(regions):
                     # open with pandas using arrow
                     df = pd.read_csv(
-                        regions, sep="\t", compression="gzip", header=None, engine="pyarrow"
+                        regions,
+                        sep="\t",
+                        compression="gzip",
+                        header=None,
+                        engine="pyarrow",
                     )
                     _regions = []
                     df.apply(
@@ -252,7 +256,7 @@ class BedSet:
         return self.region_sets[indx]
 
     @property
-    def bedset_identifier(self) -> str:
+    def identifier(self) -> str:
         return self._bedset_identifier or self.compute_bedset_identifier()
 
     def add(self, bedfile: RegionSet) -> NoReturn:

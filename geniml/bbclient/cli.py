@@ -52,28 +52,36 @@ def build_subparser(parser):
     parser_region.add_argument("--start", type=int, help="Start position")
     parser_region.add_argument("--end", type=int, help="End position")
     parser_region.add_argument(
-        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
+        "--cache-folder",
+        default="bed_cache",
+        help="Cache folder path (default: bed_cache)",
     )
     parser_region.set_defaults(func=download_and_process_bed_region)
 
     parser_local = subparsers.add_parser("local", help="Process a local bed file")
     parser_local.add_argument("--input-identifier", help="Local BED file path")
     parser_local.add_argument(
-        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
+        "--cache-folder",
+        default="bed_cache",
+        help="Cache folder path (default: bed_cache)",
     )
     parser_local.set_defaults(func=process_local_bed_data)
 
     parser_ident = subparsers.add_parser("identifier", help="Process identifiers")
     parser_ident.add_argument("--input-identifier", help="BED file identifier")
     parser_ident.add_argument(
-        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
+        "--cache-folder",
+        default="bed_cache",
+        help="Cache folder path (default: bed_cache)",
     )
     parser_ident.set_defaults(func=process_identifier)
 
     parser_ident = subparsers.add_parser("identifiers", help="Process identifiers")
     parser_ident.add_argument("--input-identifiers", help="BED file identifiers")
     parser_ident.add_argument(
-        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
+        "--cache-folder",
+        default="bed_cache",
+        help="Cache folder path (default: bed_cache)",
     )
     parser_ident.set_defaults(func=process_identifiers)
 
