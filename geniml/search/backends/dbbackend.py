@@ -90,15 +90,21 @@ class QdrantBackend(EmSearchBackend):
         )
 
     def search(
-        self, query: np.ndarray, k: int, with_payload: bool = True, with_vec: bool = True
+        self,
+        query: np.ndarray,
+        limit: int,
+        with_payload: bool = True,
+        with_vectors: bool = True,
+        offset: int = 0,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
          with a given query vector, get k nearest neighbors from vectors in the collection
 
         :param query: a vector to search
-        :param k: number of returned results
+        :param limit: number of returned results
         :param with_payload: whether payload is included in the result
-        :param with_vec: whether the stored vector is included in the result
+        :param with_vectors: whether the stored vector is included in the result
+        :param offset: the offset of the search results
         :return: a list of dictionary that contains the search results in this format:
         {
             "id": <id>
@@ -113,9 +119,10 @@ class QdrantBackend(EmSearchBackend):
         search_results = self.qd_client.search(
             collection_name=self.collection,
             query_vector=query,
-            limit=k,
+            limit=limit,
             with_payload=with_payload,
-            with_vectors=with_vec,
+            with_vectors=with_vectors,
+            offset=offset,
         )
 
         # add the results in to the output list
@@ -125,7 +132,7 @@ class QdrantBackend(EmSearchBackend):
             result_dict = {"id": result.id, "score": result.score}
             if with_payload:
                 result_dict["payload"] = result.payload
-            if with_vec:
+            if with_vectors:
                 result_dict["vector"] = result.vector
             output_list.append(result_dict)
         return output_list
