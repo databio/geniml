@@ -113,34 +113,34 @@ def main(test_args=None):
 
     if args.command == "bbclient":
         if args.subcommand == "local":
-            from .bbclient.cli import process_local_bed_data
+            from .bbclient.cli import cache_local_bed_files
 
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            process_local_bed_data(args)
+            cache_local_bed_files(args)
 
-        if args.subcommand == "bedset":
-            from .bbclient.cli import download_bedset
-
-            _LOGGER.info(f"Subcommand: {args.subcommand}")
-            download_bedset(args)
-
-        if args.subcommand == "region":
-            from .bbclient.cli import download_and_process_bed_region
-
-            _LOGGER.info(f"Subcommand: {args.subcommand}")
-            download_and_process_bed_region(args)
-
-        if args.subcommand == "identifier":
-            from .bbclient.cli import process_identifier
-
-            _LOGGER.info(f"Subcommand: {args.subcommand}")
-            process_identifier(args)
-
-        if args.subcommand == "identifiers":
-            from .bbclient.cli import process_identifiers
-
-            _LOGGER.info(f"Subcommand: {args.subcommand}")
-            process_identifiers(args)
+        # if args.subcommand == "bedset":
+        #     from .bbclient.cli import download_bedset
+        #
+        #     _LOGGER.info(f"Subcommand: {args.subcommand}")
+        #     download_bedset(args)
+        #
+        # if args.subcommand == "region":
+        #     from .bbclient.cli import download_and_process_bed_region
+        #
+        #     _LOGGER.info(f"Subcommand: {args.subcommand}")
+        #     download_and_process_bed_region(args)
+        #
+        # if args.subcommand == "identifier":
+        #     from .bbclient.cli import process_identifier
+        #
+        #     _LOGGER.info(f"Subcommand: {args.subcommand}")
+        #     process_identifier(args)
+        #
+        # if args.subcommand == "identifiers":
+        #     from .bbclient.cli import process_identifiers
+        #
+        #     _LOGGER.info(f"Subcommand: {args.subcommand}")
+        #     process_identifiers(args)
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
