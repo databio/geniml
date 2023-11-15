@@ -7,7 +7,7 @@ vector will be encoded to a query vector by the FNN. `search` backend can perfor
 stored embedding vectors of BED files, and the BED files whose embedding vectors are closest to that query vector are the
 search results.
 
-## Upload metadata and BED files
+## Upload metadata and regions from files
 `RegionSetInfo` is a [`dataclass`](https://docs.python.org/3/library/dataclasses.html) that can store information about a BED file, which includes the file name, metadata, and the
 embedding vectors of region set and metadata. A list of RegionSetInfo can be created with a folder of BED files and a file of their
 metadata by `SentenceTransformers` and `Region2VecExModel`. The first column of metadata file must match the BED file names
@@ -19,42 +19,73 @@ sort -k1 1 metadata_file >  new_metadata_file
 Example code to build a list of RegionSetInfo
 
 ```python
-from geniml.text2bednn.utils import build_regionset_info_list
+from geniml.text2bednn.utils import build_regionset_info_list_from_files
 from geniml.region2vec.main import Region2VecExModel
-from sentence_transformers import SentenceTransformer
+from fastembed.embedding import FlagEmbedding
 
 # load Region2Vec from hugging face
 r2v_model = Region2VecExModel("databio/r2v-ChIP-atlas")
-# load SentenceTransformers
-st_model = SentenceTransformer("sentence-transformers/all-MiniLM-L12-v2")
-
+# load natural language embedding model
+nl_model = FlagEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
 # folder of bed file
 bed_folder = "path/to/folders/of/bed/files"
 # path for metadata file
 metadata_path = "path/to/file/of/metadata"
 
 # list of RegionSetInfo
-ri_list = build_regionset_info_list(bed_folder, metadata_path, r2v_model, st_model)
+ri_list = build_regionset_info_list_from_files(bed_folder, metadata_path, r2v_model, nl_model)
 ```
 
-## Train the Embed2EmbedNN
+## Upload metadata and regions from PEP
+A list of RegionSetInfo can also be created with a [`PEP`](https://pep.databio.org/en/latest/), which includes a `.csv` that stores metadata, and a `.yaml` as a a metadata validation
+framework.
+
+Example code to build a list of RegionSetInfo from a PEP:
+
+```python
+from geniml.text2bednn.utils import build_regionset_info_list_from_PEP
+
+# columns in the csv of PEP that contains metadata information
+columns = return [
+        "tissue",
+        "cell_line",
+        "tissue_lineage",
+        "tissue_description",
+        "diagnosis",
+        "sample_name",
+        "antibody",
+    ]
+
+# path to the yaml file
+yaml_path = "path/to/framework/yaml/file"
+
+ri_list_PEP = build_regionset_info_list_from_PEP(
+        yaml_path,
+        col_names,
+        r2v_model,
+        nl_model,
+    )
+```
+
+## Train the model
 The list of RegionSetInfo can be split into 3 lists, which represent the training set, validating set, and testing set. The embedding
 vectors of metadata will be X, and the embedding vectors of the region set will be Y.
 
 ```python
-from geniml.text2bednn.utils import data_split, region_info_list_to_vectors
+from sklearn.model_selection import train_test_split
+from geniml.text2bednn.utils region_info_list_to_vectors
 from geniml.text2bednn.text2bednn import Vec2VecFNN
 
 # split the list of RegionInfoSet into different data set
-train_list, validate_list, test_list = data_split(ri_list)
+train_list, validate_list = train_test_split(ri_list, test_size=0.2)
 
 # get the embedding vectors
 train_X, train_Y = region_info_list_to_vectors(train_list)
 validate_X, validate_Y = region_info_list_to_vectors(validate_list)
 
 # train the neural network
-e2enn = Vec2VecFNN()
-e2enn.train(train_X, train_Y, validate_X, validate_Y)
+v2vnn = Vec2VecFNN()
+v2vnn.train(train_X, train_Y, validating_data=(validate_X, validate_Y), num_epochs=50)
 ```
 
 ## Load the vectors and information to search backend
@@ -74,14 +105,14 @@ hnsw_backend.load(embeddings, labels)
 ```
 
 ## text2bednn search interface
-The `TextToBedNNSearchInterface` includes model that encode natural language to vectors (default: `SentenceTransformers`), a
+The `TextToBedNNSearchInterface` includes model that encode natural language to vectors (default: `FlagEmbedding`), a
 model that encode natural language embedding vectors to BED file embedding vectors (`Embed2EmbedNN`), and a `search` backend.
 
 ```python
 from geniml.text2bednn.text2bednn import Text2BEDSearchInterface
 
 # initiate the search interface
-file_interface = Text2BEDSearchInterface(st_model, e2enn, hnsw_backend)
+file_interface = Text2BEDSearchInterface(nl_model, e2enn, hnsw_backend)
 
 # natural language query string
 query_term = "human, kidney, blood"
