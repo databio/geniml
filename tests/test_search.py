@@ -1,3 +1,4 @@
+import collections
 import os
 import random
 from typing import Dict, List
@@ -5,7 +6,6 @@ from typing import Dict, List
 import hnswlib
 import numpy as np
 import pytest
-
 from geniml.search.backends import HNSWBackend, QdrantBackend
 
 
@@ -169,14 +169,27 @@ def test_HNSWBackend(filenames, embeddings, labels, tmp_path_factory, ids):
     assert len(hnswb) == num_upload
 
     # test searching with one vector (np.ndarray with shape (dim,))
+    query_vec = np.random.random(
+        100,
+    )
     single_vec_search = hnswb.search(
-        np.random.random(
-            100,
-        ),
-        5,
+        query_vec,
+        3,
+        # with_payload=False,
+        # with_vectors=False,
     )
 
+    single_vec_search_offset = hnswb.search(
+        query_vec,
+        3,
+        # with_payload=False,
+        # with_vectors=False,
+        offset=2,
+    )
+
+    assert single_vec_search_offset == single_vec_search
     test_hnsw_search_result(single_vec_search, hnswb.idx, True)
+    test_hnsw_search_result(single_vec_search_offset, hnswb.idx, True)
 
     # test searching with multiple vectors (np.ndarray with shape (n, dim))
     multiple_vecs_search = hnswb.search(np.random.random((7, 100)), 5)

@@ -112,23 +112,36 @@ def main(test_args=None):
         )
 
     if args.command == "bbclient":
+        from .bbclient.bedfile_retrieval import BBClient
+
+        bbc = BBClient(args.cache_folder)
         if args.subcommand == "local":
-            from .bbclient.cli import cache_local_bed_files
+            import os
+
+            from .io import BedSet, RegionSet
 
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            cache_local_bed_files(args)
+            local_path = args.input_identifier
+            # folder -> cached BedSet
+            if os.path.isdir(local_path):
+                bedset = BedSet(
+                    [os.path.join(local_path, file_name) for file_name in os.listdir(local_path)]
+                )
+                bbc.add_bedset_to_cache(bedset)
+                _LOGGER.info(f"BED set {bedset.compute_bedset_identifier()} has been cached")
+            # file -> cached BED file
+            else:
+                bedfile = RegionSet(local_path)
+                bbc.add_bed_to_cache(bedfile)
+                _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
 
         if args.subcommand == "bedset":
-            from .bbclient.cli import download_bedset
-
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            download_bedset(args)
+            bedset = bbc.load_bedset(args.bedset)
 
-        if args.subcommand == "bedfile":
-            from .bbclient.cli import download_bedfile
-
+        if args.subcommand == "bed":
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            download_bedfile(args)
+            bedfile = bbc.load_bed(args.input_identifier)
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
