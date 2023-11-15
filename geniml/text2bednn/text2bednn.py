@@ -8,7 +8,8 @@ import numpy as np
 import torch
 from fastembed.embedding import FlagEmbedding
 from huggingface_hub import hf_hub_download
-from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
+from torch.nn import (CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss,
+                      ReLU, Sequential)
 from yaml import safe_dump, safe_load
 
 from ..search.backends import HNSWBackend, QdrantBackend
@@ -16,6 +17,39 @@ from .const import *
 from .utils import arrays_to_torch_dataloader, dtype_check
 
 _LOGGER = logging.getLogger(MODULE_NAME)
+
+
+class Vec2Vec(Sequential):
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int,
+        num_units: Union[int, List[int]],
+        num_extra_hidden_layers: int,
+    ):
+        if not isinstance(num_units, list):
+            num_units = [num_units] * (1 + num_extra_hidden_layers)
+        # check if number of layers match length of num_units
+        if len(num_units) != 1 + num_extra_hidden_layers:
+            raise ValueError("list of units number does not match number of layers")
+        # input and first hiden layer
+        current_layer_units_num = num_units[0]
+        layers_list = [Linear(in_features=input_dim, out_features=current_layer_units_num), ReLU()]
+        previous_layer_units_num = current_layer_units_num
+
+        # extra hidden layer
+        for i in range(num_extra_hidden_layers):
+            current_layer_units_num = num_units[i + 1]
+            layers_list.append(
+                Linear(in_features=previous_layer_units_num, out_features=current_layer_units_num)
+            )
+            layers_list.append(ReLU())
+            previous_layer_units_num = current_layer_units_num
+
+        # output layer
+        layers_list.append(Linear(in_features=previous_layer_units_num, out_features=output_dim))
+
+        super().__init__(*layers_list)
 
 
 class Vec2VecFNN:
@@ -26,7 +60,8 @@ class Vec2VecFNN:
         :param model_path: path to the pretrained model on huggingface.
         """
         # initialize the feedforward neural network model, which is a torch.nn.Sequential
-        self.model = Sequential()
+        # self.model =
+        self.model = None
         # whether the model is trained
         self.trained = False
         # optimizer
@@ -63,57 +98,6 @@ class Vec2VecFNN:
 
         self.load_from_disk(model_file_path, config_path)
 
-    def reinit_model(
-        self,
-        input_dim: int,
-        output_dim: int,
-        num_units: Union[int, List[int]],
-        num_extra_hidden_layers: int,
-    ):
-        """
-        Re-initiate self.model(a torch.nn.Sequential model) with list of layers created based on input.
-
-        :param input_dim: dimension of input layer
-        :param output_dim: dimension of output layer
-        :param num_units: number of units in each hidden layer, if it is an integer, each hidden layer has same
-        number of units
-        :param num_extra_hidden_layers: number of extra hidden layers
-        """
-
-        # convert the integer value of num_units to a list
-        if not isinstance(num_units, list):
-            num_units = [num_units] * (1 + num_extra_hidden_layers)
-
-        # update model config
-        self.config["input_dim"] = input_dim
-        self.config["output_dim"] = output_dim
-        self.config["num_units"] = num_units
-        self.config["num_extra_hidden_layers"] = num_extra_hidden_layers
-
-        # check if number of layers match length of num_units
-        if len(num_units) != 1 + num_extra_hidden_layers:
-            _LOGGER.error("ValueError: list of units number does not match number of layers")
-
-        # input and first hiden layer
-        current_layer_units_num = num_units[0]
-        layers_list = [Linear(in_features=input_dim, out_features=current_layer_units_num), ReLU()]
-        previous_layer_units_num = current_layer_units_num
-
-        # extra hidden layer
-        for i in range(num_extra_hidden_layers):
-            current_layer_units_num = num_units[i + 1]
-            layers_list.append(
-                Linear(in_features=previous_layer_units_num, out_features=current_layer_units_num)
-            )
-            layers_list.append(ReLU())
-            previous_layer_units_num = current_layer_units_num
-
-        # output layer
-        layers_list.append(Linear(in_features=previous_layer_units_num, out_features=output_dim))
-
-        # reinitiate self.model
-        self.model = Sequential(*layers_list)
-
     def load_from_disk(self, model_path: str, config_path: str):
         """
         Load model from local files
@@ -125,13 +109,15 @@ class Vec2VecFNN:
         with open(config_path, "r") as f:
             config = safe_load(f)
 
+        self.config = config
         # reinitiate the self.model
-        self.reinit_model(
+        self.model = Vec2Vec(
             config["input_dim"],
             config["output_dim"],
             config["num_units"],
             config["num_extra_hidden_layers"],
         )
+
         # load the Sequential model from saved files
         self.model.load_state_dict(torch.load(model_path))
 
@@ -244,18 +230,24 @@ class Vec2VecFNN:
         :param kwargs: see units and layers in reinit_model()
         """
         # if current model is empty, add layers
-        if len(self.model) == 0:
+        if self.model is None:
             # dimensions of input and output
             input_dim = training_X.shape[1]
             output_dim = training_Y.shape[1]
 
-            self.reinit_model(
+            self.config["input_dim"] = input_dim
+            self.config["output_dim"] = output_dim
+            self.config["num_units"] = kwargs.get("num_units") or DEFAULT_NUM_UNITS
+            self.config["num_extra_hidden_layers"] = (
+                kwargs.get("num_extra_hidden_layers") or DEFAULT_NUM_EXTRA_HIDDEN_LAYERS
+            )
+            self.model = Vec2Vec(
                 input_dim=input_dim,
                 output_dim=output_dim,
-                num_units=kwargs.get("num_units") or DEFAULT_NUM_UNITS,
-                num_extra_hidden_layers=kwargs.get("num_extra_hidden_layers")
-                or DEFAULT_NUM_EXTRA_HIDDEN_LAYERS,
+                num_units=self.config["num_units"],
+                num_extra_hidden_layers=self.config["num_extra_hidden_layers"],
             )
+
         # raise the error if validating data is needed but not provided
         if validating_data is not None:
             validating_X, validating_Y = validating_data
@@ -367,7 +359,6 @@ class Vec2VecFNN:
 
         if not self.config["loss"]:
             raise ValueError("Please compile the model first")
-            # _LOGGER.error("ValueError: Please compile the model first")
 
         # when all targets are 1
         # loss = 1 - cos(output, y)
@@ -471,9 +462,10 @@ class Text2BEDSearchInterface(object):
         self,
         query: Union[str, np.ndarray],
         limit: int = 10,
-        offset: int = 0,
+        # offset: int = 0,
         with_payload: bool = True,
         with_vectors: bool = False,
+        **kwargs,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
         Given an input natural language, suggest region sets
@@ -499,8 +491,14 @@ class Text2BEDSearchInterface(object):
             query = next(self.nl2vec.embed(query))
         search_vector = self.vec2vec.embedding_to_embedding(query)
         # perform the KNN search among vectors stored in backend
-        return self.search_backend.search(search_vector, limit, with_payload=with_payload, with_vectors=with_vectors,
-                                          offset=offset)
+        return self.search_backend.search(
+            search_vector,
+            limit,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+            # offset=offset)
+            **kwargs,
+        )
 
     def __repr__(self):
         return f"Text2BEDSearchInterface(nl2vec_model={self.nl2vec}, vec2vec_model={self.vec2vec}, search_backend={self.search_backend})"

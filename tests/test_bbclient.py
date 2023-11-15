@@ -26,7 +26,8 @@ def bedset_id():
 
 @pytest.fixture
 def bedfile_id():
-    return "e7e9893792c90a7ef96be9fe333c6c1d"
+    # return "e7e9893792c90a7ef96be9fe333c6c1d"
+    return "38856b21ff44f584e48081e0db51db0c"
 
 
 @pytest.fixture
@@ -156,12 +157,14 @@ def test_bedbase_caching(tmp_path, bedset_id, bedfile_id, request):
     bbclient = BBClient(cache_folder=tmp_path)
     bedset = bbclient.load_bedset(bedset_id)
     # check the GenomicRangesList from the BED set
-    grl = bedset.to_grangeslist()
+    grl = bedset.to_granges_list()
     assert isinstance(grl, genomicranges.GenomicRangesList)
 
     # check the path and identifier of BED files which the loaded BED set contains
     for bedfile in bedset:
         bedfile_path = bbclient.seek(bedfile.compute_bed_identifier())
+        print(bedfile.compute_bed_identifier())
+        print(os.path.split(bedfile_path)[1].split(".")[0])
         assert bedfile.compute_bed_identifier() == os.path.split(bedfile_path)[1].split(".")[0]
 
     bedfile = bbclient.load_bed(bedfile_id)

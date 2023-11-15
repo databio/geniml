@@ -1,8 +1,8 @@
 import gzip
 import os
+import urllib.parse
 from io import BytesIO
 from typing import Optional
-import urllib.parse
 
 import genomicranges
 import pandas as pd

@@ -118,29 +118,17 @@ def main(test_args=None):
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             cache_local_bed_files(args)
 
-        # if args.subcommand == "bedset":
-        #     from .bbclient.cli import download_bedset
-        #
-        #     _LOGGER.info(f"Subcommand: {args.subcommand}")
-        #     download_bedset(args)
-        #
-        # if args.subcommand == "region":
-        #     from .bbclient.cli import download_and_process_bed_region
-        #
-        #     _LOGGER.info(f"Subcommand: {args.subcommand}")
-        #     download_and_process_bed_region(args)
-        #
-        # if args.subcommand == "identifier":
-        #     from .bbclient.cli import process_identifier
-        #
-        #     _LOGGER.info(f"Subcommand: {args.subcommand}")
-        #     process_identifier(args)
-        #
-        # if args.subcommand == "identifiers":
-        #     from .bbclient.cli import process_identifiers
-        #
-        #     _LOGGER.info(f"Subcommand: {args.subcommand}")
-        #     process_identifiers(args)
+        if args.subcommand == "bedset":
+            from .bbclient.cli import download_bedset
+
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            download_bedset(args)
+
+        if args.subcommand == "bedfile":
+            from .bbclient.cli import download_bedfile
+
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            download_bedfile(args)
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
