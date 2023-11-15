@@ -36,7 +36,7 @@ The search module provides a generic interface for vector search. Several geniml
 
 ## Module `text2bednn`
 
-`Vec2Vec` is a feedforward neural network that maps vectors from the embedding space of natural language (such as embeddings created by [`SentenceTransformers`](https://www.sbert.net/)) to the embedding space of BED (such as embeddings created by `Region2Vec`). By mapping the embedding of natural language query strings to the space of BED files, `Vec2Vec` can perform natural language search of BED files. 
+`Vec2Vec` is a feedforward neural network that maps vectors from the embedding space of natural language (such as embeddings created by [`fastembed`](https://github.com/qdrant/fastembed)) to the embedding space of BED (such as embeddings created by `Region2Vec`). By mapping the embedding of natural language query strings to the space of BED files, `Vec2Vec` can perform natural language search of BED files. 
 
 ## Module `tokenization`
 
