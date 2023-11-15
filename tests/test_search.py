@@ -86,9 +86,14 @@ def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
     # load data
     qd_search_backend.load(embeddings, payloads=labels)
     # test searching
-    search_results = qd_search_backend.search(np.random.random(
-        100,
-    ), 5, with_payload=True, with_vectors=True)
+    search_results = qd_search_backend.search(
+        np.random.random(
+            100,
+        ),
+        5,
+        with_payload=True,
+        with_vectors=True,
+    )
     assert isinstance(search_results, list)
     for result in search_results:
         assert isinstance(result, dict)

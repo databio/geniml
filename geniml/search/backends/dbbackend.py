@@ -2,16 +2,15 @@ import logging
 import os
 from typing import Dict, List, Union
 
+import logmuse
 import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
-import logmuse
 
 from ...const import PKG_NAME
 from ..const import *
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
-
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -95,7 +94,8 @@ class QdrantBackend(EmSearchBackend):
         limit: int,
         with_payload: bool = True,
         with_vectors: bool = True,
-        offset: int = 0,
+        # offset: int = 0,
+        **kwargs,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
          with a given query vector, get k nearest neighbors from vectors in the collection
@@ -122,7 +122,8 @@ class QdrantBackend(EmSearchBackend):
             limit=limit,
             with_payload=with_payload,
             with_vectors=with_vectors,
-            offset=offset,
+            # offset=offset,
+            offset=kwargs.get("offset") or 0,
         )
 
         # add the results in to the output list

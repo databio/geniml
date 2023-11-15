@@ -4,6 +4,7 @@ from ... import _LOGGER
 
 try:
     import hnswlib
+
     DEP_HNSWLIB = True
 except ImportError:
     DEP_HNSWLIB = False
@@ -16,7 +17,6 @@ import numpy as np
 from ..const import *
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
-
 
 if not DEP_HNSWLIB:
 
@@ -100,7 +100,7 @@ else:
             self.idx.save_index(self.idx_path)
 
         def search(
-            self, query: np.ndarray, k: int, with_payload: bool = True, with_vec: bool = True
+            self, query: np.ndarray, k: int, with_payload: bool = True, with_vectors: bool = True
         ) -> Union[
             List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
             List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
@@ -111,7 +111,7 @@ else:
             :param query: the query vector, np.ndarray with shape of (1, dim) or (dim, )
             :param k: number of nearest neighbors to search for query vector
             :param with_payload: whether payload is included in the result
-            :param with_vec: whether the stored vector is included in the result
+            :param with_vectors: whether the stored vector is included in the result
             :return: if the shape of query vector is (<dim>, ), a list of k dictionaries will be returned,
             the format of dictionary will be:
             {
@@ -135,13 +135,13 @@ else:
                 search_list = []
                 result_id = ids[i]
                 result_distances = distances[i]
-                if with_vec:
+                if with_vectors:
                     result_vectors = self.idx.get_items(result_id)
                 for j in range(k):
                     output_dict = {"id": result_id[j], "distance": result_distances[j]}
                     if with_payload:
                         output_dict["payload"] = self.payloads[result_id[j]]
-                    if with_vec:
+                    if with_vectors:
                         output_dict["vector"] = result_vectors[j]
                     search_list.append(output_dict)
                 output_list.append(search_list)

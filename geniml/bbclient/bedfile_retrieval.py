@@ -1,25 +1,19 @@
 import gzip
 import os
 import shutil
+import tempfile
+import urllib.request
 from logging import getLogger
 from typing import List, NoReturn
 
-import tempfile
 import requests
-import urllib.request
 
 from ..io import is_gzipped
 from ..io.io import BedSet, RegionSet
-from .const import (
-    BEDFILE_URL_PATTERN,
-    BEDSET_URL_PATTERN,
-    DEFAULT_BEDBASE_API,
-    DEFAULT_BEDFILE_EXT,
-    DEFAULT_BEDFILE_SUBFOLDER,
-    DEFAULT_BEDSET_EXT,
-    DEFAULT_BEDSET_SUBFOLDER,
-    MODULE_NAME,
-)
+from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
+                    DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
+                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
+                    DEFAULT_BEDSET_SUBFOLDER, MODULE_NAME)
 from .utils import BedCacheManager, is_valid_url
 
 _LOGGER = getLogger(MODULE_NAME)
