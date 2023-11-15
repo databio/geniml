@@ -5,7 +5,6 @@ from typing import Tuple
 
 import genomicranges
 import pytest
-
 from geniml.bbclient import BBClient
 from geniml.io import BedSet, RegionSet
 
@@ -21,7 +20,8 @@ def bedset_id():
     identifier of bedset
     """
 
-    return "b4b0466f55d8e7b5ffd19ec35eac40d2"
+    # return "b4b0466f55d8e7b5ffd19ec35eac40d2"
+    return " 2f5fbf7a65c1b666e38bccf7ed9da5e6"
 
 
 @pytest.fixture

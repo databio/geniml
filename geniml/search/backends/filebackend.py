@@ -100,19 +100,25 @@ else:
             self.idx.save_index(self.idx_path)
 
         def search(
-            self, query: np.ndarray, k: int, with_payload: bool = True, with_vectors: bool = True
+            self,
+            query: np.ndarray,
+            limit: int,
+            with_payload: bool = True,
+            with_vectors: bool = True,
+            offset: int = 0,
         ) -> Union[
             List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
             List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
         ]:
             """
-            With query vector(s), get the k nearest neighbors.
+            With query vector(s), get the limit nearest neighbors.
 
             :param query: the query vector, np.ndarray with shape of (1, dim) or (dim, )
-            :param k: number of nearest neighbors to search for query vector
+            :param limit: number of nearest neighbors to search for query vector
             :param with_payload: whether payload is included in the result
             :param with_vectors: whether the stored vector is included in the result
-            :return: if the shape of query vector is (<dim>, ), a list of k dictionaries will be returned,
+            :param offset: the offset of the search results
+            :return: if the shape of query vector is (<dim>, ), a list of limit dictionaries will be returned,
             the format of dictionary will be:
             {
                 "id": <id>
@@ -123,9 +129,9 @@ else:
                 "vector": [<the vector>]
             }
             if the shape of query vector is (n, <dim>), a 2d list will be returned,
-            which is a list of n * list of k dictionaries
+            which is a list of n * list of limit dictionaries
             """
-            ids, distances = self.idx.knn_query(query, k)
+            ids, distances = self.idx.knn_query(query, k=limit + offset)
             # ids and distances are 2d array
             ids = ids.tolist()
             distances = distances.tolist()
@@ -137,7 +143,7 @@ else:
                 result_distances = distances[i]
                 if with_vectors:
                     result_vectors = self.idx.get_items(result_id)
-                for j in range(k):
+                for j in range(limit):
                     output_dict = {"id": result_id[j], "distance": result_distances[j]}
                     if with_payload:
                         output_dict["payload"] = self.payloads[result_id[j]]
