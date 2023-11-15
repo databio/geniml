@@ -41,29 +41,13 @@ geniml bbclient local --input-identifier <path_to_BED_file_or_folder_of_BED_file
 
 Replace <path_to_BED_file_or_folder_of_BED_files> with the path to the local BED file or folder of BED files you want to cache.
 
-### Download and Process BED File Identifiers
+### Download BED file from BED base
 
 ```bash
-geniml bbclient identifiers --input-identifier <bed_identifier>
+geniml bbclient bedfile --input-identifier <bed_identifier>
 ```
 
-Replace <bed_identifier> with either the BED file identifier or a file containing a list of BED file identifiers.
-
-### Download and Process a BED Region
-
-```bash
-geniml bbclient region --input-identifier <bed_identifier> --chr <chromosome_number> --start <start_position> --end <end_position>
-```
-
-Replace <bed_identifier> with the identifier of the BED file, <chromosome_number> with the chromosome number, <start_position> with the start position, and <end_position> with the end position of the region you want to download and process.
-
-### Process a Local BED File
-
-```bash
-geniml bbclient local --input-identifier <local_bed_file_path>
-```
-
-Replace <local_bed_file_path> with the path to the local BED file you want to process.
+Replace <bed_identifier> with either the BED file identifier
 
 ### Download a BEDset
 
@@ -76,9 +60,8 @@ Replace <bedset_identifier> with the identifier of the BEDset you want to downlo
 ### Command-Line Arguments
 
     bedset: Download a BEDset.
-    region: Download and process a BED region.
-    local: Process a local BED file.
-    identifiers: Process BED file identifiers.
+    local: Cache a local BED file, or cache a local folder of BED files as a BED set.
+    identifiers: Download a BED file.
 
 ### Cache Folder
 
