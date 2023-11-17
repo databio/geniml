@@ -97,7 +97,6 @@ class TestRegionSet:
         gr = bedfile.to_granges()  # should return a GenomicRanges object
         assert isinstance(gr, genomicranges.GenomicRanges)
 
-
     def test_calculation_id(self):
         bedfile_id_1 = RegionSet(ALL_BEDFILE_PATH[0]).identifier
         bedfile_id_2 = RegionSet(ALL_BEDFILE_PATH[1]).identifier
