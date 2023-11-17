@@ -6,5 +6,5 @@ DEFAULT_BEDFILE_EXT = ".bed.gz"
 
 
 BEDSET_URL_PATTERN = "{bedbase_api}/bedset/{bedset_id}/bedfiles"
-BEDFILE_URL_PATTERN = "{bedbase_api}/objects/bed.{bedfile_id}.bedfile/access/http/bytes"
+BEDFILE_URL_PATTERN = "{bedbase_api}/objects/bed.{bed_id}.bedfile/access/http/bytes"
 MODULE_NAME = "bbclient"

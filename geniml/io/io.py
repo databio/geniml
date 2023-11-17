@@ -1,6 +1,8 @@
 import gzip
 import os
 from typing import List, Union, NoReturn
+import pyarrow
+from ubiquerg import is_url
 
 import numpy as np
 import pandas as pd
@@ -19,6 +21,7 @@ from .const import (
     MAF_STRAND_COL_NAME,
 )
 from .utils import extract_maf_col_positions, is_gzipped, read_bedset_file
+from .exceptions import BackedFileNotAvailableError
 
 
 class Region:
@@ -46,7 +49,7 @@ class RegionSet:
         If you specify `backed` as True, then the bed file will not be loaded into memory. This is useful for large
         bed files. You can still iterate over the regions, but you cannot index into them.
 
-        :param regions: path to bed file or list of Region objects
+        :param regions: path, or url to bed file or list of Region objects
         :param backed: whether to load the bed file into memory or not
         """
         # load from file
@@ -55,44 +58,49 @@ class RegionSet:
             self.regions: List[Region] = []
             self.path = regions
 
-            # Open function depending on file type
-            open_func = gzip.open if is_gzipped(regions) else open
-            mode = "rt" if is_gzipped else "r"
+            self.regions = None
+            self.is_gzipped = False
 
             if backed:
-                self.regions = None
+                if is_url(regions):
+                    raise BackedFileNotAvailableError()
+                # Open function depending on file type
+                if not is_gzipped(regions):
+                    open_func = open
+                    mode = "r"
+                else:
+                    self.is_gzipped = True
+                    open_func = gzip.open
+                    mode = "rt"
+
                 # https://stackoverflow.com/a/32607817/13175187
-                with open_func(self.path, mode) as file:
-                    self.length = sum(1 for line in file if line.strip())
+                try:
+                    with open_func(self.path, mode) as file:
+                        self.length = sum(1 for line in file if line.strip())
+                except UnicodeDecodeError:
+                    self.is_gzipped = True
+                    with gzip.open(self.path, "rt") as file:
+                        self.length = sum(1 for line in file if line.strip())
+
             else:
                 if is_gzipped(regions):
-                    # open with pandas using arrow
-                    df = pd.read_csv(
-                        regions,
-                        sep="\t",
-                        compression="gzip",
-                        header=None,
-                        engine="pyarrow",
-                    )
-                    _regions = []
-                    df.apply(
-                        lambda row: _regions.append(Region(row[0], row[1], row[2])),
-                        axis=1,
-                    )
+                    df = self._read_gzipped_file(regions)
 
-                    self.regions = _regions
-                    self.length = len(self.regions)
                 else:
-                    # open with pandas
-                    df = pd.read_csv(regions, sep="\t", header=None, engine="pyarrow")
-                    _regions = []
-                    df.apply(
-                        lambda row: _regions.append(Region(row[0], row[1], row[2])),
-                        axis=1,
-                    )
+                    # if file is gzipped, catch error and open using gzip
+                    try:
+                        df = pd.read_csv(regions, sep="\t", header=None, engine="pyarrow")
+                    except pyarrow.lib.ArrowInvalid:
+                        df = self._read_gzipped_file(regions)
 
-                    self.regions = _regions
-                    self.length = len(self.regions)
+                _regions = []
+                df.apply(
+                    lambda row: _regions.append(Region(row[0], row[1], row[2])),
+                    axis=1,
+                )
+
+                self.regions = _regions
+                self.length = len(self.regions)
 
         # load from list
         elif isinstance(regions, list) and all([isinstance(region, Region) for region in regions]):
@@ -105,7 +113,21 @@ class RegionSet:
 
         self._identifier = None
 
-        self._identifier = None
+    @staticmethod
+    def _read_gzipped_file(file_path: str) -> pd.DataFrame:
+        """
+        Read a gzipped file into a pandas dataframe
+
+        :param file_path: path to gzipped file
+        :return: pandas dataframe
+        """
+        return pd.read_csv(
+            file_path,
+            sep="\t",
+            compression="gzip",
+            header=None,
+            engine="pyarrow",
+        )
 
     def __len__(self):
         return self.length
@@ -127,13 +149,13 @@ class RegionSet:
 
     def __iter__(self):
         if self.backed:
-            # Check if the file is gzipped
-            _, file_extension = os.path.splitext(self.path)
-            is_gzipped = file_extension == ".gz"
-
             # Open function depending on file type
-            open_func = gzip.open if is_gzipped else open
-            mode = "rt" if is_gzipped else "r"
+            if self.is_gzipped:
+                open_func = gzip.open
+                mode = "rt"
+            else:
+                open_func = open
+                mode = "r"
 
             with open_func(self.path, mode) as f:
                 for line in f:
@@ -165,7 +187,6 @@ class RegionSet:
         """
         Return bed file identifier. If it is not set, compute one
 
-        :param bedfile: RegionSet object (Representation of bed_file)
         :return: the identifier of BED file (str)
         """
         if self._identifier is not None:

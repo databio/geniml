@@ -21,5 +21,4 @@ tqdm
 umap-learn
 ubiquerg
 yacman
-hnswlib
 pyarrow

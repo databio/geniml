@@ -17,6 +17,7 @@ bbc = BBClient(cache_folder="<cache_folder_path>", bedbase_api="<bedbase_api>")
 ```
 
 ### Cache a Local BED File
+
 ```python
 bbclient.add_bed_to_cache(RegionSet("<local_bed_file_path>"))
 ```
@@ -27,8 +28,9 @@ bedset = bbclient.load_bedset("<bed_identifier>")
 ```
 
 ### Download and Process BED File Identifiers
+
 ```python
-regionset = bbclient.load_bed(<input_identifier(s)>)
+regionset = bbclient.load_bed() < input_identifier(s) >)
 ```
 
 ## For command line usage, run the CLI with appropriate subcommands and arguments as described below:

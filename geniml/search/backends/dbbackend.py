@@ -95,7 +95,6 @@ class QdrantBackend(EmSearchBackend):
         with_payload: bool = True,
         with_vectors: bool = True,
         offset: int = 0,
-        # **kwargs,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
          with a given query vector, get k nearest neighbors from vectors in the collection
@@ -123,7 +122,6 @@ class QdrantBackend(EmSearchBackend):
             with_payload=with_payload,
             with_vectors=with_vectors,
             offset=offset,
-            # offset=kwargs.get("offset") or 0,
         )
 
         # add the results in to the output list

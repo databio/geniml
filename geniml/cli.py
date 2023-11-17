@@ -112,7 +112,7 @@ def main(test_args=None):
         )
 
     if args.command == "bbclient":
-        from .bbclient.bedfile_retrieval import BBClient
+        from .bbclient import BBClient
 
         bbc = BBClient(args.cache_folder)
         if args.subcommand == "local":
