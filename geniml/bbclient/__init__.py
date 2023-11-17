@@ -1,1 +1,3 @@
-from .bedfile_retrieval import BBClient
+from .bbclient import BBClient
+
+__all__ = ["BBClient"]
