@@ -566,7 +566,7 @@ class Region2VecExModel:
             safe_dump(config, f)
 
     def encode(
-        self, regions: Union[Region, List[Region]], pooling: POOLING_TYPES = "mean"
+        self, regions: Union[Region, List[Region], RegionSet], pooling: POOLING_TYPES = "mean"
     ) -> np.ndarray:
         """
         Get the vector for a region.
