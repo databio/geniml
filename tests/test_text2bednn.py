@@ -3,17 +3,20 @@ import os
 import numpy as np
 import pytest
 from fastembed.embedding import FlagEmbedding
+from sklearn.model_selection import train_test_split
+from torchsummary import summary
+
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
-from geniml.text2bednn.utils import (build_regionset_info_list_from_files,
-                                     build_regionset_info_list_from_PEP,
-                                     prepare_vectors_for_database,
-                                     region_info_list_to_vectors,
-                                     vectors_from_backend)
-from geniml.tokenization.main import InMemTokenizer
-from sklearn.model_selection import train_test_split
-from torchsummary import summary
+from geniml.text2bednn.utils import (
+    build_regionset_info_list_from_files,
+    build_regionset_info_list_from_PEP,
+    prepare_vectors_for_database,
+    region_info_list_to_vectors,
+    vectors_from_backend,
+)
+from geniml.tokenization.main import ITTokenizer
 
 
 @pytest.fixture
@@ -45,7 +48,7 @@ def tokenizer(universe_path):
     """
     :return: a tokenizer
     """
-    return InMemTokenizer(universe_path)
+    return ITTokenizer(universe_path)
 
 
 @pytest.fixture
@@ -64,7 +67,7 @@ def r2v_hf_repo():
     """
     :return: the huggingface repo of Region2VecExModel
     """
-    return "databio/r2v-ChIP-atlas-hg38"
+    return "databio/r2v-ChIP-atlas-hg38-v2"
 
 
 @pytest.fixture
@@ -304,7 +307,7 @@ def test_data_nn_search_interface(
 
     # construct a search interface
     db_interface = Text2BEDSearchInterface(nl_embed, v2vnn, qd_search_backend)
-    db_search_result = db_interface.nl_vec_search(query_term, k)
+    db_search_result = db_interface.nl_vec_search(query_term, k, offset=0)
     for i in range(len(db_search_result)):
         assert isinstance(db_search_result[i], dict)
     # test vectors_from_backend

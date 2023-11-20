@@ -73,7 +73,7 @@ def build_regionset_info_list_from_PEP(
         bed_metadata = ";".join(sample[col] for col in col_names if sample[col] is not None)
         region_set = RegionSet(bed_file_path)
         metadata_embedding = next(nl_embed.embed(bed_metadata))
-        region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
+        region_set_embedding = r2v_model.encode(region_set)
         if region_set_embedding is None and bed_vec_necessary:
             _LOGGER.warning(f"Warning: {bed_file_name}'s embedding is None, exclude from dataset")
             continue
@@ -142,7 +142,7 @@ def build_regionset_info_list_from_files(
             bed_metadata = clean_escape_characters(metadata_line)
             region_set = RegionSet(bed_file_path)
             metadata_embedding = next(nl_embed.embed(bed_metadata))
-            region_set_embedding = r2v_model.encode(region_set, pool="mean", return_none=False)
+            region_set_embedding = r2v_model.encode(region_set)
             if region_set_embedding is None and bed_vec_necessary:
                 _LOGGER.info(f"{bed_file_name}'s embedding is None, exclude from dataset")
                 bed_folder_index += 1
