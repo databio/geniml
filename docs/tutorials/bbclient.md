@@ -4,66 +4,91 @@ This client downloads, processes, and caches BED files and BED sets from the BED
 
 ## Usage
 
-###
-```python
-from geniml.bbclient import BBClient
-from geniml.io import RegionSet
-```
-
 ### Create an Instance of the BBClient Class:
 
 ```python
-bbc = BBClient(cache_folder="<cache_folder_path>", bedbase_api="<bedbase_api>")
+from geniml.bbclient import BBClient
+
+bbclient = BBClient(cache_folder="cache", bedbase_api="https://api.bedbase.org
 ```
 
-### Cache a Local BED File
+### Download and cache a BED file from BEDbase
 
 ```python
-bbclient.add_bed_to_cache(RegionSet("<local_bed_file_path>"))
+bedfile_id = "...."  # find interesting bedfile on bedbase
+bedfile = bbclient.load_bed(bedfile_id)  # download, cache and return a RegionSet object
+gr = bedfile.to_granges()  # return a GenomicRanges object
 ```
 
-### Download a BEDset
+### Cache a local BED file
 ```python
-bedset = bbclient.load_bedset("<bed_identifier>")
+from geniml.io import RegionSet
+
+bedfile = RegionSet("path/to/bedfile")
+gr = bedfile.to_granges()  # should return a GenomicRanges object
+bedfile_id = bbclient.add_bed_to_cache(bedfile) # compute its ID and add it to the cache
 ```
 
-### Download and Process BED File Identifiers
+### Download cache a BEDset from BEDbase
 
 ```python
-regionset = bbclient.load_bed() < input_identifier(s) >)
+bedset_identifier = "xyz" # find some interesting bedset on bedbase.org
+bedset = bbclient.load_bedset(bedset_identifier)  # download, cache and return a BedSet object
+grl = bedset.to_granges_list()  # return a GenomicRangesList object
+```
+
+### Cache a local BEDset
+
+```python
+from geniml.io import BedSet
+
+bedset_folder = "path/to/bed/files/folder"
+bedset = BedSet(
+    [os.path.join(bedset-folder, file_name) for file_name in os.listdir(bedset_folder)]
+)
+bedset_id = bbclient.add_bedset_to_cache(bedset)
 ```
 
 ## For command line usage, run the CLI with appropriate subcommands and arguments as described below:
 
-### Cache local BED file / BED set
+### Cache BED file
 
 ```bash
-geniml bbclient local --input-identifier <path_to_BED_file_or_folder_of_BED_files>
+geniml bbclient cache-bed --input-identifier <path_to_BED_file_or_identifier_or_url>
 ```
 
-Replace <path_to_BED_file_or_folder_of_BED_files> with the path to the local BED file or folder of BED files you want to cache.
+Replace  <path_to_BED_file_or_identifier_or_url> with the path to the local BED file or BED file's identifier or url.
 
-### Download BED file from BED base
+### Cache BED set
 
 ```bash
-geniml bbclient bedfile --input-identifier <bed_identifier>
+geniml bbclient cache-bedset --input-identifier <path_to_BED_files_folder_or_identifier>
 ```
 
-Replace <bed_identifier> with either the BED file identifier
+Replace  <path_to_BED_files_folder_or_identifier> with path to the folder of BED files or the BEDset identifier
 
-### Download a BEDset
+### Seek the path of a BED file or BEDset in cache folder
 
 ```bash
-geniml bbclient bedset --bedset <bedset_identifier>
+geniml bbclient seek --input-identifier <identifier>
 ```
 
-Replace <bedset_identifier> with the identifier of the BEDset you want to download.
+Replace <bedset_identifier> with the identifier of the BED file or BEDset you want to seek.
+
+### List and count the subdirectories and files in cache  folder
+
+```bash
+geniml bbclient tree
+```
+
+`tree` command may need [installing](https://www.geeksforgeeks.org/tree-command-unixlinux/)
 
 ### Command-Line Arguments
 
-    bedset: Download a BEDset.
-    local: Cache a local BED file, or cache a local folder of BED files as a BED set.
-    identifiers: Download a BED file.
+    cache-bed: cache a BED file from BEDbase (with given identifier), url, or local file 
+    cache-bedset: cache a BEDset from BEDbase (with given identifier) or local folder 
+    seek: return the path of a BED file or BEDset in cache folder
+    tree: 
 
 ### Cache Folder
 
