@@ -203,7 +203,7 @@ class BBClient(BedCacheManager):
         :return: the file content as bytes
         """
 
-        bed_url = BEDFILE_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedfile_id=bedfile)
+        bed_url = BEDFILE_URL_PATTERN.format(bedbase_api=self.bedbase_api, bed_id=bedfile)
         response = requests.get(bed_url)
         response.raise_for_status()
         return response.content
