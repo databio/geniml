@@ -115,33 +115,40 @@ def main(test_args=None):
         from .bbclient import BBClient
 
         bbc = BBClient(args.cache_folder)
-        if args.subcommand == "local":
+        if args.subcommand == "cache-bed":
             import os
-
-            from .io import BedSet, RegionSet
-
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            local_path = args.input_identifier
-            # folder -> cached BedSet
-            if os.path.isdir(local_path):
+            # if input is a BED file path
+            if os.path.exists(args.input_identifier):
+                from .io import RegionSet
+                bedfile = RegionSet(args.input_identifier)
+                bbc.add_bed_to_cache(bedfile)
+                _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
+            else:
+                bedfile = bbc.load_bed(args.input_identifier)
+
+        if args.subcommand == "cache-bedset":
+            import os
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            if os.path.isdir(args.input_identifier):
+                from .io import BedSet
                 bedset = BedSet(
-                    [os.path.join(local_path, file_name) for file_name in os.listdir(local_path)]
+                    [os.path.join(args.input_identifier, file_name) for file_name in os.listdir(args.input_identifier)]
                 )
                 bbc.add_bedset_to_cache(bedset)
                 _LOGGER.info(f"BED set {bedset.compute_bedset_identifier()} has been cached")
-            # file -> cached BED file
+
             else:
-                bedfile = RegionSet(local_path)
-                bbc.add_bed_to_cache(bedfile)
-                _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
+                bedset = bbc.load_bedset(args.input_identifier)
 
-        if args.subcommand == "bedset":
+        if args.subcommand == "seek":
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            bedset = bbc.load_bedset(args.bedset)
+            _LOGGER.info(bbc.seek(args.input_identifier))
 
-        if args.subcommand == "bed":
+        if args.subcommand == "tree":
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            bedfile = bbc.load_bed(args.input_identifier)
+            import os
+            os.system(f"tree {args.cache_folder}")
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
