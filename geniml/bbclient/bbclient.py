@@ -167,11 +167,11 @@ class BBClient(BedCacheManager):
         """
 
         # check if any BED set has that identifier
-        file_path = self._bedset_path(identifier)
+        file_path = self._bedset_path(identifier, False)
         if os.path.exists(file_path):
             return file_path
         else:
-            file_path = self._bedfile_path(identifier)
+            file_path = self._bedfile_path(identifier, False)
             if os.path.exists(file_path):
                 return file_path
             else:
@@ -208,46 +208,51 @@ class BBClient(BedCacheManager):
         response.raise_for_status()
         return response.content
 
-    def _bedset_path(self, bedset_id: str) -> str:
+    def _bedset_path(self, bedset_id: str, create: bool = True) -> str:
         """
         Get the path of a BED set's .txt file with given identifier
 
         :param bedset_id: the identifier of BED set
+        :param create: whether the cache path needs creating
         :return: the path to the .txt file
         """
 
         subfolder_name = DEFAULT_BEDSET_SUBFOLDER
         file_extension = DEFAULT_BEDSET_EXT
 
-        return self._cache_path(bedset_id, subfolder_name, file_extension)
+        return self._cache_path(bedset_id, subfolder_name, file_extension, create)
 
-    def _bedfile_path(self, bedfile_id: str) -> str:
+    def _bedfile_path(self, bedfile_id: str, create: bool = True) -> str:
         """
         Get the path of a BED file's .bed.gz file with given identifier
 
-        :param bedfile_id: the identifier of BED set
+        :param bedfile_id: the identifier of BED file
+        :param create: whether the cache path needs creating
         :return: the path to the .bed.gz file
         """
 
         subfolder_name = DEFAULT_BEDFILE_SUBFOLDER
         file_extension = DEFAULT_BEDFILE_EXT
 
-        return self._cache_path(bedfile_id, subfolder_name, file_extension)
+        return self._cache_path(bedfile_id, subfolder_name, file_extension, create)
 
-    def _cache_path(self, identifier: str, subfolder_name: str, file_extension: str) -> str:
+    def _cache_path(
+        self, identifier: str, subfolder_name: str, file_extension: str, create: bool = True
+    ) -> str:
         """
         Get the path of a file in cache folder
 
         :param identifier: the identifier of BED set or BED file
         :param subfolder_name: "bedsets" or "bedfiles"
         :param file_extension: ".txt" or ".bed.gz"
+        :param create: whether the cache path needs creating
         :return: the path to the file
         """
 
         filename = f"{identifier}{file_extension}"
         folder_name = os.path.join(self.cache_folder, subfolder_name, identifier[0], identifier[1])
-
-        self.create_cache_folder(folder_name)
+        if create:
+            self.create_cache_folder(folder_name)
         return os.path.join(folder_name, filename)
 
     def remove_bedfile_from_cache(self, bedfile_id: str) -> NoReturn:

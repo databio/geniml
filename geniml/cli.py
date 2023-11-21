@@ -117,10 +117,12 @@ def main(test_args=None):
         bbc = BBClient(args.cache_folder)
         if args.subcommand == "cache-bed":
             import os
+
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             # if input is a BED file path
             if os.path.exists(args.input_identifier):
                 from .io import RegionSet
+
                 bedfile = RegionSet(args.input_identifier)
                 bbc.add_bed_to_cache(bedfile)
                 _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
@@ -129,11 +131,16 @@ def main(test_args=None):
 
         if args.subcommand == "cache-bedset":
             import os
+
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             if os.path.isdir(args.input_identifier):
                 from .io import BedSet
+
                 bedset = BedSet(
-                    [os.path.join(args.input_identifier, file_name) for file_name in os.listdir(args.input_identifier)]
+                    [
+                        os.path.join(args.input_identifier, file_name)
+                        for file_name in os.listdir(args.input_identifier)
+                    ]
                 )
                 bbc.add_bedset_to_cache(bedset)
                 _LOGGER.info(f"BED set {bedset.compute_bedset_identifier()} has been cached")
@@ -148,7 +155,14 @@ def main(test_args=None):
         if args.subcommand == "tree":
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             import os
+
             os.system(f"tree {args.cache_folder}")
+
+        if args.subcommand == "rm":
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            file_path = bbc.seek(args.input_identifier)
+            bbc._remove(file_path)
+            _LOGGER.info(f"{file_path} is removed")
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
