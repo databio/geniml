@@ -73,9 +73,9 @@ Replace  <path_to_BED_files_folder_or_identifier> with path to the folder of BED
 geniml bbclient seek --input-identifier <identifier>
 ```
 
-Replace <bedset_identifier> with the identifier of the BED file or BEDset you want to seek.
+Replace <identifier> with the identifier of the BED file or BEDset you want to seek.
 
-### List and count the subdirectories and files in cache  folder
+### List and count the subdirectories and files in cache folder
 
 ```bash
 geniml bbclient tree
@@ -83,12 +83,13 @@ geniml bbclient tree
 
 `tree` command may need [installing](https://www.geeksforgeeks.org/tree-command-unixlinux/)
 
-### Command-Line Arguments
+### Remove a BED file or BEDset from the cache folder 
 
-    cache-bed: cache a BED file from BEDbase (with given identifier), url, or local file 
-    cache-bedset: cache a BEDset from BEDbase (with given identifier) or local folder 
-    seek: return the path of a BED file or BEDset in cache folder
-    tree: 
+```bash
+geniml bbclient rm ----input-identifier <identifier>
+```
+
+Replace <identifier> with the identifier of the BED file or BEDset you want to remove.
 
 ### Cache Folder
 
