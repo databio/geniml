@@ -7,7 +7,7 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
-from gtokenizers import (
+from genimtools.tokenize import (
     Region as GRegion,
     TreeTokenizer as GTreeTokenizer,
     TokenizedRegionSet as GTokenizedRegionSet,
