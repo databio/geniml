@@ -11,11 +11,17 @@ from .._version import __version__
 from ..exceptions import GenimlBaseError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
-from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
-                    DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
-                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
-                    DEFAULT_BEDSET_SUBFOLDER, DEFAULT_CACHE_FOLDER,
-                    MODULE_NAME)
+from .const import (
+    BEDFILE_URL_PATTERN,
+    BEDSET_URL_PATTERN,
+    DEFAULT_BEDBASE_API,
+    DEFAULT_BEDFILE_EXT,
+    DEFAULT_BEDFILE_SUBFOLDER,
+    DEFAULT_BEDSET_EXT,
+    DEFAULT_BEDSET_SUBFOLDER,
+    DEFAULT_CACHE_FOLDER,
+    MODULE_NAME,
+)
 from .utils import BedCacheManager
 
 _LOGGER = getLogger(MODULE_NAME)
@@ -30,7 +36,8 @@ class BBClient(BedCacheManager):
         """
         BBClient to deal with download files from bedbase and caching them.
 
-        :param cache_folder: path to local folder as cache of files from bedbase
+        :param cache_folder: path to local folder as cache of files from bedbase,
+        if not given it will be the environment variable `BBCLIENT_CACHE`
         :param bedbase_api: url to bedbase
         """
 
