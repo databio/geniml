@@ -152,11 +152,15 @@ def main(test_args=None):
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             _LOGGER.info(bbc.seek(args.input_identifier))
 
-        if args.subcommand == "tree":
+        if args.subcommand == "inspect":
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             import os
 
-            os.system(f"tree {args.cache_folder}")
+            _LOGGER.info(f"Bedfiles directory:")
+            os.system(f"tree {os.path.join(args.cache_folder, 'bedfiles')} | tail -n 1")
+
+            _LOGGER.info(f"Bedsets directory:")
+            os.system(f"tree {os.path.join(args.cache_folder, 'bedsets')} | tail -n 1")
 
         if args.subcommand == "rm":
             _LOGGER.info(f"Subcommand: {args.subcommand}")

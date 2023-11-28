@@ -1,6 +1,6 @@
 from logging import getLogger
 
-from .const import MODULE_NAME
+from .const import DEFAULT_CACHE_FOLDER, MODULE_NAME
 
 _LOGGER = getLogger(MODULE_NAME)
 
@@ -19,7 +19,7 @@ def build_subparser(parser):
     parser_bedset.add_argument("--input-identifier", help="BED file identifier, url, or file path")
     parser_bedset.add_argument(
         "--cache-folder",
-        default="bed_cache",
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
@@ -30,33 +30,37 @@ def build_subparser(parser):
     parser_bedset.add_argument("--input-identifier", help="Bedset identifier, or folder path")
     parser_bedset.add_argument(
         "--cache-folder",
-        default="bed_cache",
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
     # seek the path of BED file or BED set
-    parser_ident = subparsers.add_parser("seek", help="Return the path in cache folder")
+    parser_ident = subparsers.add_parser(
+        "seek", help="Seek the BED / BEDset path by giving identifier"
+    )
     parser_ident.add_argument("--input-identifier", help="BED file / BEDset identifier")
     parser_ident.add_argument(
         "--cache-folder",
-        default="bed_cache",
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
-    # list and count files and subdirectories in the cache folder
-    parser_ident = subparsers.add_parser("tree", help="Return the path in cache folder")
+    # list and count files and subdirectories in the subdirectory bedfiles and bedsets
+    parser_ident = subparsers.add_parser("inspect", help="Inspect the contents of cache folder")
     parser_ident.add_argument(
         "--cache-folder",
-        default="bed_cache",
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
     # remove bed files or bedsets from the cache folder
-    parser_ident = subparsers.add_parser("rm", help="Return the path in cache folder")
+    parser_ident = subparsers.add_parser(
+        "rm", help="Remove the BED/BEDset from cache with given identifier"
+    )
     parser_ident.add_argument("--input-identifier", help="BED file / BEDset identifier")
     parser_ident.add_argument(
         "--cache-folder",
-        default="bed_cache",
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
