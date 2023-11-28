@@ -3,31 +3,30 @@ import os
 import shutil
 from logging import getLogger
 from typing import List, NoReturn, Union
-from ubiquerg import is_url
 
 import requests
+from ubiquerg import is_url
 
-from ..io.utils import is_gzipped
-from ..io.io import BedSet, RegionSet
-from .const import (
-    BEDFILE_URL_PATTERN,
-    BEDSET_URL_PATTERN,
-    DEFAULT_BEDBASE_API,
-    DEFAULT_BEDFILE_EXT,
-    DEFAULT_BEDFILE_SUBFOLDER,
-    DEFAULT_BEDSET_EXT,
-    DEFAULT_BEDSET_SUBFOLDER,
-    MODULE_NAME,
-)
-from .utils import BedCacheManager
-from ..exceptions import GenimlBaseError
 from .._version import __version__
+from ..exceptions import GenimlBaseError
+from ..io.io import BedSet, RegionSet
+from ..io.utils import is_gzipped
+from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
+                    DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
+                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
+                    DEFAULT_BEDSET_SUBFOLDER, DEFAULT_CACHE_FOLDER,
+                    MODULE_NAME)
+from .utils import BedCacheManager
 
 _LOGGER = getLogger(MODULE_NAME)
 
 
 class BBClient(BedCacheManager):
-    def __init__(self, cache_folder: str, bedbase_api: str = DEFAULT_BEDBASE_API):
+    def __init__(
+        self,
+        cache_folder: Union[str, None] = DEFAULT_CACHE_FOLDER,
+        bedbase_api: str = DEFAULT_BEDBASE_API,
+    ):
         """
         BBClient to deal with download files from bedbase and caching them.
 
