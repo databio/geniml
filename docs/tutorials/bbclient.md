@@ -75,13 +75,13 @@ geniml bbclient seek --input-identifier <identifier>
 
 Replace <identifier> with the identifier of the BED file or BEDset you want to seek.
 
-### List and count the subdirectories and files in cache folder
+### Count the subdirectories and files in `bedfiles` & `bedsets` folder
 
 ```bash
-geniml bbclient tree
+geniml bbclient inspect
 ```
 
-`tree` command may need [installing](https://www.geeksforgeeks.org/tree-command-unixlinux/)
+`inspect` command may need installing [`tree`](https://www.geeksforgeeks.org/tree-command-unixlinux/)
 
 ### Remove a BED file or BEDset from the cache folder 
 
