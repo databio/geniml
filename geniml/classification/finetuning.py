@@ -1,73 +1,77 @@
-import logging
 import os
+import logging
 from typing import Union, List
 
 import torch
 import torch.nn as nn
 import scanpy as sc
-from rich.progress import Progress, track
-from huggingface_hub import hf_hub_download
+
+from rich.progress import Progress
 from torch.utils.data import DataLoader
+from huggingface_hub import hf_hub_download
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from yaml import safe_dump, safe_load
+from yaml import safe_load, safe_dump
 
 from .const import (
     MODULE_NAME,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
     CONFIG_FILE_NAME,
-    DEFAULT_EPOCHS,
     DEFAULT_LABEL_KEY,
+    DEFAULT_FINE_TUNE_LOSS_FN,
+    DEFAULT_EPOCHS,
     DEFAULT_BATCH_SIZE,
-    DEFAULT_CLASSIFICATION_LOSS_FN,
     DEFAULT_OPTIMIZER,
     DEFAULT_TEST_TRAIN_SPLIT,
 )
-from .utils import SingleCellClassificationDataset, TrainingResult, collate_batch
+from .utils import (
+    generate_fine_tuning_dataset,
+    collate_batch,
+    FineTuneTrainingResult,
+    FineTuningDataset,
+)
+
 from ..nn.main import Attention
-from ..region2vec.const import DEFAULT_EMBEDDING_SIZE
-from ..region2vec.main import Region2Vec
 from ..tokenization.main import ITTokenizer
+from ..region2vec.main import Region2Vec
+from ..region2vec.const import DEFAULT_EMBEDDING_SIZE
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 
 
-# TODO: eventually remove this
-class Region2VecClassifier(nn.Module):
-    def __init__(self, region2vec: Region2Vec, num_classes: int, freeze_r2v: bool = False):
+class RegionSet2Vec(nn.Module):
+    def __init__(
+        self, region2vec: Region2Vec, freeze_r2v: bool = False, pooling: nn.Module = None
+    ):
         """
-        Initialize the Region2VecClassifier.
+        Initialize the RegionSet2Vec. RegionSet2Vec is a wrapper around the Region2Vec model that allows
+        pooling over a set of regions. This is useful for classification tasks where the input is a set of
+        regions, such as classifying a cell type based on the set of regions that are accessible.
 
         :param Union[Region2Vec, str] region2vec: Either a Region2Vec instance or a path to a huggingface model.
-        :param int num_classes: Number of classes to classify.
         :param bool freeze_r2v: Whether or not to freeze the Region2Vec model.
         """
         super().__init__()
 
         self.region2vec: Region2Vec = region2vec
-        self.attention = Attention(self.region2vec.embedding_dim)
-        self.output_layer = nn.Linear(self.region2vec.embedding_dim, num_classes)
-        self.num_classes = num_classes
+        self.pooling = pooling or Attention(self.region2vec.embedding_dim)
 
         if freeze_r2v:
             for param in self.region2vec.parameters():
                 param.requires_grad = False
 
-    def forward(self, x):
+    def forward(self, x) -> torch.Tensor:
         x = self.region2vec(x)
         x = self.attention(x)
-        x = self.output_layer(x)
         return x
 
 
-class SingleCellTypeClassifier:
+class Region2VecFineTuner:
     def __init__(
         self,
         model_path: str = None,
         tokenizer: ITTokenizer = None,
         region2vec: Union[Region2Vec, str] = None,
-        num_classes: int = None,
         device: str = None,
         freeze_r2v: bool = False,
         **kwargs,
@@ -79,11 +83,10 @@ class SingleCellTypeClassifier:
         # there really are two models here, the Region2Vec model and the SingleCellTypeClassifier model
         # which holds the Region2Vec model. The Region2Vec model ideally is pre-trained, but can be trained
         # from scratch if a tokenizer is passed. The SingleCellTypeClassifier model is always trained from scratch.
-        self._model: Region2VecClassifier
+        self._model: RegionSet2Vec
         self.region2vec: Region2Vec
         self.device = device
         self.trained = False
-        self._label_mapping: dict
 
         # check for completely blank initialization
         if all(
@@ -99,8 +102,7 @@ class SingleCellTypeClassifier:
             self._init_from_huggingface(model_path)
             self.trained = True
         else:
-            self._init_model(region2vec, num_classes, tokenizer, freeze_r2v, **kwargs)
-            self._label_mapping = {}
+            self._init_model(region2vec, tokenizer, freeze_r2v, **kwargs)
 
     def _load_local_region2vec_model(self, model_path: str, vocab_path: str, config_path: str):
         """
@@ -179,10 +181,10 @@ class SingleCellTypeClassifier:
                 "Invalid tokenizer passed. Must be either a path to a tokenizer, a huggingface tokenizer, or a tokenizer instance."
             )
 
-    def _init_model(self, region2vec, num_classes, tokenizer, freeze_r2v: bool = False, **kwargs):
+    def _init_model(self, region2vec, tokenizer, freeze_r2v: bool = False, **kwargs):
         """
         Initialize a new model from scratch. Ideally, someone is passing in a Region2Vec instance,
-        but in theory we can build one from scratch if we have a tokenizer and a `num_classes` parameter.
+        but in theory we can build one from scratch if we have a tokenizer.
         In the "build from scratch" scenario, someone is probably training a new model from scratch on some new data.
 
         The most important aspect is initializing the inner Region2Vec model. For this, the order of operations
@@ -195,7 +197,6 @@ class SingleCellTypeClassifier:
         5. If no tokenizer was passed, raise an error, because we need a vocab size to build a Region2Vec model.
 
         :param Union[Region2Vec, str] region2vec: Either a Region2Vec instance or a path to a huggingface model.
-        :param int num_classes: Number of classes to classify. This is **required**.
         :param ITTokenizer tokenizer: The tokenizer to use. This is **required** if building a Region2Vec model from scratch.
         :param bool freeze_r2v: Whether or not to freeze the Region2Vec model.
         :param kwargs: Additional keyword arguments to pass to the Region2Vec model.
@@ -229,13 +230,8 @@ class SingleCellTypeClassifier:
             len(self.tokenizer) == self.region2vec.vocab_size
         ), "Tokenizer and Region2Vec vocab size mismatch. Are you sure they are compatible?"
 
-        if num_classes is None:
-            raise ValueError("Must pass a number of classes to build classifier!")
-
-        self.num_classes = num_classes
-
         # build the model, finally using the region2vec model
-        self._model = Region2VecClassifier(self.region2vec, num_classes, freeze_r2v)
+        self._model = RegionSet2Vec(self.region2vec, freeze_r2v=freeze_r2v)
 
     def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
@@ -260,9 +256,8 @@ class SingleCellTypeClassifier:
         )
 
         self._label_mapping = config["label_mapping"]
-        self.num_classes = config["num_classes"]
 
-        self._model = Region2VecClassifier(self.region2vec, config["num_classes"])
+        self._model = RegionSet2Vec(self.region2vec)
         self._model.load_state_dict(params)
 
     def _init_from_huggingface(
@@ -296,7 +291,7 @@ class SingleCellTypeClassifier:
         model_file_name: str = MODEL_FILE_NAME,
         universe_file_name: str = UNIVERSE_FILE_NAME,
         config_file_name: str = CONFIG_FILE_NAME,
-    ) -> "SingleCellTypeClassifier":
+    ) -> "Region2VecFineTuner":
         """
         Load the model from a set of files that were exported using the export function.
 
@@ -335,34 +330,12 @@ class SingleCellTypeClassifier:
         assert label_key in data.obs.columns, f"Label key {label_key} not found in data."
         return data
 
-    def class_to_label(self, class_id: int) -> str:
-        """
-        Convert a class id to a label.
-
-        :param int class_id: The class id to convert.
-
-        :return: The label.
-        """
-        try:
-            return self._label_mapping[class_id]
-        except AttributeError:
-            raise RuntimeError("Model has not label mapping, are you sure it is trained?")
-        except KeyError:
-            raise ValueError(f"Class id {class_id} not found in label mapping.")
-
-    def freeze_r2v(self):
-        """
-        Freeze the weights of the Region2Vec model.
-        """
-        for param in self.region2vec.parameters():
-            param.requires_grad = False
-
     def train(
         self,
         data: Union[sc.AnnData, str],
         label_key: str = DEFAULT_LABEL_KEY,
         epochs: int = DEFAULT_EPOCHS,
-        loss_fn: nn.Module = DEFAULT_CLASSIFICATION_LOSS_FN,
+        loss_fn: nn.Module = DEFAULT_FINE_TUNE_LOSS_FN,
         optimizer: torch.optim.Optimizer = DEFAULT_OPTIMIZER,
         batch_size: int = DEFAULT_BATCH_SIZE,
         optimizer_kwargs: dict = {},
@@ -371,8 +344,7 @@ class SingleCellTypeClassifier:
         learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         device: Union[List, str] = None,
         early_stopping: bool = False,
-        r2v_gradient_ramp: List[float] = None,
-    ) -> TrainingResult:
+    ) -> FineTuneTrainingResult:
         """
         Train the model. The training loop assumes your data is a scanpy AnnData object,
         with the cell type labels in the `.obs` attribute. The cell type labels are
@@ -396,16 +368,6 @@ class SingleCellTypeClassifier:
         # validate the data
         data = self._validate_data(data, label_key)
 
-        # convert labels to integers
-        data.obs[f"{label_key}_code"] = data.obs[label_key].astype("category").cat.codes
-        encoder_celltype = LabelEncoder()
-        encoder_celltype.fit(data.obs[label_key])
-
-        # get mapping from integer to label
-        self._label_mapping = dict(
-            enumerate(data.obs[label_key].astype("category").cat.categories)
-        )
-
         # split the data into train and test
         X_train, X_test, Y_train, Y_test = train_test_split(
             data,
@@ -420,20 +382,33 @@ class SingleCellTypeClassifier:
         X_train = X_train.to_memory()
         X_test = X_test.to_memory()
 
-        train_tokens = [[t.id for t in sublist] for sublist in self.tokenizer.tokenize(X_train)]
-        test_tokens = [[t.id for t in sublist] for sublist in self.tokenizer.tokenize(X_test)]
+        pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
+            X_train, self.tokenizer, seed=seed
+        )
 
+        # combine the positive and negative pairs
+        pairs = pos_pairs + neg_pairs
+        labels = pos_labels + neg_labels
+
+        # get the pad token id
         pad_token_id = self.tokenizer.padding_token_id()
+
+        train_pairs, test_pairs, Y_train, Y_test = train_test_split(
+            pairs,
+            labels,
+            train_size=test_train_split,
+            random_state=seed,
+        )
 
         # create the datasets
         train_dataloader = DataLoader(
-            SingleCellClassificationDataset(train_tokens, Y_train),
+            FineTuningDataset(train_pairs, Y_train),
             batch_size=batch_size,
             shuffle=True,
             collate_fn=lambda x: collate_batch(x, pad_token_id),
         )
         test_dataloader = DataLoader(
-            SingleCellClassificationDataset(test_tokens, Y_test),
+            FineTuningDataset(test_pairs, Y_test),
             batch_size=batch_size,
             shuffle=True,
             collate_fn=lambda x: collate_batch(x, pad_token_id),
@@ -467,150 +442,95 @@ class SingleCellTypeClassifier:
         validation_loss = []
         consecutive_no_improvement = 0
 
+        cossim_fn = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+
         with Progress() as progress_bar:
             epoch_tid = progress_bar.add_task("Epochs", total=epochs)
             batches_tid = progress_bar.add_task("Batches", total=len(train_dataloader))
             for epoch in range(epochs):
+                _LOGGER.info(f"Epoch {epoch + 1}/{epochs}")
                 # set the model to train mode
                 self._model.train()
-
-                for i, batch in enumerate(train_dataloader):
-                    tokens, label = batch
-
+                epoch_loss = []
+                for _, batch in enumerate(train_dataloader):
                     # zero the gradients
                     optimizer.zero_grad()
 
-                    # move the data to the device
-                    tokens = tokens.to(tensor_device)
-                    label = label.to(tensor_device)
+                    # move the batch to the device
+                    pair, target = batch
+                    t1, t2 = pair
 
-                    # forward pass
-                    y_pred = self._model(tokens)
+                    t1 = t1.to(tensor_device)
+                    t2 = t2.to(tensor_device)
+                    target = target.to(tensor_device)
 
-                    loss = loss_fn(y_pred, label)
+                    # forward pass for the batch
+                    u = self._model(t1)
+                    v = self._model(t2)
+
+                    # compute the cosine similarity
+                    cossim = cossim_fn(u, v)
+
+                    # compute the loss
+                    loss = loss_fn(cossim, target.float())
                     loss.backward()
                     all_loss.append(loss.item())
+                    epoch_loss.append(loss.item())
 
-                    if r2v_gradient_ramp is not None:
-                        if isinstance(self._model, nn.DataParallel):
-                            parameters = self._model.module.region2vec.parameters()
-                        else:
-                            parameters = self._model.region2vec.parameters()
-                        for param in parameters:
-                            try:
-                                scaling_factor = r2v_gradient_ramp[epoch]
-                            except IndexError:
-                                scaling_factor = r2v_gradient_ramp[-1]
-                            param.grad *= scaling_factor
-
-                    # update the weights
+                    # clip gradients
                     optimizer.step()
 
-                    if learning_rate_scheduler is not None:
-                        learning_rate_scheduler.step()
                     # update the progress bar
-                    progress_bar.update(batches_tid, completed=i + 1)
+                    progress_bar.update(batches_tid, advance=1)
 
-                epoch_loss.append(sum(all_loss) / len(all_loss))  # training loss after each epoch
+                # compute the loss for the epoch
+                epoch_loss.append(sum(epoch_loss) / len(epoch_loss))
 
-                # validation loss after each epoch
+                # compute the validation loss
                 with torch.no_grad():
-                    # set the model to eval mode
                     self._model.eval()
-
                     val_loss = []
                     for i, batch in enumerate(test_dataloader):
-                        tokens, label = batch
-                        # move the data to the device
-                        tokens = tokens.to(tensor_device)
-                        label = label.to(tensor_device)
-                        # forward pass
-                        y_pred = self._model(tokens)
-                        loss = loss_fn(y_pred, label)
+                        # move the batch to the device
+                        pair, target = batch
+                        t1, t2 = pair
+
+                        t1 = t1.to(tensor_device)
+                        t2 = t2.to(tensor_device)
+                        target = target.to(tensor_device)
+
+                        # forward pass for the batch
+                        u = self._model(t1)
+                        v = self._model(t2)
+
+                        # compute the cosine similarity
+                        cossim = cossim_fn(u, v)
+
+                        # compute the loss
+                        loss = loss_fn(cossim, target.float())
                         val_loss.append(loss.item())
 
+                        # compute the loss for the epoch
+                        val_loss = sum(val_loss) / len(val_loss)
+                        validation_loss.append(val_loss)
+
                         # update the progress bar
-                        progress_bar.update(epoch_tid, completed=epoch + 1)
+                        progress_bar.update(epoch_tid, advance=1)
 
-                    validation_loss.append(
-                        sum(val_loss) / len(val_loss)
-                    )  # validation loss after each epoch
+                        # check for early stopping
+                        if early_stopping:
+                            if len(validation_loss) > 1:
+                                if validation_loss[-1] > validation_loss[-2]:
+                                    consecutive_no_improvement += 1
+                                else:
+                                    consecutive_no_improvement = 0
 
-                if early_stopping:
-                    if validation_loss[-1] > validation_loss[-2]:
-                        consecutive_no_improvement += 1
-                    else:
-                        consecutive_no_improvement = 0
+                                if consecutive_no_improvement >= 5:
+                                    break
 
-                if consecutive_no_improvement >= 5 and early_stopping:
-                    _LOGGER.info("Early stopping due to overfitting.")
-                    break
-
-            _LOGGER.info("Finished training.")
-
-        self.trained = True
-
-        with torch.no_grad():
-            training_accuracy = sum(
-                [
-                    1 if torch.argmax(self._model(torch.tensor(t).unsqueeze(0))) == label else 0
-                    for t, label in track(
-                        zip(train_tokens, Y_train),
-                        total=len(train_tokens),
-                        description="Training accuracy",
-                    )
-                ]
-            ) / len(tokens)
-
-            validation_accuracy = sum(
-                [
-                    1 if torch.argmax(self._model(torch.tensor(t).unsqueeze(0))) == label else 0
-                    for t, label in track(
-                        zip(test_tokens, Y_test),
-                        total=len(test_tokens),
-                        description="Validation accuracy",
-                    )
-                ]
-            ) / len(test_tokens)
-
-        return TrainingResult(
-            validation_loss=validation_loss,
-            epoch_loss=epoch_loss,
-            all_loss=all_loss,
-            training_accuracy=training_accuracy,
-            validation_accuracy=validation_accuracy,
-        )
-
-    def predict(self, data: Union[sc.AnnData, str]):
-        """
-        Predict the cell types of the given data.
-
-        :param Union[sc.AnnData, str] data: Either a scanpy AnnData object or a path to a h5ad file.
-        """
-        if isinstance(data, str):
-            data = sc.read_h5ad(data)
-        elif not isinstance(data, sc.AnnData):
-            raise ValueError(
-                "Data must be either a scanpy AnnData object or a path to a h5ad file."
-            )
-
-        tokens = [[t.id for t in sublist] for sublist in self.tokenizer.tokenize(data)]
-
-        # no need to compute gradients - we are just predicting
-        with torch.no_grad():
-            outputs = []
-            predictions = []
-            for t in track(tokens, total=len(tokens)):
-                # remove batch dimension
-                output = self._model(torch.tensor(t).unsqueeze(0))
-                output = torch.softmax(output, dim=1)
-                outputs.append(output)
-                predictions.append(torch.argmax(output, dim=1).item())
-
-        # convert the predictions to labels
-        predictions = [self.class_to_label(p) for p in predictions]
-
-        return predictions
+                # log out the losses
+                _LOGGER.info(f"Epoch loss: {epoch_loss[-1]}")
+                _LOGGER.info(f"Validation loss: {val_loss}")
 
     def export(
         self,
@@ -651,8 +571,6 @@ class SingleCellTypeClassifier:
         config = {
             "vocab_size": len(self.tokenizer),
             "embedding_size": embedding_size,
-            "num_classes": self.num_classes,
-            "label_mapping": self._label_mapping or {},
         }
 
         with open(os.path.join(path, config_file), "w") as f:
