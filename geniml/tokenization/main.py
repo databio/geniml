@@ -126,7 +126,7 @@ class ITTokenizer(Tokenizer):
         """
         Tokenize a Region or RegionSet into the universe
 
-        :param Union[Region, RegionSet] query: The query to tokenize.
+        :param Union[Region, RegionSet, sc.AnnData] query: The query to tokenize.
         """
         if isinstance(query, sc.AnnData):
             return self._tokenize_anndata(query)

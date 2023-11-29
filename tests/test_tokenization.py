@@ -79,6 +79,19 @@ def test_yield_tokens(universe_bed_file: str):
         assert isinstance(token.id, int)
 
 
+def test_tokenize_anndata(universe_bed_file: str):
+    t = ITTokenizer(universe_bed_file)
+
+    # tokenize anndata
+    adata = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
+
+    # tokenize
+    tokens = t.tokenize(adata)
+
+    # count tokens
+    assert len(tokens) == 20
+
+
 def test_ittokenizer_get_padding(universe_bed_file: str):
     t = ITTokenizer(universe_bed_file)
     padding = t.padding_token()
