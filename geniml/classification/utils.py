@@ -11,7 +11,7 @@ from torch.utils.data import Dataset
 from ..tokenization.main import ITTokenizer
 
 
-def collate_batch(
+def collate_classification_batch(
     batch: Tuple[torch.Tensor, torch.Tensor], pad_token: int
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
@@ -26,6 +26,29 @@ def collate_batch(
     labels = torch.tensor(labels, dtype=torch.long)
 
     return tokens_padded, labels
+
+
+def collate_finetuning_batch(
+    batch: Tuple[torch.Tensor, torch.Tensor], pad_token: int
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Collate a batch of data into a single tensor.
+
+    :param batch: A batch of data.
+    :return: A tuple of tensors.
+    """
+    pairs, labels = zip(*batch)
+    firsts = [p[0] for p in pairs]
+    seconds = [p[1] for p in pairs]
+
+    firsts_padded = pad_sequence(firsts, batch_first=True, padding_value=pad_token)
+    seconds_padded = pad_sequence(seconds, batch_first=True, padding_value=pad_token)
+
+    pairs_padded = (firsts_padded, seconds_padded)
+
+    labels = torch.tensor(labels, dtype=torch.float)
+
+    return pairs_padded, labels
 
 
 class SingleCellClassificationDataset(Dataset):
@@ -63,10 +86,12 @@ class FineTuningDataset(Dataset):
         self.labels = labels
 
     def __len__(self) -> int:
-        return len(self.pos_pairs)
+        return len(self.pairs)
 
-    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
-        return torch.tensor(self.pairs[idx]), torch.tensor(self.labels[idx])
+    def __getitem__(self, idx) -> Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+        return (torch.tensor(self.pairs[idx][0]), torch.tensor(self.pairs[idx][1])), torch.tensor(
+            self.labels[idx]
+        )
 
 
 class TrainingResult(BaseModel):
@@ -173,4 +198,4 @@ def generate_fine_tuning_dataset(
                 )
             )
 
-    return positive_pairs, negative_pairs, [1] * len(positive_pairs), [0] * len(negative_pairs)
+    return positive_pairs, negative_pairs, [1] * len(positive_pairs), [-1] * len(negative_pairs)
