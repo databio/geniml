@@ -435,7 +435,7 @@ class Region2VecFineTuner:
                 _LOGGER.info(f"Epoch {epoch + 1}/{epochs}")
                 # set the model to train mode
                 self._model.train()
-                epoch_loss = []
+                this_epoch_loss = []
                 for _, batch in enumerate(train_dataloader):
                     # zero the gradients
                     optimizer.zero_grad()
@@ -456,6 +456,7 @@ class Region2VecFineTuner:
                     loss = loss_fn(u, v, target.float())
                     loss.backward()
                     all_loss.append(loss.item())
+                    this_epoch_loss.append(loss.item())
 
                     # clip gradients
                     optimizer.step()
@@ -464,7 +465,7 @@ class Region2VecFineTuner:
                     progress_bar.update(batches_tid, advance=1)
 
                 # compute the loss for the epoch
-                epoch_loss.append(sum(epoch_loss) / len(epoch_loss))
+                epoch_loss.append(sum(this_epoch_loss) / len(this_epoch_loss)
 
                 # compute the validation loss
                 with torch.no_grad():
