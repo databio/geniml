@@ -24,7 +24,7 @@ from .const import (
     DEFAULT_OPTIMIZER,
     DEFAULT_TEST_TRAIN_SPLIT,
 )
-from .utils import SingleCellClassificationDataset, TrainingResult, collate_batch
+from .utils import SingleCellClassificationDataset, TrainingResult, collate_classification_batch
 from ..nn.main import Attention
 from ..region2vec.const import DEFAULT_EMBEDDING_SIZE
 from ..region2vec.main import Region2Vec
@@ -430,13 +430,13 @@ class SingleCellTypeClassifier:
             SingleCellClassificationDataset(train_tokens, Y_train),
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=lambda x: collate_batch(x, pad_token_id),
+            collate_fn=lambda x: collate_classification_batch(x, pad_token_id),
         )
         test_dataloader = DataLoader(
             SingleCellClassificationDataset(test_tokens, Y_test),
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=lambda x: collate_batch(x, pad_token_id),
+            collate_fn=lambda x: collate_classification_batch(x, pad_token_id),
         )
 
         # move the model to the device

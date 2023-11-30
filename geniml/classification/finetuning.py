@@ -26,7 +26,7 @@ from .const import (
 )
 from .utils import (
     generate_fine_tuning_dataset,
-    collate_batch,
+    collate_finetuning_batch,
     FineTuneTrainingResult,
     FineTuningDataset,
 )
@@ -62,7 +62,7 @@ class RegionSet2Vec(nn.Module):
 
     def forward(self, x) -> torch.Tensor:
         x = self.region2vec(x)
-        x = self.attention(x)
+        x = self.pooling(x)
         return x
 
 
@@ -77,7 +77,7 @@ class Region2VecFineTuner:
         **kwargs,
     ):
         """
-        Initialize the SingleCellTypeClassifierExModel from a huggingface model or from scratch.
+        Initialize the Region2Vec fine tuning model from a huggingface model or from scratch.
         """
 
         # there really are two models here, the Region2Vec model and the SingleCellTypeClassifier model
@@ -368,22 +368,8 @@ class Region2VecFineTuner:
         # validate the data
         data = self._validate_data(data, label_key)
 
-        # split the data into train and test
-        X_train, X_test, Y_train, Y_test = train_test_split(
-            data,
-            data.obs[f"{label_key}_code"].values.tolist(),
-            train_size=test_train_split,
-            random_state=seed,
-        )
-        del data
-
-        # convert to better datatypes
-        # the labels are stored in the `.obs` attribute
-        X_train = X_train.to_memory()
-        X_test = X_test.to_memory()
-
         pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
-            X_train, self.tokenizer, seed=seed
+            data, self.tokenizer, seed=seed
         )
 
         # combine the positive and negative pairs
@@ -405,13 +391,13 @@ class Region2VecFineTuner:
             FineTuningDataset(train_pairs, Y_train),
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=lambda x: collate_batch(x, pad_token_id),
+            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
         )
         test_dataloader = DataLoader(
             FineTuningDataset(test_pairs, Y_test),
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=lambda x: collate_batch(x, pad_token_id),
+            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
         )
 
         # move the model to the device
@@ -427,8 +413,8 @@ class Region2VecFineTuner:
         else:
             tensor_device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        # move the loss function to the device
-        loss_fn = loss_fn()
+        # loss_fn = loss_fn()
+        loss_fn = DEFAULT_FINE_TUNE_LOSS_FN()
 
         # create the optimizer
         optimizer = optimizer(self._model.parameters(), **optimizer_kwargs)
@@ -441,8 +427,6 @@ class Region2VecFineTuner:
         epoch_loss = []
         validation_loss = []
         consecutive_no_improvement = 0
-
-        cossim_fn = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
         with Progress() as progress_bar:
             epoch_tid = progress_bar.add_task("Epochs", total=epochs)
@@ -468,11 +452,8 @@ class Region2VecFineTuner:
                     u = self._model(t1)
                     v = self._model(t2)
 
-                    # compute the cosine similarity
-                    cossim = cossim_fn(u, v)
-
                     # compute the loss
-                    loss = loss_fn(cossim, target.float())
+                    loss = loss_fn(u, v, target.float())
                     loss.backward()
                     all_loss.append(loss.item())
                     epoch_loss.append(loss.item())
@@ -503,34 +484,43 @@ class Region2VecFineTuner:
                         u = self._model(t1)
                         v = self._model(t2)
 
-                        # compute the cosine similarity
-                        cossim = cossim_fn(u, v)
-
                         # compute the loss
-                        loss = loss_fn(cossim, target.float())
+                        loss = loss_fn(u, v, target.float())
                         val_loss.append(loss.item())
 
-                        # compute the loss for the epoch
-                        val_loss = sum(val_loss) / len(val_loss)
-                        validation_loss.append(val_loss)
+                    # compute the loss for the epoch
+                    val_loss = sum(val_loss) / len(val_loss)
+                    validation_loss.append(val_loss)
 
-                        # update the progress bar
-                        progress_bar.update(epoch_tid, advance=1)
+                    # update the progress bar
+                    progress_bar.update(epoch_tid, advance=1)
 
-                        # check for early stopping
-                        if early_stopping:
-                            if len(validation_loss) > 1:
-                                if validation_loss[-1] > validation_loss[-2]:
-                                    consecutive_no_improvement += 1
-                                else:
-                                    consecutive_no_improvement = 0
+                    # check for early stopping
+                    if early_stopping:
+                        if len(validation_loss) > 1:
+                            if validation_loss[-1] > validation_loss[-2]:
+                                consecutive_no_improvement += 1
+                            else:
+                                consecutive_no_improvement = 0
 
-                                if consecutive_no_improvement >= 5:
-                                    break
+                            if consecutive_no_improvement >= 5:
+                                break
+
+                # update the learning rate scheduler
+                if learning_rate_scheduler is not None:
+                    learning_rate_scheduler.step()
+
+                self.trained = True
 
                 # log out the losses
                 _LOGGER.info(f"Epoch loss: {epoch_loss[-1]}")
                 _LOGGER.info(f"Validation loss: {val_loss}")
+
+        return FineTuneTrainingResult(
+            validation_loss=validation_loss,
+            epoch_loss=epoch_loss,
+            all_loss=all_loss,
+        )
 
     def export(
         self,
