@@ -456,7 +456,6 @@ class Region2VecFineTuner:
                     loss = loss_fn(u, v, target.float())
                     loss.backward()
                     all_loss.append(loss.item())
-                    epoch_loss.append(loss.item())
 
                     # clip gradients
                     optimizer.step()
@@ -488,23 +487,23 @@ class Region2VecFineTuner:
                         loss = loss_fn(u, v, target.float())
                         val_loss.append(loss.item())
 
-                    # compute the loss for the epoch
-                    val_loss = sum(val_loss) / len(val_loss)
-                    validation_loss.append(val_loss)
+                # compute the loss for the epoch
+                val_loss = sum(val_loss) / len(val_loss)
+                validation_loss.append(val_loss)
 
-                    # update the progress bar
-                    progress_bar.update(epoch_tid, advance=1)
+                # update the progress bar
+                progress_bar.update(epoch_tid, advance=1)
 
-                    # check for early stopping
-                    if early_stopping:
-                        if len(validation_loss) > 1:
-                            if validation_loss[-1] > validation_loss[-2]:
-                                consecutive_no_improvement += 1
-                            else:
-                                consecutive_no_improvement = 0
+                # check for early stopping
+                if early_stopping:
+                    if len(validation_loss) > 1:
+                        if validation_loss[-1] > validation_loss[-2]:
+                            consecutive_no_improvement += 1
+                        else:
+                            consecutive_no_improvement = 0
 
-                            if consecutive_no_improvement >= 5:
-                                break
+                        if consecutive_no_improvement >= 5:
+                            break
 
                 # update the learning rate scheduler
                 if learning_rate_scheduler is not None:
