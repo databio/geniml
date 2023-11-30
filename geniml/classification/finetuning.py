@@ -465,7 +465,7 @@ class Region2VecFineTuner:
                     progress_bar.update(batches_tid, advance=1)
 
                 # compute the loss for the epoch
-                epoch_loss.append(sum(this_epoch_loss) / len(this_epoch_loss)
+                epoch_loss.append(sum(this_epoch_loss) / len(this_epoch_loss))
 
                 # compute the validation loss
                 with torch.no_grad():
