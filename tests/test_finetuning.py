@@ -23,7 +23,7 @@ def test_generate_finetuning_dataset():
 
 def test_init_region2vec_finetuner_from_scratch():
     """
-    Test the initialization of a SingleCellTypeClassifier from scratch.
+    Test the initialization of a FineTuner from scratch.
     """
     region2vec = Region2Vec(2380, 100)  # 1000 vocab size, 100 embedding size
     rs2v = Region2VecFineTuner(tokenizer="tests/data/universe.bed", region2vec=region2vec)

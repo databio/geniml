@@ -10,7 +10,7 @@ from rich.progress import Progress
 from torch.utils.data import DataLoader
 from huggingface_hub import hf_hub_download
 from sklearn.model_selection import train_test_split
-from yaml import safe_load, safe_dump
+from yaml import safe_load
 
 from .const import (
     MODULE_NAME,
@@ -31,34 +31,50 @@ from .utils import (
     FineTuningDataset,
 )
 
-from ..nn.main import Attention
 from ..tokenization.main import ITTokenizer
 from ..region2vec.main import Region2Vec
-from ..region2vec.const import DEFAULT_EMBEDDING_SIZE
+from ..region2vec.const import DEFAULT_EMBEDDING_SIZE, POOLING_TYPES, POOLING_METHOD_KEY
+from ..region2vec.utils import export_region2vec_model, load_local_region2vec_model
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 
 
+class MeanPooling(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.mean(x, dim=1)
+
+
+class MaxPooling(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.max(x, dim=1)
+
+
 class RegionSet2Vec(nn.Module):
-    def __init__(
-        self, region2vec: Region2Vec, freeze_r2v: bool = False, pooling: nn.Module = None
-    ):
+    def __init__(self, region2vec: Region2Vec, pooling: POOLING_TYPES = "mean"):
         """
         Initialize the RegionSet2Vec. RegionSet2Vec is a wrapper around the Region2Vec model that allows
         pooling over a set of regions. This is useful for classification tasks where the input is a set of
         regions, such as classifying a cell type based on the set of regions that are accessible.
 
         :param Union[Region2Vec, str] region2vec: Either a Region2Vec instance or a path to a huggingface model.
-        :param bool freeze_r2v: Whether or not to freeze the Region2Vec model.
+        :param POOLING_TYPES pooling: The pooling type to use. Either "mean" or "max".
         """
         super().__init__()
 
         self.region2vec: Region2Vec = region2vec
-        self.pooling = pooling or Attention(self.region2vec.embedding_dim)
-
-        if freeze_r2v:
-            for param in self.region2vec.parameters():
-                param.requires_grad = False
+        # assign the pooling layer based on mean or max
+        if pooling == "mean":
+            self.pooling = MeanPooling()
+        elif pooling == "max":
+            self.pooling = MaxPooling()
+        else:
+            raise ValueError(f"Invalid pooling type {pooling} passed.")
 
     def forward(self, x) -> torch.Tensor:
         x = self.region2vec(x)
@@ -73,20 +89,21 @@ class Region2VecFineTuner:
         tokenizer: ITTokenizer = None,
         region2vec: Union[Region2Vec, str] = None,
         device: str = None,
-        freeze_r2v: bool = False,
+        pooling: POOLING_TYPES = "mean",
         **kwargs,
     ):
         """
         Initialize the Region2Vec fine tuning model from a huggingface model or from scratch.
         """
 
-        # there really are two models here, the Region2Vec model and the SingleCellTypeClassifier model
+        # there really are two models here, the Region2Vec model and the FineTuning model
         # which holds the Region2Vec model. The Region2Vec model ideally is pre-trained, but can be trained
-        # from scratch if a tokenizer is passed. The SingleCellTypeClassifier model is always trained from scratch.
+        # from scratch if a tokenizer is passed. The Finetuning model is always trained from scratch.
         self._model: RegionSet2Vec
         self.region2vec: Region2Vec
         self.device = device
         self.trained = False
+        self.pooling_method = pooling
 
         # check for completely blank initialization
         if all(
@@ -102,7 +119,7 @@ class Region2VecFineTuner:
             self._init_from_huggingface(model_path)
             self.trained = True
         else:
-            self._init_model(region2vec, tokenizer, freeze_r2v, **kwargs)
+            self._init_model(region2vec, tokenizer, **kwargs)
 
     def _load_local_region2vec_model(self, model_path: str, vocab_path: str, config_path: str):
         """
@@ -110,25 +127,16 @@ class Region2VecFineTuner:
 
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
+        :param str config_path: Path to the config file.
         """
-        self._model_path = model_path
-        self._universe_path = vocab_path
-
-        # init the tokenizer - only one option for now
-        self.tokenizer = ITTokenizer(vocab_path)
-
-        # load the model state dict (weights)
-        params = torch.load(model_path)
-
-        # get the model config (vocab size, embedding size)
-        with open(config_path, "r") as f:
-            config = safe_load(f)
-
-        self.region2vec = Region2Vec(
-            config["vocab_size"],
-            embedding_dim=config["embedding_size"],
+        _model, tokenizer, config = load_local_region2vec_model(
+            model_path, vocab_path, config_path
         )
-        self.region2vec.load_state_dict(params)
+
+        self.region2vec = _model
+        self.tokenizer = tokenizer
+        if POOLING_METHOD_KEY in config:
+            self.pooling_method = config[POOLING_METHOD_KEY]
 
     def _init_region2vec_from_huggingface(
         self,
@@ -146,6 +154,7 @@ class Region2VecFineTuner:
         :param str model_path: Path to the pre-trained model on huggingface.
         :param str model_file_name: Name of the model file.
         :param str universe_file_name: Name of the universe file.
+        :param str config_file_name: Name of the config file.
         :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
@@ -181,7 +190,7 @@ class Region2VecFineTuner:
                 "Invalid tokenizer passed. Must be either a path to a tokenizer, a huggingface tokenizer, or a tokenizer instance."
             )
 
-    def _init_model(self, region2vec, tokenizer, freeze_r2v: bool = False, **kwargs):
+    def _init_model(self, region2vec, tokenizer, **kwargs):
         """
         Initialize a new model from scratch. Ideally, someone is passing in a Region2Vec instance,
         but in theory we can build one from scratch if we have a tokenizer.
@@ -198,7 +207,6 @@ class Region2VecFineTuner:
 
         :param Union[Region2Vec, str] region2vec: Either a Region2Vec instance or a path to a huggingface model.
         :param ITTokenizer tokenizer: The tokenizer to use. This is **required** if building a Region2Vec model from scratch.
-        :param bool freeze_r2v: Whether or not to freeze the Region2Vec model.
         :param kwargs: Additional keyword arguments to pass to the Region2Vec model.
         """
         # first init the tokenizer they passed in
@@ -231,7 +239,7 @@ class Region2VecFineTuner:
         ), "Tokenizer and Region2Vec vocab size mismatch. Are you sure they are compatible?"
 
         # build the model, finally using the region2vec model
-        self._model = RegionSet2Vec(self.region2vec, freeze_r2v=freeze_r2v)
+        self._model = RegionSet2Vec(self.region2vec, self.pooling_method)
 
     def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
@@ -255,9 +263,8 @@ class Region2VecFineTuner:
             embedding_dim=config["embedding_size"],
         )
 
-        self._label_mapping = config["label_mapping"]
-
-        self._model = RegionSet2Vec(self.region2vec)
+        self.pooling_method = config["pooling_method"]
+        self._model = RegionSet2Vec(self.region2vec, self.pooling_method)
         self._model.load_state_dict(params)
 
     def _init_from_huggingface(
@@ -536,74 +543,12 @@ class Region2VecFineTuner:
 
         :param str path: Path to export the model to.
         """
-        # make sure the path exists
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        # detach the model from the data parallel
-        if isinstance(self._model, nn.DataParallel):
-            self._model = self._model.module
-
-        # move model to cpu
-        self._model.cpu()
-
-        # export the model weights
-        torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
-
-        # export the vocabulary
-        with open(os.path.join(path, universe_file), "a") as f:
-            for region in self.tokenizer.universe.regions:
-                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
-
-        # export the config (vocab size, embedding size)
-        embedding_size = self._model.region2vec.embedding_dim
-
-        config = {
-            "vocab_size": len(self.tokenizer),
-            "embedding_size": embedding_size,
-        }
-
-        with open(os.path.join(path, config_file), "w") as f:
-            safe_dump(config, f)
-
-    def export_region2vec(
-        self,
-        path: str,
-        checkpoint_file: str = MODEL_FILE_NAME,
-        universe_file: str = UNIVERSE_FILE_NAME,
-        config_file: str = CONFIG_FILE_NAME,
-    ):
-        """
-        Export the core Region2Vec model that has been fine-tuned through the classification model.
-
-        This is useful if you want to use the Region2Vec model for other purposes.
-        """
-        # make sure the path exists
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        # detach the model from the data parallel
-        if isinstance(self._model, nn.DataParallel):
-            self._model = self._model.module
-
-        # move model to cpu
-        self._model.cpu()
-
-        # export the model weights
-        torch.save(self._model.region2vec.state_dict(), os.path.join(path, checkpoint_file))
-
-        # export the vocabulary
-        with open(os.path.join(path, universe_file), "a") as f:
-            for region in self.tokenizer.universe.regions:
-                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
-
-        # export the config (vocab size, embedding size)
-        embedding_size = self._model.region2vec.embedding_dim
-
-        config = {
-            "vocab_size": len(self.tokenizer),
-            "embedding_size": embedding_size,
-        }
-
-        with open(os.path.join(path, config_file), "w") as f:
-            safe_dump(config, f)
+        # export the model
+        export_region2vec_model(
+            self.region2vec,
+            path,
+            checkpoint_file,
+            universe_file,
+            config_file,
+            pooling=self.pooling_method,
+        )
