@@ -22,4 +22,5 @@ UNIVERSE_FILE_NAME = "universe.bed"
 
 POOLING_METHOD_KEY = "pooling_method"
 EMBEDDING_DIM_KEY = "embedding_dim"
+EMBEDDING_DIM_KEY_OLD = "embedding_size"
 VOCAB_SIZE_KEY = "vocab_size"

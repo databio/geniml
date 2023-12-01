@@ -32,6 +32,7 @@ def test_init_region2vec_finetuner_from_scratch():
     assert rs2v.region2vec == region2vec
 
 
+@pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
 def test_init_classifier_from_pretrained():
     # get pre-trained r2v
     r2v = Region2VecExModel("databio/r2v-ChIP-atlas-hg38-v2")
