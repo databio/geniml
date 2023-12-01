@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pytest
 import torch
-from torch.utils.data import DataLoader, Dataset
 
 from geniml.io.io import Region, RegionSet
 from geniml.region2vec.main import Region2Vec
