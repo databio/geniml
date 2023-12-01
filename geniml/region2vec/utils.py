@@ -6,16 +6,26 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from random import shuffle
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import numpy as np
+import torch
 
+from yaml import safe_dump, safe_load
+
+from ..tokenization.main import Tokenizer, ITTokenizer
 from .const import (
     LR_TYPES,
     DEFAULT_INIT_LR,
     DEFAULT_MIN_LR,
     MODULE_NAME,
+    CONFIG_FILE_NAME,
+    MODEL_FILE_NAME,
+    UNIVERSE_FILE_NAME,
+    VOCAB_SIZE_KEY,
+    EMBEDDING_DIM_KEY,
 )
+from .models import Region2Vec
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 
@@ -380,21 +390,77 @@ def shuffle_documents(
     return shuffled_documents
 
 
-def make_syn1neg_file_name(model_file_name: str) -> str:
+def export_region2vec_model(
+    model: torch.nn.Module,
+    tokenizer: Tokenizer,
+    path: str,
+    checkpoint_file: str = MODEL_FILE_NAME,
+    universe_file: str = UNIVERSE_FILE_NAME,
+    config_file: str = CONFIG_FILE_NAME,
+    **kwargs: Dict[str, any],
+):
     """
-    Make the syn1neg file name from the model file name.
+    Export the region2vec model to a folder
 
-    :param str model_file_name: The model file name.
-    :return str: The syn1neg file name.
+    :param torch.nn.Module model: The model to export
+    :param Tokenizer tokenizer: The tokenizer to export
+    :param str path: The path to export the model to
+    :param str checkpoint_file: The name of the checkpoint file to export
+    :param str universe_file: The name of the universe file to export
+    :param str config_file: The name of the config file to export
+    :param Dict[str, any] kwargs: Any additional arguments to pass to the config file
     """
-    return f"{model_file_name}.syn1neg.npy"
+    # make sure the path exists
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    # export the model weights
+    torch.save(model.state_dict(), os.path.join(path, checkpoint_file))
+
+    # export the vocabulary
+    with open(os.path.join(path, universe_file), "a") as f:
+        for region in tokenizer.universe.regions:
+            f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+
+    # export the config (vocab size, embedding size)
+    config = {
+        VOCAB_SIZE_KEY: len(tokenizer),
+        EMBEDDING_DIM_KEY: model.embedding_dim,
+    }
+    if kwargs:
+        config.update(kwargs)
+
+    with open(os.path.join(path, config_file), "w") as f:
+        safe_dump(config, f)
 
 
-def make_wv_file_name(model_file_name: str) -> str:
+def load_local_region2vec_model(
+    model_path: str,
+    vocab_path: str,
+    config_path: str,
+) -> Tuple[Region2Vec, ITTokenizer, dict]:
     """
-    Make the wv file name from the model file name.
+    Load a region2vec model from a local directory
 
-    :param str model_file_name: The model file name.
-    :return str: The wv file name.
+    :param str model_path: The path to the model checkpoint file
+    :param str config_path: The path to the model config file
+    :param str vocab_path: The path to the model vocabulary file
     """
-    return f"{model_file_name}.wv.vectors.npy"
+    # init the tokenizer - only one option for now
+    tokenizer = ITTokenizer(vocab_path)
+
+    # load the model state dict (weights)
+    params = torch.load(model_path)
+
+    # get the model config (vocab size, embedding size)
+    with open(config_path, "r") as f:
+        config = safe_load(f)
+
+    model = Region2Vec(
+        config[VOCAB_SIZE_KEY],
+        embedding_dim=config[EMBEDDING_DIM_KEY],
+    )
+
+    model.load_state_dict(params)
+
+    return model, tokenizer, config
