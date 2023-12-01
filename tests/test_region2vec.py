@@ -26,7 +26,7 @@ def test_init_region2vec():
 
 @pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
 def test_pretrained_model():
-    model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38")
+    model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38-v2")
 
     region = Region("chr1", 63403166, 63403785)
     embedding = model.encode(region)

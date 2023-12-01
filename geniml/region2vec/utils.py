@@ -24,6 +24,7 @@ from .const import (
     UNIVERSE_FILE_NAME,
     VOCAB_SIZE_KEY,
     EMBEDDING_DIM_KEY,
+    EMBEDDING_DIM_KEY_OLD,
 )
 from .models import Region2Vec
 
@@ -456,9 +457,21 @@ def load_local_region2vec_model(
     with open(config_path, "r") as f:
         config = safe_load(f)
 
+    # try with new key first, then old key for backwards compatibility
+    embedding_dim = config.get(EMBEDDING_DIM_KEY, config.get(EMBEDDING_DIM_KEY_OLD))
+    if embedding_dim is None:
+        raise KeyError(
+            f"Could not find embedding dimension in config file. Expected key {EMBEDDING_DIM_KEY} or {EMBEDDING_DIM_KEY_OLD}."
+        )
+    else:
+        if EMBEDDING_DIM_KEY_OLD in config:
+            _LOGGER.warning(
+                f"Found old key {EMBEDDING_DIM_KEY_OLD} in config file. This key will be deprecated in future versions. Please notify this models maintainer."
+            )
+
     model = Region2Vec(
         config[VOCAB_SIZE_KEY],
-        embedding_dim=config[EMBEDDING_DIM_KEY],
+        embedding_dim=embedding_dim,
     )
 
     model.load_state_dict(params)
