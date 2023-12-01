@@ -191,10 +191,13 @@ def generate_fine_tuning_dataset(
             positive_pairs.append(
                 (adata_ct.obs["tokens"].iloc[ppair[0]], adata_ct.obs["tokens"].iloc[ppair[1]])
             )
+            # notice that we are appending one from the cell type and one from the not cell type
+            # this ensures that the negative pairs are actually negative, otherwise
+            # its possible that the negative pairs are actually positive (we happen to select two cells from the same cell type)
             negative_pairs.append(
                 (
                     adata_not_ct.obs["tokens"].iloc[npair[0]],
-                    adata_not_ct.obs["tokens"].iloc[npair[1]],
+                    adata_ct.obs["tokens"].iloc[npair[1]],
                 )
             )
 
