@@ -10,7 +10,6 @@ from rich.progress import Progress
 from torch.utils.data import DataLoader
 from huggingface_hub import hf_hub_download
 from sklearn.model_selection import train_test_split
-from yaml import safe_load
 
 from .const import (
     MODULE_NAME,
@@ -33,7 +32,11 @@ from .utils import (
 
 from ..tokenization.main import ITTokenizer
 from ..region2vec.main import Region2Vec
-from ..region2vec.const import DEFAULT_EMBEDDING_SIZE, POOLING_TYPES, POOLING_METHOD_KEY
+from ..region2vec.const import (
+    DEFAULT_EMBEDDING_DIM,
+    POOLING_TYPES,
+    POOLING_METHOD_KEY,
+)
 from ..region2vec.utils import export_region2vec_model, load_local_region2vec_model
 
 _LOGGER = logging.getLogger(MODULE_NAME)
@@ -231,7 +234,7 @@ class Region2VecFineTuner:
         else:
             self.region2vec = Region2Vec(
                 len(self.tokenizer),
-                embedding_dim=kwargs.get("embedding_dim") or DEFAULT_EMBEDDING_SIZE,
+                embedding_dim=kwargs.get("embedding_dim") or DEFAULT_EMBEDDING_DIM,
             )
 
         assert (
@@ -248,24 +251,12 @@ class Region2VecFineTuner:
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
         """
-        # init the tokenizer - only one option for now
-        self.tokenizer = ITTokenizer(vocab_path)
+        r2v, tokenizer, config = load_local_region2vec_model(model_path, vocab_path, config_path)
 
-        # load the model state dict (weights)
-        params = torch.load(model_path)
-
-        # get the model config (vocab size, embedding size)
-        with open(config_path, "r") as f:
-            config = safe_load(f)
-
-        self.region2vec = Region2Vec(
-            config["vocab_size"],
-            embedding_dim=config["embedding_size"],
-        )
-
-        self.pooling_method = config["pooling_method"]
-        self._model = RegionSet2Vec(self.region2vec, self.pooling_method)
-        self._model.load_state_dict(params)
+        self._model = RegionSet2Vec(r2v, config[POOLING_METHOD_KEY])
+        self.region2vec = r2v
+        self.tokenizer = tokenizer
+        self.pooling_method = config[POOLING_METHOD_KEY]
 
     def _init_from_huggingface(
         self,
@@ -544,11 +535,13 @@ class Region2VecFineTuner:
         :param str path: Path to export the model to.
         """
         # export the model
+        kwargs = {POOLING_METHOD_KEY: self.pooling_method}
         export_region2vec_model(
             self.region2vec,
+            self.tokenizer,
             path,
             checkpoint_file,
             universe_file,
             config_file,
-            pooling=self.pooling_method,
+            **kwargs,
         )

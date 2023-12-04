@@ -18,7 +18,7 @@ from ..region2vec.main import Region2Vec
 from ..tokenization import ITTokenizer, Tokenizer
 from ..region2vec.const import (
     POOLING_TYPES,
-    DEFAULT_EMBEDDING_SIZE,
+    DEFAULT_EMBEDDING_DIM,
     DEFAULT_WINDOW_SIZE,
     DEFAULT_MIN_COUNT,
     DEFAULT_EPOCHS,
@@ -105,7 +105,7 @@ class ScEmbed:
 
         self._model = Region2Vec(
             len(self.tokenizer),
-            embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
+            embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_DIM),
         )
 
     @property
