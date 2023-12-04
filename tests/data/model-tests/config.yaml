@@ -1,0 +1,3 @@
+embedding_dim: 100
+pooling_method: mean
+vocab_size: 2380

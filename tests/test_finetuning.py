@@ -1,7 +1,9 @@
+import os
 from typing import Literal
 
 import torch
 import pytest
+import numpy as np
 import scanpy as sc
 
 from geniml.tokenization.main import ITTokenizer
@@ -79,3 +81,52 @@ def test_train_exmodel():
     assert result is not None
     assert model.trained
     assert result.epoch_loss[0] > result.all_loss[-1]
+
+
+def test_export_exmodel():
+    r2v = Region2Vec(2380, 100)
+    model = Region2VecFineTuner(region2vec=r2v, tokenizer="tests/data/universe.bed")
+    assert model is not None
+
+    # grab some weights from the inner r2v
+    r2v_weights = model.region2vec.projection.weight.detach().clone().numpy()
+
+    # save
+    try:
+        model.export("tests/data/model-tests")
+        model = Region2VecFineTuner.from_pretrained("tests/data/model-tests")
+
+        # ensure model is still trained and has region2vec
+        assert model.trained
+
+        # ensure weights are the same
+        assert np.allclose(
+            r2v_weights, model.region2vec.projection.weight.detach().clone().numpy()
+        )
+    finally:
+        for file in os.listdir("tests/data/model-tests"):
+            os.remove(os.path.join("tests/data/model-tests", file))
+
+
+def test_train_ex_model_save_load():
+    data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
+    model = Region2VecFineTuner(
+        region2vec=Region2Vec(2380, 100),
+        tokenizer="tests/data/universe.bed",
+    )
+    torch.manual_seed(0)  # for reproducibility
+    result = model.train(data, label_key="cell_type", batch_size=2, epochs=50, seed=42)
+    assert model.trained
+    assert result.all_loss[0] > result.all_loss[-1]
+
+    input_tokens = [t.id for t in model.tokenizer.tokenize(data[0, :].to_memory())[0]]
+    input_tokens = torch.tensor(input_tokens).unsqueeze(0)
+
+    pre_save_output = model._model(input_tokens)
+
+    model.export("tests/data/model-tests")
+    model = Region2VecFineTuner.from_pretrained("tests/data/model-tests")
+
+    post_save_output = model._model(input_tokens)
+
+    assert np.allclose(pre_save_output.detach().numpy(), post_save_output.detach().numpy())

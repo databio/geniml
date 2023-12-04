@@ -21,7 +21,7 @@ from .utils import (
 from .const import (
     MODULE_NAME,
     DEFAULT_WINDOW_SIZE,
-    DEFAULT_EMBEDDING_SIZE,
+    DEFAULT_EMBEDDING_DIM,
     DEFAULT_MIN_COUNT,
     DEFAULT_EPOCHS,
     UNIVERSE_FILE_NAME,
@@ -258,7 +258,7 @@ class Region2VecExModel:
         self._init_tokenizer(tokenizer)
         self._model = Region2Vec(
             len(self.tokenizer),
-            embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
+            embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_DIM),
         )
 
     @property

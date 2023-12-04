@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .const import DEFAULT_EMBEDDING_SIZE
+from .const import DEFAULT_EMBEDDING_DIM
 
 
 class Word2Vec(nn.Module):
@@ -12,7 +12,7 @@ class Word2Vec(nn.Module):
     def __init__(
         self,
         vocab_size: int,
-        embedding_dim: int = DEFAULT_EMBEDDING_SIZE,
+        embedding_dim: int = DEFAULT_EMBEDDING_DIM,
     ):
         super().__init__()
         self.vocab_size = vocab_size
@@ -28,6 +28,6 @@ class Region2Vec(Word2Vec):
     def __init__(
         self,
         vocab_size: int,
-        embedding_dim: int = DEFAULT_EMBEDDING_SIZE,
+        embedding_dim: int = DEFAULT_EMBEDDING_DIM,
     ):
         super().__init__(vocab_size, embedding_dim)
