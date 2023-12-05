@@ -112,11 +112,14 @@ def main(test_args=None):
         )
 
     if args.command == "bbclient":
-        from .bbclient import BBClient
-        from .bbclient.utils import get_bbclient_path_folder
+        if args.subcommand is not None:
+            from .bbclient import BBClient
+            from .bbclient.utils import get_bbclient_path_folder
 
-        cache_path = get_bbclient_path_folder(args.cache_folder)
-        bbc = BBClient(cache_path)
+            cache_path = get_bbclient_path_folder(args.cache_folder)
+            bbc = BBClient(cache_path)
+        else:
+            _LOGGER.error("Subcommand is missing")
         if args.subcommand == "cache-bed":
             import os
 
