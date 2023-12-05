@@ -15,7 +15,7 @@ from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
                     DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
                     DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
                     DEFAULT_BEDSET_SUBFOLDER, MODULE_NAME)
-from .utils import BedCacheManager
+from .utils import BedCacheManager, get_bbclient_path_folder
 
 _LOGGER = getLogger(MODULE_NAME)
 
@@ -34,7 +34,7 @@ class BBClient(BedCacheManager):
         :param bedbase_api: url to bedbase
         """
         # get default cache folder from environment variable set by user
-        super().__init__(os.environ.get("BBCLIENT_CACHE", cache_folder))
+        super().__init__(get_bbclient_path_folder(cache_folder))
         self.bedbase_api = bedbase_api
 
     def load_bedset(self, bedset_id: str) -> BedSet:
