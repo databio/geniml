@@ -18,7 +18,7 @@ from geniml.bbclient import BBClient
 bbclient = BBClient(cache_folder="cache", bedbase_api="https://api.bedbase.org
 ```
 
-### Download and cache a remote BED file from BEDbase
+### Download and cache a remote BED file from BEDbase 
 
 ```python
 bedfile_id = "...."  # find interesting bedfile on bedbase
@@ -38,8 +38,8 @@ bedfile_id = bbclient.add_bed_to_cache(bedfile) # compute its ID and add it to t
 ### Load a BED file from cache into Python session
 
 ```python
-# code here on how to load BED file from cache
-
+bedfile_id = "...."  # get the identifier
+bedfile = bbclient.load_bed(bedfile_id)  # the same function can also load BED files that have already been cached
 ```
 
 
