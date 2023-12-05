@@ -1,8 +1,14 @@
 # BED File Retrieval and Processing
 
-This client downloads, processes, and caches BED files and BED sets from the BEDbase API and converts them into a GenomicRanges or GenomicRangesList object. It provides various commands to interact with BED files, including downloading individual files, downloading BEDsets, processing local BED files, and processing BED file identifiers.
+The BEDbase client command `bbclient` downloads, processes, and caches BED files and BED sets from the BEDbase API and converts them into GenomicRanges or GenomicRangesList objects.
+It provides various commands to interact with BED files, including downloading individual files, downloading BEDsets, processing local BED files, and processing BED file identifiers.
 
-## Usage
+This document provides tutorials for using `bbclient` via either:
+
+1. the [Python interface](#getting-started-python-interface), or
+2. the [command-line interface](#command-line-interface).
+
+## Getting started: Python interface
 
 ### Create an Instance of the BBClient Class:
 
@@ -12,7 +18,7 @@ from geniml.bbclient import BBClient
 bbclient = BBClient(cache_folder="cache", bedbase_api="https://api.bedbase.org
 ```
 
-### Download and cache a BED file from BEDbase
+### Download and cache a remote BED file from BEDbase
 
 ```python
 bedfile_id = "...."  # find interesting bedfile on bedbase
@@ -29,7 +35,7 @@ gr = bedfile.to_granges()  # should return a GenomicRanges object
 bedfile_id = bbclient.add_bed_to_cache(bedfile) # compute its ID and add it to the cache
 ```
 
-### Download cache a BEDset from BEDbase
+### Download and cache a BEDset from BEDbase
 
 ```python
 bedset_identifier = "xyz" # find some interesting bedset on bedbase.org
@@ -49,25 +55,34 @@ bedset = BedSet(
 bedset_id = bbclient.add_bedset_to_cache(bedset)
 ```
 
-## For command line usage, run the CLI with appropriate subcommands and arguments as described below:
+## Command line interface
 
 ### Cache BED file
 
 ```bash
-geniml bbclient cache-bed --input-identifier <path_to_BED_file_or_identifier_or_url>
+geniml bbclient cache-bed --input-identifier <BED_file_or_identifier_or_url>
 ```
 
-Replace  <path_to_BED_file_or_identifier_or_url> with the path to the local BED file or BED file's identifier or url.
+The `<BED_file_or_identifier_or_url>` variable can be one of 3 things:
 
-### Cache BED set
+1. a path to a local BED file;
+2. a BED record identifier from BEDbase; or,
+3. a URL to a BED file hosted anywhere.
+
+### Cache BEDset
 
 ```bash
-geniml bbclient cache-bedset --input-identifier <path_to_BED_files_folder_or_identifier>
+geniml bbclient cache-bedset --input-identifier <BED_files_folder_or_identifier>
 ```
 
-Replace  <path_to_BED_files_folder_or_identifier> with path to the folder of BED files or the BEDset identifier
+The `<BED_files_folder_or_identifier>` variable may be:
+
+1. local path to a folder containing BED files; or,
+2. a BEDbase BEDset identifier
 
 ### Seek the path of a BED file or BEDset in cache folder
+
+To retrieve the local file path to a BED file stored locally,
 
 ```bash
 geniml bbclient seek --input-identifier <identifier>
