@@ -16,11 +16,16 @@ def test_generate_finetuning_dataset():
     t = ITTokenizer("tests/data/universe.bed")
     adata = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
 
-    pos, neg, pos_labels, neg_labels = generate_fine_tuning_dataset(adata, t)
+    pos, neg, pos_labels, neg_labels = generate_fine_tuning_dataset(adata, t, negative_ratio=1.0)
+
+    # total positive pairs should be equal to total negative pairs
+    # total positive pairs will be equal to sum([n*(n - 1) for n in adata.obs.groupby("cell_type").size()])
+    # total negative pairs only equals number of positive pairs when negative_ratio=1.0
 
     assert len(pos) == len(neg)
     assert len(pos) == len(pos_labels)
     assert len(neg) == len(neg_labels)
+    assert len(pos) == sum([(n * (n - 1)) for n in adata.obs.groupby("cell_type").size()])
 
 
 def test_init_region2vec_finetuner_from_scratch():
@@ -39,7 +44,7 @@ def test_init_classifier_from_pretrained():
     # get pre-trained r2v
     r2v = Region2VecExModel("databio/r2v-ChIP-atlas-hg38-v2")
 
-    # create classifier
+    # create RegionSet2Vec
     rs2v = RegionSet2Vec(r2v.model)
 
     assert rs2v.region2vec.embedding_dim == 100
