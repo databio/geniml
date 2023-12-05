@@ -1,4 +1,4 @@
-# BED File Retrieval and Processing
+# BED file caching and loading from BEDbase
 
 The BEDbase client command `bbclient` downloads, processes, and caches BED files and BED sets from the BEDbase API and converts them into GenomicRanges or GenomicRangesList objects.
 It provides various commands to interact with BED files, including downloading individual files, downloading BEDsets, processing local BED files, and processing BED file identifiers.
@@ -10,7 +10,7 @@ This document provides tutorials for using `bbclient` via either:
 
 ## Getting started: Python interface
 
-### Create an Instance of the BBClient Class:
+### Create an instance of the BBClient Class:
 
 ```python
 from geniml.bbclient import BBClient
@@ -34,6 +34,14 @@ bedfile = RegionSet("path/to/bedfile")
 gr = bedfile.to_granges()  # should return a GenomicRanges object
 bedfile_id = bbclient.add_bed_to_cache(bedfile) # compute its ID and add it to the cache
 ```
+
+### Load a BED file from cache into Python session
+
+```python
+# code here on how to load BED file from cache
+
+```
+
 
 ### Download and cache a BEDset from BEDbase
 
