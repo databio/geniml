@@ -112,11 +112,10 @@ def main(test_args=None):
         )
 
     if args.command == "bbclient":
-        import os
-
         from .bbclient import BBClient
+        from .bbclient.utils import get_bbclient_path_folder
 
-        cache_path = os.environ.get("BBCLIENT_CACHE", args.cache_folder)
+        cache_path = get_bbclient_path_folder(args.cache_folder)
         bbc = BBClient(cache_path)
         if args.subcommand == "cache-bed":
             import os
