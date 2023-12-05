@@ -112,9 +112,12 @@ def main(test_args=None):
         )
 
     if args.command == "bbclient":
+        import os
+
         from .bbclient import BBClient
 
-        bbc = BBClient(args.cache_folder)
+        cache_path = os.environ.get("BBCLIENT_CACHE", args.cache_folder)
+        bbc = BBClient(cache_path)
         if args.subcommand == "cache-bed":
             import os
 
@@ -157,10 +160,10 @@ def main(test_args=None):
             import os
 
             _LOGGER.info(f"Bedfiles directory:")
-            os.system(f"tree {os.path.join(args.cache_folder, 'bedfiles')} | tail -n 1")
+            os.system(f"tree {os.path.join(cache_path, 'bedfiles')} | tail -n 1")
 
             _LOGGER.info(f"Bedsets directory:")
-            os.system(f"tree {os.path.join(args.cache_folder, 'bedsets')} | tail -n 1")
+            os.system(f"tree {os.path.join(cache_path, 'bedsets')} | tail -n 1")
 
         if args.subcommand == "rm":
             _LOGGER.info(f"Subcommand: {args.subcommand}")
