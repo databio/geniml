@@ -1,3 +1,6 @@
+import contextlib
+import random
+from random import shuffle
 from typing import Tuple, List
 
 import torch
@@ -9,6 +12,16 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
 from ..tokenization.main import ITTokenizer
+
+
+@contextlib.contextmanager
+def tempseed(seed: int):
+    state = random.getstate()
+    random.seed(seed)
+    try:
+        yield
+    finally:
+        random.setstate(state)
 
 
 def collate_classification_batch(
@@ -129,7 +142,7 @@ def generate_fine_tuning_dataset(
     tokenizer: ITTokenizer,
     cell_type_key: str = "cell_type",
     seed: int = 42,
-    negative_ratio: float = 1.0,
+    negative_ratio: float = None,
 ) -> Tuple[
     List[Tuple[List[int], List[int]]], List[Tuple[List[int], List[int]]], List[int], List[int]
 ]:
@@ -170,35 +183,32 @@ def generate_fine_tuning_dataset(
         adata_ct = adata[adata.obs[cell_type_key] == ct]
         adata_not_ct = adata[adata.obs[cell_type_key] != ct]
 
-        # generate number of positive and negative pairs
-        # shaves off the remainder if odd, will never be more than 1,
-        # so worst case is 1 pair lost
-        npos_pairs = int(len(adata_ct) - len(adata_ct) % 2)
-        nneg_pairs = int((npos_pairs * negative_ratio) - (npos_pairs * negative_ratio) % 2)
+        # generate pairwise combinations of the cells
+        pos_indexes = list(range(len(adata_ct)))
+        neg_indexes = list(range(len(adata_not_ct)))
 
-        # generate random permutations of the indices
-        with torch.random.fork_rng():
-            torch.random.manual_seed(seed)
-            pos_indices = torch.randperm(npos_pairs).tolist()
-            neg_indices = torch.randperm(nneg_pairs).tolist()
+        # positive pair generation
+        pos = [
+            (adata_ct.obs["tokens"][i], adata_ct.obs["tokens"][j])
+            for i in pos_indexes
+            for j in pos_indexes
+            if i != j  # don't include the same cell
+        ]
+        positive_pairs.extend(pos)
 
-        # generate pairs
-        pos_pairs = torch.tensor(pos_indices).reshape(-1, 2).tolist()
-        neg_pairs = torch.tensor(neg_indices).reshape(-1, 2).tolist()
+        # negative pair generation
+        neg = [
+            (adata_ct.obs["tokens"][i], adata_not_ct.obs["tokens"][j])
+            for i in pos_indexes
+            for j in neg_indexes
+        ]
 
-        # extend the positive and negative pairs (dont convert to tensor yet)
-        for ppair, npair in zip(pos_pairs, neg_pairs):
-            positive_pairs.append(
-                (adata_ct.obs["tokens"].iloc[ppair[0]], adata_ct.obs["tokens"].iloc[ppair[1]])
-            )
-            # notice that we are appending one from the cell type and one from the not cell type
-            # this ensures that the negative pairs are actually negative, otherwise
-            # its possible that the negative pairs are actually positive (we happen to select two cells from the same cell type)
-            negative_pairs.append(
-                (
-                    adata_not_ct.obs["tokens"].iloc[npair[0]],
-                    adata_ct.obs["tokens"].iloc[npair[1]],
-                )
-            )
+        if negative_ratio:
+            # shuffle then take the first n pairs
+            with tempseed(seed):
+                shuffle(neg)
+                neg = neg[: int(len(pos) * negative_ratio)]
+
+        negative_pairs.extend(neg)
 
     return positive_pairs, negative_pairs, [1] * len(positive_pairs), [-1] * len(negative_pairs)
