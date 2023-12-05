@@ -11,17 +11,10 @@ from .._version import __version__
 from ..exceptions import GenimlBaseError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
-from .const import (
-    BEDFILE_URL_PATTERN,
-    BEDSET_URL_PATTERN,
-    DEFAULT_BEDBASE_API,
-    DEFAULT_BEDFILE_EXT,
-    DEFAULT_BEDFILE_SUBFOLDER,
-    DEFAULT_BEDSET_EXT,
-    DEFAULT_BEDSET_SUBFOLDER,
-    DEFAULT_CACHE_FOLDER,
-    MODULE_NAME,
-)
+from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
+                    DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
+                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
+                    DEFAULT_BEDSET_SUBFOLDER, MODULE_NAME)
 from .utils import BedCacheManager
 
 _LOGGER = getLogger(MODULE_NAME)
@@ -30,7 +23,7 @@ _LOGGER = getLogger(MODULE_NAME)
 class BBClient(BedCacheManager):
     def __init__(
         self,
-        cache_folder: Union[str, None] = DEFAULT_CACHE_FOLDER,
+        cache_folder: Union[str, None] = None,
         bedbase_api: str = DEFAULT_BEDBASE_API,
     ):
         """
@@ -40,8 +33,8 @@ class BBClient(BedCacheManager):
         if not given it will be the environment variable `BBCLIENT_CACHE`
         :param bedbase_api: url to bedbase
         """
-
-        super().__init__(cache_folder)
+        # get default cache folder from environment variable set by user
+        super().__init__(os.environ.get("BBCLIENT_CACHE", cache_folder))
         self.bedbase_api = bedbase_api
 
     def load_bedset(self, bedset_id: str) -> BedSet:
