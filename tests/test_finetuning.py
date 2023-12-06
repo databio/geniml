@@ -16,7 +16,9 @@ def test_generate_finetuning_dataset():
     t = ITTokenizer("tests/data/universe.bed")
     adata = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
 
-    pos, neg, pos_labels, neg_labels = generate_fine_tuning_dataset(adata, t, negative_ratio=1.0)
+    pos, neg, pos_labels, neg_labels = generate_fine_tuning_dataset(
+        adata, t, negative_ratio=1.0, sample_size=2
+    )
 
     # total positive pairs should be equal to total negative pairs
     # total positive pairs will be equal to sum([n*(n - 1) for n in adata.obs.groupby("cell_type").size()])
