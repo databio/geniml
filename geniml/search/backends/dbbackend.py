@@ -24,6 +24,7 @@ class QdrantBackend(EmSearchBackend):
         collection: str = DEFAULT_COLLECTION_NAME,
         qdrant_host: str = DEFAULT_QDRANT_HOST,
         qdrant_port: int = DEFAULT_QDRANT_PORT,
+        qdrant_api_key: str = None,
     ):
         """
         Connect to Qdrant on commandline first:
@@ -41,7 +42,7 @@ class QdrantBackend(EmSearchBackend):
         self.qd_client = QdrantClient(
             url=self.url,
             port=self.port,
-            api_key=os.environ.get("QDRANT_API_KEY", None),
+            api_key=os.environ.get("QDRANT_API_KEY", qdrant_api_key),
         )
 
         # Create collection only if it does not exist
