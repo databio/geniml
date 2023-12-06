@@ -142,6 +142,7 @@ def generate_fine_tuning_dataset(
     tokenizer: ITTokenizer,
     cell_type_key: str = "cell_type",
     seed: int = 42,
+    sample_size: int = None,
     negative_ratio: float = None,
 ) -> Tuple[
     List[Tuple[List[int], List[int]]], List[Tuple[List[int], List[int]]], List[int], List[int]
@@ -159,6 +160,7 @@ def generate_fine_tuning_dataset(
     :param ITTokenizer tokenizer: The tokenizer to use for tokenizing the regions.
     :param str cell_type_key: The key in the obs that contains the cell type labels.
     :param int seed: The seed to use for generating the pairs.
+    :param int sample_size: The number of pairs to sample. If None, all possible pairs will be used.
     :param float negative_ratio: The ratio of negative pairs to positive pairs.
     :return: A tuple of positive pairs, negative pairs, positive labels, and negative labels.
     """
@@ -186,6 +188,14 @@ def generate_fine_tuning_dataset(
         # generate pairwise combinations of the cells
         pos_indexes = list(range(len(adata_ct)))
         neg_indexes = list(range(len(adata_not_ct)))
+
+        if sample_size:
+            # shuffle then take the first n pairs
+            with tempseed(seed):
+                shuffle(pos_indexes)
+                shuffle(neg_indexes)
+                pos_indexes = pos_indexes[:sample_size]
+                neg_indexes = neg_indexes[:sample_size]
 
         # positive pair generation
         pos = [
