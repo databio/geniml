@@ -367,7 +367,7 @@ class Region2VecFineTuner:
         data = self._validate_data(data, label_key)
 
         pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
-            data, self.tokenizer, seed=seed
+            data, self.tokenizer, seed=seed, negative_ratio=1.0
         )
 
         # combine the positive and negative pairs
