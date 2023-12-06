@@ -189,7 +189,7 @@ def generate_fine_tuning_dataset(
 
         # positive pair generation
         pos = [
-            (adata_ct.obs["tokens"][i], adata_ct.obs["tokens"][j])
+            (adata_ct.obs["tokens"].iloc[i], adata_ct.obs["tokens"].iloc[j])
             for i in pos_indexes
             for j in pos_indexes
             if i != j  # don't include the same cell
@@ -198,7 +198,7 @@ def generate_fine_tuning_dataset(
 
         # negative pair generation
         neg = [
-            (adata_ct.obs["tokens"][i], adata_not_ct.obs["tokens"][j])
+            (adata_ct.obs["tokens"].iloc[i], adata_not_ct.obs["tokens"].iloc[j])
             for i in pos_indexes
             for j in neg_indexes
         ]
