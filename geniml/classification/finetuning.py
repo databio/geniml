@@ -339,6 +339,7 @@ class Region2VecFineTuner:
         optimizer_kwargs: dict = {},
         test_train_split: float = DEFAULT_TEST_TRAIN_SPLIT,
         seed: any = 42,
+        sample_size: int = None,
         learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         device: Union[List, str] = None,
         early_stopping: bool = False,
@@ -357,6 +358,7 @@ class Region2VecFineTuner:
         :param dict optimizer_kwargs: Additional keyword arguments to pass to the optimizer.
         :param float test_train_split: Fraction of data to use for training (defaults to 0.8).
         :param any seed: Random seed to use.
+        :param int sample_size: Number of samples to use for training. If not passed, all possible samples will be used.
         :param torch.optim.lr_scheduler._LRScheduler learning_rate_scheduler: Learning rate scheduler to use.
         :param Union[List, str] device: Device to use for training.
         :param bool early_stopping: Whether or not to use early stopping. The training loop will stop if the validation loss
@@ -367,7 +369,7 @@ class Region2VecFineTuner:
         data = self._validate_data(data, label_key)
 
         pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
-            data, self.tokenizer, seed=seed, negative_ratio=1.0
+            data, self.tokenizer, seed=seed, negative_ratio=1.0, sample_size=sample_size
         )
 
         # combine the positive and negative pairs
