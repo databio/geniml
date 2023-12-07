@@ -116,7 +116,7 @@ Replace <identifier> with the identifier of the BED file or BEDset you want to r
 
 ### Cache Folder
 
-By default, the downloaded and processed BED files are cached in the bed_cache folder. You can specify a different cache folder using the --cache-folder argument.
+By default, the downloaded and processed BED files are cached in the bed_cache folder. You can specify a different cache folder using the --cache-folder argument, or set the environment variable `BBCLIENT_CACHE`.
 The cache folder has this structure:
 ```
 cache_folder
