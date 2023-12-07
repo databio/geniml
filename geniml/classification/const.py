@@ -2,6 +2,10 @@ import torch
 
 MODULE_NAME = "geniml.classification"
 
+DDP_MASTER_ADDR = "localhost"
+DDP_MASTER_PORT = 12355
+DDP_BACKEND = "nccl"
+
 VOCAB_SIZE_KEY = "vocab_size"
 NUM_CLASSES_KEY = "num_classes"
 EMBEDDING_DIM_KEY = "embedding_dim"

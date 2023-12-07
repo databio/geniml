@@ -4,6 +4,9 @@ from typing import Union, List
 
 import torch
 import torch.nn as nn
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
+import torch.multiprocessing as mp
 import scanpy as sc
 
 from rich.progress import Progress
@@ -22,6 +25,9 @@ from .const import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_OPTIMIZER,
     DEFAULT_TEST_TRAIN_SPLIT,
+    DDP_MASTER_ADDR,
+    DDP_MASTER_PORT,
+    DDP_BACKEND,
 )
 from .utils import (
     generate_fine_tuning_dataset,
@@ -32,6 +38,7 @@ from .utils import (
 
 from ..tokenization.main import ITTokenizer
 from ..region2vec.main import Region2Vec
+from ..region2vec.models import RegionSet2Vec
 from ..region2vec.const import (
     DEFAULT_EMBEDDING_DIM,
     POOLING_TYPES,
@@ -40,49 +47,6 @@ from ..region2vec.const import (
 from ..region2vec.utils import export_region2vec_model, load_local_region2vec_model
 
 _LOGGER = logging.getLogger(MODULE_NAME)
-
-
-class MeanPooling(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return torch.mean(x, dim=1)
-
-
-class MaxPooling(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return torch.max(x, dim=1)
-
-
-class RegionSet2Vec(nn.Module):
-    def __init__(self, region2vec: Region2Vec, pooling: POOLING_TYPES = "mean"):
-        """
-        Initialize the RegionSet2Vec. RegionSet2Vec is a wrapper around the Region2Vec model that allows
-        pooling over a set of regions. This is useful for classification tasks where the input is a set of
-        regions, such as classifying a cell type based on the set of regions that are accessible.
-
-        :param Union[Region2Vec, str] region2vec: Either a Region2Vec instance or a path to a huggingface model.
-        :param POOLING_TYPES pooling: The pooling type to use. Either "mean" or "max".
-        """
-        super().__init__()
-
-        self.region2vec: Region2Vec = region2vec
-        # assign the pooling layer based on mean or max
-        if pooling == "mean":
-            self.pooling = MeanPooling()
-        elif pooling == "max":
-            self.pooling = MaxPooling()
-        else:
-            raise ValueError(f"Invalid pooling type {pooling} passed.")
-
-    def forward(self, x) -> torch.Tensor:
-        x = self.region2vec(x)
-        x = self.pooling(x)
-        return x
 
 
 class Region2VecFineTuner:
@@ -328,6 +292,25 @@ class Region2VecFineTuner:
         assert label_key in data.obs.columns, f"Label key {label_key} not found in data."
         return data
 
+    def _setup_ddp(self, rank: int, world_size: int):
+        """
+        Setup the DDP environment for training.
+
+        :param int rank: The rank of the current process.
+        :param int world_size: The number of processes.
+        """
+        os.environ["MASTER_ADDR"] = DDP_MASTER_ADDR
+        os.environ["MASTER_PORT"] = str(DDP_MASTER_PORT)
+
+        # initialize the process group
+        dist.init_process_group(DDP_BACKEND, rank=rank, world_size=world_size)
+
+    def _cleanup_ddp(self):
+        """
+        Cleanup the DDP environment.
+        """
+        dist.destroy_process_group()
+
     def train(
         self,
         data: Union[sc.AnnData, str],
@@ -403,7 +386,7 @@ class Region2VecFineTuner:
         # move the model to the device
         if isinstance(device, list):
             self._model = nn.DataParallel(self._model, device_ids=device)
-            self._model.to(device[0])
+            self._model.cuda()
         else:
             self._model.to(device)
 
