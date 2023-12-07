@@ -114,8 +114,9 @@ def main(test_args=None):
     if args.command == "bbclient":
         if args.subcommand is not None:
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            from .bbclient import BBClient
             import os
+
+            from .bbclient import BBClient
 
             cache_path = os.environ.get("BBCLIENT_CACHE", args.cache_folder)
             if cache_path is None:
@@ -145,39 +146,41 @@ def main(test_args=None):
                         sys.exit(1)
         if args.subcommand == "cache-bed":
             # if input is a BED file path
-            if os.path.exists(args.input_identifier):
+            if os.path.exists(args.identifier[0]):
                 from .io import RegionSet
 
-                bedfile = RegionSet(args.input_identifier)
+                bedfile = RegionSet(args.identifier[0])
                 bbc.add_bed_to_cache(bedfile)
                 _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
             else:
-                bedfile = bbc.load_bed(args.input_identifier)
+                bedfile = bbc.load_bed(args.identifier[0])
 
         if args.subcommand == "cache-bedset":
             import os
 
-            if os.path.isdir(args.input_identifier):
+            if os.path.isdir(args.identifier[0]):
                 from .io import BedSet
 
                 bedset = BedSet(
                     [
-                        os.path.join(args.input_identifier, file_name)
-                        for file_name in os.listdir(args.input_identifier)
+                        os.path.join(args.identifier[0], file_name)
+                        for file_name in os.listdir(args.identifier[0])
                     ]
                 )
                 bbc.add_bedset_to_cache(bedset)
                 _LOGGER.info(f"BED set {bedset.compute_bedset_identifier()} has been cached")
 
             else:
-                bedset = bbc.load_bedset(args.input_identifier)
+                bedset = bbc.load_bedset(args.identifier[0])
 
         if args.subcommand == "seek":
+            _LOGGER.info(args.identifier[0])
             import logging
+
             handler = logging.StreamHandler(sys.stdout)
             _LOGGER.addHandler(handler)
-            _LOGGER.info(bbc.seek(args.input_identifier))
-            # sys.stdout.write(bbc.seek(args.input_identifier))
+            _LOGGER.info(bbc.seek(args.identifier[0]))
+            # sys.stdout.write(bbc.seek(args.identifier[0))
         if args.subcommand == "inspect":
             import os
 
@@ -188,7 +191,7 @@ def main(test_args=None):
             os.system(f"tree {os.path.join(cache_path, 'bedsets')} | tail -n 1")
 
         if args.subcommand == "rm":
-            file_path = bbc.seek(args.input_identifier)
+            file_path = bbc.seek(args.identifier[0])
             bbc._remove(file_path)
             _LOGGER.info(f"{file_path} is removed")
 

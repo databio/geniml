@@ -9,7 +9,7 @@ def build_subparser_cache_bed(parser):
     """
     Builds argument parser to support to cache a BED file from local file or BEDbase.
     """
-    parser.add_argument("--input-identifier", help="BED file identifier, url, or file path")
+    parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
     parser.add_argument(
         "--cache-folder",
         default=None,
@@ -23,7 +23,7 @@ def build_subparser_cache_bedset(parser):
     """
     Builds argument parser to support to cache a BEDset from local folder or BEDbase.
     """
-    parser.add_argument("--input-identifier", help="BED file identifier, url, or file path")
+    parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
     parser.add_argument(
         "--cache-folder",
         default=None,
@@ -37,7 +37,7 @@ def build_subparser_seek(parser):
     """
     Builds argument parser to support to seek the path of BED file or BEDset.
     """
-    parser.add_argument("--input-identifier", help="BED file identifier, url, or file path")
+    parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
     parser.add_argument(
         "--cache-folder",
         default=None,
@@ -64,7 +64,7 @@ def build_subparser_remove(parser):
     """
     Builds argument parser to support to remove bed files or bedsets from the cache folder
     """
-    parser.add_argument("--input-identifier", help="BED file identifier, url, or file path")
+    parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
     parser.add_argument(
         "--cache-folder",
         default=None,

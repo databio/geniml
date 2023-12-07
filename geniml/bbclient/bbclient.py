@@ -11,17 +11,11 @@ from .._version import __version__
 from ..exceptions import GenimlBaseError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
-from .const import (
-    BEDFILE_URL_PATTERN,
-    BEDSET_URL_PATTERN,
-    DEFAULT_BEDBASE_API,
-    DEFAULT_BEDFILE_EXT,
-    DEFAULT_BEDFILE_SUBFOLDER,
-    DEFAULT_BEDSET_EXT,
-    DEFAULT_BEDSET_SUBFOLDER,
-    MODULE_NAME,
-    DEFAULT_CACHE_FOLDER,
-)
+from .const import (BEDFILE_URL_PATTERN, BEDSET_URL_PATTERN,
+                    DEFAULT_BEDBASE_API, DEFAULT_BEDFILE_EXT,
+                    DEFAULT_BEDFILE_SUBFOLDER, DEFAULT_BEDSET_EXT,
+                    DEFAULT_BEDSET_SUBFOLDER, DEFAULT_CACHE_FOLDER,
+                    MODULE_NAME)
 from .utils import BedCacheManager, get_bbclient_path_folder
 
 _LOGGER = getLogger(MODULE_NAME)
