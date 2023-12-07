@@ -174,7 +174,6 @@ def main(test_args=None):
                 bedset = bbc.load_bedset(args.identifier[0])
 
         if args.subcommand == "seek":
-            _LOGGER.info(args.identifier[0])
             import logging
 
             handler = logging.StreamHandler(sys.stdout)
