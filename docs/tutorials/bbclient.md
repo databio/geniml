@@ -68,7 +68,7 @@ bedset_id = bbclient.add_bedset_to_cache(bedset)
 ### Cache BED file
 
 ```bash
-geniml bbclient cache-bed --input-identifier <BED_file_or_identifier_or_url>
+geniml bbclient cache-bed <BED_file_or_identifier_or_url>
 ```
 
 The `<BED_file_or_identifier_or_url>` variable can be one of 3 things:
@@ -80,7 +80,7 @@ The `<BED_file_or_identifier_or_url>` variable can be one of 3 things:
 ### Cache BEDset
 
 ```bash
-geniml bbclient cache-bedset --input-identifier <BED_files_folder_or_identifier>
+geniml bbclient cache-bedset <BED_files_folder_or_identifier>
 ```
 
 The `<BED_files_folder_or_identifier>` variable may be:
@@ -93,7 +93,7 @@ The `<BED_files_folder_or_identifier>` variable may be:
 To retrieve the local file path to a BED file stored locally,
 
 ```bash
-geniml bbclient seek --input-identifier <identifier>
+geniml bbclient seek <identifier>
 ```
 
 Replace <identifier> with the identifier of the BED file or BEDset you want to seek.
@@ -109,7 +109,7 @@ geniml bbclient inspect
 ### Remove a BED file or BEDset from the cache folder 
 
 ```bash
-geniml bbclient rm ----input-identifier <identifier>
+geniml bbclient rm <identifier>
 ```
 
 Replace <identifier> with the identifier of the BED file or BEDset you want to remove.
