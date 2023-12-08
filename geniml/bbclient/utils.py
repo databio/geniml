@@ -6,6 +6,8 @@ from typing import Optional
 import genomicranges
 import pandas as pd
 
+from .const import DEFAULT_CACHE_FOLDER
+
 
 class BedCacheManager:
     def __init__(self, cache_folder: str):
@@ -58,3 +60,10 @@ class BedCacheManager:
         gr = genomicranges.from_pandas(df)
 
         return gr
+
+
+def get_bbclient_path_folder(path: str = DEFAULT_CACHE_FOLDER):
+    """
+    Get the cache folder path either from input or environment variable '$BBCLIENT_CACHE'
+    """
+    return os.path.expandvars(path)
