@@ -34,21 +34,26 @@ The bedshift object with methods to perturb regions
 
 
 ```python
-def __init__(self)
+def __init__(self, bedfile_path, chrom_sizes, delimiter='\t')
 ```
 
-Initialize self.  See help(type(self)) for accurate signature.
+Read in a .bed file to pandas DataFrame format
+#### Parameters:
+
+- `bedfile_path` (`str`):  the path to the BED file
+- `chrom_sizes` (`str`):  the path to the chrom.sizes file
+- `delimiter` (`str`):  the delimiter used in the BED file
+
 
 
 
 ```python
-def add(self, df, addrate, addmean, addstdev)
+def add(self, addrate, addmean, addstdev)
 ```
 
 Add regions
 #### Parameters:
 
-- `df` (`pandas.DataFrame`):  the dataframe to perturb
 - `addrate` (`float`):  the rate to add regions
 - `addmean` (`float`):  the mean length of added regions
 - `addstdev` (`float`):  the standard deviation of the length of added regions
@@ -56,33 +61,36 @@ Add regions
 
 #### Returns:
 
-- `pandas.DataFrame`:  the new dataframe object after adds
+- `int`:  the number of regions added
 
 
 
 
 ```python
-def add_from_file(self, df, fp, addrate)
+def add_from_file(self, fp, addrate, delimiter='\t')
 ```
 
 Add regions from another bedfile to this perturbed bedfile
 #### Parameters:
 
-- `df` (`pandas.DataFrame`):  the dataframe to perturb
 - `addrate` (`float`):  the rate to add regions
 - `fp` (`str`):  the filepath to the other bedfile
+
+
+#### Returns:
+
+- `int`:  the number of regions added
 
 
 
 
 ```python
-def all_perturbations(self, df, addrate=0.0, addmean=320.0, addstdev=30.0, addfile=None, shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0, cutrate=0.0, mergerate=0.0, droprate=0.0)
+def all_perturbations(self, addrate=0.0, addmean=320.0, addstdev=30.0, addfile=None, shiftrate=0.0, shiftmean=0.0, shiftstdev=150.0, cutrate=0.0, mergerate=0.0, droprate=0.0)
 ```
 
-Perform all five perturbations in the order of add, shift, cut, merge, drop.
+Perform all five perturbations in the order of shift, add, cut, merge, drop.
 #### Parameters:
 
-- `df` (`pandas.DataFrame`):  the dataframe to perturb.
 - `addrate` (`float`):  the rate (as a proportion of the total number of regions) to add regions
 - `addmean` (`float`):  the mean length of added regions
 - `addstdev` (`float`):  the standard deviation of the length of added regions
@@ -96,61 +104,58 @@ Perform all five perturbations in the order of add, shift, cut, merge, drop.
 
 #### Returns:
 
-- `pandas.DataFrame`:  the new dataframe after all perturbations
+- `int`:  the number of total regions perturbed
 
 
 
 
 ```python
-def cut(self, df, cutrate)
+def cut(self, cutrate)
 ```
 
 Cut regions to create two new regions
 #### Parameters:
 
-- `df` (`pandas.DataFrame`):  the dataframe to perturb.
 - `cutrate` (`float`):  the rate to cut regions into two separate regions
 
 
 #### Returns:
 
-- `pandas.DataFrame`:  the new dataframe after cuts
+- `int`:  the number of regions cut
 
 
 
 
 ```python
-def drop(self, df, droprate)
+def drop(self, droprate)
 ```
 
 Drop regions
 #### Parameters:
 
-- `df` (`pandas.DataFrame`):  the dataframe to perturb.
 - `droprate` (`float`):  the rate to drop/remove regions
 
 
 #### Returns:
 
-- `pandas.DataFrame`:  the new dataframe after drops
+- `int`:  the number of rows dropped
 
 
 
 
 ```python
-def merge(self, df, mergerate)
+def merge(self, mergerate)
 ```
 
 Merge two regions into one new region
 #### Parameters:
 
-- `df` (`pandas.DataFrame`):  the dataframe to perturb.
 - `mergerate` (`float`):  the rate to merge two regions into one
 
 
 #### Returns:
 
-- `pandas.DataFrame`:  the new dataframe after merges
+- `int`:  number of regions merged
 
 
 
@@ -168,25 +173,32 @@ Utility function to pick a random chromosome
 
 
 ```python
-def read_bed(self, bedfile_path)
+def read_bed(self, bedfile_path, delimiter='\t')
 ```
 
-Read in a bedfile to pandas DataFrame format
+Read a BED file into pandas dataframe
 #### Parameters:
 
-- `bedfile_path` (`str`):  the path to the bedfile
+- `bedfile_path` (`str`):  The path to the BED file
 
 
 
 
 ```python
-def shift(self, df, shiftrate, shiftmean, shiftstdev)
+def reset_bed(self)
+```
+
+Reset the stored bedfile to the state before perturbations
+
+
+
+```python
+def shift(self, shiftrate, shiftmean, shiftstdev)
 ```
 
 Shift regions
 #### Parameters:
 
-- `df` (`pandas.DataFrame`):  the dataframe to perturb.
 - `shiftrate` (`float`):  the rate to shift regions (both the start and end are shifted by the same amount)
 - `shiftmean` (`float`):  the mean shift distance
 - `shiftstdev` (`float`):  the standard deviation of the shift distance
@@ -194,20 +206,19 @@ Shift regions
 
 #### Returns:
 
-- `pandas.DataFrame`:  the original dataframe after shifts
+- `int`:  the number of regions shifted
 
 
 
 
 ```python
-def write_bed(self, df, outfile_name)
+def to_bed(self, outfile_name)
 ```
 
-Write a pandas dataframe back into bedfile format
+Write a pandas dataframe back into BED file format
 #### Parameters:
 
-- `df` (`pandas.DataFrame`):  A dataframe containing regions like a bedfile
-- `outfile_name` (`str`):  The name of the output bedfile
+- `outfile_name` (`str`):  The name of the output BED file
 
 
 
@@ -215,4 +226,4 @@ Write a pandas dataframe back into bedfile format
 
 
 
-*Version Information: `bedshift` v0.2.0, generated by `lucidoc` v0.4.2*
+*Version Information: `bedshift` v1.1.0-dev, generated by `lucidoc` v0.4.2*
