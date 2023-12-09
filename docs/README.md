@@ -18,7 +18,7 @@ The package is available for use both as a command line interface and a python p
 bedshift -h
 ```
 
-The following examples will shift 10% of the regions and add 10% new regions in `examples/test.bed`. The -l argument is the file in which chromosome sizes are located, and is only required for adding and/or shifting regions. The output is located at `bedshifted_test.bed`. 
+The following examples will shift 10% of the regions and add 10% new regions in `examples/test.bed`. The -l argument is the file in which chromosome sizes are located, and is only required for adding and/or shifting regions. The output is located at `bedshifted_test.bed`.
 
 CLI:
 
@@ -36,3 +36,14 @@ bedshifter.shift(shiftrate=0.1, shiftmean=0.0, shiftstdev=120.0)
 bedshifter.add(addrate=0.1, addmean=320.0, addstdev=20.0)
 bedshifter.to_bed('tests/test_output.bed')
 ```
+
+## Example Repository
+
+If you're looking to use Bedshift in your own experiment, we created an [example repository](https://github.com/databio/bedshift_analysis) containing working code to:
+
+1. Produce a large dataset of Bedshift files
+2. Run a pipeline on the dataset and obtain results
+3. Aggregate and visualize the results
+
+It integrates the [PEP](http://pep.databio.org/en/latest/) and [looper](http://looper.databio.org/en/latest/) workflow allowing you to easily
+run the project out of the box.
