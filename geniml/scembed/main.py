@@ -7,20 +7,25 @@ import scanpy as sc
 import torch
 from huggingface_hub import hf_hub_download
 from rich.progress import track
-from yaml import safe_load, safe_dump
 
-from ..region2vec.utils import LearningRateScheduler, shuffle_documents
+from ..region2vec.utils import (
+    LearningRateScheduler,
+    shuffle_documents,
+    export_region2vec_model,
+    load_local_region2vec_model,
+)
 from ..region2vec.main import Region2Vec
 from ..tokenization import ITTokenizer, Tokenizer
 from ..region2vec.const import (
     POOLING_TYPES,
-    DEFAULT_EMBEDDING_SIZE,
+    DEFAULT_EMBEDDING_DIM,
     DEFAULT_WINDOW_SIZE,
     DEFAULT_MIN_COUNT,
     DEFAULT_EPOCHS,
     MODEL_FILE_NAME,
     UNIVERSE_FILE_NAME,
     CONFIG_FILE_NAME,
+    POOLING_METHOD_KEY,
 )
 
 from .const import (
@@ -43,6 +48,7 @@ class ScEmbed:
         model_path: str = None,
         tokenizer: ITTokenizer = None,
         device: str = None,
+        pooling_method: POOLING_TYPES = "mean",
         **kwargs,
     ):
         """
@@ -57,6 +63,7 @@ class ScEmbed:
         self.tokenizer: ITTokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
+        self.pooling_method: POOLING_TYPES = pooling_method
 
         if model_path is not None:
             self._init_from_huggingface(model_path)
@@ -96,10 +103,9 @@ class ScEmbed:
         """
         self._init_tokenizer(tokenizer)
 
-        self._vocab_length = len(self.tokenizer)
         self._model = Region2Vec(
             len(self.tokenizer),
-            embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_SIZE),
+            embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_DIM),
         )
 
     @property
@@ -131,24 +137,13 @@ class ScEmbed:
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
         """
-        self._model_path = model_path
-        self._universe_path = vocab_path
-
-        # init the tokenizer - only one option for now
-        self.tokenizer = ITTokenizer(vocab_path)
-
-        # load the model state dict (weights)
-        params = torch.load(model_path)
-
-        # get the model config (vocab size, embedding size)
-        with open(config_path, "r") as f:
-            config = safe_load(f)
-
-        self._model = Region2Vec(
-            config["vocab_size"],
-            embedding_dim=config["embedding_size"],
+        _model, tokenizer, config = load_local_region2vec_model(
+            model_path, vocab_path, config_path
         )
-        self._model.load_state_dict(params)
+        self._model = _model
+        self.tokenizer = tokenizer
+        if POOLING_METHOD_KEY in config:
+            self.pooling_method = config[POOLING_METHOD_KEY]
 
     def _init_from_huggingface(
         self,
@@ -355,30 +350,16 @@ class ScEmbed:
         if not self.trained:
             raise RuntimeError("Cannot export an untrained model.")
 
-        # make sure the path exists
-        if not os.path.exists(path):
-            os.makedirs(path)
+        export_region2vec_model(
+            self._model,
+            self.tokenizer,
+            path,
+            checkpoint_file=checkpoint_file,
+            universe_file=universe_file,
+            config_file=config_file,
+        )
 
-        # export the model weights
-        torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
-
-        # export the vocabulary
-        with open(os.path.join(path, universe_file), "a") as f:
-            for region in self.tokenizer.universe.regions:
-                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
-
-        # export the config (vocab size, embedding size)
-        config = {
-            "vocab_size": len(self.tokenizer),
-            "embedding_size": self._model.embedding_dim,
-        }
-
-        with open(os.path.join(path, config_file), "w") as f:
-            safe_dump(config, f)
-
-    def encode(
-        self, regions: Union[sc.AnnData, str], pooling: POOLING_TYPES = "mean"
-    ) -> np.ndarray:
+    def encode(self, regions: Union[sc.AnnData, str], pooling: POOLING_TYPES = None) -> np.ndarray:
         """
         Get the vector for a region.
 
@@ -387,6 +368,9 @@ class ScEmbed:
 
         :return np.ndarray: Vector for the region.
         """
+        # allow the user to override the pooling method
+        pooling = pooling or self.pooling_method
+
         # data validation
         if not (isinstance(regions, sc.AnnData) or isinstance(regions, str)):
             raise TypeError(

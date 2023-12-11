@@ -13,6 +13,8 @@ class Attention(nn.Module):
         # x: [batch_size, seq_len, embed_dim]
         attention_weights = F.softmax(self.attention(x), dim=1)
         # attention_weights: [batch_size, seq_len, 1]
-        weighted_sum = torch.sum(x * attention_weights, dim=1)
+        weighted_sum = torch.sum(x * attention_weights, dim=1) / torch.sum(
+            attention_weights, dim=1
+        )
         # weighted_sum: [batch_size, embed_dim]
         return weighted_sum
