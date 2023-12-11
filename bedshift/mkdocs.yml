@@ -1,0 +1,29 @@
+site_name: Bedshift
+# site_logo: img/logo_caravel_dark.svg
+site_url: http://code.databio.org/bedshift/
+repo_url: http://github.com/databio/bedshift
+theme: databio
+pypi_name: bedshift
+paper_link: https://doi.org/10.1101/2020.11.11.378554
+
+nav:
+  - Introduction:
+    - Overview: README.md
+  - How-to Guides:
+    - Generate a Random BED File: generate_random.md
+    - Bedshift All BED Files in Folder: bedshift_all.md
+    - Evaluate Similarity Scores: evaluation_guide.md
+    - From-file Features: from_file.md
+    - Use YAML to Specify Perturbations: yaml_config.md
+    - Add Regions in Valid Regions: add_valid.md
+  - Reference:
+    - Python API: autodoc_build/bedshift.md
+    - Changelog: changelog.md
+
+plugins:
+  - databio:
+      autodoc_build: "docs/autodoc_build"
+      autodoc_package: "bedshift"
+      no_top_level: true
+  - search
+
