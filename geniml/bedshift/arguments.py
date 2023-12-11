@@ -4,10 +4,9 @@ from geniml.bedshift._version import __version__
 
 class _VersionInHelpParser(argparse.ArgumentParser):
     def format_help(self):
-        """ Add version information to help text. """
+        """Add version information to help text."""
         return (
-            "version: {}\n".format(__version__)
-            + super(_VersionInHelpParser, self).format_help()
+            "version: {}\n".format(__version__) + super(_VersionInHelpParser, self).format_help()
         )
 
 
@@ -48,17 +47,11 @@ def build_argparser():
         help="Refgenie genome identifier (used for chrom sizes).",
     )
 
-    parser.add_argument(
-        "-d", "--droprate", type=float, default=0.0, help="Droprate parameter"
-    )
+    parser.add_argument("-d", "--droprate", type=float, default=0.0, help="Droprate parameter")
 
-    parser.add_argument(
-        "-a", "--addrate", type=float, default=0.0, help="Addrate parameter"
-    )
+    parser.add_argument("-a", "--addrate", type=float, default=0.0, help="Addrate parameter")
 
-    parser.add_argument(
-        "--addmean", type=float, default=320.0, help="Mean add region length"
-    )
+    parser.add_argument("--addmean", type=float, default=320.0, help="Mean add region length")
 
     parser.add_argument("--addstdev", type=float, default=30.0, help="Stdev add length")
 
@@ -71,9 +64,7 @@ def build_argparser():
         help="valid regions in which regions can be randomly added",
     )
 
-    parser.add_argument(
-        "-s", "--shiftrate", type=float, default=0.0, help="Shift probability"
-    )
+    parser.add_argument("-s", "--shiftrate", type=float, default=0.0, help="Shift probability")
 
     parser.add_argument("--shiftmean", type=float, default=0.0, help="Mean shift")
 
@@ -81,9 +72,7 @@ def build_argparser():
 
     parser.add_argument("--shiftfile", type=str, help="Shift regions from a bedfile")
 
-    parser.add_argument(
-        "-c", "--cutrate", type=float, default=0.0, help="Cut probability"
-    )
+    parser.add_argument("-c", "--cutrate", type=float, default=0.0, help="Cut probability")
 
     parser.add_argument(
         "-m",
@@ -122,7 +111,7 @@ def build_argparser():
         "--seed",
         default=None,
         help="an integer-valued seed for allowing reproducible perturbations",
-        )
+    )
 
     return parser
 
