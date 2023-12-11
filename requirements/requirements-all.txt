@@ -9,7 +9,7 @@ logmuse
 matplotlib
 numpy >= 1.24.0
 paramiko >= 3.0.0
-peppy
+peppy>=0.40.0a4
 pyBigWig
 pydantic
 pyyaml
@@ -22,3 +22,4 @@ tqdm
 umap-learn
 ubiquerg
 yacman
+pyarrow
