@@ -1,5 +1,5 @@
 import argparse
-from bedshift._version import __version__
+from geniml.bedshift._version import __version__
 
 
 class _VersionInHelpParser(argparse.ArgumentParser):

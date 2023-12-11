@@ -6,13 +6,12 @@ import math
 import numpy as np
 import os
 import pandas as pd
-import pyranges as pr
 import random
 import sys
 
-from bedshift._version import __version__
-from bedshift import arguments
-from bedshift import BedshiftYAMLHandler
+from geniml.bedshift._version import __version__
+from geniml.bedshift import arguments
+from geniml.bedshift import BedshiftYAMLHandler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -435,6 +434,10 @@ class Bedshift(object):
             raise Exception("unsupported input type: {}".format(type(reference)))
         reference_bed.columns = ["Chromosome", "Start", "End", "modifications"]
         comparison_bed.columns = ["Chromosome", "Start", "End", "modifications"]
+        # TODO, switch this overlap calculation to use genomicranges
+        raise NotImplementedError(
+            "This relies on pyranges, which was removed with the switch to geniml."
+        )
         reference_pr = pr.PyRanges(reference_bed)
         comparison_pr = pr.PyRanges(comparison_bed)
         intersection = reference_pr.overlap(comparison_pr, how="first").as_df()

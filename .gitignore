@@ -172,6 +172,9 @@ test.*
 # data
 tests/data/buenrostro2018.h5ad
 tests/data/buenrostro_metadata.tsv
+bedshifted*
+examples/sh_output*
+examples/py_output*
 
 # integration test stuff
 tests/integration/buenrostro2018.model
@@ -186,3 +189,7 @@ examples/scembed/luecken2021
 qdrant_storage/
 
 .ruff_cache/
+
+
+# MacOS
+.DS_Store
