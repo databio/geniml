@@ -2,7 +2,7 @@ genimtools
 fastembed
 gensim
 genomicranges >= 0.3.6
-gtokenizers
+genimtools
 huggingface_hub
 intervaltree
 logmuse
