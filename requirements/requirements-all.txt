@@ -1,3 +1,4 @@
+genimtools
 fastembed
 gensim
 genomicranges >= 0.3.6
