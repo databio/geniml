@@ -1,80 +1,97 @@
-# TODO: it won't work. BedFetch and BedDownloader doesn't exist
+from logging import getLogger
 
-# from .bedfile_retrieval import BedFetch
-# from .utils import BedCacheManager, BedDownloader
+from .const import MODULE_NAME
 
-
-def download_bedset(args):
-    bed_downloader = BedDownloader()
-    bed_downloader.download_bedset_data(args.bedset)
+_LOGGER = getLogger(MODULE_NAME)
 
 
-def download_and_process_bed_region(args):
-    bed_processor = BedFetch(args.cache_folder)
-    bed_regions = bed_processor.download_and_process_bed_region_data(
-        args.input_identifier, args.chr, args.start, args.end
+def build_subparser_cache_bed(parser):
+    """
+    Builds argument parser to support to cache a BED file from local file or BEDbase.
+    """
+    parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
+    parser.add_argument(
+        "--cache-folder",
+        default=None,
+        help="Cache folder path (default: bed_cache)",
     )
-    print(bed_regions)
+
+    return parser
 
 
-def process_local_bed_data(args):
-    cache_manager = BedCacheManager(args.cache_folder)
-    bed_local = cache_manager.process_local_bed_data(args.input_identifier)
-    print(bed_local)
+def build_subparser_cache_bedset(parser):
+    """
+    Builds argument parser to support to cache a BEDset from local folder or BEDbase.
+    """
+    parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
+    parser.add_argument(
+        "--cache-folder",
+        default=None,
+        help="Cache folder path (default: bed_cache)",
+    )
+
+    return parser
 
 
-def process_identifier(args):
-    bed_processor = BedFetch(args.cache_folder)
-    bed_ident = bed_processor.process_identifier(args.input_identifier)
-    print(bed_ident)
+def build_subparser_seek(parser):
+    """
+    Builds argument parser to support to seek the path of BED file or BEDset.
+    """
+    parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
+    parser.add_argument(
+        "--cache-folder",
+        default=None,
+        help="Cache folder path (default: bed_cache)",
+    )
+
+    return parser
 
 
-def process_identifiers(args):
-    bed_processor = BedFetch(args.cache_folder)
-    bed_ident = bed_processor.process_identifiers(args.input_identifiers)
-    print(bed_ident)
+def build_subparser_inspect(parser):
+    """
+    Builds argument parser to support to list and count files and subdirectories in the subdirectory bedfiles and bedsets.
+    """
+    parser.add_argument(
+        "--cache-folder",
+        default=None,
+        help="Cache folder path (default: bed_cache)",
+    )
+
+    return parser
+
+
+def build_subparser_remove(parser):
+    """
+    Builds argument parser to support to remove bed files or bedsets from the cache folder
+    """
+    parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
+    parser.add_argument(
+        "--cache-folder",
+        default=None,
+        help="Cache folder path (default: bed_cache)",
+    )
+
+    return parser
 
 
 def build_subparser(parser):
-    """Build subparser for bbclient"""
-    subparsers = parser.add_subparsers(
-        title="subcommands", dest="subcommand", description="Choose a subcommand"
-    )
-    subparsers.required = True
-
-    parser_bedset = subparsers.add_parser("bedset", help="Download a bedset")
-    parser_bedset.add_argument("--bedset", help="Bedset identifier")
-    parser_bedset.set_defaults(func=download_bedset)
-
-    parser_region = subparsers.add_parser("region", help="Download and process a bed region")
-    parser_region.add_argument("--input-identifier", help="BED file identifier")
-    parser_region.add_argument("--chr", help="Chromosome number")
-    parser_region.add_argument("--start", type=int, help="Start position")
-    parser_region.add_argument("--end", type=int, help="End position")
-    parser_region.add_argument(
-        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
-    )
-    parser_region.set_defaults(func=download_and_process_bed_region)
-
-    parser_local = subparsers.add_parser("local", help="Process a local bed file")
-    parser_local.add_argument("--input-identifier", help="Local BED file path")
-    parser_local.add_argument(
-        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
-    )
-    parser_local.set_defaults(func=process_local_bed_data)
-
-    parser_ident = subparsers.add_parser("identifier", help="Process identifiers")
-    parser_ident.add_argument("--input-identifier", help="BED file identifier")
-    parser_ident.add_argument(
-        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
-    )
-    parser_ident.set_defaults(func=process_identifier)
-
-    parser_ident = subparsers.add_parser("identifiers", help="Process identifiers")
-    parser_ident.add_argument("--input-identifiers", help="BED file identifiers")
-    parser_ident.add_argument(
-        "--cache-folder", default="bed_cache", help="Cache folder path (default: bed_cache)"
-    )
-    parser_ident.set_defaults(func=process_identifiers)
-
+    """
+    Builds argument parser to support the eval command line interface.
+    """
+    sp = parser.add_subparsers(dest="subcommand")
+    msg_by_cmd = {
+        "cache-bed": "Cache a BED file from local file or BEDbase",
+        "cache-bedset": "Cache a BED set from local folder or BEDbase",
+        "seek": "Seek the BED / BEDset path by giving identifier",
+        "inspect": "Inspect the contents of cache folder",
+        "rm": "Remove the BED/BEDset from cache with given identifier",
+    }
+    subparsers = {}
+    for k, v in msg_by_cmd.items():
+        subparsers[k] = sp.add_parser(k, description=v, help=v)
+    subparsers["cache-bed"] = build_subparser_cache_bed(subparsers["cache-bed"])
+    subparsers["cache-bedset"] = build_subparser_cache_bedset(subparsers["cache-bedset"])
+    subparsers["seek"] = build_subparser_seek(subparsers["seek"])
+    subparsers["inspect"] = build_subparser_inspect(subparsers["inspect"])
+    subparsers["rm"] = build_subparser_remove(subparsers["rm"])
     return parser
