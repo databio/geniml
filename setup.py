@@ -41,6 +41,7 @@ setup(
         "geniml.search",
         "geniml.search.backends",
         "geniml.classification",
+        "geniml.nn",
     ],
     version=version,
     long_description=long_description,

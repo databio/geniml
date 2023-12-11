@@ -3,12 +3,10 @@ import os
 import numpy as np
 import pytest
 import torch
-from torch.utils.data import DataLoader, Dataset
 
 from geniml.io.io import Region, RegionSet
-from geniml.region2vec.experimental import Region2Vec as Region2VecV2
-from geniml.region2vec.experimental import Region2VecExModel as Region2VecExModelV2
-from geniml.region2vec.main import Region2Vec, Region2VecExModel
+from geniml.region2vec.main import Region2Vec
+from geniml.region2vec.main import Region2VecExModel
 from geniml.tokenization.main import ITTokenizer
 
 
@@ -27,7 +25,7 @@ def test_init_region2vec():
 
 @pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
 def test_pretrained_model():
-    model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38")
+    model = Region2VecExModel("databio/r2v-ChIP-atlas-hg38-v2")
 
     region = Region("chr1", 63403166, 63403785)
     embedding = model.encode(region)

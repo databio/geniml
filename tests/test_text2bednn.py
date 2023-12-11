@@ -17,6 +17,7 @@ from geniml.text2bednn.utils import (
     vectors_from_backend,
 )
 from geniml.tokenization.main import ITTokenizer
+from sklearn.model_selection import train_test_split
 
 
 @pytest.fixture
