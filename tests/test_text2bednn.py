@@ -20,7 +20,6 @@ from geniml.tokenization.main import ITTokenizer
 from sklearn.model_selection import train_test_split
 
 
-
 @pytest.fixture
 def metadata_path():
     """

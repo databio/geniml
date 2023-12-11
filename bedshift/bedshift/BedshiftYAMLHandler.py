@@ -125,9 +125,7 @@ class BedshiftYAMLHandler(object):
                 if os.path.isfile(fp):
                     drop_rate = operation["rate"]
                     delimiter = operation["delimiter"]
-                    num_dropped = self.bedshifter.drop_from_file(
-                        fp, drop_rate, delimiter
-                    )
+                    num_dropped = self.bedshifter.drop_from_file(fp, drop_rate, delimiter)
                     num_changed += num_dropped
                 else:
                     self._LOGGER.error("File '{}' does not exist.".format(fp))
@@ -157,18 +155,16 @@ class BedshiftYAMLHandler(object):
                     sys.exit(1)
 
             ##### shift_from_file with delimiter provided #####
-            elif set(
-                ["shift_from_file", "file", "rate", "mean", "stdev", "delimiter"]
-            ) == set(list(operation.keys())):
+            elif set(["shift_from_file", "file", "rate", "mean", "stdev", "delimiter"]) == set(
+                list(operation.keys())
+            ):
                 fp = operation["file"]
                 if os.path.isfile(fp):
                     rate = operation["rate"]
                     mean = operation["mean"]
                     std = operation["stdev"]
                     delimiter = operation["delimiter"]
-                    num_shifted = self.bedshifter.shift_from_file(
-                        fp, rate, mean, std, delimiter
-                    )
+                    num_shifted = self.bedshifter.shift_from_file(fp, rate, mean, std, delimiter)
                     num_changed += num_shifted
                 else:
                     self._LOGGER.error("File '{}' does not exist.".format(fp))
