@@ -1,5 +1,5 @@
 import os
-from typing import Literal
+from typing import Literal, Union
 
 import torch
 import pytest
@@ -68,8 +68,10 @@ def test_init_classifier_from_pretrained():
     ],
 )
 def test_init_exmodel(
-    r2v: Region2Vec | Literal["databio/r2v-ChIP-atlas-hg38-v2"] | None,
-    tokenizer: ITTokenizer | Literal["tests/data/universe.bed", "databio/r2v-ChIP-atlas-hg38-v2"],
+    r2v: Union[Region2Vec, Literal["databio/r2v-ChIP-atlas-hg38-v2"], None],
+    tokenizer: Union[
+        ITTokenizer, Literal["tests/data/universe.bed", "databio/r2v-ChIP-atlas-hg38-v2"]
+    ],
 ):
     model = Region2VecFineTuner(region2vec=r2v, tokenizer=tokenizer)
     assert model is not None
