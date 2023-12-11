@@ -172,6 +172,7 @@ test.*
 # data
 tests/data/buenrostro2018.h5ad
 tests/data/buenrostro_metadata.tsv
+tests/data/model-tests/*
 bedshifted*
 examples/sh_output*
 examples/py_output*
