@@ -7,6 +7,7 @@ import hnswlib
 import numpy as np
 import pytest
 from geniml.search.backends import HNSWBackend, QdrantBackend
+from geniml.search.backends.filebackend import DEP_HNSWLIB
 
 
 @pytest.fixture
@@ -122,6 +123,10 @@ def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
     qd_search_backend.qd_client.delete_collection(qd_search_backend.collection)
 
 
+# https://github.com/pyjanitor-devs/pyjanitor/issues/115
+@pytest.mark.skipif(
+    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
+)
 def test_HNSWBackend(filenames, embeddings, labels, tmp_path_factory, ids):
     def test_hnsw_search_result(
         dict_list: List[Dict], index: hnswlib.Index, with_dist: bool = False
