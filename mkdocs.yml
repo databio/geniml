@@ -19,6 +19,7 @@ nav:
     - Create consensus peaks: tutorials/create-consensus-peaks.md
     - Fine-tune embeddings: tutorials/fine-tune-region2vec-model.md
     - Randomize bed files: tutorials/bedshift.md
+    - Create evaluation dataset with bedshift: tutorials/bedshift-evaluation-guide.md
   - Reference:
     - API: autodoc_build/geniml.md
     - Support: support.md
