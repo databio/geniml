@@ -59,7 +59,7 @@ setup(
     entry_points={
         "console_scripts": [
             "geniml = geniml.cli:main",
-            'bedshift = geniml.bedshift.bedshift:main',
+            "bedshift = geniml.bedshift.bedshift:main",
         ],
     },
     keywords="bioinformatics, sequencing, ngs",

@@ -236,7 +236,7 @@ def get_f_10_score(
     res = res.astype("float")
     recall = res[:, 2] / (res[:, 2] + res[:, 1])
     precision = res[:, 2] / (res[:, 2] + res[:, 0])
-    f_10 = (1 + 10 ** 2) * (precision * recall) / ((10 ** 2 * precision) + recall)
+    f_10 = (1 + 10**2) * (precision * recall) / ((10**2 * precision) + recall)
     return np.mean(f_10)
 
 
@@ -249,7 +249,7 @@ def get_f_10_score_from_assessment_file(file, f10_each_file=False):
     df = pd.read_csv(file, index_col=(0))
     r = df["A&U/A"]
     p = df["A&U/U"]
-    df["F_10"] = (1 + 10 ** 2) * (p * r) / ((10 ** 2 * p) + r)
+    df["F_10"] = (1 + 10**2) * (p * r) / ((10**2 * p) + r)
     if f10_each_file:
         return df["F_10"]
     else:
