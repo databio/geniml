@@ -3,7 +3,6 @@ import os
 import random
 from typing import Dict, List
 
-import hnswlib
 import numpy as np
 import pytest
 from geniml.search.backends import HNSWBackend, QdrantBackend
@@ -129,7 +128,7 @@ def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
 )
 def test_HNSWBackend(filenames, embeddings, labels, tmp_path_factory, ids):
     def test_hnsw_search_result(
-        dict_list: List[Dict], index: hnswlib.Index, with_dist: bool = False
+        dict_list: List[Dict], backend: HNSWBackend, with_dist: bool = False
     ):
         """
         repeated test of the output of search / retrieve_info function of HNSWBackend
@@ -139,6 +138,7 @@ def test_HNSWBackend(filenames, embeddings, labels, tmp_path_factory, ids):
         :param with_dist: whether distance score is included in the result
         :return:
         """
+        index = backend.idx
         assert isinstance(dict_list, list)
         for result in dict_list:
             assert isinstance(result, dict)
@@ -193,16 +193,16 @@ def test_HNSWBackend(filenames, embeddings, labels, tmp_path_factory, ids):
     )
 
     assert single_vec_search_offset == single_vec_search
-    test_hnsw_search_result(single_vec_search, hnswb.idx, True)
-    test_hnsw_search_result(single_vec_search_offset, hnswb.idx, True)
+    test_hnsw_search_result(single_vec_search, hnswb, True)
+    test_hnsw_search_result(single_vec_search_offset, hnswb, True)
 
     # test searching with multiple vectors (np.ndarray with shape (n, dim))
     multiple_vecs_search = hnswb.search(np.random.random((7, 100)), 5)
     assert isinstance(multiple_vecs_search, list)
     assert len(multiple_vecs_search) == 7
     for i in range(len(multiple_vecs_search)):
-        test_hnsw_search_result(multiple_vecs_search[i], hnswb.idx, True)
+        test_hnsw_search_result(multiple_vecs_search[i], hnswb, True)
 
     # test information retrieval / get items
     retrieval_results = hnswb.retrieve_info(ids, True)
-    test_hnsw_search_result(retrieval_results, hnswb.idx, False)
+    test_hnsw_search_result(retrieval_results, hnswb, False)
