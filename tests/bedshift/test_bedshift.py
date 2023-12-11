@@ -1,8 +1,8 @@
 import unittest
 import os
 
-from bedshift import bedshift
-from bedshift import BedshiftYAMLHandler
+from geniml.bedshift import bedshift
+from geniml.bedshift import BedshiftYAMLHandler
 
 
 class TestBedshift(unittest.TestCase):

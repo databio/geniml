@@ -27,6 +27,7 @@ setup(
         PACKAGE_NAME,
         "geniml.assess",
         "geniml.bedspace",
+        "geniml.bedshift",
         "geniml.eval",
         "geniml.likelihood",
         "geniml.models",
@@ -58,12 +59,13 @@ setup(
     entry_points={
         "console_scripts": [
             "geniml = geniml.cli:main",
+            'bedshift = geniml.bedshift.bedshift:main',
         ],
     },
     keywords="bioinformatics, sequencing, ngs",
-    package_data={"refgenie": [os.path.join("refgenie", "*")]},
+    package_data={"geniml": [os.path.join("geniml", "*")]},
     include_package_data=True,
-    url="http://giss.databio.org",
+    url="http://geniml.databio.org",
     author="Nathan Sheffield",
     **extra,
 )

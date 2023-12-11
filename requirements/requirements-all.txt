@@ -17,6 +17,7 @@ requests>=2.31.0
 scanpy
 seaborn
 torch
+torchsummary
 tqdm
 umap-learn
 ubiquerg
