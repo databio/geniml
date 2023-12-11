@@ -4,16 +4,16 @@ bedshift_operations:
     mean: 100
     stdev: 20
   - drop_from_file:
-    file: tests/test.bed
+    file: tests/bedshift/test.bed
     rate: 0.1
     delimiter: \t
   - shift_from_file:
-    file: tests/test2.bed
+    file: tests/bedshift/test2.bed
     rate: 0.5
     mean: 100
     stdev: 200
   - add_from_file:
-    file: tests/small_test.bed
+    file: tests/bedshift/small_test.bed
     rate: 0.2
   - cut:
     rate: 0.2
