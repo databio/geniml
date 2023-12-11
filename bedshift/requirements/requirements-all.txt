@@ -1,4 +1,0 @@
-logmuse
-pandas
-numpy
-pyranges
