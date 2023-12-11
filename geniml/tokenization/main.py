@@ -7,7 +7,7 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
-from gtokenizers import (
+from genimtools.tokenizers import (
     Region as GRegion,
     TreeTokenizer as GTreeTokenizer,
     TokenizedRegionSet as GTokenizedRegionSet,
@@ -126,7 +126,7 @@ class ITTokenizer(Tokenizer):
         """
         Tokenize a Region or RegionSet into the universe
 
-        :param Union[Region, RegionSet] query: The query to tokenize.
+        :param Union[Region, RegionSet, sc.AnnData] query: The query to tokenize.
         """
         if isinstance(query, sc.AnnData):
             return self._tokenize_anndata(query)

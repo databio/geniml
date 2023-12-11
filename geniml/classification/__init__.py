@@ -1,1 +1,1 @@
-from .main import SingleCellTypeClassifier, Region2VecClassifier
+from .main import Region2VecClassifier
