@@ -112,35 +112,87 @@ def main(test_args=None):
         )
 
     if args.command == "bbclient":
-        if args.subcommand == "local":
-            from .bbclient.cli import process_local_bed_data
-
+        if args.subcommand is not None:
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            process_local_bed_data(args)
+            import os
 
-        if args.subcommand == "bedset":
-            from .bbclient.cli import download_bedset
+            from .bbclient import BBClient
 
-            _LOGGER.info(f"Subcommand: {args.subcommand}")
-            download_bedset(args)
+            cache_path = os.environ.get("BBCLIENT_CACHE", args.cache_folder)
+            if cache_path is None:
+                _LOGGER.error(
+                    "Please give a valid cache folder, or set it in the environment variable $BBCLIENT_CACHE`."
+                )
+                sys.exit(1)
+            bbc = BBClient(cache_path)
 
-        if args.subcommand == "region":
-            from .bbclient.cli import download_and_process_bed_region
+        else:
+            # if no subcommand, print help format of bbclient subparser
+            # from https://stackoverflow.com/a/20096044/23054783
+            import argparse
 
-            _LOGGER.info(f"Subcommand: {args.subcommand}")
-            download_and_process_bed_region(args)
+            subparsers_actions = [
+                action
+                for action in parser._actions
+                if isinstance(action, argparse._SubParsersAction)
+            ]
+            # there will probably only be one subparser_action,
+            # but better safe than sorry
+            for subparsers_action in subparsers_actions:
+                # get all subparsers and print help
+                for choice, subparser in subparsers_action.choices.items():
+                    if choice == "bbclient":
+                        print(subparser.format_help())
+                        sys.exit(1)
+        if args.subcommand == "cache-bed":
+            # if input is a BED file path
+            if os.path.exists(args.identifier[0]):
+                from .io import RegionSet
 
-        if args.subcommand == "identifier":
-            from .bbclient.cli import process_identifier
+                bedfile = RegionSet(args.identifier[0])
+                bbc.add_bed_to_cache(bedfile)
+                _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
+            else:
+                bedfile = bbc.load_bed(args.identifier[0])
 
-            _LOGGER.info(f"Subcommand: {args.subcommand}")
-            process_identifier(args)
+        if args.subcommand == "cache-bedset":
+            import os
 
-        if args.subcommand == "identifiers":
-            from .bbclient.cli import process_identifiers
+            if os.path.isdir(args.identifier[0]):
+                from .io import BedSet
 
-            _LOGGER.info(f"Subcommand: {args.subcommand}")
-            process_identifiers(args)
+                bedset = BedSet(
+                    [
+                        os.path.join(args.identifier[0], file_name)
+                        for file_name in os.listdir(args.identifier[0])
+                    ]
+                )
+                bbc.add_bedset_to_cache(bedset)
+                _LOGGER.info(f"BED set {bedset.compute_bedset_identifier()} has been cached")
+
+            else:
+                bedset = bbc.load_bedset(args.identifier[0])
+
+        if args.subcommand == "seek":
+            import logging
+
+            handler = logging.StreamHandler(sys.stdout)
+            _LOGGER.addHandler(handler)
+            _LOGGER.info(bbc.seek(args.identifier[0]))
+            # sys.stdout.write(bbc.seek(args.identifier[0))
+        if args.subcommand == "inspect":
+            import os
+
+            _LOGGER.info(f"Bedfiles directory:")
+            os.system(f"tree {os.path.join(cache_path, 'bedfiles')} | tail -n 1")
+
+            _LOGGER.info(f"Bedsets directory:")
+            os.system(f"tree {os.path.join(cache_path, 'bedsets')} | tail -n 1")
+
+        if args.subcommand == "rm":
+            file_path = bbc.seek(args.identifier[0])
+            bbc._remove(file_path)
+            _LOGGER.info(f"{file_path} is removed")
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")

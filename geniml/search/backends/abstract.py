@@ -25,7 +25,14 @@ class EmSearchBackend(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def search(self, query: np.ndarray, k: int) -> List[Dict]:
+    def search(
+        self,
+        query: np.ndarray,
+        limit: int,
+        with_payload: bool = True,
+        with_vectors: bool = True,
+        offset: int = 0,
+    ) -> List[Dict]:
         """
         Search for the nearest neighbors of the given embedding
 
