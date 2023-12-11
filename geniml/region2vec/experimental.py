@@ -190,7 +190,7 @@ class NegativeSampler:
         :param torch.Tensor freq_dist: List of frequencies for each token. Must be normalized.
         :param float power: The power to use for the negative sampling. It is not recommended to change this.
         """
-        self.dist = freq_dist**power
+        self.dist = freq_dist ** power
         self.dist /= self.dist.sum()
         self.power = power
         self.batch_size = batch_size
