@@ -68,8 +68,8 @@ def get_ctt_score(
 
     random_dist_to_nn = random_dist[:, 0]
 
-    x = sum(sample_dist_to_nn ** 2)
-    y = sum(random_dist_to_nn ** 2)
+    x = sum(sample_dist_to_nn**2)
+    y = sum(random_dist_to_nn**2)
 
     if x + y == 0:
         raise ZeroDivisionError("The denominator is zero")

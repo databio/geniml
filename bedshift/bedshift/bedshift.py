@@ -63,9 +63,7 @@ class Bedshift(object):
             sys.exit(1)
 
         total_len = sum(self.chrom_lens.values())
-        self.chrom_weights = [
-            chrom_len / total_len for chrom_len in self.chrom_lens.values()
-        ]
+        self.chrom_weights = [chrom_len / total_len for chrom_len in self.chrom_lens.values()]
 
     def reset_bed(self):
         """
@@ -101,9 +99,7 @@ class Bedshift(object):
         :param str n: the number of random chromosomes to pick
         :return str, float chrom_str, chrom_len: chromosome number and length
         """
-        chrom_strs = random.choices(
-            list(self.chrom_lens.keys()), weights=self.chrom_weights, k=n
-        )
+        chrom_strs = random.choices(list(self.chrom_lens.keys()), weights=self.chrom_weights, k=n)
         chrom_lens = [self.chrom_lens[chrom_str] for chrom_str in chrom_strs]
         return zip(chrom_strs, chrom_lens)
 
@@ -254,9 +250,7 @@ class Bedshift(object):
         original_colnames = self.bed.columns
         intersect_regions.columns = [str(col) for col in intersect_regions.columns]
         self.bed.columns = [str(col) for col in self.bed.columns]
-        indices_of_overlap_regions = self.bed.reset_index().merge(intersect_regions)[
-            "index"
-        ]
+        indices_of_overlap_regions = self.bed.reset_index().merge(intersect_regions)["index"]
         self.bed.columns = [int(col) for col in self.bed.columns]
 
         interlen = len(indices_of_overlap_regions)
@@ -303,9 +297,7 @@ class Bedshift(object):
         end = self.bed.loc[row][2]
 
         # choose where to cut the region
-        thecut = (
-            start + end
-        ) // 2  # int(np.random.normal((start+end)/2, (end - start)/6))
+        thecut = (start + end) // 2  # int(np.random.normal((start+end)/2, (end - start)/6))
         if thecut <= start:
             thecut = start + 10
         if thecut >= end:
@@ -350,10 +342,7 @@ class Bedshift(object):
 
     def _merge(self, row):
         # check if the regions being merged are on the same chromosome
-        if (
-            row + 1 not in self.bed.index
-            or self.bed.loc[row][0] != self.bed.loc[row + 1][0]
-        ):
+        if row + 1 not in self.bed.index or self.bed.loc[row][0] != self.bed.loc[row + 1][0]:
             return None, None
 
         chrom = self.bed.loc[row][0]
@@ -394,9 +383,7 @@ class Bedshift(object):
         original_colnames = self.bed.columns
         intersect_regions.columns = [str(col) for col in intersect_regions.columns]
         self.bed.columns = [str(col) for col in self.bed.columns]
-        indices_of_overlap_regions = self.bed.reset_index().merge(intersect_regions)[
-            "index"
-        ]
+        indices_of_overlap_regions = self.bed.reset_index().merge(intersect_regions)["index"]
         self.bed.columns = [int(col) for col in self.bed.columns]
 
         interlen = len(indices_of_overlap_regions)
@@ -414,7 +401,6 @@ class Bedshift(object):
         self.bed = self.bed.drop(indices_of_overlap_regions)
         return num_drop
 
-
     def set_seed(self, seednum):
         try:
             seednum = int(seednum)
@@ -423,7 +409,6 @@ class Bedshift(object):
         except ValueError:
             _LOGGER.error("Seed should be an integer, not {}.".format(type(seednum)))
             sys.exit(1)
-
 
     def _find_overlap(self, fp, reference=None):
         """
@@ -455,9 +440,7 @@ class Bedshift(object):
         intersection = reference_pr.overlap(comparison_pr, how="first").as_df()
         if len(intersection) == 0:
             raise Exception(
-                "no intersection found between {} and {}".format(
-                    reference_bed, comparison_bed
-                )
+                "no intersection found between {} and {}".format(reference_bed, comparison_bed)
             )
         intersection = intersection.drop(["modifications"], axis=1)
         intersection.columns = [0, 1, 2]
@@ -529,7 +512,6 @@ class Bedshift(object):
 
         return n
 
-
     def to_bed(self, outfile_name):
         """
         Write a pandas dataframe back into BED file format
@@ -537,9 +519,7 @@ class Bedshift(object):
         :param str outfile_name: The name of the output BED file
         """
         self.bed.sort_values([0, 1, 2], inplace=True)
-        self.bed.to_csv(
-            outfile_name, sep="\t", header=False, index=False, float_format="%.0f"
-        )
+        self.bed.to_csv(outfile_name, sep="\t", header=False, index=False, float_format="%.0f")
 
     def read_bed(self, bedfile_path, delimiter="\t"):
         """
@@ -571,7 +551,7 @@ class Bedshift(object):
 
 
 def main():
-    """ Primary workflow """
+    """Primary workflow"""
 
     parser = logmuse.add_logging_options(arguments.build_argparser())
     args, remaining_args = parser.parse_known_args()
@@ -595,9 +575,7 @@ def main():
             rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
             args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
         except ModuleNotFoundError:
-            _LOGGER.error(
-                "You must have package refgenconf installed to use a refgenie genome"
-            )
+            _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
             sys.exit(1)
 
     msg = arguments.param_msg
@@ -631,7 +609,7 @@ def main():
             outputfile=outfile_base,
             repeat=args.repeat,
             yaml_config=args.yaml_config,
-            seed=args.seed
+            seed=args.seed,
         )
     )
 
@@ -656,7 +634,7 @@ def main():
             args.droprate,
             args.dropfile,
             args.yaml_config,
-            args.seed
+            args.seed,
         )
         if args.repeat == 1:
             bedshifter.to_bed(outfile_base)
