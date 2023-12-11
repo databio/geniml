@@ -150,7 +150,7 @@ class Bedshift(object):
                 new_regions[1].append(start)
                 new_regions[2].append(end)
                 new_regions[3].append("A")
-        self.bed = self.bed.append(pd.DataFrame(new_regions), ignore_index=True)
+        self.bed = pd.concat([self.bed, pd.DataFrame(new_regions)], ignore_index=True)
         return num_add
 
     def add_from_file(self, fp, addrate, delimiter="\t"):
@@ -177,7 +177,7 @@ class Bedshift(object):
         add_rows = random.sample(list(range(dflen)), num_add)
         add_df = df.loc[add_rows].reset_index(drop=True)
         add_df[3] = pd.Series(["A"] * add_df.shape[0])
-        self.bed = self.bed.append(add_df, ignore_index=True)
+        self.bed = pd.concat([self.bed, add_df], ignore_index=True)
         return num_add
 
     def shift(self, shiftrate, shiftmean, shiftstdev, shift_rows=[]):
@@ -209,7 +209,7 @@ class Bedshift(object):
             else:
                 invalid_shifted += 1
         self.bed = self.bed.drop(to_drop)
-        self.bed = self.bed.append(new_row_list, ignore_index=True)
+        self.bed = pd.concat([self.bed, pd.DataFrame(new_row_list)], ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
         if invalid_shifted > 0:
             _LOGGER.warning(
@@ -286,7 +286,7 @@ class Bedshift(object):
             new_row_list.extend(new_regions)
             to_drop.append(drop_row)
         self.bed = self.bed.drop(to_drop)
-        self.bed = self.bed.append(new_row_list, ignore_index=True)
+        self.bed = pd.concat([self.bed, pd.DataFrame(new_row_list)], ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
         return len(cut_rows)
 
@@ -335,7 +335,7 @@ class Bedshift(object):
                 to_add.append(add_row)
                 to_drop.extend(drop_rows)
         self.bed = self.bed.drop(to_drop)
-        self.bed = self.bed.append(to_add, ignore_index=True)
+        self.bed = pd.concat([self.bed, pd.DataFrame(to_add)], ignore_index=True)
         self.bed = self.bed.reset_index(drop=True)
         return len(to_drop)
 
