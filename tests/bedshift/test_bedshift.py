@@ -5,20 +5,21 @@ import unittest
 from geniml.bedshift import bedshift
 from geniml.bedshift import BedshiftYAMLHandler
 
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class TestBedshift(unittest.TestCase):
     def setUp(self):
         self.bs = bedshift.Bedshift(
-            "tests/bedshift/test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes"
+            os.path.join(SCRIPT_PATH, "test.bed"), chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes")
         )
 
     def test_read_bed(self):
-        reader = bedshift.Bedshift("tests/bedshift/header_test.bed")
+        reader = bedshift.Bedshift(os.path.join(SCRIPT_PATH, "header_test.bed"))
         self.assertTrue(list(reader.bed.columns), [0, 1, 2, 3])
         self.assertTrue(list(reader.bed.index), [0, 1, 2])
 
     def test_read_chrom_sizes(self):
-        self.bs._read_chromsizes("tests/bedshift/hg19.chrom.sizes")
+        self.bs._read_chromsizes(os.path.join(SCRIPT_PATH, "hg19.chrom.sizes"))
         self.assertEqual(len(self.bs.chrom_lens), 93)
 
     def test_add(self):
@@ -37,14 +38,14 @@ class TestBedshift(unittest.TestCase):
 
     def test_add_valid_regions(self):
         added = self.bs.add(
-            0.5, 2000, 1000, valid_bed="tests/bedshift/small_test.bed", delimiter="\t"
+            0.5, 2000, 1000, valid_bed=os.path.join(SCRIPT_PATH, "small_test.bed"), delimiter="\t"
         )
         self.assertEqual(added, 5000)
-        self.bs.to_bed("tests/bedshift/add_valid_test.bed")
+        self.bs.to_bed(os.path.join(SCRIPT_PATH, "add_valid_test.bed"))
         self.bs.reset_bed()
 
     def test_add_from_file(self):
-        added = self.bs.add_from_file("tests/bedshift/test.bed", 0.25)
+        added = self.bs.add_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0.25)
         self.assertEqual(added, 2500)
         self.bs.reset_bed()
 
@@ -76,19 +77,19 @@ class TestBedshift(unittest.TestCase):
 
     @pytest.mark.skip("Not implemented yet")
     def test_drop_from_file(self):
-        dropped = self.bs.drop_from_file("tests/bedshift/test.bed", 0.25)
+        dropped = self.bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0.25)
         self.assertEqual(dropped, 2500)
         self.bs.reset_bed()
 
     @pytest.mark.skip("Not implemented yet")
     def test_drop_from_file_high_rate(self):
-        dropped = self.bs.drop_from_file("tests/bedshift/test.bed", 1)
+        dropped = self.bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 1)
         self.assertEqual(dropped, 10000)
         self.bs.reset_bed()
 
     @pytest.mark.skip("Not implemented yet")
     def test_drop_from_file_zero_rate(self):
-        dropped = self.bs.drop_from_file("tests/bedshift/test.bed", 0)
+        dropped = self.bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0)
         self.assertEqual(dropped, 0)
         self.bs.reset_bed()
 
@@ -126,12 +127,12 @@ class TestBedshift(unittest.TestCase):
         self.assertAlmostEqual(perturbed, 9400, places=-3)
 
     def test_to_bed(self):
-        self.bs.to_bed("tests/bedshift/py_output.bed")
-        self.assertTrue(os.path.exists("tests/bedshift/py_output.bed"))
+        self.bs.to_bed(os.path.join(SCRIPT_PATH, "py_output.bed"))
+        self.assertTrue(os.path.exists(os.path.join(SCRIPT_PATH, "py_output.bed")))
 
     def test_small_file(self):
         bs_small = bedshift.Bedshift(
-            "tests/bedshift/small_test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes"
+            os.path.join(SCRIPT_PATH, "small_test.bed"), chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes")
         )
         shifted = bs_small.shift(0.3, 50, 50)
         self.assertEqual(shifted, 0)
@@ -149,19 +150,19 @@ class TestBedshiftYAMLHandler(unittest.TestCase):
     @pytest.mark.skip("Not implemented yet")
     def test_handle_yaml(self):
         bedshifter = bedshift.Bedshift(
-            "tests/bedshift/test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes"
+            os.path.join(SCRIPT_PATH, "test.bed"), chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes")
         )
         yamled = BedshiftYAMLHandler.BedshiftYAMLHandler(
-            bedshifter=bedshifter, yaml_fp="tests/bedshift/bedshift_analysis.yaml"
+            bedshifter=bedshifter, yaml_fp=os.path.join(SCRIPT_PATH, "bedshift_analysis.yaml")
         ).handle_yaml()
         bedshifter.reset_bed()
 
         added = bedshifter.add(addrate=0.1, addmean=100, addstdev=20)
-        f_drop_10 = bedshifter.drop_from_file(fp="tests/bedshift/test.bed", droprate=0.1)
+        f_drop_10 = bedshifter.drop_from_file(fp=os.path.join(SCRIPT_PATH, "test.bed"), droprate=0.1)
         f_shift_30 = bedshifter.shift_from_file(
-            fp="tests/bedshift/test2.bed", shiftrate=0.50, shiftmean=100, shiftstdev=200
+            fp=os.path.join(SCRIPT_PATH, "test2.bed"), shiftrate=0.50, shiftmean=100, shiftstdev=200
         )
-        f_added_20 = bedshifter.add_from_file(fp="tests/bedshift/small_test.bed", addrate=0.2)
+        f_added_20 = bedshifter.add_from_file(fp=os.path.join(SCRIPT_PATH, "small_test.bed"), addrate=0.2)
         cut = bedshifter.cut(cutrate=0.2)
         shifted = bedshifter.shift(shiftrate=0.3, shiftmean=100, shiftstdev=200)
         dropped = bedshifter.drop(droprate=0.3)
