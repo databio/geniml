@@ -6,9 +6,7 @@ sample_modifiers:
   append:
     output_file_path: FILES
     
-    
   derive:
     attributes: [output_file_path]
     sources:
-      FILES: ./data/hg38_sample/{file}.bed
-
+      FILES: ${TEST_FOLDER}/{file}.bed

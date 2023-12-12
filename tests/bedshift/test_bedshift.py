@@ -7,10 +7,12 @@ from geniml.bedshift import BedshiftYAMLHandler
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
+
 class TestBedshift(unittest.TestCase):
     def setUp(self):
         self.bs = bedshift.Bedshift(
-            os.path.join(SCRIPT_PATH, "test.bed"), chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes")
+            os.path.join(SCRIPT_PATH, "test.bed"),
+            chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes"),
         )
 
     def test_read_bed(self):
@@ -132,7 +134,8 @@ class TestBedshift(unittest.TestCase):
 
     def test_small_file(self):
         bs_small = bedshift.Bedshift(
-            os.path.join(SCRIPT_PATH, "small_test.bed"), chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes")
+            os.path.join(SCRIPT_PATH, "small_test.bed"),
+            chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes"),
         )
         shifted = bs_small.shift(0.3, 50, 50)
         self.assertEqual(shifted, 0)
@@ -150,7 +153,8 @@ class TestBedshiftYAMLHandler(unittest.TestCase):
     @pytest.mark.skip("Not implemented yet")
     def test_handle_yaml(self):
         bedshifter = bedshift.Bedshift(
-            os.path.join(SCRIPT_PATH, "test.bed"), chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes")
+            os.path.join(SCRIPT_PATH, "test.bed"),
+            chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes"),
         )
         yamled = BedshiftYAMLHandler.BedshiftYAMLHandler(
             bedshifter=bedshifter, yaml_fp=os.path.join(SCRIPT_PATH, "bedshift_analysis.yaml")
@@ -158,11 +162,18 @@ class TestBedshiftYAMLHandler(unittest.TestCase):
         bedshifter.reset_bed()
 
         added = bedshifter.add(addrate=0.1, addmean=100, addstdev=20)
-        f_drop_10 = bedshifter.drop_from_file(fp=os.path.join(SCRIPT_PATH, "test.bed"), droprate=0.1)
-        f_shift_30 = bedshifter.shift_from_file(
-            fp=os.path.join(SCRIPT_PATH, "test2.bed"), shiftrate=0.50, shiftmean=100, shiftstdev=200
+        f_drop_10 = bedshifter.drop_from_file(
+            fp=os.path.join(SCRIPT_PATH, "test.bed"), droprate=0.1
         )
-        f_added_20 = bedshifter.add_from_file(fp=os.path.join(SCRIPT_PATH, "small_test.bed"), addrate=0.2)
+        f_shift_30 = bedshifter.shift_from_file(
+            fp=os.path.join(SCRIPT_PATH, "test2.bed"),
+            shiftrate=0.50,
+            shiftmean=100,
+            shiftstdev=200,
+        )
+        f_added_20 = bedshifter.add_from_file(
+            fp=os.path.join(SCRIPT_PATH, "small_test.bed"), addrate=0.2
+        )
         cut = bedshifter.cut(cutrate=0.2)
         shifted = bedshifter.shift(shiftrate=0.3, shiftmean=100, shiftstdev=200)
         dropped = bedshifter.drop(droprate=0.3)
