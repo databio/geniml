@@ -582,6 +582,7 @@ def main():
     elif args.genome:
         try:
             import refgenconf
+
             rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
             args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
         except ModuleNotFoundError:
