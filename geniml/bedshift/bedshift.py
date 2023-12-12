@@ -58,8 +58,9 @@ class Bedshift(object):
                     size = int(line[1])
                     self.chrom_lens[chrom] = size
         except FileNotFoundError:
-            _LOGGER.error("fasta file path {} invalid".format(fp))
-            sys.exit(1)
+            msg = "Fasta file path {} invalid".format(fp)
+            _LOGGER.error(msg)
+            raise FileNotFoundError(msg)
 
         total_len = sum(self.chrom_lens.values())
         self.chrom_weights = [chrom_len / total_len for chrom_len in self.chrom_lens.values()]
@@ -80,16 +81,19 @@ class Bedshift(object):
         """
         if isAdd:
             if rate < 0:
-                _LOGGER.error("Rate must be greater than 0")
-                sys.exit(1)
+                msg = "Rate must be greater than 0"
+                _LOGGER.error(msg)
+                raise ValueError(msg)
         else:
             if rate < 0 or rate > 1:
-                _LOGGER.error("Rate must be between 0 and 1")
-                sys.exit(1)
+                msg = "Rate must be between 0 and 1"
+                _LOGGER.error(msg)
+                raise ValueError(msg)
         if requiresChromLens:
             if len(self.chrom_lens) == 0:
-                _LOGGER.error("chrom.sizes file must be specified")
-                sys.exit(1)
+                msg = "chrom.sizes file must be specified"
+                _LOGGER.error(msg)
+                raise FileNotFoundError(msg)
 
     def pick_random_chroms(self, n):
         """
@@ -406,8 +410,9 @@ class Bedshift(object):
             random.seed(seednum)
             np.random.seed(seednum)
         except ValueError:
-            _LOGGER.error("Seed should be an integer, not {}.".format(type(seednum)))
-            sys.exit(1)
+            msg = "Seed should be an integer, not {}.".format(type(seednum))
+            _LOGGER.error(msg)
+            raise ValueError(msg)
 
     def _find_overlap(self, fp, reference=None):
         """
@@ -539,11 +544,13 @@ class Bedshift(object):
                 engine="python",
             )
         except FileNotFoundError:
-            _LOGGER.error("BED file path {} invalid".format(bedfile_path))
-            sys.exit(1)
+            msg = "BED file path {} invalid".format(bedfile_path)
+            _LOGGER.error(msg)
+            raise FileNotFoundError(msg)
         except:
-            _LOGGER.error("file {} could not be read".format(bedfile_path))
-            sys.exit(1)
+            msg = "File {} could not be read".format(bedfile_path)
+            _LOGGER.error(msg)
+            raise Exception(msg)
 
         # if there is a header line in the table, remove it
         if not str(df.iloc[0, 1]).isdigit():
@@ -566,26 +573,28 @@ def main():
 
     if not args.bedfile:
         parser.print_help()
-        _LOGGER.error("No BED file given")
-        sys.exit(1)
+        msg = "No BED file given"
+        _LOGGER.error(msg)
+        raise MissingArgumentError(msg)
 
     if args.chrom_lengths:
         pass
     elif args.genome:
         try:
             import refgenconf
-
             rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
             args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
         except ModuleNotFoundError:
-            _LOGGER.error("You must have package refgenconf installed to use a refgenie genome")
-            sys.exit(1)
+            msg = "You must have package refgenconf installed to use a refgenie genome"
+            _LOGGER.error(msg)
+            raise ModuleNotFoundError(msg)
 
     msg = arguments.param_msg
 
     if args.repeat < 1:
-        _LOGGER.error("repeats specified is less than 1")
-        sys.exit(1)
+        msg = "Repeats must be greater than 0"
+        _LOGGER.error(msg)
+        raise ValueError(msg)
 
     if args.outputfile:
         outfile_base = args.outputfile
