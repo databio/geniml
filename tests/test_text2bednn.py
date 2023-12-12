@@ -19,7 +19,7 @@ from geniml.tokenization.main import ITTokenizer
 from sklearn.model_selection import train_test_split
 
 
-DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"tests", "data")
 
 
 @pytest.fixture
