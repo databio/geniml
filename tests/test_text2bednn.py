@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pytest
 from fastembed.embedding import FlagEmbedding
-from sklearn.model_selection import train_test_split
 
 
 from geniml.region2vec.main import Region2VecExModel
@@ -20,12 +19,15 @@ from geniml.tokenization.main import ITTokenizer
 from sklearn.model_selection import train_test_split
 
 
+DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+
 @pytest.fixture
 def metadata_path():
     """
     :return: the path to the metadata file (sorted)
     """
-    return "./data/testing_hg38_metadata_sorted.tab"
+    return os.path.join(DATA_FOLDER_PATH, "testing_hg38_metadata_sorted.tab")
 
 
 @pytest.fixture
@@ -33,7 +35,7 @@ def bed_folder():
     """
     :return: the path to the folder where bed files are stored
     """
-    return "./data/hg38_sample"
+    return os.path.join(DATA_FOLDER_PATH, "hg38_sample")
 
 
 @pytest.fixture
@@ -41,7 +43,7 @@ def universe_path():
     """
     :return: the universe file for tokenizer
     """
-    return "./data/universe.bed"
+    return os.path.join(DATA_FOLDER_PATH, "universe.bed")
 
 
 @pytest.fixture
@@ -106,7 +108,7 @@ def local_model_path():
 
 
 @pytest.fixture
-def testing_input():
+def random_input():
     """
     :return: a random generated np.ndarray,
     with same dimension as a sentence embedding vector of SentenceTransformer
@@ -133,7 +135,7 @@ def query_term():
 
 
 @pytest.fixture
-def k():
+def k_nearest_neighbours():
     """
     :return: number of nearest neighbor to search
     """
@@ -141,7 +143,7 @@ def k():
 
 
 @pytest.fixture
-def testing_input_biogpt():
+def random_input_biogpt():
     """
     :return: a random generated np.ndarray,
     with same dimension as a sentence embedding vector of SentenceTransformer
@@ -155,7 +157,7 @@ def yaml_path():
     """
     :return: path to the yaml file of testing PEP
     """
-    return "./data/testing_hg38.yaml"
+    return os.path.join(DATA_FOLDER_PATH, "testing_hg38.yaml")
 
 
 @pytest.fixture
@@ -259,10 +261,10 @@ def test_data_nn_search_interface(
     r2v_hf_model,
     nl_embed,
     local_model_path,
-    testing_input,
+    random_input,
     collection,
     query_term,
-    k,
+    k_nearest_neighbours,
     tmp_path_factory,
 ):
     def test_vector_from_backend(search_backend, nl_embed):
@@ -307,7 +309,7 @@ def test_data_nn_search_interface(
 
     # construct a search interface
     db_interface = Text2BEDSearchInterface(nl_embed, v2vnn, qd_search_backend)
-    db_search_result = db_interface.nl_vec_search(query_term, k, offset=0)
+    db_search_result = db_interface.nl_vec_search(query_term, k_nearest_neighbours, offset=0)
     for i in range(len(db_search_result)):
         assert isinstance(db_search_result[i], dict)
     # test vectors_from_backend
@@ -322,7 +324,7 @@ def test_data_nn_search_interface(
     hnsw_backend.load(vectors=embeddings, payloads=labels)
     file_interface = Text2BEDSearchInterface(nl_embed, v2vnn, hnsw_backend)
 
-    file_search_result = file_interface.nl_vec_search(query_term, k)
+    file_search_result = file_interface.nl_vec_search(query_term, k_nearest_neighbours)
     for i in range(len(file_search_result)):
         assert isinstance(file_search_result[i], dict)
 
