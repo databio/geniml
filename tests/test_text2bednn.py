@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from fastembed.embedding import FlagEmbedding
 from sklearn.model_selection import train_test_split
-from torchsummary import summary
+
 
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
@@ -227,7 +227,6 @@ def test_torch_running(tmp_path_factory):
     )
     v2v_torch1.plot_training_hist(best_embed_folder)
     v2v_torch1.export(best_embed_folder, "v2v_best_epoch.pt")
-    summary(v2v_torch1.model)
 
     v2v_torch2 = Vec2VecFNN()
     v2v_torch2.load_from_disk(
