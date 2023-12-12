@@ -1,5 +1,5 @@
 genimtools
-fastembed
+fastembed >= 0.1.1 
 gensim
 genomicranges >= 0.4.1
 genimtools
