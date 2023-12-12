@@ -1,7 +1,4 @@
-import gzip
 import os
-import shutil
-from typing import Tuple
 
 import genomicranges
 import pytest

@@ -8,7 +8,9 @@ from geniml.bedshift import BedshiftYAMLHandler
 
 class TestBedshift(unittest.TestCase):
     def setUp(self):
-        self.bs = bedshift.Bedshift("tests/bedshift/test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes")
+        self.bs = bedshift.Bedshift(
+            "tests/bedshift/test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes"
+        )
 
     def test_read_bed(self):
         reader = bedshift.Bedshift("tests/bedshift/header_test.bed")
@@ -34,7 +36,9 @@ class TestBedshift(unittest.TestCase):
         self.bs.reset_bed()
 
     def test_add_valid_regions(self):
-        added = self.bs.add(0.5, 2000, 1000, valid_bed="tests/bedshift/small_test.bed", delimiter="\t")
+        added = self.bs.add(
+            0.5, 2000, 1000, valid_bed="tests/bedshift/small_test.bed", delimiter="\t"
+        )
         self.assertEqual(added, 5000)
         self.bs.to_bed("tests/bedshift/add_valid_test.bed")
         self.bs.reset_bed()
@@ -126,7 +130,9 @@ class TestBedshift(unittest.TestCase):
         self.assertTrue(os.path.exists("tests/bedshift/py_output.bed"))
 
     def test_small_file(self):
-        bs_small = bedshift.Bedshift("tests/bedshift/small_test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes")
+        bs_small = bedshift.Bedshift(
+            "tests/bedshift/small_test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes"
+        )
         shifted = bs_small.shift(0.3, 50, 50)
         self.assertEqual(shifted, 0)
         shifted = bs_small.shift(1.0, 50, 50)
@@ -142,7 +148,9 @@ class TestBedshift(unittest.TestCase):
 class TestBedshiftYAMLHandler(unittest.TestCase):
     @pytest.mark.skip("Not implemented yet")
     def test_handle_yaml(self):
-        bedshifter = bedshift.Bedshift("tests/bedshift/test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes")
+        bedshifter = bedshift.Bedshift(
+            "tests/bedshift/test.bed", chrom_sizes="tests/bedshift/hg38.chrom.sizes"
+        )
         yamled = BedshiftYAMLHandler.BedshiftYAMLHandler(
             bedshifter=bedshifter, yaml_fp="tests/bedshift/bedshift_analysis.yaml"
         ).handle_yaml()

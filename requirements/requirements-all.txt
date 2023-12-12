@@ -1,7 +1,7 @@
 genimtools
 fastembed
 gensim
-genomicranges >= 0.3.6
+genomicranges >= 0.4.1
 genimtools
 huggingface_hub
 intervaltree
@@ -24,3 +24,4 @@ umap-learn
 ubiquerg
 yacman
 pyarrow
+iranges
