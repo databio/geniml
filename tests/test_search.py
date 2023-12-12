@@ -15,7 +15,9 @@ def bed_folder():
     folder where testing bed files are stored
     """
 
-    return "./data/hg38_sample"
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data", "hg38_sample"
+    )
 
 
 @pytest.fixture
