@@ -7,6 +7,7 @@ from ubiquerg import is_url
 import numpy as np
 import pandas as pd
 import genomicranges
+from iranges import IRanges
 from hashlib import md5
 
 from .const import (
@@ -179,9 +180,12 @@ class RegionSet:
         seqnames, starts, ends = zip(
             *[(region.chr, region.start, region.end) for region in self.regions]
         )
-        gr_dict = {"seqnames": seqnames, "starts": starts, "ends": ends}
+        width_list = []
+        for start, end in zip(starts, ends):
+            width_list.append(end - start)
+        ir = IRanges(start=starts, width=width_list)
 
-        return genomicranges.GenomicRanges(gr_dict)
+        return genomicranges.GenomicRanges(seqnames, ir)
 
     def compute_bed_identifier(self) -> str:
         """

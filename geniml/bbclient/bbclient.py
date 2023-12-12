@@ -8,7 +8,6 @@ import requests
 from ubiquerg import is_url
 
 from .._version import __version__
-from ..exceptions import GenimlBaseError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
 from .const import (
