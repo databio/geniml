@@ -19,7 +19,9 @@ from geniml.tokenization.main import ITTokenizer
 from sklearn.model_selection import train_test_split
 
 
-DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DATA_FOLDER_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data"
+)
 
 
 @pytest.fixture
@@ -180,6 +182,8 @@ def test_reading_data(bed_folder, metadata_path, yaml_path, col_names, r2v_model
     """
     Test reading data from files and PEP
     """
+    # TODO: we shouldn't set environment variable in tests. This is workaround for now.
+    os.environ["TEST_FOLDER"] = bed_folder
     ri_list_PEP = build_regionset_info_list_from_PEP(
         yaml_path,
         col_names,
