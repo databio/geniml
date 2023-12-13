@@ -194,3 +194,5 @@ qdrant_storage/
 
 # MacOS
 .DS_Store
+
+local_cache
