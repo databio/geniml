@@ -296,6 +296,8 @@ class Vec2VecFNN:
 
                 # save the best-performing model
                 if avg_val_loss < best_val_loss:
+                    # reset the patience count
+                    patience_count = 0
                     best_val_loss = avg_val_loss
                     if save_best:
                         self.export(
