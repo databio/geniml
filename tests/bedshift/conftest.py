@@ -4,6 +4,7 @@ from geniml.bedshift import bedshift
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
+
 @pytest.fixture
 def bs():
     return bedshift.Bedshift(
