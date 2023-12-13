@@ -6,7 +6,8 @@ from geniml.bedshift import BedshiftYAMLHandler
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
-class TestBedshift():
+
+class TestBedshift:
     def test_read_bed(self):
         reader = bedshift.Bedshift(os.path.join(SCRIPT_PATH, "header_test.bed"))
         assert list(reader.bed.columns) == [0, 1, 2, 3]
@@ -86,7 +87,7 @@ class TestBedshift():
     @pytest.mark.skip("Not implemented yet")
     def test_drop_from_file_zero_rate(self, bs):
         dropped = bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0)
-        assert dropped ==  0
+        assert dropped == 0
         bs.reset_bed()
 
     @pytest.mark.skip("Not implemented yet")
@@ -143,7 +144,7 @@ class TestBedshift():
         assert added == 4
 
 
-class TestBedshiftYAMLHandler():
+class TestBedshiftYAMLHandler:
     @pytest.mark.skip("Not implemented yet")
     def test_handle_yaml(self):
         bedshifter = bedshift.Bedshift(
