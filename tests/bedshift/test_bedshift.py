@@ -1,103 +1,97 @@
 import os
 import pytest
-import unittest
 
 from geniml.bedshift import bedshift
 from geniml.bedshift import BedshiftYAMLHandler
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
-
-class TestBedshift(unittest.TestCase):
-    def setUp(self):
-        self.bs = bedshift.Bedshift(
-            os.path.join(SCRIPT_PATH, "test.bed"),
-            chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes"),
-        )
-
+class TestBedshift():
     def test_read_bed(self):
         reader = bedshift.Bedshift(os.path.join(SCRIPT_PATH, "header_test.bed"))
-        self.assertTrue(list(reader.bed.columns), [0, 1, 2, 3])
-        self.assertTrue(list(reader.bed.index), [0, 1, 2])
+        assert list(reader.bed.columns) == [0, 1, 2, 3]
+        assert list(reader.bed.index) == [0, 1, 2]
 
-    def test_read_chrom_sizes(self):
-        self.bs._read_chromsizes(os.path.join(SCRIPT_PATH, "hg19.chrom.sizes"))
-        self.assertEqual(len(self.bs.chrom_lens), 93)
+    def test_read_chrom_sizes(self, bs):
+        bs._read_chromsizes(os.path.join(SCRIPT_PATH, "hg19.chrom.sizes"))
+        assert len(bs.chrom_lens) == 93
 
-    def test_add(self):
-        added = self.bs.add(0.1, 100, 20)
-        self.assertEqual(added, 1000)
-        self.bs.reset_bed()
+    def test_add(self, bs):
+        added = bs.add(0.1, 100, 20)
+        assert added == 100
+        bs.reset_bed()
 
-    def test_check_rate(self):
-        self.assertRaises(ValueError, self.bs.shift, -0.1, 250, 250)
-        self.assertRaises(ValueError, self.bs.cut, 1.5)
+    def test_check_rate(self, bs):
+        with pytest.raises(ValueError):
+            bs.shift(-0.1, 250, 250)
+        with pytest.raises(ValueError):
+            bs.cut(1.5)
 
-    def test_add_high_rate(self):
-        added = self.bs.add(1.23, 500, 123)
-        self.assertEqual(added, 12300)
-        self.bs.reset_bed()
+    def test_add_high_rate(self, bs):
+        added = bs.add(1.23, 500, 123)
+        assert added == 1230
+        bs.reset_bed()
 
-    def test_add_valid_regions(self):
-        added = self.bs.add(
+    def test_add_valid_regions(self, bs):
+        added = bs.add(
             0.5, 2000, 1000, valid_bed=os.path.join(SCRIPT_PATH, "small_test.bed"), delimiter="\t"
         )
-        self.assertEqual(added, 5000)
-        # self.bs.to_bed(os.path.join(SCRIPT_PATH, "add_valid_test.bed"))
-        self.bs.reset_bed()
+        assert added == 500
+        # bs.to_bed(os.path.join(SCRIPT_PATH, "add_valid_test.bed"))
+        bs.reset_bed()
 
-    def test_add_from_file(self):
-        added = self.bs.add_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0.25)
-        self.assertEqual(added, 2500)
-        self.bs.reset_bed()
+    def test_add_from_file(self, bs):
+        added = bs.add_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0.25)
+        assert added == 250
+        bs.reset_bed()
 
-    def test_drop(self):
-        dropped = self.bs.drop(0.315)
-        self.assertEqual(dropped, 3150)
-        self.bs.reset_bed()
+    def test_drop(self, bs):
+        dropped = bs.drop(0.315)
+        assert dropped == 315
+        bs.reset_bed()
 
-    def test_shift(self):
-        shifted = self.bs.shift(0.129, 200, 30)
-        self.assertAlmostEqual(shifted, 1290, places=-2)
-        self.bs.reset_bed()
+    def test_shift(self, bs):
+        shifted = bs.shift(0.129, 200, 30)
+        assert shifted == pytest.approx(129, 2)
+        bs.reset_bed()
 
-    def test_cut(self):
-        cut = self.bs.cut(0.909)
-        self.assertEqual(cut, 9090)
-        self.bs.reset_bed()
+    def test_cut(self, bs):
+        cut = bs.cut(0.909)
+        assert cut == 909
+        bs.reset_bed()
 
-    def test_merge(self):
-        merged = self.bs.merge(0.2)
-        self.assertAlmostEqual(merged, 4000, places=-3)
-        self.bs.reset_bed()
+    def test_merge(self, bs):
+        merged = bs.merge(0.2)
+        assert merged == pytest.approx(400, 3)
+        bs.reset_bed()
 
-    def test_combo(self):
-        _ = self.bs.drop(0.4)
-        _ = self.bs.add(0.2, 200, 10)
-        self.assertEqual(len(self.bs.bed), 7200)
-        self.bs.reset_bed()
-
-    @pytest.mark.skip("Not implemented yet")
-    def test_drop_from_file(self):
-        dropped = self.bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0.25)
-        self.assertEqual(dropped, 2500)
-        self.bs.reset_bed()
+    def test_combo(self, bs):
+        _ = bs.drop(0.4)
+        _ = bs.add(0.2, 200, 10)
+        assert len(bs.bed) == 720
+        bs.reset_bed()
 
     @pytest.mark.skip("Not implemented yet")
-    def test_drop_from_file_high_rate(self):
-        dropped = self.bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 1)
-        self.assertEqual(dropped, 10000)
-        self.bs.reset_bed()
+    def test_drop_from_file(self, bs):
+        dropped = bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0.25)
+        self.assertEqual(dropped, 250)
+        bs.reset_bed()
 
     @pytest.mark.skip("Not implemented yet")
-    def test_drop_from_file_zero_rate(self):
-        dropped = self.bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0)
-        self.assertEqual(dropped, 0)
-        self.bs.reset_bed()
+    def test_drop_from_file_high_rate(self, bs):
+        dropped = bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 1)
+        assert dropped == 100
+        bs.reset_bed()
 
     @pytest.mark.skip("Not implemented yet")
-    def test_all_perturbations1(self):
-        perturbed = self.bs.all_perturbations(
+    def test_drop_from_file_zero_rate(self, bs):
+        dropped = bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0)
+        assert dropped ==  0
+        bs.reset_bed()
+
+    @pytest.mark.skip("Not implemented yet")
+    def test_all_perturbations1(self, bs):
+        perturbed = bs.all_perturbations(
             addrate=0.5,
             addmean=320.0,
             addstdev=20.0,
@@ -107,13 +101,13 @@ class TestBedshift(unittest.TestCase):
             cutrate=0.12,
             droprate=0.42,
         )
-        self.assertAlmostEqual(perturbed, 16156, places=-2)
-        self.assertAlmostEqual(len(self.bs.bed), 9744, places=-2)
-        self.bs.reset_bed()
+        assert perturbed == pytest.approx(16156, 2)
+        assert len(bs.bed) == pytest.approx(9744, 2)
+        bs.reset_bed()
 
     @pytest.mark.skip("Not implemented yet")
-    def test_all_perturbations2(self):
-        perturbed = self.bs.all_perturbations(
+    def test_all_perturbations2(self, bs):
+        perturbed = bs.all_perturbations(
             addrate=0.3,
             addmean=320.0,
             addstdev=20.0,
@@ -126,11 +120,12 @@ class TestBedshift(unittest.TestCase):
         )
         # merge sometimes merges more or less than expected because it depends
         # if the randomly chosen regions are adjacent
-        self.assertAlmostEqual(perturbed, 9400, places=-3)
+        assert perturbed == pytest.approx(9400, 3)
 
-    def test_to_bed(self):
-        self.bs.to_bed(os.path.join(SCRIPT_PATH, "py_output.bed"))
-        self.assertTrue(os.path.exists(os.path.join(SCRIPT_PATH, "py_output.bed")))
+    @pytest.mark.skip("Not implemented yet")
+    def test_to_bed(self, tmp_path, bs):
+        bs.to_bed(os.path.join(tmp_path, "py_output.bed"))
+        assert os.path.exists(os.path.join(tmp_path, "py_output.bed"))
 
     def test_small_file(self):
         bs_small = bedshift.Bedshift(
@@ -138,18 +133,18 @@ class TestBedshift(unittest.TestCase):
             chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes"),
         )
         shifted = bs_small.shift(0.3, 50, 50)
-        self.assertEqual(shifted, 0)
+        assert shifted == 0
         shifted = bs_small.shift(1.0, 50, 50)
-        self.assertEqual(shifted, 1)
+        assert shifted == 1
         added = bs_small.add(0.2, 100, 50)
-        self.assertEqual(added, 0)
+        assert added == 0
         added = bs_small.add(1.0, 100, 50)
-        self.assertEqual(added, 1)
+        assert added == 1
         added = bs_small.add(2.0, 100, 50)
-        self.assertEqual(added, 4)
+        assert added == 4
 
 
-class TestBedshiftYAMLHandler(unittest.TestCase):
+class TestBedshiftYAMLHandler():
     @pytest.mark.skip("Not implemented yet")
     def test_handle_yaml(self):
         bedshifter = bedshift.Bedshift(
@@ -182,5 +177,5 @@ class TestBedshiftYAMLHandler(unittest.TestCase):
         total = added + f_drop_10 + f_shift_30 + f_added_20 + cut + dropped + shifted + merged
 
         # yamled and total both should be around 16750, but can vary by over 100
-        self.assertAlmostEqual(yamled, total, places=-3)
+        assert yamled == pytest.approx(total, 3)
         bedshifter.reset_bed()
