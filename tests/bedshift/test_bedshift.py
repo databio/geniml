@@ -43,7 +43,7 @@ class TestBedshift(unittest.TestCase):
             0.5, 2000, 1000, valid_bed=os.path.join(SCRIPT_PATH, "small_test.bed"), delimiter="\t"
         )
         self.assertEqual(added, 5000)
-        self.bs.to_bed(os.path.join(SCRIPT_PATH, "add_valid_test.bed"))
+        # self.bs.to_bed(os.path.join(SCRIPT_PATH, "add_valid_test.bed"))
         self.bs.reset_bed()
 
     def test_add_from_file(self):
