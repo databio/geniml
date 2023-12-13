@@ -122,7 +122,6 @@ class TestBedshift():
         # if the randomly chosen regions are adjacent
         assert perturbed == pytest.approx(9400, 3)
 
-    @pytest.mark.skip("Not implemented yet")
     def test_to_bed(self, tmp_path, bs):
         bs.to_bed(os.path.join(tmp_path, "py_output.bed"))
         assert os.path.exists(os.path.join(tmp_path, "py_output.bed"))
