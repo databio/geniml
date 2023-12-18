@@ -1,1 +1,2 @@
-from .main import region2vec
+from .main import Region2Vec, Region2VecExModel, region2vec
+from .pooling import *

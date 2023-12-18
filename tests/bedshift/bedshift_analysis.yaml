@@ -1,0 +1,27 @@
+bedshift_operations:
+  - add:
+    rate: 0.1
+    mean: 100
+    stdev: 20
+  - drop_from_file:
+    file: tests/bedshift/test.bed
+    rate: 0.1
+    delimiter: \t
+  - shift_from_file:
+    file: tests/bedshift/test2.bed
+    rate: 0.5
+    mean: 100
+    stdev: 200
+  - add_from_file:
+    file: tests/bedshift/small_test.bed
+    rate: 0.2
+  - cut:
+    rate: 0.2
+  - shift:
+    rate: 0.3
+    mean: 100
+    stdev: 200
+  - drop:
+    rate: 0.30
+  - merge:
+    rate: 0.15

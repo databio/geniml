@@ -1,5 +1,5 @@
 https://github.com/databio/mkdocs-databio/archive/master.zip
 markdown-include
-geniml
+# geniml
 mkdocs>=1.0
 pydoc-markdown

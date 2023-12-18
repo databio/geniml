@@ -1,23 +1,166 @@
-import argparse
-import glob
-import json
 import multiprocessing
 import os
-import random
-import shlex
 import shutil
 import subprocess
-import sys
-from queue import Queue
+from abc import ABC, abstractmethod
+from typing import List, Union
 
 import numpy as np
-import requests
-import yaml
+import scanpy as sc
+from genimtools.tokenizers import (
+    Region as GRegion,
+    TreeTokenizer as GTreeTokenizer,
+    TokenizedRegionSet as GTokenizedRegionSet,
+    Universe as GUniverse,
+)
+from huggingface_hub import hf_hub_download
+from rich.progress import track
 
-import geniml.region2vec.utils as utils
 from geniml.tokenization.split_file import split_file
 
+from .const import UNIVERSE_FILE_NAME, CHR_KEY, START_KEY, END_KEY
+from ..io import Region, RegionSet
 from .hard_tokenization_batch import main as hard_tokenization
+from .utils import time_str, Timer
+
+
+class Tokenizer(ABC):
+    @abstractmethod
+    def tokenize(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class ITTokenizer(Tokenizer):
+    """
+    A fast, in memory, tokenizer that uses `gtokenizers` - a rust based tokenizer. This
+    tokenizer is the fastest tokenizer available. It is also the most memory efficient.
+    """
+
+    # class based method to insantiate the tokenizer from file
+    @classmethod
+    def from_file(cls, universe: str, **kwargs):
+        """
+        Create a new tokenizer from a file.
+
+        Usage:
+        ```
+        tokenizer = ITTokenizer.from_file("path/to/universe.bed")
+        ```
+
+        :param str universe: The universe to use for tokenization.
+        """
+        return cls(universe, **kwargs)
+
+    @classmethod
+    def from_pretrained(cls, model_path: str, **kwargs):
+        """
+        Create a new tokenizer from a pretrained model's vocabulary.
+
+        Usage:
+        ```
+        tokenizer = ITTokenizer.from_pretrained("path/to/universe.bed")
+        ```
+
+        :param str model_path: The path to the pretrained model on huggingface.
+        """
+        universe_file_path = hf_hub_download(model_path, UNIVERSE_FILE_NAME)
+        return cls(universe_file_path, **kwargs)
+
+    @property
+    def universe(self) -> GUniverse:
+        return self._tokenizer.universe
+
+    def __init__(self, universe: str = None, verbose: bool = True):
+        """
+        Create a new tokenizer.
+
+        This tokenizer only accepts a path to a BED file containing regions.
+
+        :param str universe: The universe to use for tokenization.
+        """
+        self.verbose = verbose
+        if universe is not None:
+            self._tokenizer: GTreeTokenizer = GTreeTokenizer(universe)
+        else:
+            self._tokenizer = None
+
+    def _tokenize_anndata(self, adata: sc.AnnData) -> List[GTokenizedRegionSet]:
+        """
+        Tokenize an AnnData object. This is more involved, so it gets its own function.
+
+        :param sc.AnnData query: The query to tokenize.
+        """
+        # extract regions from AnnData
+        # its weird because of how numpy handle Intervals, the parent class of Region,
+        # see here:
+        # https://stackoverflow.com/a/43722306/13175187
+        adata_features = [
+            Region(chr, int(start), int(end))
+            for chr, start, end in track(
+                zip(adata.var[CHR_KEY], adata.var[START_KEY], adata.var[END_KEY]),
+                total=adata.var.shape[0],
+                description="Extracting regions from AnnData",
+                disable=not self.verbose,
+            )
+        ]
+        features = np.ndarray(len(adata_features), dtype=object)
+        for i, region in enumerate(adata_features):
+            features[i] = region
+        del adata_features
+
+        # tokenize
+        tokenized = []
+        for row in track(
+            range(adata.shape[0]),
+            total=adata.shape[0],
+            description="Tokenizing",
+            disable=not self.verbose,
+        ):
+            _, non_zeros = adata.X[row].nonzero()
+            regions = features[non_zeros]
+            tokenized.append(self._tokenizer.tokenize(regions.tolist()))
+
+        return tokenized
+
+    def tokenize(self, query: Union[Region, RegionSet]) -> GTokenizedRegionSet:
+        """
+        Tokenize a Region or RegionSet into the universe
+
+        :param Union[Region, RegionSet, sc.AnnData] query: The query to tokenize.
+        """
+        if isinstance(query, sc.AnnData):
+            return self._tokenize_anndata(query)
+        if isinstance(query, Region):
+            query = [query]
+        elif isinstance(query, RegionSet):
+            query = list(query)
+        elif isinstance(query, list) and isinstance(query[0], Region):
+            pass
+        else:
+            raise ValueError("Query must be a Region or RegionSet")
+
+        result = self._tokenizer.tokenize(list(query))
+        return result
+
+    def padding_token(self) -> Region:
+        return self._tokenizer.padding_token
+
+    def padding_token_id(self) -> int:
+        padding_token = self.padding_token()
+        return self.universe.region_to_id(
+            GRegion(padding_token.chr, padding_token.start, padding_token.end)
+        )
+
+    def convert_tokens_to_ids(self, tokens: GTokenizedRegionSet) -> List[int]:
+        """
+        Convert a list of tokens to a list of ids.
+
+        :param List[TokenizedRegion] tokens: The list of tokens to convert
+        """
+        return [token.id for token in tokens]
+
+    def __len__(self):
+        return len(self._tokenizer)
 
 
 class Namespace:
@@ -30,7 +173,7 @@ def hard_tokenization_main(
     dst_folder: str,
     universe_file: str,
     fraction: float = 1e-9,
-    file_list: list[str] = None,
+    file_list: List[str] = None,
     num_workers: int = 10,
     bedtools_path: str = "bedtools",
 ) -> int:
@@ -61,7 +204,7 @@ def hard_tokenization_main(
             has the complete tokenized BED files or the tokenization process
             succeeds.
     """
-    timer = utils.Timer()
+    timer = Timer()
     start_time = timer.t()
 
     file_list_path = os.path.join(dst_folder, "file_list.txt")
@@ -104,7 +247,7 @@ def hard_tokenization_main(
     if bedtools_path == "bedtools":
         try:
             rval = subprocess.call([bedtools_path, "--version"])
-        except:
+        except Exception:
             raise Exception("No bedtools executable found")
         if rval != 0:
             raise Exception("No bedtools executable found")
@@ -142,7 +285,7 @@ def hard_tokenization_main(
             args_arr.append(tokenization_args)
         with multiprocessing.Pool(nworkers) as pool:
             processes = [pool.apply_async(hard_tokenization, args=(param,)) for param in args_arr]
-            results = [r.get() for r in processes]
+            _ = [r.get() for r in processes]
         # move tokenized files in different folders to expr_tokens
         shutil.rmtree(dest_folder)
         for param in args_arr:
@@ -156,5 +299,5 @@ def hard_tokenization_main(
     os.remove(file_list_path)
     print(f"Tokenization complete {len(os.listdir(dst_folder))}/{file_count} bed files")
     elapsed_time = timer.t() - start_time
-    print(f"[Tokenization] {utils.time_str(elapsed_time)}/{utils.time_str(timer.t())}")
+    print(f"[Tokenization] {time_str(elapsed_time)}/{time_str(timer.t())}")
     return 1

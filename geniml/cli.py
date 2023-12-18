@@ -1,19 +1,19 @@
-from typing import Dict
-import logmuse
 import sys
+from typing import Dict
 
+import logmuse
 from ubiquerg import VersionInHelpParser
 
-from .assess.cli import build_subparser as assess_subparser
-from .eval.cli import build_subparser as eval_subparser
-from .universe.cli import build_mode_parser as universe_subparser
-from .region2vec.cli import build_subparser as region2vec_subparser
-from .tokenization.cli import build_subparser as tokenization_subparser
-from .likelihood.cli import build_subparser as likelihood_subparser
-from .scembed.argparser import build_argparser as scembed_subparser
-from .bedspace.cli import build_argparser as bedspace_subparser
-
 from ._version import __version__
+from .assess.cli import build_subparser as assess_subparser
+from .bbclient.cli import build_subparser as bbclient_subparser
+from .bedspace.cli import build_argparser as bedspace_subparser
+from .eval.cli import build_subparser as eval_subparser
+from .likelihood.cli import build_subparser as likelihood_subparser
+from .region2vec.cli import build_subparser as region2vec_subparser
+from .scembed.argparser import build_argparser as scembed_subparser
+from .tokenization.cli import build_subparser as tokenization_subparser
+from .universe.cli import build_mode_parser as universe_subparser
 
 
 def build_argparser():
@@ -35,14 +35,15 @@ def build_argparser():
 
     # Individual subcommands
     msg_by_cmd = {
-        "build-universe": "Build a consensus peak set using one of provided model",
-        "lh": "Make likelihood model",
         "assess-universe": "Assess a universe",
-        "scembed": "Embed single-cell data as region vectors",
-        "region2vec": "Train a region2vec model",
-        "tokenize": "Tokenize BED files",
-        "eval": "Evaluate a set of region embeddings",
+        "bbclient": "Client for the BEDbase server",
         "bedspace": "Coembed regionsets (bed files) and labels",
+        "build-universe": "Build a consensus peak set using one of provided model",
+        "eval": "Evaluate a set of region embeddings",
+        "lh": "Make likelihood model",
+        "region2vec": "Train a region2vec model",
+        "scembed": "Embed single-cell data as region vectors",
+        "tokenize": "Tokenize BED files",
     }
 
     sp = parser.add_subparsers(dest="command")
@@ -51,14 +52,15 @@ def build_argparser():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
 
     # build up subparsers for modules
-    subparsers["build-universe"] = universe_subparser(subparsers["build-universe"])
     subparsers["assess-universe"] = assess_subparser(subparsers["assess-universe"])
-    subparsers["lh"] = likelihood_subparser(subparsers["lh"])
-    subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
-    subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
-    subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
-    subparsers["eval"] = eval_subparser(subparsers["eval"])
+    subparsers["bbclient"] = bbclient_subparser(subparsers["bbclient"])
     subparsers["bedspace"] = bedspace_subparser(subparsers["bedspace"])
+    subparsers["build-universe"] = universe_subparser(subparsers["build-universe"])
+    subparsers["eval"] = eval_subparser(subparsers["eval"])
+    subparsers["lh"] = likelihood_subparser(subparsers["lh"])
+    subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
+    subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
+    subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
 
     return parser
 
@@ -108,6 +110,89 @@ def main(test_args=None):
             args.file_no,
             args.force,
         )
+
+    if args.command == "bbclient":
+        if args.subcommand is not None:
+            _LOGGER.info(f"Subcommand: {args.subcommand}")
+            import os
+
+            from .bbclient import BBClient
+
+            cache_path = os.environ.get("BBCLIENT_CACHE", args.cache_folder)
+            if cache_path is None:
+                _LOGGER.error(
+                    "Please give a valid cache folder, or set it in the environment variable $BBCLIENT_CACHE`."
+                )
+                sys.exit(1)
+            bbc = BBClient(cache_path)
+
+        else:
+            # if no subcommand, print help format of bbclient subparser
+            # from https://stackoverflow.com/a/20096044/23054783
+            import argparse
+
+            subparsers_actions = [
+                action
+                for action in parser._actions
+                if isinstance(action, argparse._SubParsersAction)
+            ]
+            # there will probably only be one subparser_action,
+            # but better safe than sorry
+            for subparsers_action in subparsers_actions:
+                # get all subparsers and print help
+                for choice, subparser in subparsers_action.choices.items():
+                    if choice == "bbclient":
+                        print(subparser.format_help())
+                        sys.exit(1)
+        if args.subcommand == "cache-bed":
+            # if input is a BED file path
+            if os.path.exists(args.identifier[0]):
+                from .io import RegionSet
+
+                bedfile = RegionSet(args.identifier[0])
+                bbc.add_bed_to_cache(bedfile)
+                _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
+            else:
+                bedfile = bbc.load_bed(args.identifier[0])
+
+        if args.subcommand == "cache-bedset":
+            import os
+
+            if os.path.isdir(args.identifier[0]):
+                from .io import BedSet
+
+                bedset = BedSet(
+                    [
+                        os.path.join(args.identifier[0], file_name)
+                        for file_name in os.listdir(args.identifier[0])
+                    ]
+                )
+                bbc.add_bedset_to_cache(bedset)
+                _LOGGER.info(f"BED set {bedset.compute_bedset_identifier()} has been cached")
+
+            else:
+                bedset = bbc.load_bedset(args.identifier[0])
+
+        if args.subcommand == "seek":
+            import logging
+
+            handler = logging.StreamHandler(sys.stdout)
+            _LOGGER.addHandler(handler)
+            _LOGGER.info(bbc.seek(args.identifier[0]))
+            # sys.stdout.write(bbc.seek(args.identifier[0))
+        if args.subcommand == "inspect":
+            import os
+
+            _LOGGER.info(f"Bedfiles directory:")
+            os.system(f"tree {os.path.join(cache_path, 'bedfiles')} | tail -n 1")
+
+            _LOGGER.info(f"Bedsets directory:")
+            os.system(f"tree {os.path.join(cache_path, 'bedsets')} | tail -n 1")
+
+        if args.subcommand == "rm":
+            file_path = bbc.seek(args.identifier[0])
+            bbc._remove(file_path)
+            _LOGGER.info(f"{file_path} is removed")
 
     if args.command == "build-universe":
         _LOGGER.info(f"Subcommand: {args.subcommand}")
@@ -236,8 +321,11 @@ def main(test_args=None):
             )
             print(rct_score)
         if args.subcommand == "bin-gen":
+            import glob
+            import os
+            import pickle
+
             from geniml.eval.utils import get_bin_embeddings
-            import glob, pickle, os
 
             if os.path.exists(args.file_name):
                 print(f"{args.file_name} exists!")

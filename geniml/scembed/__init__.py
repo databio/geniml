@@ -1,4 +1,4 @@
 from .annotation import *
 from .const import *
-from .scembed import *
+from .main import *
 from .utils import *

@@ -5,6 +5,7 @@ import os
 import pickle
 import random
 import time
+from typing import List
 
 import numpy as np
 
@@ -106,7 +107,7 @@ class MatrixDataset:
     Generates a new dataset with regions shuffled in BED files.
     """
 
-    def __init__(self, matrix: list[list[int]]):
+    def __init__(self, matrix: List[List[int]]):
         """Initializes a MatrixDataset object with matrix.
 
         Args:

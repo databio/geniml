@@ -3,6 +3,7 @@ site_logo: img/geniml_logo.svg
 site_url: http://geniml.databio.org/
 repo_url: http://github.com/databio/geniml
 pypi_name: geniml
+papers: https://www.biorxiv.org/content/10.1101/2020.11.02.364145v1
 
 nav:
   - Getting Started: 
@@ -14,9 +15,12 @@ nav:
     - Evaluate embeddings: tutorials/evaluation.md
     - Train region2vec embeddings: tutorials/region2vec.md
     - Train single-cell embeddings: tutorials/train-scembed-model.md
-    - Tokenize a BED file: tutorials/tokenization.md
-    - Build universe: tutorials/build-universe.md
+    - Tokenization: tutorials/tokenization.md
+    - Tokenize a BED file on the command line: tutorials/cli-tokenization.md
     - Create consensus peaks: tutorials/create-consensus-peaks.md
+    - Fine-tune embeddings: tutorials/fine-tune-region2vec-model.md
+    - Randomize bed files: tutorials/bedshift.md
+    - Create evaluation dataset with bedshift: tutorials/bedshift-evaluation-guide.md
   - Reference:
     - API: autodoc_build/geniml.md
     - Support: support.md
@@ -33,3 +37,10 @@ plugins:
       # autodoc_package: "geniml"
       no_top_level: false
   - search
+
+
+navbar:
+  right:
+  - text: Manuscripts
+    icon: fa-file-alt
+    href: manuscripts

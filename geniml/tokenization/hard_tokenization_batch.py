@@ -3,7 +3,7 @@ import os
 import shlex
 import subprocess
 
-from geniml.region2vec import utils
+from .utils import Timer, time_str
 
 
 def bedtools_tokenization(
@@ -31,7 +31,7 @@ def bedtools_tokenization(
         subprocess.run(shlex.split(f"sort -k1,1V -k2,2n {fname}"), stdout=f_temp)
     with open(target, "w") as f_target:
         subprocess.run(
-            shlex.split(f"{bedtools_path} intersect -a {universe} -b {temp} -u -f {fraction} "),
+            shlex.split(f"{bedtools_path} intersect -a {universe} -b {temp} -u -f {fraction}"),
             stdout=f_target,
         )
     os.remove(temp)
