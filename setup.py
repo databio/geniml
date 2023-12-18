@@ -1,5 +1,4 @@
 import os
-import sys
 
 from setuptools import setup
 
@@ -28,15 +27,21 @@ setup(
         PACKAGE_NAME,
         "geniml.assess",
         "geniml.bedspace",
+        "geniml.bedshift",
         "geniml.eval",
         "geniml.likelihood",
         "geniml.models",
-        "geniml.models.atac",
-        "geniml.models.rna",
         "geniml.region2vec",
         "geniml.scembed",
         "geniml.tokenization",
         "geniml.universe",
+        "geniml.io",
+        "geniml.text2bednn",
+        "geniml.bbclient",
+        "geniml.search",
+        "geniml.search.backends",
+        "geniml.classification",
+        "geniml.nn",
     ],
     version=version,
     long_description=long_description,
@@ -49,18 +54,20 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
     license="BSD2",
     entry_points={
         "console_scripts": [
             "geniml = geniml.cli:main",
+            "bedshift = geniml.bedshift.bedshift:main",
         ],
     },
     keywords="bioinformatics, sequencing, ngs",
-    package_data={"refgenie": [os.path.join("refgenie", "*")]},
+    package_data={"geniml": [os.path.join("geniml", "*")]},
     include_package_data=True,
-    url="http://giss.databio.org",
+    url="http://geniml.databio.org",
     author="Nathan Sheffield",
     **extra,
 )

@@ -1,8 +1,10 @@
-import numpy as np
 import os
-from .utils import check_if_uni_sorted, check_if_uni_flexible
-from ..utils import read_chromosome_from_bw
+
+import numpy as np
+
 from ..likelihood.build_model import ModelLH
+from ..utils import read_chromosome_from_bw
+from .utils import check_if_uni_flexible, check_if_uni_sorted
 
 
 class LhModel:
