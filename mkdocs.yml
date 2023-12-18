@@ -3,6 +3,7 @@ site_logo: img/geniml_logo.svg
 site_url: http://geniml.databio.org/
 repo_url: http://github.com/databio/geniml
 pypi_name: geniml
+papers: https://www.biorxiv.org/content/10.1101/2020.11.02.364145v1
 
 nav:
   - Getting Started: 
@@ -36,3 +37,10 @@ plugins:
       # autodoc_package: "geniml"
       no_top_level: false
   - search
+
+
+navbar:
+  right:
+  - text: Manuscripts
+    icon: fa-file-alt
+    href: manuscripts

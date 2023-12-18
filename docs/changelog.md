@@ -2,10 +2,10 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format. 
 
-## [0.1.0] -- 2023-12-08
+## [0.1.0] -- 2023-12-18
 
 - First official released version of geniml
-- Integrated bedshift 1.1.1 into geniml
+- Integrated bedshift 1.1.1 into geniml (excluding intersection support)
 
 
 ## [bedshift 1.1.1] - 2021-04-15
