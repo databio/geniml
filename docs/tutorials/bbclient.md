@@ -15,7 +15,7 @@ This document provides tutorials for using `bbclient` via either:
 ```python
 from geniml.bbclient import BBClient
 
-bbclient = BBClient(cache_folder="cache", bedbase_api="https://api.bedbase.org
+bbclient = BBClient(cache_folder="cache", bedbase_api="https://api.bedbase.org")
 ```
 
 ### Download and cache a remote BED file from BEDbase 
