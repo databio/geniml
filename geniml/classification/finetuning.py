@@ -304,6 +304,8 @@ class Region2VecFineTuner:
         os.environ["MASTER_ADDR"] = DDP_MASTER_ADDR
         os.environ["MASTER_PORT"] = str(DDP_MASTER_PORT)
 
+        self._model = DDP(self._model, device_ids=[rank])
+
         # initialize the process group
         dist.init_process_group(DDP_BACKEND, rank=rank, world_size=world_size)
         torch.cuda.set_device(rank)
@@ -356,6 +358,13 @@ class Region2VecFineTuner:
         _LOGGER.info(f"Epoch {epoch + 1}")
         # set the model to train mode
         self._model.train()
+
+        # update sampler if needed
+        if isinstance(train_dataloader.sampler, DistributedSampler):
+            train_dataloader.sampler.set_epoch(epoch)
+        if isinstance(test_dataloader.sampler, DistributedSampler):
+            test_dataloader.sampler.set_epoch(epoch)
+
         for _, batch in enumerate(train_dataloader):
             # zero the gradients
             optimizer.zero_grad()
@@ -411,6 +420,7 @@ class Region2VecFineTuner:
     def _train_single_process(
         self,
         epochs: int = DEFAULT_EPOCHS,
+        device: str = None,
         train_dataloader: DataLoader = None,
         test_dataloader: DataLoader = None,
         tensor_device: str = None,
@@ -424,7 +434,22 @@ class Region2VecFineTuner:
         This function handles the training loop for a single process. That is,
         if the user passes a single device (either CPU or single GPU), this
         function will be called.
+
+        :param int epochs: Number of epochs to train for.
+        :param str device: Device to use for training.
+        :param DataLoader train_dataloader: The training dataloader.
+        :param DataLoader test_dataloader: The test dataloader.
+        :param str tensor_device: The device to use for training.
+        :param nn.Module loss_fn: The loss function to use.
+        :param torch.optim.Optimizer optimizer: The optimizer to use.
+        :param torch.optim.lr_scheduler._LRScheduler learning_rate_scheduler: Learning rate scheduler to use.
+        :param int save_every: Save a checkpoint every `save_every` epochs. If None, no checkpoints will be saved.
+        :param str checkpoint_path: Path to save the checkpoints to.
+
+        :return: The training loss and validation loss.
         """
+        self._model.to(device)
+
         training_loss_smoothed = []
         validation_loss_smoothed = []
         with Progress() as progress_bar:
@@ -603,13 +628,6 @@ class Region2VecFineTuner:
             random_state=seed,
         )
 
-        # move the model to the device
-        if isinstance(device, list):
-            self._model = DDP(self._model, device_ids=device)
-            self._model.cuda()
-        else:
-            self._model.to(device)
-
         # tensor device
         if isinstance(device, list):
             tensor_device = device[0]
@@ -627,7 +645,6 @@ class Region2VecFineTuner:
             learning_rate_scheduler = learning_rate_scheduler(optimizer)
 
         # create the datasets
-
         train_dataset = FineTuningDataset(train_pairs, Y_train)
         train_sampler = DistributedSampler(train_dataset) if isinstance(device, list) else None
         train_dataloader = DataLoader(
@@ -668,6 +685,7 @@ class Region2VecFineTuner:
         else:
             return self._train_single_process(
                 epochs,
+                device,
                 train_dataloader,
                 test_dataloader,
                 tensor_device,
