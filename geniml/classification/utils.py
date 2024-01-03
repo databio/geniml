@@ -129,12 +129,10 @@ class FineTuneTrainingResult(BaseModel):
 
     :param List[float] validation_loss: The validation loss for each epoch.
     :param List[float] epoch_loss: The training loss for each epoch.
-    :param List[float] all_loss: The training loss for each batch.
     """
 
     validation_loss: List[float]
-    epoch_loss: List[float]
-    all_loss: List[float]
+    training_loss: List[float]
 
 
 def generate_fine_tuning_dataset(

@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import torch
 import torch.nn as nn
@@ -25,6 +25,7 @@ from .const import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_OPTIMIZER,
     DEFAULT_TEST_TRAIN_SPLIT,
+    DEFAULT_CHECKPOINT_PATH,
     DDP_MASTER_ADDR,
     DDP_MASTER_PORT,
     DDP_BACKEND,
@@ -297,7 +298,7 @@ class Region2VecFineTuner:
         Setup the DDP environment for training.
 
         :param int rank: The rank of the current process.
-        :param int world_size: The number of processes.
+        :param int world_size: The number of processes or GPUs.
         """
         os.environ["MASTER_ADDR"] = DDP_MASTER_ADDR
         os.environ["MASTER_PORT"] = str(DDP_MASTER_PORT)
@@ -310,6 +311,235 @@ class Region2VecFineTuner:
         Cleanup the DDP environment.
         """
         dist.destroy_process_group()
+
+    def _save_checkpoint(self, path: str):
+        """
+        Save a checkpoint of the model.
+
+        :param int rank: The rank of the current process.
+        :param str path: Path to save the checkpoint to.
+        """
+        if isinstance(self._model, DDP):
+            torch.save(self._model.module.state_dict(), path)
+        else:
+            torch.save(self._model.state_dict(), path)
+
+    def _run_epoch(
+        self,
+        epoch: int,
+        train_dataloader: DataLoader,
+        test_dataloader: DataLoader,
+        tensor_device: str,
+        loss_fn: nn.Module,
+        optimizer: torch.optim.Optimizer,
+        progress_bar: Progress,
+        batches_tid: int,
+    ) -> Tuple[List[float], List[float]]:
+        """
+        Run a single epoch of training.
+
+        :param int epoch: The epoch number.
+        :param DataLoader train_dataloader: The training dataloader.
+        :param DataLoader test_dataloader: The test dataloader.
+        :param str tensor_device: The device to use for training.
+        :param nn.Module loss_fn: The loss function to use.
+        :param torch.optim.Optimizer optimizer: The optimizer to use.
+        :param Progress progress_bar: The progress bar to update.
+        :param int batches_tid: The progress bar task id for the batches.
+
+        :return: The training loss and validation loss.
+        """
+        train_loss = []
+        val_loss = []
+        _LOGGER.info(f"Epoch {epoch + 1}")
+        # set the model to train mode
+        self._model.train()
+        for _, batch in enumerate(train_dataloader):
+            # zero the gradients
+            optimizer.zero_grad()
+
+            # move the batch to the device
+            pair, target = batch
+            t1, t2 = pair
+
+            t1 = t1.to(tensor_device)
+            t2 = t2.to(tensor_device)
+            target = target.to(tensor_device)
+
+            # forward pass for the batch
+            u = self._model(t1)
+            v = self._model(t2)
+
+            # compute the loss
+            loss = loss_fn(u, v, target.float())
+            loss.backward()
+
+            # store the loss
+            train_loss.append(loss.item())
+
+            # clip gradients
+            optimizer.step()
+
+            # update the progress bar
+            progress_bar.update(batches_tid, advance=1)
+
+        # compute the validation loss
+        with torch.no_grad():
+            self._model.eval()
+            val_loss = []
+            for _, batch in enumerate(test_dataloader):
+                # move the batch to the device
+                pair, target = batch
+                t1, t2 = pair
+
+                t1 = t1.to(tensor_device)
+                t2 = t2.to(tensor_device)
+                target = target.to(tensor_device)
+
+                # forward pass for the batch
+                u = self._model(t1)
+                v = self._model(t2)
+
+                # compute the loss
+                loss = loss_fn(u, v, target.float())
+                val_loss.append(loss.item())
+
+        return train_loss, val_loss
+
+    def _train_single_process(
+        self,
+        epochs: int = DEFAULT_EPOCHS,
+        train_dataloader: DataLoader = None,
+        test_dataloader: DataLoader = None,
+        tensor_device: str = None,
+        loss_fn: nn.Module = DEFAULT_FINE_TUNE_LOSS_FN,
+        optimizer: torch.optim.Optimizer = DEFAULT_OPTIMIZER,
+        learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
+        save_every: int = None,
+        checkpoint_path: str = DEFAULT_CHECKPOINT_PATH,
+    ):
+        """
+        This function handles the training loop for a single process. That is,
+        if the user passes a single device (either CPU or single GPU), this
+        function will be called.
+        """
+        training_loss_smoothed = []
+        validation_loss_smoothed = []
+        with Progress() as progress_bar:
+            epoch_tid = progress_bar.add_task("Epochs", total=epochs)
+            batches_tid = progress_bar.add_task("Batches", total=len(train_dataloader))
+
+            for epoch in range(epochs):
+                train_loss, val_loss = self._run_epoch(
+                    epoch,
+                    train_dataloader,
+                    test_dataloader,
+                    tensor_device,
+                    loss_fn,
+                    optimizer,
+                    progress_bar,
+                    batches_tid,
+                )
+
+                # append averaged losses
+                training_loss_smoothed.append(sum(train_loss) / len(train_loss))
+                validation_loss_smoothed.append(sum(val_loss) / len(val_loss))
+
+                # update the progress bar
+                progress_bar.update(epoch_tid, advance=1)
+
+                # update the learning rate scheduler
+                if learning_rate_scheduler is not None:
+                    learning_rate_scheduler.step()
+
+                self.trained = True
+
+                # log out the losses
+                _LOGGER.info(f"Epoch loss: {training_loss_smoothed[-1]}")
+                _LOGGER.info(f"Validation loss: {validation_loss_smoothed[-1]}")
+
+                # save a checkpoint if needed
+                if save_every is not None and (epoch + 1) % save_every == 0:
+                    path_to_checkpoint = os.path.join(
+                        checkpoint_path, f"checkpoint_{epoch + 1}.pt"
+                    )
+                    self._save_checkpoint(path_to_checkpoint)
+
+        return FineTuneTrainingResult(
+            validation_loss=validation_loss_smoothed,
+            training_loss=training_loss_smoothed,
+        )
+
+    def _train_multi_process(
+        self,
+        rank: int,
+        epochs: int = DEFAULT_EPOCHS,
+        train_dataloader: DataLoader = None,
+        test_dataloader: DataLoader = None,
+        tensor_device: str = None,
+        loss_fn: nn.Module = DEFAULT_FINE_TUNE_LOSS_FN,
+        optimizer: torch.optim.Optimizer = DEFAULT_OPTIMIZER,
+        learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
+        save_every: int = None,
+        checkpoint_path: str = DEFAULT_CHECKPOINT_PATH,
+    ):
+        """
+        This function handles the training loop for multiple processes. That is,
+        if the user passes multiple GPUs, this function will be called. It uses
+        the DistributedDataParallel module to handle the multi-GPU training.
+
+        PyTorch [recommends](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html#comparison-between-dataparallel-and-distributeddataparallel)
+        using `DistributedDataParallel` over `DataParallel` for multi-GPU training.
+        """
+        self._setup_ddp(
+            rank,
+            torch.cuda.device_count(),
+        )
+
+        # run training
+        training_loss_smoothed = []
+        validation_loss_smoothed = []
+        with Progress() as progress_bar:
+            epoch_tid = progress_bar.add_task("Epochs", total=epochs)
+            batches_tid = progress_bar.add_task("Batches", total=len(train_dataloader))
+
+            for epoch in range(epochs):
+                train_loss, val_loss = self._run_epoch(
+                    epoch,
+                    train_dataloader,
+                    test_dataloader,
+                    tensor_device,
+                    loss_fn,
+                    optimizer,
+                    progress_bar,
+                    batches_tid,
+                )
+
+                # append averaged losses
+                training_loss_smoothed.append(sum(train_loss) / len(train_loss))
+                validation_loss_smoothed.append(sum(val_loss) / len(val_loss))
+
+                # update the progress bar
+                progress_bar.update(epoch_tid, advance=1)
+
+                # update the learning rate scheduler
+                if learning_rate_scheduler is not None:
+                    learning_rate_scheduler.step()
+
+                self.trained = True
+
+                # log out the losses
+                _LOGGER.info(f"Epoch loss: {training_loss_smoothed[-1]}")
+                _LOGGER.info(f"Validation loss: {validation_loss_smoothed[-1]}")
+
+                # save a checkpoint if needed
+                if save_every is not None and (epoch + 1) % save_every == 0:
+                    path_to_checkpoint = os.path.join(
+                        checkpoint_path, f"checkpoint_{epoch + 1}.pt"
+                    )
+                    self._save_checkpoint(path_to_checkpoint)
+
+        self._cleanup_ddp()
 
     def train(
         self,
@@ -325,7 +555,8 @@ class Region2VecFineTuner:
         sample_size: int = None,
         learning_rate_scheduler: torch.optim.lr_scheduler._LRScheduler = None,
         device: Union[List, str] = None,
-        early_stopping: bool = False,
+        save_every: int = None,
+        checkpoint_path: str = DEFAULT_CHECKPOINT_PATH,
     ) -> FineTuneTrainingResult:
         """
         Train the model. The training loop assumes your data is a scanpy AnnData object,
@@ -346,7 +577,7 @@ class Region2VecFineTuner:
         :param Union[List, str] device: Device to use for training.
         :param bool early_stopping: Whether or not to use early stopping. The training loop will stop if the validation loss
                                     does not improve for 5 epochs. This is an indicator of overfitting.
-        :param List[float] r2v_gradient_ramp: List of floats between 0 and 1. If passed, the Region2Vec model will be
+        :param int save_every: Save a checkpoint every `save_every` epochs. If None, no checkpoints will be saved.
         """
         # validate the data
         data = self._validate_data(data, label_key)
@@ -362,6 +593,7 @@ class Region2VecFineTuner:
         # get the pad token id
         pad_token_id = self.tokenizer.padding_token_id()
 
+        # split the data
         train_pairs, test_pairs, Y_train, Y_test = train_test_split(
             pairs,
             labels,
@@ -369,23 +601,9 @@ class Region2VecFineTuner:
             random_state=seed,
         )
 
-        # create the datasets
-        train_dataloader = DataLoader(
-            FineTuningDataset(train_pairs, Y_train),
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
-        )
-        test_dataloader = DataLoader(
-            FineTuningDataset(test_pairs, Y_test),
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
-        )
-
         # move the model to the device
         if isinstance(device, list):
-            self._model = nn.DataParallel(self._model, device_ids=device)
+            self._model = DDP(self._model, device_ids=device)
             self._model.cuda()
         else:
             self._model.to(device)
@@ -406,104 +624,49 @@ class Region2VecFineTuner:
         if learning_rate_scheduler is not None:
             learning_rate_scheduler = learning_rate_scheduler(optimizer)
 
-        all_loss = []
-        epoch_loss = []
-        validation_loss = []
-        consecutive_no_improvement = 0
-
-        with Progress() as progress_bar:
-            epoch_tid = progress_bar.add_task("Epochs", total=epochs)
-            batches_tid = progress_bar.add_task("Batches", total=len(train_dataloader))
-            for epoch in range(epochs):
-                _LOGGER.info(f"Epoch {epoch + 1}/{epochs}")
-                # set the model to train mode
-                self._model.train()
-                this_epoch_loss = []
-                for _, batch in enumerate(train_dataloader):
-                    # zero the gradients
-                    optimizer.zero_grad()
-
-                    # move the batch to the device
-                    pair, target = batch
-                    t1, t2 = pair
-
-                    t1 = t1.to(tensor_device)
-                    t2 = t2.to(tensor_device)
-                    target = target.to(tensor_device)
-
-                    # forward pass for the batch
-                    u = self._model(t1)
-                    v = self._model(t2)
-
-                    # compute the loss
-                    loss = loss_fn(u, v, target.float())
-                    loss.backward()
-                    all_loss.append(loss.item())
-                    this_epoch_loss.append(loss.item())
-
-                    # clip gradients
-                    optimizer.step()
-
-                    # update the progress bar
-                    progress_bar.update(batches_tid, advance=1)
-
-                # compute the loss for the epoch
-                epoch_loss.append(sum(this_epoch_loss) / len(this_epoch_loss))
-
-                # compute the validation loss
-                with torch.no_grad():
-                    self._model.eval()
-                    val_loss = []
-                    for i, batch in enumerate(test_dataloader):
-                        # move the batch to the device
-                        pair, target = batch
-                        t1, t2 = pair
-
-                        t1 = t1.to(tensor_device)
-                        t2 = t2.to(tensor_device)
-                        target = target.to(tensor_device)
-
-                        # forward pass for the batch
-                        u = self._model(t1)
-                        v = self._model(t2)
-
-                        # compute the loss
-                        loss = loss_fn(u, v, target.float())
-                        val_loss.append(loss.item())
-
-                # compute the loss for the epoch
-                val_loss = sum(val_loss) / len(val_loss)
-                validation_loss.append(val_loss)
-
-                # update the progress bar
-                progress_bar.update(epoch_tid, advance=1)
-
-                # check for early stopping
-                if early_stopping:
-                    if len(validation_loss) > 1:
-                        if validation_loss[-1] > validation_loss[-2]:
-                            consecutive_no_improvement += 1
-                        else:
-                            consecutive_no_improvement = 0
-
-                        if consecutive_no_improvement >= 5:
-                            break
-
-                # update the learning rate scheduler
-                if learning_rate_scheduler is not None:
-                    learning_rate_scheduler.step()
-
-                self.trained = True
-
-                # log out the losses
-                _LOGGER.info(f"Epoch loss: {epoch_loss[-1]}")
-                _LOGGER.info(f"Validation loss: {val_loss}")
-
-        return FineTuneTrainingResult(
-            validation_loss=validation_loss,
-            epoch_loss=epoch_loss,
-            all_loss=all_loss,
+        # TODO: this depends on training strategy (single vs multi process)
+        # create the datasets
+        train_dataloader = DataLoader(
+            FineTuningDataset(train_pairs, Y_train),
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
         )
+        test_dataloader = DataLoader(
+            FineTuningDataset(test_pairs, Y_test),
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+        )
+
+        # dispatch to the correct training function
+        if isinstance(device, list):
+            return mp.spawn(
+                self._train_multi_process,
+                args=(
+                    epochs,
+                    train_dataloader,
+                    test_dataloader,
+                    tensor_device,
+                    loss_fn,
+                    optimizer,
+                    learning_rate_scheduler,
+                    save_every,
+                    checkpoint_path,
+                ),
+                nprocs=len(device),
+            )
+        else:
+            return self._train_single_process(
+                epochs,
+                train_dataloader,
+                test_dataloader,
+                tensor_device,
+                loss_fn,
+                optimizer,
+                learning_rate_scheduler,
+                save_every,
+            )
 
     def export(
         self,
