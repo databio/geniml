@@ -11,6 +11,7 @@ import scanpy as sc
 
 from rich.progress import Progress
 from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
 from huggingface_hub import hf_hub_download
 from sklearn.model_selection import train_test_split
 
@@ -305,6 +306,7 @@ class Region2VecFineTuner:
 
         # initialize the process group
         dist.init_process_group(DDP_BACKEND, rank=rank, world_size=world_size)
+        torch.cuda.set_device(rank)
 
     def _cleanup_ddp(self):
         """
@@ -624,19 +626,26 @@ class Region2VecFineTuner:
         if learning_rate_scheduler is not None:
             learning_rate_scheduler = learning_rate_scheduler(optimizer)
 
-        # TODO: this depends on training strategy (single vs multi process)
         # create the datasets
+
+        train_dataset = FineTuningDataset(train_pairs, Y_train)
+        train_sampler = DistributedSampler(train_dataset) if isinstance(device, list) else None
         train_dataloader = DataLoader(
-            FineTuningDataset(train_pairs, Y_train),
+            train_dataset,
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=(not isinstance(device, list)),
             collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+            sampler=train_sampler,
         )
+
+        test_dataset = FineTuningDataset(test_pairs, Y_test)
+        test_sampler = DistributedSampler(test_dataset) if isinstance(device, list) else None
         test_dataloader = DataLoader(
-            FineTuningDataset(test_pairs, Y_test),
+            test_dataset,
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=(not isinstance(device, list)),
             collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+            sampler=test_sampler,
         )
 
         # dispatch to the correct training function
