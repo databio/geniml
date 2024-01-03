@@ -21,3 +21,4 @@ DEFAULT_CLASSIFICATION_LOSS_FN = torch.nn.CrossEntropyLoss
 DEFAULT_LABEL_KEY = "cell_type"
 DEFAULT_TEST_TRAIN_SPLIT = 0.8
 DEFAULT_FINE_TUNE_LOSS_FN = torch.nn.CosineEmbeddingLoss
+DEFAULT_CHECKPOINT_PATH = "checkpoints"
