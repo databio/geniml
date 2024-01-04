@@ -3,6 +3,7 @@ site_logo: img/geniml_logo.svg
 site_url: http://geniml.databio.org/
 repo_url: http://github.com/databio/geniml
 pypi_name: geniml
+papers: https://www.biorxiv.org/content/10.1101/2020.11.02.364145v1
 
 nav:
   - Getting Started: 
@@ -19,6 +20,7 @@ nav:
     - Create consensus peaks: tutorials/create-consensus-peaks.md
     - Fine-tune embeddings: tutorials/fine-tune-region2vec-model.md
     - Randomize bed files: tutorials/bedshift.md
+    - Create evaluation dataset with bedshift: tutorials/bedshift-evaluation-guide.md
   - Reference:
     - API: autodoc_build/geniml.md
     - Support: support.md
@@ -35,3 +37,10 @@ plugins:
       # autodoc_package: "geniml"
       no_top_level: false
   - search
+
+
+navbar:
+  right:
+  - text: Manuscripts
+    icon: fa-file-alt
+    href: manuscripts
