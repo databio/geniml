@@ -90,7 +90,7 @@ def test_train_exmodel():
     result = model.train(data, label_key="cell_type", batch_size=2, epochs=50, seed=42)
     assert result is not None
     assert model.trained
-    assert result.epoch_loss[0] > result.all_loss[-1]
+    assert result.training_loss[0] > result.training_loss[-1]
 
 
 def test_export_exmodel():
