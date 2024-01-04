@@ -127,7 +127,7 @@ def test_train_ex_model_save_load():
     torch.manual_seed(0)  # for reproducibility
     result = model.train(data, label_key="cell_type", batch_size=2, epochs=50, seed=42)
     assert model.trained
-    assert result.all_loss[0] > result.all_loss[-1]
+    assert result.training_loss[0] > result.training_loss[-1]
 
     input_tokens = [t.id for t in model.tokenizer.tokenize(data[0, :].to_memory())[0]]
     input_tokens = torch.tensor(input_tokens).unsqueeze(0)
