@@ -1,15 +1,24 @@
 import os
+import multiprocessing
 from typing import Literal, Union
 
 import torch
 import pytest
+import lightning as L
 import numpy as np
 import scanpy as sc
 
+from torch.utils.data import DataLoader
+from sklearn.model_selection import train_test_split
+
 from geniml.tokenization.main import ITTokenizer
-from geniml.classification.utils import generate_fine_tuning_dataset
+from geniml.classification.utils import (
+    generate_fine_tuning_dataset,
+    FineTuningDataset,
+    collate_finetuning_batch,
+)
+from geniml.training import CellTypeFineTuneAdapter
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
-from geniml.classification.finetuning import Region2VecFineTuner, RegionSet2Vec
 
 
 def test_generate_finetuning_dataset():
@@ -31,112 +40,124 @@ def test_generate_finetuning_dataset():
     # assert len(pos) == sum([(n * (n - 1)) for n in adata.obs.groupby("cell_type").size()])
 
 
-def test_init_region2vec_finetuner_from_scratch():
-    """
-    Test the initialization of a FineTuner from scratch.
-    """
-    region2vec = Region2Vec(2380, 100)  # 1000 vocab size, 100 embedding size
-    rs2v = Region2VecFineTuner(tokenizer="tests/data/universe.bed", region2vec=region2vec)
-
-    assert rs2v.region2vec.embedding_dim == 100
-    assert rs2v.region2vec == region2vec
-
-
-@pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
-def test_init_classifier_from_pretrained():
-    # get pre-trained r2v
-    r2v = Region2VecExModel("databio/r2v-ChIP-atlas-hg38-v2")
-
-    # create RegionSet2Vec
-    rs2v = RegionSet2Vec(r2v.model)
-
-    assert rs2v.region2vec.embedding_dim == 100
-    assert rs2v.region2vec == r2v.model
-
-
-@pytest.mark.parametrize(
-    "r2v, tokenizer",
-    [
-        (None, ITTokenizer("tests/data/universe.bed")),
-        (None, "tests/data/universe.bed"),
-        # (None, "databio/r2v-ChIP-atlas-hg38-v2"),
-        (Region2Vec(2380, 100), ITTokenizer("tests/data/universe.bed")),
-        (Region2Vec(2380, 100), "tests/data/universe.bed"),
-        # (Region2Vec(1_698_713, 100), "databio/r2v-ChIP-atlas-hg38-v2"),
-        # ("databio/r2v-ChIP-atlas-hg38-v2", ITTokenizer("tests/data/universe.bed")),
-        # ("databio/r2v-ChIP-atlas-hg38-v2", "tests/data/universe.bed"),
-        # ("databio/r2v-ChIP-atlas-hg38-v2", "databio/r2v-ChIP-atlas-hg38-v2"),
-    ],
-)
-def test_init_exmodel(
-    r2v: Union[Region2Vec, Literal["databio/r2v-ChIP-atlas-hg38-v2"], None],
-    tokenizer: Union[
-        ITTokenizer, Literal["tests/data/universe.bed", "databio/r2v-ChIP-atlas-hg38-v2"]
-    ],
-):
-    model = Region2VecFineTuner(region2vec=r2v, tokenizer=tokenizer)
-    assert model is not None
-    assert model.region2vec is not None
-    assert model.tokenizer is not None
-
-
-def test_train_exmodel():
-    data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
-    model = Region2VecFineTuner(
-        region2vec=Region2Vec(2380, 100),
+def test_init_celltype_adapter():
+    model = Region2VecExModel(
         tokenizer="tests/data/universe.bed",
     )
-    torch.manual_seed(0)  # for reproducibility
-    result = model.train(data, label_key="cell_type", batch_size=2, epochs=50, seed=42)
-    assert result is not None
-    assert model.trained
-    assert result.training_loss[0] > result.training_loss[-1]
+    adapter = CellTypeFineTuneAdapter(model)
+    assert adapter is not None
+    assert isinstance(adapter.nn_model, Region2Vec)
+    assert adapter.nn_model.projection.num_embeddings == len(model.tokenizer)
 
 
-def test_export_exmodel():
-    r2v = Region2Vec(2380, 100)
-    model = Region2VecFineTuner(region2vec=r2v, tokenizer="tests/data/universe.bed")
-    assert model is not None
-
-    # grab some weights from the inner r2v
-    r2v_weights = model.region2vec.projection.weight.detach().clone().numpy()
-
-    # save
-    try:
-        model.export("tests/data/model-tests")
-        model = Region2VecFineTuner.from_pretrained("tests/data/model-tests")
-
-        # ensure model is still trained and has region2vec
-        assert model.trained
-
-        # ensure weights are the same
-        assert np.allclose(
-            r2v_weights, model.region2vec.projection.weight.detach().clone().numpy()
-        )
-    finally:
-        for file in os.listdir("tests/data/model-tests"):
-            os.remove(os.path.join("tests/data/model-tests", file))
-
-
-def test_train_ex_model_save_load():
-    data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
-    model = Region2VecFineTuner(
-        region2vec=Region2Vec(2380, 100),
+def test_train_with_adapter():
+    # make models
+    model = Region2VecExModel(
         tokenizer="tests/data/universe.bed",
     )
-    torch.manual_seed(0)  # for reproducibility
-    result = model.train(data, label_key="cell_type", batch_size=2, epochs=50, seed=42)
-    assert model.trained
-    assert result.training_loss[0] > result.training_loss[-1]
+    adapter = CellTypeFineTuneAdapter(model)
 
-    input_tokens = [t.id for t in model.tokenizer.tokenize(data[0, :].to_memory())[0]]
-    input_tokens = torch.tensor(input_tokens).unsqueeze(0)
+    # load data
+    data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
+    pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
+        data, model.tokenizer, seed=42, negative_ratio=1.0, sample_size=1_000
+    )
 
-    pre_save_output = model._model(input_tokens)
+    # combine the positive and negative pairs
+    pairs = pos_pairs + neg_pairs
+    labels = pos_labels + neg_labels
 
+    # get the pad token id
+    pad_token_id = model.tokenizer.padding_token_id()
+
+    train_pairs, test_pairs, Y_train, Y_test = train_test_split(
+        pairs,
+        labels,
+        train_size=0.8,
+        random_state=42,
+    )
+
+    batch_size = 32
+
+    # create the datasets
+    train_dataloader = DataLoader(
+        FineTuningDataset(train_pairs, Y_train),
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+        # num_workers=multiprocessing.cpu_count() - 2,
+    )
+    test_dataloader = DataLoader(
+        FineTuningDataset(test_pairs, Y_test),
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+        # num_workers=multiprocessing.cpu_count() - 2,
+    )
+
+    trainer = L.Trainer(min_epochs=3)
+    trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
+
+
+def test_train_export():
+    # make models
+    model = Region2VecExModel(
+        tokenizer="tests/data/universe.bed",
+    )
+    adapter = CellTypeFineTuneAdapter(model)
+
+    # load data
+    data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
+    pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
+        data, model.tokenizer, seed=42, negative_ratio=1.0, sample_size=1_000
+    )
+
+    # combine the positive and negative pairs
+    pairs = pos_pairs + neg_pairs
+    labels = pos_labels + neg_labels
+
+    # get the pad token id
+    pad_token_id = model.tokenizer.padding_token_id()
+
+    train_pairs, test_pairs, Y_train, Y_test = train_test_split(
+        pairs,
+        labels,
+        train_size=0.8,
+        random_state=42,
+    )
+
+    batch_size = 32
+
+    # create the datasets
+    train_dataloader = DataLoader(
+        FineTuningDataset(train_pairs, Y_train),
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+        # num_workers=multiprocessing.cpu_count() - 2,
+    )
+    test_dataloader = DataLoader(
+        FineTuningDataset(test_pairs, Y_test),
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+        # num_workers=multiprocessing.cpu_count() - 2,
+    )
+
+    trainer = L.Trainer(min_epochs=3)
+    trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
+
+    # get the tensor dfor token 42
+    t_before = model._model.projection(torch.tensor([42]))
+
+    # export
     model.export("tests/data/model-tests")
-    model = Region2VecFineTuner.from_pretrained("tests/data/model-tests")
 
-    post_save_output = model._model(input_tokens)
+    # load the model
+    model = Region2VecExModel.from_pretrained("tests/data/model-tests")
 
-    assert np.allclose(pre_save_output.detach().numpy(), post_save_output.detach().numpy())
+    # get the tensor for token 42
+    t_after = model._model.projection(torch.tensor([42]))
+
+    # make sure the tensors are close
+    assert torch.allclose(t_before, t_after)

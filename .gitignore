@@ -196,3 +196,5 @@ qdrant_storage/
 .DS_Store
 
 local_cache
+
+lightning_logs

@@ -19,3 +19,4 @@ torch
 ubiquerg >= 0.6.3
 pyarrow
 iranges
+lightning
