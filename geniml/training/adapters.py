@@ -1,5 +1,4 @@
 from typing import Tuple, Union
-from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
 import torch
 import torch.nn as nn
@@ -63,6 +62,32 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         # compute the loss
         loss = self.loss_fn(u, v, target.float())
         self.log("train_loss", loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        """
+        Perform a validation step.
+
+        :param batch: The batch
+        :param batch_idx: The batch index
+
+        :return: The loss
+        """
+        # move the batch to the device
+        pair, target = batch
+        t1, t2 = pair
+
+        # forward pass for the batch
+        u = self.nn_model(t1)
+        v = self.nn_model(t2)
+
+        # pool the embeddings using mean
+        u = torch.mean(u, dim=1)
+        v = torch.mean(v, dim=1)
+
+        # compute the loss
+        loss = self.loss_fn(u, v, target.float())
+        self.log("val_loss", loss)
         return loss
 
     def configure_optimizers(self):

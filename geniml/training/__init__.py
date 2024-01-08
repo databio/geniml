@@ -1,1 +1,1 @@
-from .trainers import CellTypeFineTuneAdapter
+from .adapters import CellTypeFineTuneAdapter
