@@ -1,11 +1,5 @@
-import os
-import multiprocessing
-from typing import Literal, Union
-
 import torch
-import pytest
 import lightning as L
-import numpy as np
 import scanpy as sc
 
 from torch.utils.data import DataLoader
@@ -95,7 +89,7 @@ def test_train_with_adapter():
         # num_workers=multiprocessing.cpu_count() - 2,
     )
 
-    trainer = L.Trainer(min_epochs=3)
+    trainer = L.Trainer(profiler="simple", min_epochs=3)
     trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
 
 

@@ -60,7 +60,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         v = torch.mean(v, dim=1)
 
         # compute the loss
-        loss = self.loss_fn(u, v, target.float())
+        loss = self.loss_fn(u, v, target)
         self.log("train_loss", loss)
         return loss
 
@@ -86,7 +86,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         v = torch.mean(v, dim=1)
 
         # compute the loss
-        loss = self.loss_fn(u, v, target.float())
+        loss = self.loss_fn(u, v, target)
         self.log("val_loss", loss)
         return loss
 

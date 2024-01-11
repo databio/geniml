@@ -24,23 +24,6 @@ def tempseed(seed: int):
         random.setstate(state)
 
 
-def collate_classification_batch(
-    batch: Tuple[torch.Tensor, torch.Tensor], pad_token: int
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Collate a batch of data into a single tensor.
-
-    :param batch: A batch of data.
-    :return: A tuple of tensors.
-    """
-    tokens, labels = zip(*batch)
-    tokens_padded = pad_sequence(tokens, batch_first=True, padding_value=pad_token)
-
-    labels = torch.tensor(labels, dtype=torch.long)
-
-    return tokens_padded, labels
-
-
 def collate_finetuning_batch(
     batch: Tuple[torch.Tensor, torch.Tensor], pad_token: int
 ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -59,9 +42,7 @@ def collate_finetuning_batch(
 
     pairs_padded = (firsts_padded, seconds_padded)
 
-    labels = torch.tensor(labels, dtype=torch.float)
-
-    return pairs_padded, labels
+    return pairs_padded, torch.tensor(labels)
 
 
 class SingleCellClassificationDataset(Dataset):
@@ -95,16 +76,14 @@ class FineTuningDataset(Dataset):
         :param List[Tuple[List[int], List[int]]] pairs: The pairs - each pair is a tuple of two lists of tokens.
         :param List[int] labels: The labels for each pair (0 or 1).
         """
-        self.pairs = pairs
-        self.labels = labels
+        self.pairs = [(torch.tensor(p[0]), torch.tensor(p[1])) for p in pairs]
+        self.labels = torch.tensor(labels, dtype=torch.float32)
 
     def __len__(self) -> int:
         return len(self.pairs)
 
     def __getitem__(self, idx) -> Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
-        return (torch.tensor(self.pairs[idx][0]), torch.tensor(self.pairs[idx][1])), torch.tensor(
-            self.labels[idx]
-        )
+        return self.pairs[idx], self.labels[idx]
 
 
 class TrainingResult(BaseModel):
