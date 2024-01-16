@@ -4,15 +4,17 @@ import select
 import shutil
 import sys
 import time
+import random
+
 from concurrent.futures import ThreadPoolExecutor
-from random import shuffle
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union, Tuple, Callable
 
 import numpy as np
 import torch
 
 from yaml import safe_dump, safe_load
 
+from ..io import RegionSet
 from ..tokenization.main import Tokenizer, ITTokenizer
 from .const import (
     LR_TYPES,
@@ -375,7 +377,7 @@ def shuffle_documents(
 
     def shuffle_list(list: List[any], n: int) -> List[any]:
         for _ in range(n):
-            shuffle(list)
+            random.shuffle(list)
         return list
 
     _LOGGER.debug(f"Shuffling documents {n_shuffles} times.")
@@ -477,3 +479,49 @@ def load_local_region2vec_model(
     model.load_state_dict(params)
 
     return model, tokenizer, config
+
+
+class Region2VecDataset:
+    def __init__(
+        self, data: Union[str, List[RegionSet]], collator: Callable, shuffle: bool = False
+    ):
+        """
+        Initialize a Region2VecDataset.
+
+        :param Union[str, List[RegionSet]] data: The data to use for the dataset. This is either a path to a directory container region set files, or a list of region sets.
+        :param Callable collator: The collator to use for the dataset. This takes a regionset as input and transforms it into a list of tokens.
+        :param bool shuffle: Whether or not to shuffle the data before yielding it.
+        """
+        self.data = data
+        self.collator = collator
+        self.shuffle = shuffle
+        if isinstance(data, str):
+            self._is_streamed = True
+            self.len = len(os.listdir(data))
+        else:
+            self._is_streamed = False
+            self.len = len(data)
+
+        def __len__(self):
+            return self.len
+
+        def __iter__(self):
+            if self._is_streamed:
+                for fname in os.listdir(self.dirname):
+                    rs = RegionSet(fname)
+                    tokens = self.collator(rs)
+                    if self.shuffle:
+                        random.shuffle(tokens)
+                    yield tokens
+            else:
+                for region_set in self.data:
+                    tokens = self.collator(region_set)
+                    if self.shuffle:
+                        random.shuffle(tokens)
+                    yield tokens
+
+        def __repr__(self):
+            if self._is_streamed:
+                return f"Region2VecDataset(dirname={self.dirname}, shuffle={self.shuffle})"
+            else:
+                return f"Region2VecDataset({self.len} region sets, shuffle={self.shuffle})"

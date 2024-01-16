@@ -7,6 +7,7 @@ import torch
 from rich.progress import track
 from huggingface_hub import hf_hub_download
 
+from ..models import ExModel
 from ..io import Region, RegionSet
 from ..tokenization.main import ITTokenizer, Tokenizer
 
@@ -38,7 +39,7 @@ _LOGGER = getLogger(MODULE_NAME)
 _GENSIM_LOGGER.setLevel("WARNING")
 
 
-class Region2VecExModel:
+class Region2VecExModel(ExModel):
     def __init__(
         self,
         model_path: str = None,
