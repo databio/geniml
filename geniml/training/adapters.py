@@ -16,7 +16,6 @@ class CellTypeFineTuneAdapter(L.LightningModule):
     def __init__(
         self,
         model: Union[Region2VecExModel, ScEmbed],
-        pooling: str = "mean",
         **kwargs,
     ):
         """

@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 
 from geniml.tokenization.main import ITTokenizer
-from geniml.classification.utils import (
+from geniml.training.utils import (
     generate_fine_tuning_dataset,
     FineTuningDataset,
     collate_finetuning_batch,

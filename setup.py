@@ -41,7 +41,6 @@ setup(
         "geniml.bbclient",
         "geniml.search",
         "geniml.search.backends",
-        "geniml.classification",
         "geniml.nn",
     ],
     version=version,
