@@ -13,8 +13,8 @@ from ..tokenization.main import ITTokenizer, Tokenizer
 
 from .models import Region2Vec
 from .utils import (
+    Region2VecDataset,
     LearningRateScheduler,
-    shuffle_documents,
     export_region2vec_model,
     load_local_region2vec_model,
 )
@@ -222,21 +222,22 @@ class Region2VecExModel(ExModel):
         min_count: int = DEFAULT_MIN_COUNT,
         num_cpus: int = 1,
         seed: int = 42,
-        checkpoint_path: str = MODEL_FILE_NAME,
-        save_model: bool = False,
+        save_checkpoint_path: str = None,
         gensim_params: dict = {},
+        load_from_checkpoint: str = None,
     ) -> np.ndarray:
         """
         Train the model.
 
         :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
                                                         a list of RegionSets or a list of paths to bed files.
+        :param str universe: Path to the universe file to use. If None, the universe will be inferred from the data (this is not recommended).
         :param int window_size: Window size for the model.
         :param int epochs: Number of epochs to train for.
         :param int min_count: Minimum count for a region to be included in the vocabulary.
         :param int n_shuffles: Number of shuffles to perform on the data.
         :param int batch_size: Batch size for training.
-        :param str checkpoint_path: Path to save the model checkpoint to.
+        :param str save_checkpoint_path: Path to save the model checkpoints to.
         :param torch.optim.Optimizer optimizer: Optimizer to use for training.
         :param float learning_rate: Learning rate to use for training.
         :param int ns_k: Number of negative samples to use.
@@ -244,6 +245,7 @@ class Region2VecExModel(ExModel):
         :param dict optimizer_params: Additional parameters to pass to the optimizer.
         :param bool save_model: Whether or not to save the model.
         :param dict gensim_params: Additional parameters to pass to the gensim model.
+        :param str load_from_checkpoint: Path to a checkpoint to load from.
 
         :return np.ndarray: Loss values for each epoch.
         """
@@ -256,40 +258,35 @@ class Region2VecExModel(ExModel):
                 "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
             )
 
-        # validate the data - convert all to RegionSets
-        _LOGGER.info("Validating data for training.")
-        data = self._validate_data_for_training(data)
-
         # create gensim model that will be used to train
-        _LOGGER.info("Creating gensim model.")
-        gensim_model = GensimWord2Vec(
-            vector_size=self._model.embedding_dim,
-            window=window_size,
-            min_count=min_count,
-            workers=num_cpus,
-            seed=seed,
-            **gensim_params,
-        )
-
-        # tokenize the data
-        # convert to strings for gensim
-        _LOGGER.info("Tokenizing data.")
-        tokenized_data = [
-            self.tokenizer.tokenize(list(region_set))
-            for region_set in track(data, description="Tokenizing data", total=len(data))
-            if len(region_set) > 0
-        ]
-
-        _LOGGER.info("Building vocabulary.")
-        tokenized_data = [
-            [str(t.id) for t in region_set]
-            for region_set in track(
-                tokenized_data,
-                total=len(tokenized_data),
-                description="Converting to strings.",
+        if load_from_checkpoint is not None:
+            _LOGGER.info(f"Loading model from checkpoint: {load_from_checkpoint}")
+            gensim_model = GensimWord2Vec.load(load_from_checkpoint)
+        else:
+            _LOGGER.info("Creating new gensim model.")
+            gensim_model = GensimWord2Vec(
+                vector_size=self._model.embedding_dim,
+                window=window_size,
+                min_count=min_count,
+                workers=num_cpus,
+                seed=seed,
+                **gensim_params,
             )
-        ]
-        gensim_model.build_vocab(tokenized_data)
+            _LOGGER.info("Building vocabulary.")
+            vocab = [
+                str(i)
+                for i in track(
+                    range(len(self.tokenizer)),
+                    total=len(self.tokenizer),
+                    description="Building vocabulary.",
+                )
+            ]
+            gensim_model.build_vocab(vocab)
+
+        # create the dataset
+        dataset = Region2VecDataset(
+            data, lambda rs: self.tokenizer.tokenize(rs, ids_only=True), shuffle=True
+        )
 
         # create our own learning rate scheduler
         lr_scheduler = LearningRateScheduler(
@@ -302,12 +299,8 @@ class Region2VecExModel(ExModel):
         for epoch in track(range(epochs), description="Training model", total=epochs):
             # shuffle the data
             _LOGGER.info(f"Starting epoch {epoch+1}.")
-            _LOGGER.info("Shuffling data.")
-            shuffled_data = shuffle_documents(
-                tokenized_data, n_shuffles=1
-            )  # shuffle once per epoch, no need to shuffle more
             gensim_model.train(
-                shuffled_data,
+                dataset,
                 epochs=1,  # train for 1 epoch at a time, shuffle data each time
                 compute_loss=True,
                 total_words=gensim_model.corpus_total_words,
@@ -320,6 +313,12 @@ class Region2VecExModel(ExModel):
             # update the learning rate
             lr_scheduler.update()
 
+            # if we have a checkpoint path, save the model
+            if save_checkpoint_path is not None:
+                gensim_model.save(save_checkpoint_path)
+
+        _LOGGER.info("Training complete. Moving weights to pytorch model.")
+
         # once done training, set the weights of the pytorch model in self._model
         for id in track(
             gensim_model.wv.key_to_index,
@@ -330,10 +329,6 @@ class Region2VecExModel(ExModel):
 
         # set the model as trained
         self.trained = True
-
-        # export
-        if save_model:
-            self.export(checkpoint_path)
 
         return np.array(losses)
 
