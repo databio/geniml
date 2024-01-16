@@ -122,11 +122,14 @@ class ITTokenizer(Tokenizer):
 
         return tokenized
 
-    def tokenize(self, query: Union[Region, RegionSet]) -> GTokenizedRegionSet:
+    def tokenize(
+        self, query: Union[Region, RegionSet], ids_only: bool = True
+    ) -> GTokenizedRegionSet:
         """
         Tokenize a Region or RegionSet into the universe
 
         :param Union[Region, RegionSet, sc.AnnData] query: The query to tokenize.
+        :param bool ids_only: Whether to return only the IDs or the full TokenizedRegionSet
         """
         if isinstance(query, sc.AnnData):
             return self._tokenize_anndata(query)
@@ -140,7 +143,10 @@ class ITTokenizer(Tokenizer):
             raise ValueError("Query must be a Region or RegionSet")
 
         result = self._tokenizer.tokenize(list(query))
-        return result
+        if ids_only:
+            return result.ids()
+        else:
+            return result
 
     def padding_token(self) -> Region:
         return self._tokenizer.padding_token
