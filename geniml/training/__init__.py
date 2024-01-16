@@ -2,6 +2,6 @@ from .adapters import CellTypeFineTuneAdapter
 from .utils import (
     collate_finetuning_batch,
     FineTuningDataset,
-    SingleCellClassificationDataset,
+    generate_fine_tuning_dataset,
     tempseed,
 )
