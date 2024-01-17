@@ -502,26 +502,26 @@ class Region2VecDataset:
             self._is_streamed = False
             self.len = len(data)
 
-        def __len__(self):
-            return self.len
+    def __len__(self):
+        return self.len
 
-        def __iter__(self):
-            if self._is_streamed:
-                for fname in os.listdir(self.dirname):
-                    rs = RegionSet(fname)
-                    tokens = self.collator(rs)
-                    if self.shuffle:
-                        random.shuffle(tokens)
-                    yield tokens
-            else:
-                for region_set in self.data:
-                    tokens = self.collator(region_set)
-                    if self.shuffle:
-                        random.shuffle(tokens)
-                    yield tokens
+    def __iter__(self):
+        if self._is_streamed:
+            for fname in os.listdir(self.dirname):
+                rs = RegionSet(fname)
+                tokens = self.collator(rs)
+                if self.shuffle:
+                    random.shuffle(tokens)
+                yield tokens
+        else:
+            for region_set in self.data:
+                tokens = self.collator(region_set)
+                if self.shuffle:
+                    random.shuffle(tokens)
+                yield tokens
 
-        def __repr__(self):
-            if self._is_streamed:
-                return f"Region2VecDataset(dirname={self.dirname}, shuffle={self.shuffle})"
-            else:
-                return f"Region2VecDataset({self.len} region sets, shuffle={self.shuffle})"
+    def __repr__(self):
+        if self._is_streamed:
+            return f"Region2VecDataset(dirname={self.dirname}, shuffle={self.shuffle})"
+        else:
+            return f"Region2VecDataset({self.len} region sets, shuffle={self.shuffle})"
