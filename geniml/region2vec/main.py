@@ -4,6 +4,8 @@ from typing import List, Union
 
 import numpy as np
 import torch
+
+from tqdm import tqdm
 from rich.progress import track
 from huggingface_hub import hf_hub_download
 
@@ -300,7 +302,7 @@ class Region2VecExModel(ExModel):
             # shuffle the data
             _LOGGER.info(f"Starting epoch {epoch+1}.")
             gensim_model.train(
-                dataset,
+                tqdm(dataset, desc=f"Epoch {epoch+1}", total=len(dataset)),
                 epochs=1,  # train for 1 epoch at a time, shuffle data each time
                 compute_loss=True,
                 total_words=gensim_model.corpus_total_words,
