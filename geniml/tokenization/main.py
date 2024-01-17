@@ -123,13 +123,14 @@ class ITTokenizer(Tokenizer):
         return tokenized
 
     def tokenize(
-        self, query: Union[Region, RegionSet], ids_only: bool = True
+        self, query: Union[Region, RegionSet], ids_only: bool = True, as_strings: bool = False
     ) -> GTokenizedRegionSet:
         """
         Tokenize a Region or RegionSet into the universe
 
         :param Union[Region, RegionSet, sc.AnnData] query: The query to tokenize.
         :param bool ids_only: Whether to return only the IDs or the full TokenizedRegionSet
+        :param bool as_strings: Whether to return the IDs as strings or ints
         """
         if isinstance(query, sc.AnnData):
             return self._tokenize_anndata(query)
@@ -144,7 +145,10 @@ class ITTokenizer(Tokenizer):
 
         result = self._tokenizer.tokenize(list(query))
         if ids_only:
-            return result.ids()
+            if as_strings:
+                return result.ids_as_strs
+            else:
+                return result.ids
         else:
             return result
 

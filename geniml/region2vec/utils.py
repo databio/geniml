@@ -507,8 +507,9 @@ class Region2VecDataset:
 
     def __iter__(self):
         if self._is_streamed:
-            for fname in os.listdir(self.dirname):
-                rs = RegionSet(fname)
+            for fname in os.listdir(self.data):
+                _data = os.path.join(self.data, fname)
+                rs = RegionSet(_data)
                 tokens = self.collator(rs)
                 if self.shuffle:
                     random.shuffle(tokens)
@@ -522,6 +523,6 @@ class Region2VecDataset:
 
     def __repr__(self):
         if self._is_streamed:
-            return f"Region2VecDataset(dirname={self.dirname}, shuffle={self.shuffle})"
+            return f"Region2VecDataset(dirname={self.data}, shuffle={self.shuffle})"
         else:
             return f"Region2VecDataset({self.len} region sets, shuffle={self.shuffle})"
