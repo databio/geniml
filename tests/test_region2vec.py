@@ -5,8 +5,8 @@ import pytest
 import torch
 
 from geniml.io.io import Region, RegionSet
-from geniml.region2vec.main import Region2Vec
-from geniml.region2vec.main import Region2VecExModel
+from geniml.region2vec.main import Region2Vec, Region2VecExModel
+from geniml.region2vec.utils import Region2VecDataset
 from geniml.tokenization.main import ITTokenizer
 
 
@@ -21,6 +21,17 @@ def test_init_region2vec():
         embedding_dim=100,
     )
     assert model is not None
+
+
+def test_make_region2vec_dataset():
+    path_to_data = "tests/data/hg38_sample/"
+    tokenizer = ITTokenizer("tests/data/universe.bed")
+    dataset = Region2VecDataset(
+        path_to_data, lambda rs: tokenizer.tokenize(rs, ids_only=True, as_strings=True)
+    )
+
+    first = next(iter(dataset))
+    assert all([isinstance(x, str) for x in first])
 
 
 @pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
