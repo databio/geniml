@@ -1,5 +1,6 @@
 import logging
 import os
+import glob
 import select
 import shutil
 import sys
@@ -507,9 +508,9 @@ class Region2VecDataset:
 
     def __iter__(self):
         if self._is_streamed:
-            for fname in os.listdir(self.data):
-                _data = os.path.join(self.data, fname)
-                rs = RegionSet(_data)
+            # glob.glob("/project/shefflab/data/encode/*.bed*")
+            for fname in glob.glob(os.path.join(self.data, "*.bed*")):
+                rs = RegionSet(fname)
                 tokens = self.collator(rs)
                 if self.shuffle:
                     random.shuffle(tokens)
