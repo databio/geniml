@@ -484,40 +484,46 @@ def load_local_region2vec_model(
 
 class Region2VecDataset:
     def __init__(
-        self, data: Union[str, List[RegionSet]], collator: Callable, shuffle: bool = False
+        self, data: Union[str, List[RegionSet]], tokenizer: ITTokenizer, shuffle: bool = True
     ):
         """
         Initialize a Region2VecDataset.
 
+        For performance reasons, this dataset does not take advantage
+        of the RegionSet class, rather is loads straight from disk,
+        with the assumption that the data is a valid bedfile
+
         :param Union[str, List[RegionSet]] data: The data to use for the dataset. This is either a path to a directory container region set files, or a list of region sets.
-        :param Callable collator: The collator to use for the dataset. This takes a regionset as input and transforms it into a list of tokens.
+        :param Tokenizer tokenizer: The tokenizer to use for the dataset.
         :param bool shuffle: Whether or not to shuffle the data before yielding it.
         """
         self.data = data
-        self.collator = collator
+        self.tokenizer = tokenizer
         self.shuffle = shuffle
         if isinstance(data, str):
             self._is_streamed = True
             self.len = len(os.listdir(data))
-        else:
+        elif isinstance(data, list) and isinstance(data[0], RegionSet):
             self._is_streamed = False
             self.len = len(data)
+        else:
+            raise ValueError(
+                "data must be a path to a directory containing region set files, or a list of RegionSet objects"
+            )
 
     def __len__(self):
         return self.len
 
     def __iter__(self):
         if self._is_streamed:
-            # glob.glob("/project/shefflab/data/encode/*.bed*")
             for fname in glob.glob(os.path.join(self.data, "*.bed*")):
-                rs = RegionSet(fname)
-                tokens = self.collator(rs)
+                tokens = self.tokenizer.tokenize_bed_file(fname).ids_as_strs
                 if self.shuffle:
                     random.shuffle(tokens)
                 yield tokens
         else:
             for region_set in self.data:
-                tokens = self.collator(region_set)
+                tokens = self.tokenizer.tokenize(region_set, ids_only=True, as_strings=True)
                 if self.shuffle:
                     random.shuffle(tokens)
                 yield tokens
@@ -527,3 +533,17 @@ class Region2VecDataset:
             return f"Region2VecDataset(dirname={self.data}, shuffle={self.shuffle})"
         else:
             return f"Region2VecDataset({self.len} region sets, shuffle={self.shuffle})"
+
+    def __getitem__(self, indx: int):
+        if self._is_streamed:
+            fname = os.listdir(self.data)[indx]
+            rs = RegionSet(os.path.join(self.data, fname))
+            tokens = self.collator(rs)
+            if self.shuffle:
+                random.shuffle(tokens)
+            return tokens
+        else:
+            tokens = self.collator(self.data[indx])
+            if self.shuffle:
+                random.shuffle(tokens)
+            return tokens

@@ -152,6 +152,16 @@ class ITTokenizer(Tokenizer):
         else:
             return result
 
+    def tokenize_bed_file(self, bed_file: str) -> GTokenizedRegionSet:
+        """
+        Tokenize a BED file into the universe
+
+        :param str bed_file: The path to the BED file to tokenize.
+        :param bool ids_only: Whether to return only the IDs or the full TokenizedRegionSet
+        :param bool as_strings: Whether to return the IDs as strings or ints
+        """
+        return self._tokenizer.tokenize_bed_file(bed_file)
+
     def padding_token(self) -> Region:
         return self._tokenizer.padding_token
 

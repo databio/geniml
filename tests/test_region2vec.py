@@ -26,9 +26,7 @@ def test_init_region2vec():
 def test_make_region2vec_dataset():
     path_to_data = "tests/data/hg38_sample/"
     tokenizer = ITTokenizer("tests/data/universe.bed")
-    dataset = Region2VecDataset(
-        path_to_data, lambda rs: tokenizer.tokenize(rs, ids_only=True, as_strings=True)
-    )
+    dataset = Region2VecDataset(path_to_data, tokenizer)
 
     first = next(iter(dataset))
     assert all([isinstance(x, str) for x in first])
