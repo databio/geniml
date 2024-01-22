@@ -56,3 +56,6 @@ class PretokenizedDataset(IterableDataset):
 		
 ```
 Here, we are no longer tokenizing each epoch, rather just streaming in data that has already been pre-tokenized. I still need to think about this in the context of fine-tuning and datasets that require targets and labels.
+
+## `.gtok` file format
+The `.gtok` file format is a binary file where each token is stored as a 32-bit integer. This allows tokens to be stored in a very compact format with the ability to represent up to 4 billion unique tokens. Using our companion package `genimtools`, we can convert `.bed` files into `.gtok` files after tokenization.

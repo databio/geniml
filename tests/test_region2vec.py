@@ -24,12 +24,11 @@ def test_init_region2vec():
 
 
 def test_make_region2vec_dataset():
-    path_to_data = "tests/data/hg38_sample/"
-    tokenizer = ITTokenizer("tests/data/universe.bed")
-    dataset = Region2VecDataset(path_to_data, tokenizer)
+    path_to_data = "tests/data/gtok_sample/"
+    dataset = Region2VecDataset(path_to_data)
 
     first = next(iter(dataset))
-    assert all([isinstance(x, str) for x in first])
+    assert all([isinstance(x, int) for x in first])
 
 
 @pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
