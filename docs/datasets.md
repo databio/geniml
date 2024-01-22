@@ -33,26 +33,26 @@ from typing import List
 from torch.data.utils import IterableDataset
 
 class PretokenizedDataset(IterableDataset):
-	def __init__(self, data: Union[str, List[str]):
-		self.data = data
-		if isinstance(data, str):
-			self._is_folder = True
-		elif isinstance(data, list) and isinstance(data[0], str):
-			self._is_folder = False
-		else:
-			raise ValueError("`data` must be a path to a folder or a list of `.gtok` files")
+  def __init__(self, data: Union[str, List[str]):
+    self.data = data
+      if isinstance(data, str):
+        self._is_folder = True
+      elif isinstance(data, list) and isinstance(data[0], str):
+        self._is_folder = False
+      else:
+        raise ValueError("`data` must be a path to a folder or a list of `.gtok` files")
 
-	def __iter__(self, indx: int):
-		if self._is_folder:
-			for file in os.listdir(self.data):
-				with open(file, 'r') as f:
-					for line in file.readlines():
-						yield line.split(",")
-		else:
-			for file in self.data:
-				with open(file, 'r') as f:
-					for line in file.readlines():
-						yield line.split(",")
+  def __iter__(self, indx: int):
+    if self._is_folder:
+      for file in os.listdir(self.data):
+        with open(file, 'r') as f:
+          for line in file.readlines():
+            yield line.split(",")
+    else:
+      for file in self.data:
+        with open(file, 'r') as f:
+          for line in file.readlines():
+            yield line.split(",")
 		
 ```
 Here, we are no longer tokenizing each epoch, rather just streaming in data that has already been pre-tokenized. I still need to think about this in the context of fine-tuning and datasets that require targets and labels.
