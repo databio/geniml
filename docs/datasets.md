@@ -12,14 +12,18 @@ Model inference is the process of utilizing a pre-trained model to analyze some 
 ## Tokenization forms
 Given the above requirements, tokenizers need to be able to output tokenized genomic data into different forms and locations. For model training: tokenizers should take either bed files or `.h5ad` single-cell datasets and convert them into an intermediary `.gtok` file format. These `.gtok` files will be directly consumed during model training. For model inference: tokenizers should take either bed files or `.h5ad` single-cell datasets and output an in-memory representation of these tokens; typically in the form of a `torch.Tensor` or python list. The following table summarizes the format, location, and scenario in which data is tokenized:
 
-
+<div align="center">
+	
 |                 | Where  | What        | When              |
 | --------------- | --------- | ------------- | ----------------- |
 | Model training  | On disk   | `.gtok` files | Prior to training |
 | Model inference | In memory | `torch.Tensors`              | On the fly                  |
 
+</div>
 
-<img width="500" src="./img/geniml_tokenization_strategy.png" alt="Tokenization strategies for model training and inference" />
+<div align="center">
+<img width="700" src="./img/geniml_tokenization_strategy.png" alt="Tokenization strategies for model training and inference" />
+</div>
 
 ## Datasets in `geniml`
 `geniml` uses `pytorch` + `lightning` to train models. This ecosystem encourages the use of `torch`s built-in `Dataset` class to parallelize and batch the loading of data. Because training and fine-tuning models requires pre-tokenized data (`.gtok` files), `geniml` needs datasets to handle this. It most likely will look like:
