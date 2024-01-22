@@ -18,7 +18,7 @@ Given the above requirements, tokenizers need to be able to output tokenized gen
 | Model training  | On disk   | `.gtok` files | Prior to training |
 | Model inference | In memory | `torch.Tensors`              | On the fly                  |
 
-![Tokenization strategies for model training and inference](./img/geniml_tokenization_strategy.svg)
+![Tokenization strategies for model training and inference](./img/geniml_tokenization_strategy.png)
 
 ## Datasets in `geniml`
 `geniml` uses `pytorch` + `lightning` to train models. This ecosystem encourages the use of `torch`s built-in `Dataset` class to parallelize and batch the loading of data. Because training and fine-tuning models requires pre-tokenized data (`.gtok` files), `geniml` needs datasets to handle this. It most likely will look like:
