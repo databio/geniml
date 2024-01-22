@@ -1,7 +1,7 @@
 # Genomic datasets with `geniml`
 
 ## Overview
-Genomic datasets are well know for their incredible size. Therefore, using these data for machine learning pipelines requires clever strategies and considerations to effectively handle the large volumes of data. This is particularly problematic when training new models. To that end, `geniml` has two separate workflows for handling genomic data: one for model training and a second for model usage. These workflows have big differences on *when* and *where* genomic datasets are tokenized and stored.
+Genomic datasets are well known for their incredible size. Therefore, using these data for machine learning pipelines requires clever strategies and considerations to effectively handle the large volumes of data. This is particularly problematic when training new models. To that end, `geniml` has two separate workflows for handling genomic data: one for model training and a second for model usage. These workflows have big differences on *when* and *where* genomic datasets are tokenized and stored.
 
 ## Model training
 Model training, especially pre-training, usually requires large datasets with billions of genomic tokens. These datasets are way too large to fit in memory and therefore must be streamed from disk during training. Because of this, the data must be tokenized "on the fly" for each epoch. This is wildly inefficient and for particularly large datasets, results in the majority of training time being dedicated to tokenization alone. Therefore, the data need be *pre-tokenized* into an intermediate form which can then be streamed in for each epoch. This removes tokenization entirely from the training procedure and therefore increase efficiency (Fig. 1A).
