@@ -484,7 +484,9 @@ def load_local_region2vec_model(
 
 
 class Region2VecDataset:
-    def __init__(self, data: Union[str, List[str]], shuffle: bool = True):
+    def __init__(
+        self, data: Union[str, List[str]], shuffle: bool = True, convert_to_str: bool = False
+    ):
         """
         Initialize a Region2VecDataset.
 
@@ -496,9 +498,11 @@ class Region2VecDataset:
         :param Union[str, List[RegionSet]] data: The data to use for the dataset. This is either a path to a directory container region set files, or a list of region sets.
         :param Tokenizer tokenizer: The tokenizer to use for the dataset.
         :param bool shuffle: Whether or not to shuffle the data before yielding it.
+        :param bool convert_to_str: Whether or not to convert the tokens to strings before yielding them.
         """
         self.data = data
         self.shuffle = shuffle
+        self.convert_to_str = convert_to_str
 
         if isinstance(data, str):
             self.data = glob.glob(os.path.join(data, f"*.{GTOK_EXT}"))
@@ -525,7 +529,10 @@ class Region2VecDataset:
         if len(self) == 0:
             return
         for idx in range(len(self)):
-            yield self[idx]
+            tokens = self[idx]
+            if self.convert_to_str:
+                tokens = [str(token) for token in tokens]
+            yield tokens
 
     def __repr__(self):
         return f"Region2VecDataset(data={self.data}, shuffle={self.shuffle})"
