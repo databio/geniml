@@ -218,7 +218,7 @@ class Region2VecExModel(ExModel):
 
     def train(
         self,
-        data: Union[List[RegionSet], List[str]],
+        data: Union[str, List[str]],
         window_size: int = DEFAULT_WINDOW_SIZE,
         epochs: int = DEFAULT_EPOCHS,
         min_count: int = DEFAULT_MIN_COUNT,
@@ -231,21 +231,13 @@ class Region2VecExModel(ExModel):
         """
         Train the model.
 
-        :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
-                                                        a list of RegionSets or a list of paths to bed files.
-        :param str universe: Path to the universe file to use. If None, the universe will be inferred from the data (this is not recommended).
+        :param Union[str, List[str]] data: Data to train on. This is either a list of paths to gtoks files or a path to a folder containing gtok files.
         :param int window_size: Window size for the model.
         :param int epochs: Number of epochs to train for.
         :param int min_count: Minimum count for a region to be included in the vocabulary.
-        :param int n_shuffles: Number of shuffles to perform on the data.
-        :param int batch_size: Batch size for training.
+        :param int num_cpus: Number of cpus to use for training.
+        :param int seed: Seed to use for training.
         :param str save_checkpoint_path: Path to save the model checkpoints to.
-        :param torch.optim.Optimizer optimizer: Optimizer to use for training.
-        :param float learning_rate: Learning rate to use for training.
-        :param int ns_k: Number of negative samples to use.
-        :param torch.device device: Device to use for training.
-        :param dict optimizer_params: Additional parameters to pass to the optimizer.
-        :param bool save_model: Whether or not to save the model.
         :param dict gensim_params: Additional parameters to pass to the gensim model.
         :param str load_from_checkpoint: Path to a checkpoint to load from.
 
@@ -286,9 +278,7 @@ class Region2VecExModel(ExModel):
             gensim_model.build_vocab(vocab)
 
         # create the dataset
-        dataset = Region2VecDataset(
-            data, lambda rs: self.tokenizer.tokenize(rs, ids_only=True), shuffle=True
-        )
+        dataset = Region2VecDataset(data, shuffle=True, convert_to_str=True)
 
         # create our own learning rate scheduler
         lr_scheduler = LearningRateScheduler(

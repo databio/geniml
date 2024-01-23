@@ -1,16 +1,16 @@
 import os
 from logging import getLogger
-from typing import Union
+from typing import Union, List
 
 import numpy as np
 import scanpy as sc
 import torch
 from huggingface_hub import hf_hub_download
 from rich.progress import track
+from tqdm import tqdm
 
 from ..region2vec.utils import (
     LearningRateScheduler,
-    shuffle_documents,
     export_region2vec_model,
     load_local_region2vec_model,
 )
@@ -27,13 +27,9 @@ from ..region2vec.const import (
     CONFIG_FILE_NAME,
     POOLING_METHOD_KEY,
 )
+from ..region2vec.utils import Region2VecDataset
 
-from .const import (
-    CHR_KEY,
-    END_KEY,
-    START_KEY,
-    MODULE_NAME,
-)
+from .const import MODULE_NAME
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -197,59 +193,34 @@ class ScEmbed:
 
         return instance
 
-    def _validate_data_for_training(self, data: Union[sc.AnnData, str]) -> sc.AnnData:
-        """
-        Validate the data is of the correct type and has the required columns
-
-        :param sc.AnnData | str data: The AnnData object containing the data to train on (can be path to AnnData).
-        :return sc.AnnData: The AnnData object.
-        """
-        if not isinstance(data, sc.AnnData) and not isinstance(data, str):
-            raise TypeError(f"Data must be of type AnnData or str, not {type(data).__name__}")
-
-        # if the data is a string, assume it is a filepath
-        if isinstance(data, str):
-            data = sc.read_h5ad(data)
-
-        # validate the data has the required columns
-        if (
-            not hasattr(data.var, CHR_KEY)
-            or not hasattr(data.var, START_KEY)
-            or not hasattr(data.var, END_KEY)
-        ):
-            raise ValueError(
-                "Data does not have `chr`, `start`, and `end` columns in the `var` attribute. This is required."
-            )
-
-        return data
-
     def train(
         self,
-        data: Union[sc.AnnData, str],
+        data: Union[str, List[str]],
         window_size: int = DEFAULT_WINDOW_SIZE,
         epochs: int = DEFAULT_EPOCHS,
         min_count: int = DEFAULT_MIN_COUNT,
         num_cpus: int = 1,
         seed: int = 42,
-        checkpoint_path: str = MODEL_FILE_NAME,
-        save_model: bool = False,
+        save_checkpoint_path: str = None,
         gensim_params: dict = {},
-    ):
+        load_from_checkpoint: str = None,
+    ) -> np.ndarray:
         """
         Train the model.
 
-        :param sc.AnnData data: The AnnData object containing the data to train on (can be path to AnnData).
-        :param int window_size: The window size to use for training.
-        :param int epochs: The number of epochs to train for.
-        :param int min_count: The minimum count for a region to be included in the vocabulary.
-        :param int num_cpus: The number of cpus to use for training.
-        :param int seed: The seed to use for training.
-        :param str checkpoint_path: The path to save the model to.
-        :param bool save_model: Whether to save the model after training.
-        :param dict gensim_params: Additional keyword arguments to pass to the gensim model.
+        :param Union[str, List[str]] data: Data to train on. This is either a list of paths to gtoks files or a path to a folder containing gtok files.
+        :param int window_size: Window size for the model.
+        :param int epochs: Number of epochs to train for.
+        :param int min_count: Minimum count for a region to be included in the vocabulary.
+        :param int num_cpus: Number of cpus to use for training.
+        :param int seed: Seed to use for training.
+        :param str save_checkpoint_path: Path to save the model checkpoints to.
+        :param dict gensim_params: Additional parameters to pass to the gensim model.
+        :param str load_from_checkpoint: Path to a checkpoint to load from.
 
-        :return np.ndarray: The losses for each epoch.
+        :return np.ndarray: Loss values for each epoch.
         """
+        # we only need gensim if we are training
         from gensim.models import Word2Vec as GensimWord2Vec
 
         # validate a model exists
@@ -258,33 +229,33 @@ class ScEmbed:
                 "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
             )
 
-        _LOGGER.info("Validating data.")
-        data = self._validate_data_for_training(data)
-
         # create gensim model that will be used to train
-        _LOGGER.info("Creating gensim model.")
-        gensim_model = GensimWord2Vec(
-            vector_size=self._model.embedding_dim,
-            window=window_size,
-            min_count=min_count,
-            workers=num_cpus,
-            seed=seed,
-            **gensim_params,
-        )
-
-        # convert to tokens for training
-        tokenized_data = self.tokenizer.tokenize(data)
-
-        _LOGGER.info("Building vocabulary.")
-        tokenized_data = [
-            [str(t.id) for t in region_set]
-            for region_set in track(
-                tokenized_data,
-                total=len(tokenized_data),
-                description="Converting to strings.",
+        if load_from_checkpoint is not None:
+            _LOGGER.info(f"Loading model from checkpoint: {load_from_checkpoint}")
+            gensim_model = GensimWord2Vec.load(load_from_checkpoint)
+        else:
+            _LOGGER.info("Creating new gensim model.")
+            gensim_model = GensimWord2Vec(
+                vector_size=self._model.embedding_dim,
+                window=window_size,
+                min_count=min_count,
+                workers=num_cpus,
+                seed=seed,
+                **gensim_params,
             )
-        ]
-        gensim_model.build_vocab(tokenized_data)
+            _LOGGER.info("Building vocabulary.")
+            vocab = [
+                str(i)
+                for i in track(
+                    range(len(self.tokenizer)),
+                    total=len(self.tokenizer),
+                    description="Building vocabulary.",
+                )
+            ]
+            gensim_model.build_vocab(vocab)
+
+        # create the dataset
+        dataset = Region2VecDataset(data, shuffle=True, convert_to_str=True)
 
         # create our own learning rate scheduler
         lr_scheduler = LearningRateScheduler(
@@ -297,12 +268,8 @@ class ScEmbed:
         for epoch in track(range(epochs), description="Training model", total=epochs):
             # shuffle the data
             _LOGGER.info(f"Starting epoch {epoch+1}.")
-            _LOGGER.info("Shuffling data.")
-            shuffled_data = shuffle_documents(
-                tokenized_data, n_shuffles=1
-            )  # shuffle once per epoch, no need to shuffle more
             gensim_model.train(
-                shuffled_data,
+                tqdm(dataset, desc=f"Epoch {epoch+1}", total=len(dataset)),
                 epochs=1,  # train for 1 epoch at a time, shuffle data each time
                 compute_loss=True,
                 total_words=gensim_model.corpus_total_words,
@@ -315,6 +282,12 @@ class ScEmbed:
             # update the learning rate
             lr_scheduler.update()
 
+            # if we have a checkpoint path, save the model
+            if save_checkpoint_path is not None:
+                gensim_model.save(save_checkpoint_path)
+
+        _LOGGER.info("Training complete. Moving weights to pytorch model.")
+
         # once done training, set the weights of the pytorch model in self._model
         for id in track(
             gensim_model.wv.key_to_index,
@@ -325,10 +298,6 @@ class ScEmbed:
 
         # set the model as trained
         self.trained = True
-
-        # export
-        if save_model:
-            self.export(checkpoint_path)
 
         return np.array(losses)
 
