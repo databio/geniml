@@ -5,7 +5,6 @@ from typing import List, Union
 import numpy as np
 import torch
 
-from tqdm import tqdm
 from rich.progress import track
 from huggingface_hub import hf_hub_download
 
@@ -16,7 +15,7 @@ from ..tokenization.main import ITTokenizer, Tokenizer
 from .models import Region2Vec
 from .utils import (
     Region2VecDataset,
-    LearningRateScheduler,
+    train_region2vec_model,
     export_region2vec_model,
     load_local_region2vec_model,
 )
@@ -218,7 +217,7 @@ class Region2VecExModel(ExModel):
 
     def train(
         self,
-        data: Union[str, List[str]],
+        dataset: Region2VecDataset,
         window_size: int = DEFAULT_WINDOW_SIZE,
         epochs: int = DEFAULT_EPOCHS,
         min_count: int = DEFAULT_MIN_COUNT,
@@ -231,7 +230,7 @@ class Region2VecExModel(ExModel):
         """
         Train the model.
 
-        :param Union[str, List[str]] data: Data to train on. This is either a list of paths to gtoks files or a path to a folder containing gtok files.
+        :param dataset Region2VecDataset: Dataset to train on.
         :param int window_size: Window size for the model.
         :param int epochs: Number of epochs to train for.
         :param int min_count: Minimum count for a region to be included in the vocabulary.
@@ -243,73 +242,24 @@ class Region2VecExModel(ExModel):
 
         :return np.ndarray: Loss values for each epoch.
         """
-        # we only need gensim if we are training
-        from gensim.models import Word2Vec as GensimWord2Vec
-
         # validate a model exists
         if self._model is None:
             raise RuntimeError(
                 "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
             )
 
-        # create gensim model that will be used to train
-        if load_from_checkpoint is not None:
-            _LOGGER.info(f"Loading model from checkpoint: {load_from_checkpoint}")
-            gensim_model = GensimWord2Vec.load(load_from_checkpoint)
-        else:
-            _LOGGER.info("Creating new gensim model.")
-            gensim_model = GensimWord2Vec(
-                vector_size=self._model.embedding_dim,
-                window=window_size,
-                min_count=min_count,
-                workers=num_cpus,
-                seed=seed,
-                **gensim_params,
-            )
-            _LOGGER.info("Building vocabulary.")
-            vocab = [
-                str(i)
-                for i in track(
-                    range(len(self.tokenizer)),
-                    total=len(self.tokenizer),
-                    description="Building vocabulary.",
-                )
-            ]
-            gensim_model.build_vocab(vocab)
-
-        # create the dataset
-        dataset = Region2VecDataset(data, shuffle=True, convert_to_str=True)
-
-        # create our own learning rate scheduler
-        lr_scheduler = LearningRateScheduler(
-            n_epochs=epochs,
+        gensim_model = train_region2vec_model(
+            dataset,
+            embedding_dim=self._model.embedding_dim,
+            window_size=window_size,
+            epochs=epochs,
+            min_count=min_count,
+            num_cpus=num_cpus,
+            seed=seed,
+            save_checkpoint_path=save_checkpoint_path,
+            gensim_params=gensim_params,
+            load_from_checkpoint=load_from_checkpoint,
         )
-
-        # train the model
-        losses = []
-
-        for epoch in track(range(epochs), description="Training model", total=epochs):
-            # shuffle the data
-            _LOGGER.info(f"Starting epoch {epoch+1}.")
-            gensim_model.train(
-                tqdm(dataset, desc=f"Epoch {epoch+1}", total=len(dataset)),
-                epochs=1,  # train for 1 epoch at a time, shuffle data each time
-                compute_loss=True,
-                total_words=gensim_model.corpus_total_words,
-            )
-
-            # log out and store loss
-            _LOGGER.info(f"Loss: {gensim_model.get_latest_training_loss()}")
-            losses.append(gensim_model.get_latest_training_loss())
-
-            # update the learning rate
-            lr_scheduler.update()
-
-            # if we have a checkpoint path, save the model
-            if save_checkpoint_path is not None:
-                gensim_model.save(save_checkpoint_path)
-
-        _LOGGER.info("Training complete. Moving weights to pytorch model.")
 
         # once done training, set the weights of the pytorch model in self._model
         for id in track(
@@ -322,7 +272,7 @@ class Region2VecExModel(ExModel):
         # set the model as trained
         self.trained = True
 
-        return np.array(losses)
+        return True
 
     def export(
         self,

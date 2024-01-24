@@ -8,13 +8,16 @@ import time
 import random
 
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union, Tuple, TYPE_CHECKING
 
 import numpy as np
 import torch
 
 from yaml import safe_dump, safe_load
 from genimtools.utils import read_tokens_from_gtok
+
+if TYPE_CHECKING:
+    from gensim.models import Word2Vec as GensimWord2Vec
 
 from ..const import GTOK_EXT
 from ..tokenization.main import Tokenizer, ITTokenizer
@@ -29,6 +32,10 @@ from .const import (
     VOCAB_SIZE_KEY,
     EMBEDDING_DIM_KEY,
     EMBEDDING_DIM_KEY_OLD,
+    DEFAULT_EMBEDDING_DIM,
+    DEFAULT_WINDOW_SIZE,
+    DEFAULT_EPOCHS,
+    DEFAULT_MIN_COUNT,
 )
 from .models import Region2Vec
 
@@ -536,3 +543,62 @@ class Region2VecDataset:
 
     def __repr__(self):
         return f"Region2VecDataset(data={self.data}, shuffle={self.shuffle})"
+
+
+def train_region2vec_model(
+    dataset: Region2VecDataset,
+    embedding_dim: int = DEFAULT_EMBEDDING_DIM,
+    window_size: int = DEFAULT_WINDOW_SIZE,
+    epochs: int = DEFAULT_EPOCHS,
+    min_count: int = DEFAULT_MIN_COUNT,
+    num_cpus: int = 1,
+    seed: int = 42,
+    save_checkpoint_path: str = None,
+    gensim_params: dict = {},
+    load_from_checkpoint: str = None,
+) -> "GensimWord2Vec":
+    """
+    Train a gensim Word2Vewc model on the given dataset.
+
+    :param Region2VecDataset data: Data to train on. This is a dataset of tokens.
+    :param int embedding_dim: Embedding dimension for the model.
+    :param int window_size: Window size for the model.
+    :param int epochs: Number of epochs to train for.
+    :param int min_count: Minimum count for a region to be included in the vocabulary.
+    :param int num_cpus: Number of cpus to use for training.
+    :param int seed: Seed to use for training.
+    :param str save_checkpoint_path: Path to save the model checkpoints to.
+    :param dict gensim_params: Additional parameters to pass to the gensim model.
+    :param str load_from_checkpoint: Path to a checkpoint to load from.
+
+    :return GensimWord2Vec: The gensim model that was trained.
+    """
+    # we only need gensim if we are training
+    from gensim.models import Word2Vec as GensimWord2Vec
+
+    # create gensim model that will be used to train
+    if load_from_checkpoint is not None:
+        _LOGGER.info(f"Loading model from checkpoint: {load_from_checkpoint}")
+        gensim_model = GensimWord2Vec.load(load_from_checkpoint)
+    else:
+        _LOGGER.info("Creating new gensim model.")
+        gensim_model = GensimWord2Vec(
+            vector_size=embedding_dim,
+            window=window_size,
+            min_count=min_count,
+            workers=num_cpus,
+            seed=seed,
+            **gensim_params,
+        )
+        _LOGGER.info("Building vocabulary.")
+        gensim_model.build_vocab(dataset)
+
+    gensim_model.train(
+        dataset,
+        epochs=epochs,  # train for 1 epoch at a time, shuffle data each time
+        compute_loss=True,
+        total_words=gensim_model.corpus_total_words,
+    )
+
+    _LOGGER.info("Training complete. Moving weights to pytorch model.")
+    return gensim_model
