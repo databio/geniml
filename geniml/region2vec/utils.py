@@ -593,6 +593,7 @@ def train_region2vec_model(
         _LOGGER.info("Building vocabulary.")
         gensim_model.build_vocab(dataset)
 
+    _LOGGER.info("Training model.")
     gensim_model.train(
         dataset,
         epochs=epochs,  # train for 1 epoch at a time, shuffle data each time
