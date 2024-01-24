@@ -111,7 +111,7 @@ def test_end_to_end_training():
     dataset = Region2VecDataset(tokens_path, convert_to_str=True, shuffle=True)
 
     model = ScEmbed(tokenizer=tokenizer)
-    model.train(dataset, epochs=100, num_cpus=5)
+    model.train(dataset, epochs=3, num_cpus=5)
 
     model.export(export_path)
 
