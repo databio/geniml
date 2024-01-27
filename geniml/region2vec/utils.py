@@ -606,7 +606,6 @@ def train_region2vec_model(
             min_count=min_count,
             workers=num_cpus,
             seed=seed,
-            callbacks=[TrainingCallback()],
             **gensim_params,
         )
         _LOGGER.info("Building vocabulary.")
@@ -618,6 +617,7 @@ def train_region2vec_model(
         epochs=epochs,  # train for 1 epoch at a time, shuffle data each time
         compute_loss=True,
         total_words=gensim_model.corpus_total_words,
+        callbacks=[TrainingCallback()],
     )
 
     _LOGGER.info("Training complete. Moving weights to pytorch model.")
