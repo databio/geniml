@@ -1,6 +1,6 @@
 import os
-import random
 from glob import glob
+from math import ceil
 
 import torch
 from torch.utils.data import Dataset
@@ -14,6 +14,7 @@ class AtacformerMLMDataset(Dataset):
         self,
         data: str,
         mask_token_id: int,
+        vocab_size: int,
         mask_prob: float = MASK_RATE,
         random_seed: int = 42,
         shuffle: bool = True,
@@ -25,12 +26,14 @@ class AtacformerMLMDataset(Dataset):
         :param str data: Path to the dataset. This should be a file of .gtok files
         :param int mask_token_id: ID of the mask token
         :param float mask_prob: Probability of masking a token
+        :param int vocab_size: Size of the vocabulary
         :param int random_seed: Random seed to use
         :param bool shuffle: Whether to shuffle the data
         """
         self.data = data
         self.mask_prob = mask_prob
         self.mask_token_id = mask_token_id
+        self.vocab_size = vocab_size
         self.random_seed = random_seed
         self.shuffle = shuffle
 
@@ -40,35 +43,27 @@ class AtacformerMLMDataset(Dataset):
     def __len__(self):
         return len(self.files)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> tuple(torch.Tensor, torch.Tensor, torch.Tensor):
         """
-        This should return a tuple of (input_ids, labels).
+        This should return a tuple of (tokens, masked_tokens, mask_ids).
         """
         # load the data
         tokens = torch.tensor(read_tokens_from_gtok(self.files[idx]))
-        labels = torch.tensor(tokens)
+        masked_tokens = tokens.clone()
 
-        # shuffle the data if necessary
-        if self.shuffle:
-            random.shuffle(tokens)
+        # get the mask ids (select tokens.shape[0] * self.mask_prob tokens to mask)
+        mask_ids = torch.multinomial(torch.ones(tokens.shape[0]), ceil(tokens.shape[0] * 0.15))
 
-        # get the number of tokens to predict
-        num_to_predict = int(self.mask_prob * len(tokens))
-
-        # get the indices of the tokens to predict
-        idxs = random.sample(range(len(tokens)), num_to_predict)
-
-        # get the input ids
-        for i in idxs:
-            prob = random.random()
-            # mask the token
-            if prob < REPLACE_WITH_MASK_RATE:
-                tokens[i] = self.mask_token_id
-            # replace the token with a random token
-            elif prob < REPLACE_WITH_RANDOM_RATE:
-                tokens[i] = random.choice(tokens)
-            # keep the token
+        # mask the tokens
+        for i in mask_ids:
+            val = torch.multinomial(
+                torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE]), 1
+            )
+            if val == 0:
+                masked_tokens[i] = self.mask_token_id
+            elif val == 1:
+                masked_tokens[i] = torch.randint(self.vocab_size, (1,))
             else:
-                pass
+                pass  # do nothing, keep the original token
 
-        return tokens, labels
+        return tokens, masked_tokens, mask_ids
