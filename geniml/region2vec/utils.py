@@ -575,6 +575,24 @@ def train_region2vec_model(
     """
     # we only need gensim if we are training
     from gensim.models import Word2Vec as GensimWord2Vec
+    from gensim.models.callbacks import CallbackAny2Vec
+
+    class TrainingCallback(CallbackAny2Vec):
+        """Callback to print loss after each epoch."""
+
+        def __init__(self):
+            self.epoch = 0
+
+        def on_epoch_end(self, model: GensimWord2Vec):
+            # log the loss
+            loss = model.get_latest_training_loss()
+            print("Loss after epoch {}: {}".format(self.epoch, loss))
+            _LOGGER.info(f"EPOCH {self.epoch} COMPLETE.")
+            self.epoch += 1
+
+            # save the model
+            if save_checkpoint_path is not None:
+                model.save(os.path.join(save_checkpoint_path, f"epoch_{self.epoch}.model"))
 
     # create gensim model that will be used to train
     if load_from_checkpoint is not None:
@@ -588,6 +606,7 @@ def train_region2vec_model(
             min_count=min_count,
             workers=num_cpus,
             seed=seed,
+            callbacks=[TrainingCallback()],
             **gensim_params,
         )
         _LOGGER.info("Building vocabulary.")
