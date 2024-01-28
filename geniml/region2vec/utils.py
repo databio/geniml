@@ -592,6 +592,10 @@ def train_region2vec_model(
 
             # save the model
             if save_checkpoint_path is not None:
+                # make sure the path exists
+                if not os.path.exists(save_checkpoint_path):
+                    os.makedirs(save_checkpoint_path)
+                # save the model
                 model.save(os.path.join(save_checkpoint_path, f"epoch_{self.epoch}.model"))
 
     # create gensim model that will be used to train
