@@ -110,12 +110,16 @@ class MLMAdapter(L.LightningModule):
         """
         super().__init__(**kwargs)
         self.loss_fn = nn.CrossEntropyLoss()
+        # linear layer acts as a classification layer for training
+        # but is not used during inference
         self.linear = nn.Linear(model._model.config.hidden_size, model._model.config.vocab_size)
-        self.nn_model = model
+        self.nn_model = model._model
         self.tokenizer = model.tokenizer
 
     def forward(self, x):
-        return self.nn_model(x)
+        token_embeddings = self.nn_model(x)
+        logits = self.linear(token_embeddings)
+        return logits
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
@@ -135,7 +139,7 @@ class MLMAdapter(L.LightningModule):
         tokens, masked_tokens, mask_ids = batch
 
         # forward pass for the batch
-        output = self.nn_model(masked_tokens)
+        output = self.forward(tokens)
 
         targets = tokens[mask_ids]
         predictions = output[mask_ids]
