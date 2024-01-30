@@ -13,5 +13,7 @@ UNIVERSE_FILE_NAME = "universe.bed"
 
 POOLING_TYPES = Literal["mean", "max"]
 POOLING_METHOD_KEY = "pooling_method"
-EMBEDDING_DIM_KEY = "embedding_dim"
+D_MODEL_KEY = "embedding_dim"
 VOCAB_SIZE_KEY = "vocab_size"
+NUM_LAYERS_KEY = "num_layers"
+NHEAD_KEY = "nheads"
