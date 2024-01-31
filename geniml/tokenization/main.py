@@ -171,6 +171,24 @@ class ITTokenizer(Tokenizer):
             GRegion(padding_token.chr, padding_token.start, padding_token.end)
         )
 
+    def unknown_token(self) -> Region:
+        return self._tokenizer.unknown_token
+
+    def unknown_token_id(self) -> int:
+        unknown_token = self.unknown_token()
+        return self.universe.region_to_id(
+            GRegion(unknown_token.chr, unknown_token.start, unknown_token.end)
+        )
+
+    def mask_token(self) -> Region:
+        return self._tokenizer.mask_token
+
+    def mask_token_id(self) -> int:
+        mask_token = self.mask_token()
+        return self.universe.region_to_id(
+            GRegion(mask_token.chr, mask_token.start, mask_token.end)
+        )
+
     def convert_tokens_to_ids(self, tokens: GTokenizedRegionSet) -> List[int]:
         """
         Convert a list of tokens to a list of ids.
@@ -180,7 +198,7 @@ class ITTokenizer(Tokenizer):
         return [token.id for token in tokens]
 
     def __len__(self):
-        return len(self._tokenizer)
+        return len(self.universe.regions)
 
 
 class Namespace:

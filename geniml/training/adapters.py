@@ -1,4 +1,5 @@
 from typing import Tuple, Union
+from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
 import torch
 import torch.nn as nn
@@ -112,7 +113,7 @@ class MLMAdapter(L.LightningModule):
         self.loss_fn = nn.CrossEntropyLoss()
         # linear layer acts as a classification layer for training
         # but is not used during inference
-        self.linear = nn.Linear(model._model.config.hidden_size, model._model.config.vocab_size)
+        self.linear = nn.Linear(model._model.d_model, model._model.vocab_size)
         self.nn_model = model._model
         self.tokenizer = model.tokenizer
 
@@ -120,6 +121,17 @@ class MLMAdapter(L.LightningModule):
         token_embeddings = self.nn_model(x)
         logits = self.linear(token_embeddings)
         return logits
+
+    def configure_optimizers(self) -> OptimizerLRScheduler:
+        """
+        We use the AdamW optimizer with a learning rate of 1e-3.
+
+        See here: https://arxiv.org/abs/2302.01107
+
+        > By default, AdamW [62], a variant of Adam which decouples the L2 regularization and the weight decay, is the most widely used optimizer for Transformers.
+        """
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3)
+        return optimizer
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
@@ -139,7 +151,7 @@ class MLMAdapter(L.LightningModule):
         tokens, masked_tokens, mask_ids = batch
 
         # forward pass for the batch
-        output = self.forward(tokens)
+        output = self.forward(masked_tokens)
 
         targets = tokens[mask_ids]
         predictions = output[mask_ids]

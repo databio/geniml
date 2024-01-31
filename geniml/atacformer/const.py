@@ -1,5 +1,13 @@
 from typing import Literal
 
+PAD_CHR = "chrPAD"
+PAD_START = 0
+PAD_END = 0
+
+MASK_CHR = "chrMASK"
+MASK_START = 0
+MASK_END = 0
+
 DEFAULT_EMBEDDING_DIM = 768
 
 MASK_RATE = 0.15

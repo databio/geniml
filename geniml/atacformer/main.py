@@ -40,6 +40,7 @@ class Atacformer(nn.Module):
         self.d_model = d_model
         self.nhead = nhead
         self.num_layers = num_layers
+        self.vocab_size = vocab_size
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead)
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)

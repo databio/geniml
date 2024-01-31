@@ -43,7 +43,7 @@ class AtacformerMLMDataset(Dataset):
     def __len__(self):
         return len(self.files)
 
-    def __getitem__(self, idx) -> tuple(torch.Tensor, torch.Tensor, torch.Tensor):
+    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         This should return a tuple of (tokens, masked_tokens, mask_ids).
         """
