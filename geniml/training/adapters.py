@@ -106,7 +106,8 @@ class MLMAdapter(L.LightningModule):
         Instantiate a fine-tuning trainer.
 
         :param Atacformer model: The model to fine-tune.
-
+        :param int pad_token_id: The token to use for padding
+        :param int mask_token_id: The token to use for masking
         :param kwargs: Additional arguments to pass to the LightningModule constructor.
         """
         super().__init__(**kwargs)
@@ -150,6 +151,9 @@ class MLMAdapter(L.LightningModule):
         # move the batch to the device
         tokens, masked_tokens, mask_ids = batch
 
+        # strip the padding from the mask_ids
+        mask_ids = mask_ids[mask_ids != self.tokenizer.padding_token_id()]
+
         # forward pass for the batch
         output = self.forward(masked_tokens)
 
@@ -159,4 +163,5 @@ class MLMAdapter(L.LightningModule):
         # compute the loss
         loss = self.loss_fn(predictions, targets)
         self.log("train_loss", loss)
+
         return loss
