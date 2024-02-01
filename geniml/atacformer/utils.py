@@ -4,6 +4,7 @@ from math import ceil
 
 import torch
 from torch.utils.data import Dataset
+from torch.nn.utils.rnn import pad_sequence
 from genimtools.utils import read_tokens_from_gtok
 
 from .const import MASK_RATE, REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE
@@ -52,7 +53,9 @@ class AtacformerMLMDataset(Dataset):
         masked_tokens = tokens.clone()
 
         # get the mask ids (select tokens.shape[0] * self.mask_prob tokens to mask)
-        mask_ids = torch.multinomial(torch.ones(tokens.shape[0]), ceil(tokens.shape[0] * 0.15))
+        mask_ids = torch.multinomial(
+            torch.ones(tokens.shape[0]), ceil(tokens.shape[0] * 0.15), replacement=False
+        )
 
         # mask the tokens
         for i in mask_ids:
@@ -67,3 +70,23 @@ class AtacformerMLMDataset(Dataset):
                 pass  # do nothing, keep the original token
 
         return tokens, masked_tokens, mask_ids
+
+
+def mlm_batch_collator(
+    batch: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], padding_token: int
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Collate function for the MLM dataset. This should take a batch of
+    (tokens, masked_tokens, mask_ids) and return a tuple of (tokens, masked_tokens, mask_ids) that are padded
+
+    :param list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] batch: Batch of (tokens, masked_tokens, mask_ids)
+    :param int padding_token: Token to use for padding
+    """
+    tokens, masked_tokens, mask_ids = zip(*batch)
+
+    # pad the tokens
+    tokens = pad_sequence(tokens, batch_first=True, padding_value=padding_token)
+    masked_tokens = pad_sequence(masked_tokens, batch_first=True, padding_value=padding_token)
+    mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=padding_token)
+
+    return tokens, masked_tokens, mask_ids

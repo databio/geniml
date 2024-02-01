@@ -4,9 +4,9 @@ from genimtools.utils import write_tokens_to_gtok
 from geniml.io import RegionSet
 from geniml.tokenization import ITTokenizer
 
-path = "tests/data/hg38_sample/"
+path = "tests/data/to_tokenize/"
 out_path = "tests/data/gtok_sample/"
-universe = "tests/data/universe.bed"
+universe = "tests/data/universe_mlm.bed"
 tokenizer = ITTokenizer(universe)
 
 for bed in os.listdir(path):
@@ -15,4 +15,4 @@ for bed in os.listdir(path):
         bed_path = os.path.join(path, bed)
         region_set = RegionSet(bed_path)
         tokens = tokenizer.tokenize(region_set)
-        write_tokens_to_gtok(os.path.join(out_path, gtok_file), tokens.ids)
+        write_tokens_to_gtok(os.path.join(out_path, gtok_file), tokens)
