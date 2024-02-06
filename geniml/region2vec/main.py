@@ -329,7 +329,7 @@ class Region2VecExModel(ExModel):
 
         # tokenize the region
         tokens = [self.tokenizer.tokenize(r) for r in regions]
-        tokens = [t.id for sublist in tokens for t in sublist]
+        tokens = [[t.id for t in sublist] for sublist in tokens]
 
         # get the vector
         region_embeddings = self._model(torch.tensor(tokens))
