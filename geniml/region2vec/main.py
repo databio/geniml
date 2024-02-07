@@ -329,15 +329,18 @@ class Region2VecExModel(ExModel):
 
         # tokenize the region
         tokens = [self.tokenizer.tokenize(r) for r in regions]
-        tokens = [[t.id for t in sublist] for sublist in tokens]
 
-        # get the vector
-        region_embeddings = self._model(torch.tensor(tokens))
+        # get the embeddings
+        embeddings = []
+        for token_set in track(tokens, total=len(tokens), description="Getting embeddings"):
+            region_embeddings = self._model.projection(torch.tensor(token_set))
+            if pooling == "mean":
+                region_embeddings = torch.mean(region_embeddings, axis=0).detach().numpy()
+            elif pooling == "max":
+                region_embeddings = torch.max(region_embeddings, axis=0).values.detach().numpy()
+            else:
+                # this should be unreachable
+                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+            embeddings.append(region_embeddings)
 
-        if pooling == "mean":
-            return torch.mean(region_embeddings, axis=0).detach().numpy()
-        elif pooling == "max":
-            return torch.max(region_embeddings, axis=0).values.detach().numpy()
-        else:
-            # this should be unreachable
-            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+        return np.vstack(embeddings)
