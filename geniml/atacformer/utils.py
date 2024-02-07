@@ -71,22 +71,23 @@ class AtacformerMLMDataset(Dataset):
 
         return tokens, masked_tokens, mask_ids
 
+    def collate_batch(
+        batch: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], padding_token: int
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Collate function for the MLM dataset. This should take a batch of
+        (tokens, masked_tokens, mask_ids) and return a tuple of (tokens, masked_tokens, mask_ids) that are padded
 
-def mlm_batch_collator(
-    batch: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], padding_token: int
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """
-    Collate function for the MLM dataset. This should take a batch of
-    (tokens, masked_tokens, mask_ids) and return a tuple of (tokens, masked_tokens, mask_ids) that are padded
+        :param list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] batch: Batch of (tokens, masked_tokens, mask_ids)
+        :param int padding_token: Token to use for padding
+        """
+        tokens, masked_tokens, mask_ids = zip(*batch)
 
-    :param list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] batch: Batch of (tokens, masked_tokens, mask_ids)
-    :param int padding_token: Token to use for padding
-    """
-    tokens, masked_tokens, mask_ids = zip(*batch)
+        # pad the tokens
+        tokens = pad_sequence(tokens, batch_first=True, padding_value=padding_token)
+        masked_tokens = pad_sequence(masked_tokens, batch_first=True, padding_value=padding_token)
+        mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=padding_token)
 
-    # pad the tokens
-    tokens = pad_sequence(tokens, batch_first=True, padding_value=padding_token)
-    masked_tokens = pad_sequence(masked_tokens, batch_first=True, padding_value=padding_token)
-    mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=padding_token)
+        attention_mask = tokens != padding_token
 
-    return tokens, masked_tokens, mask_ids
+        return tokens, masked_tokens, mask_ids, attention_mask
