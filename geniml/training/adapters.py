@@ -135,7 +135,7 @@ class MLMAdapter(L.LightningModule):
         return optimizer
 
     def training_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
     ):
         """
         Perform a training step.
@@ -149,16 +149,19 @@ class MLMAdapter(L.LightningModule):
         """
 
         # move the batch to the device
-        tokens, masked_tokens, mask_ids = batch
+        tokens, masked_tokens, mask_ids, attention_mask = batch
 
-        # strip the padding from the mask_ids
-        mask_ids = mask_ids[mask_ids != self.tokenizer.padding_token_id()]
+        # strip the padding
+        tokens = tokens[attention_mask]
+        masked_tokens = masked_tokens[attention_mask]
+        mask_ids = mask_ids[attention_mask]
 
         # forward pass for the batch
         output = self.forward(masked_tokens)
 
-        targets = tokens[mask_ids]
+        # get predictions + targets
         predictions = output[mask_ids]
+        targets = tokens[mask_ids]
 
         # compute the loss
         loss = self.loss_fn(predictions, targets)
