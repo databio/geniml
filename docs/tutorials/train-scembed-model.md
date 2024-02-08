@@ -6,6 +6,7 @@ For this example we are using the [10x Genomics PBMC 10k dataset](https://www.10
 
 
 ## Installation
+
 Simply install the parent package `geniml` from PyPi:
 
 ```bash
@@ -15,26 +16,8 @@ pip install geniml
 Then import `scEmbed` from `geniml`:
 
 ```python
-from geniml.scembed import SCEmbed
+from geniml.scembed import ScEmbed
 ```
-
-## Usage
-`scEmbed` is simple to use. Import your `AnnData` object and pass it to `SCEmbed`. `scEmbed` will work regardless of any `var` or `obs` annotations, but it is recommended that you use `scEmbed` after you have already performed some basic filtering and quality control on your data. Further. If you'd like to maintain information about region embeddings, it is recommended that you attach `chr`, `start`, adn `end` annotations to your `AnnData` object before passing it to `scEmbed`.
-
-```python
-import scanpy as sc
-from geniml.scembed import SCEmbed
-
-adata = sc.read_h5ad("path/to/adata.h5ad")
-
-scEmbed = SCEmbed(adata)
-scEmbed.train(
-    epochs=100,
-)
-
-cell_embeddings = scEmbed.get_cell_embeddings()
-```
-
 
 ## Data preparation
 `scembed` requires that the input data is in the [AnnData](https://anndata.readthedocs.io/en/latest/) format. Moreover, the `.var` attribute of this object must have `chr`, `start`, and `end` values. The reason is two fold: 1) we can track which vectors belong to which genmomic regions, and 2) region vectors are now reusable. We ned three files: 1) The `barcodes.txt` file, 2) the `peaks.bed` file, and 3) the `matrix.mtx` file. These will be used to create the `AnnData` object. To begin, download the data from the 10x Genomics website:
@@ -65,57 +48,71 @@ adata.write_h5ad("pbmc.h5ad")
 
 We will use the `pbmc.h5ad` file for downstream work.
 
-## Training the model
-To train an `scembed` model, just create an instance of the `SCEmbed` model class, define your hyperparamters, and call the `train` method. For this example, we will use the default hyperparameters. The only thing we need to specify is the number of epochs to train for. We will train for 10 epochs:
+## Training
+
+Training an `scEmbed` model requires two key steps: 1) pre-tokenizing the data, and 2) training the model.
+
+### Pre-tokenizing the data
+To learn more about pre-tokenizing the data, see the [pre-tokenization tutorial](./pre-tokenization.md). Pre-tokenization offers many benefits, the two most important being 1) speeding up training, and 2) lower resource requirements. The pre-tokenization process is simple and can be done with a combination of `geniml` and `genimtools` utilities. Here is an example of how to pre-tokenize the 10x Genomics PBMC 10k dataset:
 
 ```python
-import logging
+from genimtools.utils import write_tokens_to_gtok
+from geniml.tokenization import ITTokenizer
 
-import scanpy as sc
-from geniml.scembed import SCEmbed
+adata = sc.read_h5ad("path/to/adata.h5ad")
+tokenizer = ITTokenizer("peaks.bed")
 
-# if you want to see the training progress
-logging.basicConfig(level=logging.INFO)
+tokens = tokenizer(adata)
 
-model = SCEmbed(
-    use_default_region_names=False  # this is to specify that we want to use chr, start, end.
-)
-model.train(adata, epochs=3)  # we recomend increasing this to 100
+for i, t in enumerate(tokens):
+    file = f"tokens{i}.gtok"
+    write_tokens_to_gtok(t, file)
 ```
 
-Thats it!
+### Training the model
+
+Now that the data is pre-tokenized, we can train the model. The `scEmbed` model is designed to be used with `scanpy`. Here is an example of how to train the model:
+
+```python
+
+from geniml.region2vec.utils import Region2VecDataset
+
+dataset = Region2VecDataset("path/to/tokens")
+
+model = ScEmbed(
+    tokenizer=tokenizer,
+)
+model.train(
+    dataset,
+    epochs=100,
+)
+```
+
+We can then export the model for upload to huggingface:
+
+```python
+model.export("path/to/model")
+```
+
+## Get embeddings of single-cells
+`scEmbed` is simple to use and designed to be used with `scanpy`. Here is a simple example of how to train a model and get cell embeddings:
+
+```python
+model = ScEmbed.from_pretrained("path/to/model")
+model = ScEmbed("databio/scembed-pbmc10k")
+
+adata = sc.read_h5ad("path/to/adata.h5ad")
+embeddings = model.encode(adata)
+
+adata.obsm["scembed_X"] = embeddings
+```
 
 ## Clustering the cells
-With the model now trained, we can get embeddings of our cells. This occurs in two steps: 1) tokenize the data and 2) encode the cells.
-
-**Tokenize:**
-
-```python
-from geniml.tokenization import HardTokenizer
-
-
-tokenizer = HardTokenizer("peaks.bed")  # consensus peak set
-
-region_sets = tokenizer(adata)
-```
-
-**Encode:**
-```python
-cell_embeddings = []
-for region_set in region_sets:
-    embedding = np.mean([model(r) for r in region_set if r in model.region2vec, axis=0])
-    cell_embeddings.append(embedding)
-
-cell_embeddings = np.array(cell_embeddings)
-
-adata.obsm['scembed_X'] = cell_embeddings
-```
-
-Now you can use `scanpy` utilities to cluster the cells:
+With the model now trained, and cell-embeddings obtained, we can get embeddings of our individual cells. You can use `scanpy` utilities to cluster the cells:
 
 ```python
 sc.pp.neighbors(adata, use_rep="scembed_X")
-sc.tl.leiden(adata)
+sc.tl.leiden(adata) # or louvain
 ```
 
 And visualize with UMAP
