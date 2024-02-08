@@ -54,18 +54,29 @@ pip install qdrant-client
 
 ```python
 from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams, PointStruct
 
-client = QdrantClient("http://localhost:6333")
+client = QdrantClient("localhost", port=6333)
 
-# create collection
 client.create_collection(
     collection_name="luecken2021",
-    vector_size=embeddings.shape[1]
+    vectors_config=VectorParams(size=embeddings.shape[1], distance=Distance.DOT),
 )
 
-client.upsert_collection(
-    collection_name="luecken2021",
-    data=embeddings,
-    ids=adata.obs.index
-)
+embeddings, cell_types = adata.obsm['scembed_X'], adata.obs['cell_type']
+
+points = []
+for embedding, cell_type, i in zip(embeddings, cell_types, range(len(embeddings)):
+    points.append(
+        PointStruct(
+            id=adata.obs.index[i],
+            vector=embedding.tolist(),
+            payload={"cell_type": cell_type}
+
+    ))
+
+
+client.upsert(collection_name="luecken2021", points=points, wait=True)
 ```
+
+You should now have a vector database with cell embeddings. In the next tutorial, we will show how to use this vector database to query cell embeddings and annotate cells with cell-type labels using a KNN classification algorithm.
