@@ -5,8 +5,8 @@ import pytest
 import torch
 
 from geniml.io.io import Region, RegionSet
-from geniml.region2vec.main import Region2Vec
-from geniml.region2vec.main import Region2VecExModel
+from geniml.region2vec.main import Region2Vec, Region2VecExModel
+from geniml.region2vec.utils import Region2VecDataset
 from geniml.tokenization.main import ITTokenizer
 
 
@@ -21,6 +21,14 @@ def test_init_region2vec():
         embedding_dim=100,
     )
     assert model is not None
+
+
+def test_make_region2vec_dataset():
+    path_to_data = "tests/data/gtok_sample/"
+    dataset = Region2VecDataset(path_to_data)
+
+    first = next(iter(dataset))
+    assert all([isinstance(x, int) for x in first])
 
 
 @pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")

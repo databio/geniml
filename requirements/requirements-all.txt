@@ -1,5 +1,5 @@
 anndata > 0.9.0
-genimtools >= 0.0.7
+genimtools >= 0.0.10
 fastembed >= 0.1.1 
 gensim
 genomicranges >= 0.4.1
@@ -10,7 +10,6 @@ numpy >= 1.24.0
 paramiko >= 3.0.0
 peppy>=0.40.0a4
 pyBigWig
-pydantic < 2.0.0
 qdrant_client
 requests >= 2.31.0
 scanpy
@@ -19,3 +18,4 @@ torch
 ubiquerg >= 0.6.3
 pyarrow
 iranges
+lightning
