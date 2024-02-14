@@ -1,20 +1,21 @@
-import multiprocessing
 import os
 from logging import getLogger
 from typing import List, Union
 
 import numpy as np
 import torch
+
 from rich.progress import track
 from huggingface_hub import hf_hub_download
 
+from ..models import ExModel
 from ..io import Region, RegionSet
 from ..tokenization.main import ITTokenizer, Tokenizer
-from . import utils
+
 from .models import Region2Vec
 from .utils import (
-    LearningRateScheduler,
-    shuffle_documents,
+    Region2VecDataset,
+    train_region2vec_model,
     export_region2vec_model,
     load_local_region2vec_model,
 )
@@ -30,8 +31,7 @@ from .const import (
     POOLING_TYPES,
     POOLING_METHOD_KEY,
 )
-from .region2vec_train import main as region2_train
-from .region_shuffling import main as sent_gen
+
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -40,163 +40,7 @@ _LOGGER = getLogger(MODULE_NAME)
 _GENSIM_LOGGER.setLevel("WARNING")
 
 
-class Namespace:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-
-def region2vec(
-    token_folder: str,
-    save_dir: str,
-    file_list: List[str] = None,
-    data_type: str = "files",
-    mat_path: str = None,
-    num_shufflings: int = 1000,
-    num_processes: int = 10,
-    tokenization_mode: str = "hard",
-    embedding_dim: int = 100,
-    context_win_size: int = 5,
-    save_freq: int = -1,
-    resume_path: str = "",
-    train_alg: str = "cbow",
-    min_count: int = 5,
-    neg_samples: int = 5,
-    init_lr: float = 0.025,
-    min_lr: float = 1e-4,
-    lr_scheduler: str = "linear",
-    milestones: List[int] = [],
-    hier_softmax: bool = False,
-    seed: int = 0,
-    update_vocab: str = "once",
-):
-    """Trains a Region2Vec model.
-
-    Starts two subprocesses: one that generates shuffled datasets, and the
-    other consumes the shuffled datasets to train a Region2Vec model.
-
-    Args:
-        token_folder (str): The path to the folder of tokenized files.
-        save_dir (str): The folder that stores the training results.
-        file_list (list[str], optional): Specifies which files from
-            token_folder are used for training. When None, uses all the files
-            in token_folder. Defaults to None.
-        data_type (str, optional): "files" or "matrix". Defaults to "files".
-        mat_path (str, optional): Used only when data_type = "matrix". Defaults
-            to None.
-        num_shufflings (int, optional): Number of shuffled datasets to
-            generate. Defaults to 1000.
-        num_processes (int, optional): Number of processes used. Defaults to 10.
-        tokenization_mode (str, optional): Tokenization mode. Defaults to
-            "hard", i.e., concatenating all regions in a BED files in a random order.
-        embedding_dim (int, optional): Dimension of embedding vectors. Defaults
-            to 100.
-        context_win_size (int, optional): Context window size. Defaults to 5.
-        save_freq (int, optional): Save frequency. Defaults to -1.
-        resume_path (str, optional): Starts with a previously trained model.
-            Defaults to "".
-        train_alg (str, optional): Training algorithm. Defaults to "cbow".
-        min_count (int, optional): Minimum frequency required to keep a region.
-            Defaults to 5.
-        neg_samples (int, optional): Number of negative samples used in
-            training. Defaults to 5.
-        init_lr (float, optional): Initial learning rate. Defaults to 0.025.
-        min_lr (float, optional): Minimum learning rate. Defaults to 1e-4.
-        lr_scheduler (str, optional): Type of the learning rate scheduler.
-            Defaults to "linear".
-        milestones (list[int], optional): Used only when
-            lr_scheduler="milestones". Defaults to [].
-        hier_softmax (bool, optional): Whether to use hierarchical softmax
-            during training. Defaults to False.
-        seed (int, optional): Random seed. Defaults to 0.
-        update_vocab (str, optional): If "every", then updates the vocabulary
-            for each shuffled dataset. Defaults to "once" assuming no new
-            regions occur in shuffled datasets.
-    """
-    timer = utils.Timer()
-    start_time = timer.t()
-    if file_list is None:
-        files = os.listdir(token_folder)
-    else:
-        files = file_list
-    os.makedirs(save_dir, exist_ok=True)
-    file_list_path = os.path.join(save_dir, "file_list.txt")
-    utils.set_log_path(save_dir)
-    with open(file_list_path, "w") as f:
-        for file in files:
-            f.write(file)
-            f.write("\n")
-
-    training_processes = []
-    num_sent_processes = min(int(np.ceil(num_processes / 2)), 4)
-    nworkers = min(num_shufflings, num_sent_processes)
-    utils.log(f"num_sent_processes: {nworkers}")
-    if nworkers <= 1:
-        sent_gen_args = Namespace(
-            tokenization_folder=token_folder,
-            save_dir=save_dir,
-            file_list=file_list_path,
-            tokenization_mode=tokenization_mode,
-            pool=1,  # maximum number of unused shuffled datasets generated at a time
-            worker_id=0,
-            number=num_shufflings,
-        )
-        p = multiprocessing.Process(target=sent_gen, args=(sent_gen_args,))
-        p.start()
-        training_processes.append(p)
-    else:
-        num_arrs = [num_shufflings // nworkers] * (nworkers - 1)
-
-        num_arrs.append(num_shufflings - np.array(num_arrs).sum())
-        sent_gen_args_arr = []
-        for n in range(nworkers):
-            sent_gen_args = Namespace(
-                tokenization_folder=token_folder,
-                data_type=data_type,
-                mat_path=mat_path,
-                save_dir=save_dir,
-                file_list=file_list_path,
-                tokenization_mode=tokenization_mode,
-                pool=1,  # maximum number of unused shuffled datasets generated at a time
-                worker_id=n,
-                number=num_arrs[n],
-            )
-            sent_gen_args_arr.append(sent_gen_args)
-        for n in range(nworkers):
-            p = multiprocessing.Process(target=sent_gen, args=(sent_gen_args_arr[n],))
-            p.start()
-            training_processes.append(p)
-
-    num_region2vec_processes = max(num_processes - nworkers, 1)
-    region2vec_args = Namespace(
-        num_shuffle=num_shufflings,
-        embed_dim=embedding_dim,
-        context_len=context_win_size,
-        nworkers=num_region2vec_processes,
-        save_freq=save_freq,
-        save_dir=save_dir,
-        resume=resume_path,
-        train_alg=train_alg,
-        min_count=min_count,
-        neg_samples=neg_samples,
-        init_lr=init_lr,
-        min_lr=min_lr,
-        lr_mode=lr_scheduler,
-        milestones=milestones,
-        hier_softmax=hier_softmax,
-        update_vocab=update_vocab,
-        seed=seed,
-    )
-    p = multiprocessing.Process(target=region2_train, args=(region2vec_args,))
-    p.start()
-    training_processes.append(p)
-    for p in training_processes:
-        p.join()
-    os.remove(file_list_path)
-    elapsed_time = timer.t() - start_time
-    print(f"[Training] {utils.time_str(elapsed_time)}/{utils.time_str(timer.t())}")
-
-
-class Region2VecExModel:
+class Region2VecExModel(ExModel):
     def __init__(
         self,
         model_path: str = None,
@@ -373,108 +217,49 @@ class Region2VecExModel:
 
     def train(
         self,
-        data: Union[List[RegionSet], List[str]],
+        dataset: Region2VecDataset,
         window_size: int = DEFAULT_WINDOW_SIZE,
         epochs: int = DEFAULT_EPOCHS,
         min_count: int = DEFAULT_MIN_COUNT,
         num_cpus: int = 1,
         seed: int = 42,
-        checkpoint_path: str = MODEL_FILE_NAME,
-        save_model: bool = False,
+        save_checkpoint_path: str = None,
         gensim_params: dict = {},
+        load_from_checkpoint: str = None,
     ) -> np.ndarray:
         """
         Train the model.
 
-        :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
-                                                        a list of RegionSets or a list of paths to bed files.
+        :param dataset Region2VecDataset: Dataset to train on.
         :param int window_size: Window size for the model.
         :param int epochs: Number of epochs to train for.
         :param int min_count: Minimum count for a region to be included in the vocabulary.
-        :param int n_shuffles: Number of shuffles to perform on the data.
-        :param int batch_size: Batch size for training.
-        :param str checkpoint_path: Path to save the model checkpoint to.
-        :param torch.optim.Optimizer optimizer: Optimizer to use for training.
-        :param float learning_rate: Learning rate to use for training.
-        :param int ns_k: Number of negative samples to use.
-        :param torch.device device: Device to use for training.
-        :param dict optimizer_params: Additional parameters to pass to the optimizer.
-        :param bool save_model: Whether or not to save the model.
+        :param int num_cpus: Number of cpus to use for training.
+        :param int seed: Seed to use for training.
+        :param str save_checkpoint_path: Path to save the model checkpoints to.
+        :param dict gensim_params: Additional parameters to pass to the gensim model.
+        :param str load_from_checkpoint: Path to a checkpoint to load from.
 
         :return np.ndarray: Loss values for each epoch.
         """
-        # we only need gensim if we are training
-        from gensim.models import Word2Vec as GensimWord2Vec
-
         # validate a model exists
         if self._model is None:
             raise RuntimeError(
                 "Cannot train a model that has not been initialized. Please initialize the model first using a tokenizer or from a huggingface model."
             )
 
-        # validate the data - convert all to RegionSets
-        _LOGGER.info("Validating data for training.")
-        data = self._validate_data_for_training(data)
-
-        # create gensim model that will be used to train
-        _LOGGER.info("Creating gensim model.")
-        gensim_model = GensimWord2Vec(
-            vector_size=self._model.embedding_dim,
-            window=window_size,
+        gensim_model = train_region2vec_model(
+            dataset,
+            embedding_dim=self._model.embedding_dim,
+            window_size=window_size,
+            epochs=epochs,
             min_count=min_count,
-            workers=num_cpus,
+            num_cpus=num_cpus,
             seed=seed,
-            **gensim_params,
+            save_checkpoint_path=save_checkpoint_path,
+            gensim_params=gensim_params,
+            load_from_checkpoint=load_from_checkpoint,
         )
-
-        # tokenize the data
-        # convert to strings for gensim
-        _LOGGER.info("Tokenizing data.")
-        tokenized_data = [
-            self.tokenizer.tokenize(list(region_set))
-            for region_set in track(data, description="Tokenizing data", total=len(data))
-            if len(region_set) > 0
-        ]
-
-        _LOGGER.info("Building vocabulary.")
-        tokenized_data = [
-            [str(t.id) for t in region_set]
-            for region_set in track(
-                tokenized_data,
-                total=len(tokenized_data),
-                description="Converting to strings.",
-            )
-        ]
-        gensim_model.build_vocab(tokenized_data)
-
-        # create our own learning rate scheduler
-        lr_scheduler = LearningRateScheduler(
-            n_epochs=epochs,
-        )
-
-        # train the model
-        losses = []
-
-        for epoch in track(range(epochs), description="Training model", total=epochs):
-            # shuffle the data
-            _LOGGER.info(f"Starting epoch {epoch+1}.")
-            _LOGGER.info("Shuffling data.")
-            shuffled_data = shuffle_documents(
-                tokenized_data, n_shuffles=1
-            )  # shuffle once per epoch, no need to shuffle more
-            gensim_model.train(
-                shuffled_data,
-                epochs=1,  # train for 1 epoch at a time, shuffle data each time
-                compute_loss=True,
-                total_words=gensim_model.corpus_total_words,
-            )
-
-            # log out and store loss
-            _LOGGER.info(f"Loss: {gensim_model.get_latest_training_loss()}")
-            losses.append(gensim_model.get_latest_training_loss())
-
-            # update the learning rate
-            lr_scheduler.update()
 
         # once done training, set the weights of the pytorch model in self._model
         for id in track(
@@ -487,11 +272,7 @@ class Region2VecExModel:
         # set the model as trained
         self.trained = True
 
-        # export
-        if save_model:
-            self.export(checkpoint_path)
-
-        return np.array(losses)
+        return True
 
     def export(
         self,
@@ -507,9 +288,6 @@ class Region2VecExModel:
 
         :param str path: Path to export the model to.
         """
-        # make sure the model is trained
-        if not self.trained:
-            raise RuntimeError("Cannot export an untrained model.")
 
         export_region2vec_model(
             self._model,
@@ -551,15 +329,18 @@ class Region2VecExModel:
 
         # tokenize the region
         tokens = [self.tokenizer.tokenize(r) for r in regions]
-        tokens = [t.id for sublist in tokens for t in sublist]
 
-        # get the vector
-        region_embeddings = self._model.projection(torch.tensor(tokens))
+        # get the embeddings
+        embeddings = []
+        for token_set in track(tokens, total=len(tokens), description="Getting embeddings"):
+            region_embeddings = self._model.projection(torch.tensor(token_set))
+            if pooling == "mean":
+                region_embeddings = torch.mean(region_embeddings, axis=0).detach().numpy()
+            elif pooling == "max":
+                region_embeddings = torch.max(region_embeddings, axis=0).values.detach().numpy()
+            else:
+                # this should be unreachable
+                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+            embeddings.append(region_embeddings)
 
-        if pooling == "mean":
-            return torch.mean(region_embeddings, axis=0).detach().numpy()
-        elif pooling == "max":
-            return torch.max(region_embeddings, axis=0).values.detach().numpy()
-        else:
-            # this should be unreachable
-            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+        return np.vstack(embeddings)

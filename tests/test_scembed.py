@@ -5,6 +5,9 @@ import sys
 import pytest
 import scanpy as sc
 
+from tqdm import tqdm
+from genimtools.utils import write_tokens_to_gtok
+from geniml.region2vec.utils import Region2VecDataset
 from geniml.tokenization.main import ITTokenizer
 from geniml.scembed.main import ScEmbed
 
@@ -80,3 +83,44 @@ def test_pretrained_scembed_model(hf_model: str, pbmc_data: sc.AnnData):
     model = ScEmbed(hf_model)
     embeddings = model.encode(pbmc_data)
     assert embeddings.shape[0] == pbmc_data.shape[0]
+
+
+@pytest.mark.skip(reason="This is for my own testing")
+def test_end_to_end_training():
+    from umap import UMAP
+    import matplotlib.pyplot as plt
+
+    data_path = os.path.expandvars("$HOME/Desktop/buenrostro2018.h5ad")
+    tokens_path = os.path.expandvars("$HOME/Desktop/tokens")
+    universe_path = os.path.expandvars("$HOME/Desktop/universe.bed")
+    export_path = os.path.expandvars("$HOME/Desktop/scembed-model")
+
+    # try to remove tokens folder if it exists
+    if os.path.exists(tokens_path):
+        os.system(f"rm -rf {tokens_path}")
+
+    adata = sc.read_h5ad(data_path)
+
+    tokenizer = ITTokenizer(universe_path)
+    tokens = tokenizer.tokenize(adata)
+
+    for i, t in tqdm(enumerate(tokens)):
+        file = os.path.join(tokens_path, f"cell{i}.gtok")
+        write_tokens_to_gtok(file, t.ids)
+
+    dataset = Region2VecDataset(tokens_path, convert_to_str=True, shuffle=True)
+
+    model = ScEmbed(tokenizer=tokenizer)
+    model.train(dataset, epochs=3, num_cpus=5)
+
+    model.export(export_path)
+
+    model2 = ScEmbed.from_pretrained(export_path)
+    embeddings = model2.encode(adata)
+
+    reducer = UMAP(n_components=2, random_state=42)
+    embedding = reducer.fit_transform(embeddings)
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.scatter(embedding[:, 0], embedding[:, 1], s=0.1)
+    fig.savefig("umap_test.png")
