@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple, Union
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
@@ -5,11 +6,14 @@ import torch
 import torch.nn as nn
 import lightning as L
 
+from ..nn import GradientReversal
 from ..region2vec import Region2VecExModel
 from ..scembed import ScEmbed
 from ..atacformer import AtacformerExModel
 
 from .const import BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class CellTypeFineTuneAdapter(L.LightningModule):
@@ -185,6 +189,7 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
         model: Union[Region2VecExModel, ScEmbed],
         mode: BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES,
         num_batches: int,
+        grad_rev_alpha: float = 1.0,
         **kwargs,
     ):
         """
@@ -197,6 +202,11 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
             for batch effects. "adversary" should be used first to train the adversary, and then
             "batch_correction" should be used to train the batch correction model.
 
+        :param int num_batches: The number of batches in the dataset.
+        :param float grad_rev_alpha: The alpha value to use for the gradient reversal layer. This
+            is used to control the strength of the adversarial training. A higher value will make the
+            adversarial training stronger. For more information, see: https://arxiv.org/abs/1409.7495
+
         :param kwargs: Additional arguments to pass to the LightningModule constructor.
         """
         super().__init__(**kwargs)
@@ -204,19 +214,29 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
             raise ValueError(
                 f"Invalid mode: {mode}. Must be one of {BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES}"
             )
+
         self.mode = mode
         self.num_batches = num_batches
+        self.grad_rev_alpha = grad_rev_alpha
 
-        self.nn_model = model._model
+        self.nn_model = model.model
         self.tokenizer = model.tokenizer
         self._exmodel = model
 
         self.classifier = nn.Linear(model.model.embedding_dim, self.num_batches)
         self.loss_fn = nn.CrossEntropyLoss()
+        self.grad_rev = GradientReversal(self.grad_rev_alpha)
+
+    # setter for the mode to toggle back and forth
+    def set_mode(self, mode: BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES):
+        self.mode = mode
+        _LOGGER.info(f"Switching mode to {mode}")
 
     def forward(self, x):
         embeddings = self.nn_model(x)
         cell_embeddings = torch.mean(embeddings, dim=1)
+        if self.mode == "adversary":
+            cell_embeddings = self.grad_rev(cell_embeddings)
         return self.classifier(cell_embeddings)
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int):
@@ -235,6 +255,8 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
 
         # compute the loss
         loss = self.loss_fn(output, y)
+
+        # log the loss
         self.log("train_loss", loss)
         return loss
 
