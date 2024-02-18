@@ -5,6 +5,7 @@ from typing import Tuple, List
 import scanpy as sc
 
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from genimtools.utils import read_tokens_from_gtok
 
@@ -62,7 +63,7 @@ class BatchCorrectionDataset(Dataset):
             for gtok_file in glob(os.path.join(batch, "*.gtok")):
                 self.data.append((gtok_file, i))
 
-    def __getitem__(self, idx) -> Tuple:
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get a single item from the dataset.
 
@@ -70,7 +71,7 @@ class BatchCorrectionDataset(Dataset):
         """
         gtok_file, batch = self.data[idx]
         tokens = read_tokens_from_gtok(gtok_file)
-        return tokens, batch
+        return torch.tensor(tokens), torch.tensor(batch)
 
     def __len__(self):
         return len(self.data)
@@ -79,3 +80,23 @@ class BatchCorrectionDataset(Dataset):
         return (
             f"<BatchCorrectionDataset: {len(self.data)} samples, and {self.num_batches} batches>"
         )
+
+
+class BCBatchCollator:
+    def __init__(self, pad_value: int = 0):
+        self.pad_value = pad_value
+
+    def __call__(
+        self, batch: List[Tuple[torch.Tensor, torch.Tensor]]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Collate function for the batch correction dataset. This function
+        takes in a list of tuples of (tokens, batch) and returns a tuple of
+        (padded_tokens, batches).
+
+        :param batch: A list of tuples of (tokens, batch)
+        """
+        tokens, batches = zip(*batch)
+        tokens = pad_sequence(tokens, batch_first=True, padding_value=self.pad_value)
+        batches = torch.stack(batches)
+        return tokens, batches
