@@ -1,1 +1,1 @@
-from .main import Attention
+from .main import Attention, GradientReversal
