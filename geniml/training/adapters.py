@@ -9,6 +9,8 @@ from ..region2vec import Region2VecExModel
 from ..scembed import ScEmbed
 from ..atacformer import AtacformerExModel
 
+from .const import BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES
+
 
 class CellTypeFineTuneAdapter(L.LightningModule):
     """
@@ -168,3 +170,93 @@ class MLMAdapter(L.LightningModule):
         self.log("train_loss", loss)
 
         return loss
+
+
+class AdversarialBatchCorrectionAdapter(L.LightningModule):
+    """
+    An adapter for training a model through an adversarial batch correction approach.
+
+    The idea is to train a model to predict the batch of origin for each cell, and then use
+    this information to correct for batch effects via adversarial training.
+    """
+
+    def __init__(
+        self,
+        model: Union[Region2VecExModel, ScEmbed],
+        mode: BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES,
+        num_batches: int,
+        **kwargs,
+    ):
+        """
+        Instantiate a fine-tuning trainer.
+
+        :param Union[Region2VecExModel, ScEmbed] model: The model to fine-tune.
+        :param Literal["adversary", "batch_correction"] mode: The mode to use for training. this
+            can be either "adversary" or "batch_correction". "adversary" trains the model to predict
+            the batch of origin for each cell, while "batch_correction" trains the model to correct
+            for batch effects. "adversary" should be used first to train the adversary, and then
+            "batch_correction" should be used to train the batch correction model.
+
+        :param kwargs: Additional arguments to pass to the LightningModule constructor.
+        """
+        super().__init__(**kwargs)
+        if mode not in BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES:
+            raise ValueError(
+                f"Invalid mode: {mode}. Must be one of {BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES}"
+            )
+        self.mode = mode
+        self.num_batches = num_batches
+
+        self.nn_model = model._model
+        self.tokenizer = model.tokenizer
+        self._exmodel = model
+
+        self.classifier = nn.Linear(model.model.embedding_dim, self.num_batches)
+        self.loss_fn = nn.CrossEntropyLoss()
+
+    def forward(self, x):
+        embeddings = self.nn_model(x)
+        cell_embeddings = torch.mean(embeddings, dim=1)
+        return self.classifier(cell_embeddings)
+
+    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int):
+        """
+        Perform a training step.
+
+        :param batch: The batch. This should be a set of tokens and then the batch of origin for each cell.
+        :param batch_idx: The batch index
+
+        :return: The loss
+        """
+        x, y = batch
+
+        # forward pass for the batch
+        output = self.forward(x)
+
+        # compute the loss
+        loss = self.loss_fn(output, y)
+        self.log("train_loss", loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        """
+        Perform a validation step.
+
+        :param batch: The batch. This should be a set of tokens and then the batch of origin for each cell.
+        :param batch_idx: The batch index
+
+        :return: The loss
+        """
+        x, y = batch
+
+        # forward pass for the batch
+        output = self.forward(x)
+
+        # compute the loss
+        loss = self.loss_fn(output, y)
+        self.log("val_loss", loss)
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
