@@ -190,6 +190,7 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
         mode: BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES,
         num_batches: int,
         grad_rev_alpha: float = 1.0,
+        lr: float = 1e-3,
         **kwargs,
     ):
         """
@@ -206,7 +207,7 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
         :param float grad_rev_alpha: The alpha value to use for the gradient reversal layer. This
             is used to control the strength of the adversarial training. A higher value will make the
             adversarial training stronger. For more information, see: https://arxiv.org/abs/1409.7495
-
+        :param float lr: The learning rate to use for training the model.
         :param kwargs: Additional arguments to pass to the LightningModule constructor.
         """
         super().__init__(**kwargs)
@@ -218,6 +219,7 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
         self.mode = mode
         self.num_batches = num_batches
         self.grad_rev_alpha = grad_rev_alpha
+        self.lr = lr
 
         self.r2v_model = model.model
         self.tokenizer = model.tokenizer
@@ -225,6 +227,7 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
 
         self.classifier = nn.Linear(model.model.embedding_dim, self.num_batches)
         self.loss_fn = nn.CrossEntropyLoss()
+        # TODO: integrate this, but for now, we'll just use the default
         self.grad_rev = GradientReversal(self.grad_rev_alpha)
 
         self._update_models_for_mode()
@@ -281,8 +284,6 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
     def forward(self, x):
         embeddings = self.r2v_model(x)
         cell_embeddings = torch.mean(embeddings, dim=1)
-        if self.mode == "adversary":
-            cell_embeddings = self.grad_rev(cell_embeddings)
         return self.classifier(cell_embeddings)
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int):
@@ -295,6 +296,12 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
         :return: The loss
         """
         x, y = batch
+
+        # if we're in batch correction mode,
+        # we need to flip the target
+        if self.mode == "batch_correction":
+            # this only works for binary classification
+            y = torch.abs(y - 1)
 
         # forward pass for the batch
         output = self.forward(x)
@@ -326,5 +333,5 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
