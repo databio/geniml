@@ -27,7 +27,7 @@ def test_atacformer_dataset(data: str):
     assert all([isinstance(x, tuple) for x in dataset])
 
 
-# @pytest.mark.skip(reason="This test uses a pretrained model and is not suitable for CI")
+@pytest.mark.skip(reason="This test uses a pretrained model and is not suitable for CI")
 def test_adapter_init():
     model = ScEmbed("databio/r2v-luecken2021-hg38-v2")
     adapter = AdversarialBatchCorrectionAdapter(
@@ -37,7 +37,7 @@ def test_adapter_init():
     assert adapter is not None
 
 
-# @pytest.mark.skip(reason="This test uses a pretrained model and is not suitable for CI")
+@pytest.mark.skip(reason="This test uses a pretrained model and is not suitable for CI")
 def test_train_with_adapter(universe_file: str, data: str):
     # get the model
     model = ScEmbed("databio/r2v-luecken2021-hg38-v2")
