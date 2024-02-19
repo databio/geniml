@@ -271,6 +271,15 @@ class AdversarialBatchCorrectionAdapter(L.LightningModule):
             self._unfreeze_region2vec_model()
             self._freeze_classifier()
 
+    def set_learning_rate(self, lr: float):
+        """
+        Set the learning rate for the model.
+
+        :param float lr: The learning rate to use.
+        """
+        self.lr = lr
+        _LOGGER.info(f"Setting learning rate to {lr}")
+
     # setter for the mode to toggle back and forth
     def set_mode(self, mode: BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES):
         if mode not in ["adversary", "batch_correction"]:
