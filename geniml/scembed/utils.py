@@ -84,7 +84,7 @@ class BatchCorrectionDataset(Dataset):
 
         :param idx: The index of the item to get.
         """
-        if self.backed:
+        if not self.backed:
             return self.data[idx]
         else:
             gtok_file, batch = self.data[idx]
