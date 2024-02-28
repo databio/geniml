@@ -122,11 +122,15 @@ class ITTokenizer(Tokenizer):
 
         return tokenized
 
-    def tokenize(self, query: Union[Region, RegionSet]) -> GTokenizedRegionSet:
+    def tokenize(
+        self, query: Union[Region, RegionSet], ids_only: bool = True, as_strings: bool = False
+    ) -> GTokenizedRegionSet:
         """
         Tokenize a Region or RegionSet into the universe
 
         :param Union[Region, RegionSet, sc.AnnData] query: The query to tokenize.
+        :param bool ids_only: Whether to return only the IDs or the full TokenizedRegionSet
+        :param bool as_strings: Whether to return the IDs as strings or ints
         """
         if isinstance(query, sc.AnnData):
             return self._tokenize_anndata(query)
@@ -140,7 +144,23 @@ class ITTokenizer(Tokenizer):
             raise ValueError("Query must be a Region or RegionSet")
 
         result = self._tokenizer.tokenize(list(query))
-        return result
+        if ids_only:
+            if as_strings:
+                return result.ids_as_strs
+            else:
+                return result.ids
+        else:
+            return result
+
+    def tokenize_bed_file(self, bed_file: str) -> GTokenizedRegionSet:
+        """
+        Tokenize a BED file into the universe
+
+        :param str bed_file: The path to the BED file to tokenize.
+        :param bool ids_only: Whether to return only the IDs or the full TokenizedRegionSet
+        :param bool as_strings: Whether to return the IDs as strings or ints
+        """
+        return self._tokenizer.tokenize_bed_file(bed_file)
 
     def padding_token(self) -> Region:
         return self._tokenizer.padding_token
@@ -149,6 +169,24 @@ class ITTokenizer(Tokenizer):
         padding_token = self.padding_token()
         return self.universe.region_to_id(
             GRegion(padding_token.chr, padding_token.start, padding_token.end)
+        )
+
+    def unknown_token(self) -> Region:
+        return self._tokenizer.unknown_token
+
+    def unknown_token_id(self) -> int:
+        unknown_token = self.unknown_token()
+        return self.universe.region_to_id(
+            GRegion(unknown_token.chr, unknown_token.start, unknown_token.end)
+        )
+
+    def mask_token(self) -> Region:
+        return self._tokenizer.mask_token
+
+    def mask_token_id(self) -> int:
+        mask_token = self.mask_token()
+        return self.universe.region_to_id(
+            GRegion(mask_token.chr, mask_token.start, mask_token.end)
         )
 
     def convert_tokens_to_ids(self, tokens: GTokenizedRegionSet) -> List[int]:
@@ -160,7 +198,7 @@ class ITTokenizer(Tokenizer):
         return [token.id for token in tokens]
 
     def __len__(self):
-        return len(self._tokenizer)
+        return len(self.universe.regions)
 
 
 class Namespace:

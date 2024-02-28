@@ -18,3 +18,25 @@ class Attention(nn.Module):
         )
         # weighted_sum: [batch_size, embed_dim]
         return weighted_sum
+
+
+# https://github.com/tadeephuy/GradientReversal
+class GradientReversalLayer(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, alpha):
+        ctx.alpha = alpha
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        output = grad_output.neg() * ctx.alpha
+        return output, None
+
+
+class GradientReversal(nn.Module):
+    def __init__(self, alpha):
+        super().__init__()
+        self.alpha = torch.tensor(alpha, requires_grad=False)
+
+    def forward(self, x):
+        return GradientReversalLayer.apply(x, self.alpha)

@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+import torch.nn as nn
+
 from ..io import RegionSet
 
 if TYPE_CHECKING:
     from ..tokenization import Tokenizer
 
 
-class Model(ABC):
+class Model(nn.Module):
     """Class representing an *actual* model, that is, weights, etc"""
 
     pass
@@ -25,7 +27,13 @@ class ExModel(ABC):
     tokenizer: "Tokenizer"
 
     @abstractmethod
-    def __init__(
-        self, model: Model = None, universe: RegionSet = None, tokenizer: "Tokenizer" = None
-    ) -> None:
-        raise NotImplementedError
+    def __init__(self, model_path: str = None, tokenizer: "Tokenizer" = None, device: str = None):
+        """
+        Initialize the model. If model_path is not None, load the model from
+        huggingface.
+
+        :param str model_path: Path to the model on huggingface to load
+        :param Tokenizer tokenizer: Tokenizer to use
+        :param str device: Device to use (e.g. "cpu", "cuda:0", etc)
+        """
+        pass

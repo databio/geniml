@@ -1,18 +1,25 @@
 import logging
 import os
+import glob
 import select
 import shutil
 import sys
 import time
+import random
+
 from concurrent.futures import ThreadPoolExecutor
-from random import shuffle
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union, Tuple, TYPE_CHECKING
 
 import numpy as np
 import torch
 
 from yaml import safe_dump, safe_load
+from genimtools.utils import read_tokens_from_gtok
 
+if TYPE_CHECKING:
+    from gensim.models import Word2Vec as GensimWord2Vec
+
+from ..const import GTOK_EXT
 from ..tokenization.main import Tokenizer, ITTokenizer
 from .const import (
     LR_TYPES,
@@ -25,6 +32,10 @@ from .const import (
     VOCAB_SIZE_KEY,
     EMBEDDING_DIM_KEY,
     EMBEDDING_DIM_KEY_OLD,
+    DEFAULT_EMBEDDING_DIM,
+    DEFAULT_WINDOW_SIZE,
+    DEFAULT_EPOCHS,
+    DEFAULT_MIN_COUNT,
 )
 from .models import Region2Vec
 
@@ -375,7 +386,7 @@ def shuffle_documents(
 
     def shuffle_list(list: List[any], n: int) -> List[any]:
         for _ in range(n):
-            shuffle(list)
+            random.shuffle(list)
         return list
 
     _LOGGER.debug(f"Shuffling documents {n_shuffles} times.")
@@ -477,3 +488,141 @@ def load_local_region2vec_model(
     model.load_state_dict(params)
 
     return model, tokenizer, config
+
+
+class Region2VecDataset:
+    def __init__(
+        self, data: Union[str, List[str]], shuffle: bool = True, convert_to_str: bool = False
+    ):
+        """
+        Initialize a Region2VecDataset.
+
+        The Region2VecDataset is a special dataset that takes advantage of `.gtok` files. These are
+        optimized files that contain the tokenized representation of a region set in binary format.
+        This allows for much faster loading of the data, and is the recommended way to load data
+        for training.
+
+        :param Union[str, List[RegionSet]] data: The data to use for the dataset. This is either a path to a directory container region set files, or a list of region sets.
+        :param Tokenizer tokenizer: The tokenizer to use for the dataset.
+        :param bool shuffle: Whether or not to shuffle the data before yielding it.
+        :param bool convert_to_str: Whether or not to convert the tokens to strings before yielding them.
+        """
+        self.data = data
+        self.shuffle = shuffle
+        self.convert_to_str = convert_to_str
+
+        if isinstance(data, str):
+            self.data = glob.glob(os.path.join(data, f"*.{GTOK_EXT}"))
+        elif isinstance(data, list) and isinstance(data[0], str):
+            self.data = data
+        else:
+            raise ValueError(f"Unknown data type: {type(data)}. Expected str or List[str].")
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        # load the data
+        tokens = read_tokens_from_gtok(self.data[idx])
+
+        # shuffle the data if necessary
+        if self.shuffle:
+            random.shuffle(tokens)
+
+        # return the tokens
+        return tokens
+
+    def __iter__(self):
+        if len(self) == 0:
+            return
+        for idx in range(len(self)):
+            tokens = self[idx]
+            if self.convert_to_str:
+                tokens = [str(token) for token in tokens]
+            yield tokens
+
+    def __repr__(self):
+        return f"Region2VecDataset(data={self.data}, shuffle={self.shuffle})"
+
+
+def train_region2vec_model(
+    dataset: Region2VecDataset,
+    embedding_dim: int = DEFAULT_EMBEDDING_DIM,
+    window_size: int = DEFAULT_WINDOW_SIZE,
+    epochs: int = DEFAULT_EPOCHS,
+    min_count: int = DEFAULT_MIN_COUNT,
+    num_cpus: int = 1,
+    seed: int = 42,
+    save_checkpoint_path: str = None,
+    gensim_params: dict = {},
+    load_from_checkpoint: str = None,
+) -> "GensimWord2Vec":
+    """
+    Train a gensim Word2Vewc model on the given dataset.
+
+    :param Region2VecDataset data: Data to train on. This is a dataset of tokens.
+    :param int embedding_dim: Embedding dimension for the model.
+    :param int window_size: Window size for the model.
+    :param int epochs: Number of epochs to train for.
+    :param int min_count: Minimum count for a region to be included in the vocabulary.
+    :param int num_cpus: Number of cpus to use for training.
+    :param int seed: Seed to use for training.
+    :param str save_checkpoint_path: Path to save the model checkpoints to.
+    :param dict gensim_params: Additional parameters to pass to the gensim model.
+    :param str load_from_checkpoint: Path to a checkpoint to load from.
+
+    :return GensimWord2Vec: The gensim model that was trained.
+    """
+    # we only need gensim if we are training
+    from gensim.models import Word2Vec as GensimWord2Vec
+    from gensim.models.callbacks import CallbackAny2Vec
+
+    class TrainingCallback(CallbackAny2Vec):
+        """Callback to print loss after each epoch."""
+
+        def __init__(self):
+            self.epoch = 0
+
+        def on_epoch_end(self, model: GensimWord2Vec):
+            # log the loss
+            loss = model.get_latest_training_loss()
+            print("Loss after epoch {}: {}".format(self.epoch, loss))
+            _LOGGER.info(f"EPOCH {self.epoch} COMPLETE.")
+            self.epoch += 1
+
+            # save the model
+            if save_checkpoint_path is not None:
+                # make sure the path exists
+                if not os.path.exists(save_checkpoint_path):
+                    os.makedirs(save_checkpoint_path)
+                # save the model
+                model.save(os.path.join(save_checkpoint_path, f"epoch_{self.epoch}.model"))
+
+    # create gensim model that will be used to train
+    if load_from_checkpoint is not None:
+        _LOGGER.info(f"Loading model from checkpoint: {load_from_checkpoint}")
+        gensim_model = GensimWord2Vec.load(load_from_checkpoint)
+    else:
+        _LOGGER.info("Creating new gensim model.")
+        gensim_model = GensimWord2Vec(
+            vector_size=embedding_dim,
+            window=window_size,
+            min_count=min_count,
+            workers=num_cpus,
+            seed=seed,
+            **gensim_params,
+        )
+        _LOGGER.info("Building vocabulary.")
+        gensim_model.build_vocab(dataset)
+
+    _LOGGER.info("Training model.")
+    gensim_model.train(
+        dataset,
+        epochs=epochs,  # train for 1 epoch at a time, shuffle data each time
+        compute_loss=True,
+        total_words=gensim_model.corpus_total_words,
+        callbacks=[TrainingCallback()],
+    )
+
+    _LOGGER.info("Training complete. Moving weights to pytorch model.")
+    return gensim_model
