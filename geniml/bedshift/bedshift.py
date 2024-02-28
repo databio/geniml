@@ -13,6 +13,8 @@ from geniml.bedshift._version import __version__
 from geniml.bedshift import arguments
 from geniml.bedshift import BedshiftYAMLHandler
 
+from genimtools.ailist import AIList, Interval
+
 _LOGGER = logging.getLogger(__name__)
 
 __all__ = ["Bedshift"]
@@ -443,6 +445,8 @@ class Bedshift(object):
         raise NotImplementedError(
             "This relies on pyranges, which was removed with the switch to geniml."
         )
+
+        # USE AILIST HERE:
         reference_pr = pr.PyRanges(reference_bed)
         comparison_pr = pr.PyRanges(comparison_bed)
         intersection = reference_pr.overlap(comparison_pr, how="first").as_df()
