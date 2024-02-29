@@ -58,7 +58,7 @@ class TestBBClientCaching:
         with pytest.raises(TypeError):
             BBClient(cache_folder=None)
 
-    def test_bed_caching_from_path(self, tmp_path, local_bedfile_path):
+    def test_bed_caching_from_path(self, local_bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
         bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path)
         assert bedfile_id is not None

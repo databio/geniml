@@ -77,5 +77,6 @@ def get_abs_path(path: str = DEFAULT_CACHE_FOLDER, create_folder: bool = True) -
     :return: absolute path to the folder
     """
     absolute_cache_folder = os.path.expandvars(path)
-    Path(absolute_cache_folder).mkdir(parents=True, exist_ok=True)
+    if create_folder:
+        Path(absolute_cache_folder).mkdir(parents=True, exist_ok=True)
     return absolute_cache_folder
