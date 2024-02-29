@@ -4,6 +4,7 @@ import shutil
 from logging import getLogger
 from typing import List, NoReturn, Union
 
+
 import requests
 from ubiquerg import is_url
 
@@ -21,7 +22,7 @@ from .const import (
     DEFAULT_CACHE_FOLDER,
     MODULE_NAME,
 )
-from .utils import BedCacheManager, get_bbclient_path_folder
+from .utils import BedCacheManager, get_abs_path
 
 _LOGGER = getLogger(MODULE_NAME)
 
@@ -39,8 +40,9 @@ class BBClient(BedCacheManager):
         if not given it will be the environment variable `BBCLIENT_CACHE`
         :param bedbase_api: url to bedbase
         """
-        # get default cache folder from environment variable set by user
-        super().__init__(get_bbclient_path_folder(cache_folder))
+        cache_folder = get_abs_path(cache_folder)
+        super().__init__(cache_folder)
+
         self.bedbase_api = bedbase_api
 
     def load_bedset(self, bedset_id: str) -> BedSet:
