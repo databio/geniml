@@ -7,3 +7,10 @@ class BackedFileNotAvailableError(GenimlBaseError):
 
     def __init__(self, message: Optional[str] = None):
         super().__init__(message or self.default_message)
+
+
+class BEDFileReadError(GenimlBaseError):
+    default_message = "Error reading BED file."
+
+    def __init__(self, message: Optional[str] = None):
+        super().__init__(message or self.default_message)

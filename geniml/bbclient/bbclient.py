@@ -30,7 +30,7 @@ _LOGGER = getLogger(MODULE_NAME)
 class BBClient(BedCacheManager):
     def __init__(
         self,
-        cache_folder: str = DEFAULT_CACHE_FOLDER,
+        cache_folder: Union[str, os.PathLike] = DEFAULT_CACHE_FOLDER,
         bedbase_api: str = DEFAULT_BEDBASE_API,
     ):
         """
@@ -47,9 +47,9 @@ class BBClient(BedCacheManager):
 
     def load_bedset(self, bedset_id: str) -> BedSet:
         """
-        Loads a BED set from cache, or downloads and caches it plus BED files in it if it doesn't exist
+        Load a BEDset from cache, or download and add it to the cache with its BED files
 
-        :param bedset_id: unique identifier of BED set
+        :param BedSet: BedSet object
         """
 
         file_path = self._bedset_path(bedset_id)
@@ -91,6 +91,7 @@ class BBClient(BedCacheManager):
         Loads a BED file from cache, or downloads and caches it if it doesn't exist
 
         :param bed_id: unique identifier of a BED file
+        :return: the RegionSet object
         """
         file_path = self._bedfile_path(bed_id)
 
@@ -132,8 +133,8 @@ class BBClient(BedCacheManager):
         """
         Add a BED file to the cache
 
-        :param bedfile: a RegionSet class or a path to a BED file to be added to cache
-        :return: the identifier if the BedFile object
+        :param bedfile: a RegionSet object or a path or url to the BED file
+        :return: the RegionSet identifier
         """
         if isinstance(bedfile, str):
             bedfile = RegionSet(bedfile)

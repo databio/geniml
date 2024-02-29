@@ -3,6 +3,7 @@ import os
 from typing import List, Union, NoReturn
 import pyarrow
 from ubiquerg import is_url
+import logging
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,9 @@ from .const import (
     MAF_STRAND_COL_NAME,
 )
 from .utils import extract_maf_col_positions, is_gzipped, read_bedset_file
-from .exceptions import BackedFileNotAvailableError
+from .exceptions import BackedFileNotAvailableError, BEDFileReadError
+
+_LOGGER = logging.getLogger("bbclient")
 
 
 class Region:
@@ -51,7 +54,7 @@ class RegionSet:
         bed files. You can still iterate over the regions, but you cannot index into them.
 
         :param regions: path, or url to bed file or list of Region objects
-        :param backed: whether to load the bed file into memory or not
+        :param backed: whether to load the bed file into memory or not [Default: False]
         """
         # load from file
         if isinstance(regions, str):
@@ -86,13 +89,8 @@ class RegionSet:
             else:
                 if is_gzipped(regions):
                     df = self._read_gzipped_file(regions)
-
                 else:
-                    # if file is gzipped, catch error and open using gzip
-                    try:
-                        df = pd.read_csv(regions, sep="\t", header=None, engine="pyarrow")
-                    except pyarrow.lib.ArrowInvalid:
-                        df = self._read_gzipped_file(regions)
+                    df = self._read_file_pd(regions, sep="\t", header=None, engine="pyarrow")
 
                 _regions = []
                 df.apply(
@@ -114,21 +112,41 @@ class RegionSet:
 
         self._identifier = None
 
-    @staticmethod
-    def _read_gzipped_file(file_path: str) -> pd.DataFrame:
+    def _read_gzipped_file(self, file_path: str) -> pd.DataFrame:
         """
         Read a gzipped file into a pandas dataframe
 
         :param file_path: path to gzipped file
         :return: pandas dataframe
         """
-        return pd.read_csv(
+        return self._read_file_pd(
             file_path,
             sep="\t",
             compression="gzip",
             header=None,
             engine="pyarrow",
         )
+
+    def _read_file_pd(self, *args, **kwargs) -> pd.DataFrame:
+        """
+        Read bed file into a pandas DataFrame, and skip header rows if needed
+
+        :return: pandas dataframe
+        """
+        max_rows = 5
+        row_count = 0
+        while row_count <= max_rows:
+            try:
+                df = pd.read_csv(*args, **kwargs, skiprows=row_count)
+                if row_count > 0:
+                    _LOGGER.info(f"Skipped {row_count} rows while standardization. File: '{args}'")
+                df = df.dropna(axis=1)
+                return df
+            except (pd.errors.ParserError, pd.errors.EmptyDataError) as _:
+                if row_count <= max_rows:
+                    row_count += 1
+            # if can't open file after 5 attempts try to open it with gzip
+        return self._read_gzipped_file(*args)
 
     def __len__(self):
         return self.length
