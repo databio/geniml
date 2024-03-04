@@ -3,7 +3,8 @@ import os
 import shutil
 from logging import getLogger
 from typing import List, NoReturn, Union
-
+import boto3
+from botocore.exceptions import ClientError
 
 import requests
 from ubiquerg import is_url
@@ -21,6 +22,8 @@ from .const import (
     DEFAULT_BEDSET_SUBFOLDER,
     DEFAULT_CACHE_FOLDER,
     MODULE_NAME,
+    DEFAULT_BUCKET_FOLDER,
+    DEFALUT_BUCKET_NAME,
 )
 from .utils import BedCacheManager, get_abs_path
 
@@ -166,12 +169,96 @@ class BBClient(BedCacheManager):
 
         return bedfile_id
 
+    def add_bed_to_s3(
+        self,
+        identifier: str,
+        bucket: str = DEFALUT_BUCKET_NAME,
+        endpoint_url: str = None,
+        aws_access_key_id: str = None,
+        aws_secret_access_key: str = None,
+        s3_path: str = DEFALUT_BUCKET_FOLDER,
+    ) -> str:
+        """
+        Add a cached BED file to S3
+
+        :param identifier: the unique identifier of the BED file
+        :param bucket: the name of the bucket
+        :param endpoint_url: the URL of the S3 endpoint [Default: set up by the environment vars]
+        :param aws_access_key_id: the access key of the AWS account [Default: set up by the environment vars]
+        :param aws_secret_access_key: the secret access key of the AWS account [Default: set up by the environment vars]
+        :param s3_path: the path on S3
+
+        :return: full path on S3
+        """
+        s3_client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+        local_file_path = self.seek(identifier)
+        bed_file_name = os.path.basename(local_file_path)
+        s3_bed_path = os.path.join(identifier[0], identifier[1], bed_file_name)
+        if s3_path:
+            s3_bed_path = os.path.join(s3_path, s3_bed_path)
+
+        s3_client.upload_file(local_file_path, bucket, s3_bed_path)
+        _LOGGER.info(f"Project was uploaded successfully to s3://{bucket}/{s3_bed_path}")
+        return s3_bed_path
+
+    def get_bed_from_s3(
+        self,
+        identifier: str,
+        bucket: str = DEFALUT_BUCKET_NAME,
+        endpoint_url: str = None,
+        aws_access_key_id: str = None,
+        aws_secret_access_key: str = None,
+        s3_path: str = DEFAULT_BUCKET_FOLDER,
+    ) -> str:
+        """
+        Get a cached BED file from S3 and cache it locally
+
+        :param identifier: the unique identifier of the BED file
+        :param bucket: the name of the bucket
+        :param endpoint_url: the URL of the S3 endpoint [Default: set up by the environment vars]
+        :param aws_access_key_id: the access key of the AWS account [Default: set up by the environment vars]
+        :param aws_secret_access_key: the secret access key of the AWS account [Default: set up by the environment vars]
+        :param s3_path: the path on S3
+
+        :return: bed file id
+        :raise FileNotFoundError: if the identifier does not exist in cache
+        """
+        s3_bed_path = os.path.join(
+            identifier[0], identifier[1], f"{identifier}{DEFAULT_BEDFILE_EXT}"
+        )
+        if s3_path:
+            s3_bed_path = os.path.join(s3_path, s3_bed_path)
+
+        s3_client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+        try:
+            s3_client.download_file(
+                bucket, s3_bed_path, self._bedfile_path(identifier, create=True)
+            )
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                raise FileNotFoundError(f"{identifier} does not exist in S3.")
+            else:
+                raise e
+
+        return identifier
+
     def seek(self, identifier: str) -> str:
         """
         Get local path to BED file or BED set with specific identifier
 
         :param identifier: the unique identifier
         :return: the local path of the file
+        :raise FileNotFoundError: if the identifier does not exist in cache
         """
 
         # check if any BED set has that identifier

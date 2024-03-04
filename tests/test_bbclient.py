@@ -2,8 +2,12 @@ import os
 
 import genomicranges
 import pytest
+from unittest.mock import Mock
 from geniml.bbclient import BBClient
 from geniml.io import BedSet, RegionSet
+
+import boto3
+import botocore
 
 DATA_TEST_FOLDER = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -140,3 +144,34 @@ def test_bedbase_caching(tmp_path, bedset_id, bedfile_id, request):
     # check the path and identifier of BED file
     bedfile_path = bbclient.seek(bedfile_id)
     assert bedfile.compute_bed_identifier() == os.path.split(bedfile_path)[1].split(".")[0]
+
+
+def test_upload_s3(mocker, local_bedfile_path, tmp_path):
+    bbclient = BBClient(cache_folder=tmp_path)
+    bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path)
+    upload_mock = mocker.patch(
+        "boto3.s3.inject.upload_file",
+    )
+    bbclient.add_bed_to_s3(bedfile_id, s3_path="test_test")
+    assert upload_mock.called
+
+
+def test_download_s3(mocker, local_bedfile_path, tmp_path):
+    bbclient = BBClient(cache_folder=tmp_path)
+    download_mock = mocker.patch(
+        "boto3.s3.inject.download_file",
+    )
+    bbclient.get_bed_from_s3("test_id", s3_path="test_test")
+    assert download_mock.called
+
+
+def test_download_s3_404(mocker, local_bedfile_path, tmp_path):
+    bbclient = BBClient(cache_folder=tmp_path)
+    download_mock = mocker.patch(
+        "boto3.s3.inject.download_file",
+        side_effect=botocore.exceptions.ClientError({"Error": {"Code": "404"}}, "operation_name"),
+    )
+    with pytest.raises(FileNotFoundError):
+        bbclient.get_bed_from_s3("test_id", s3_path="test_test")
+
+    assert download_mock.called

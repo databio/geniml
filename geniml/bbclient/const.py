@@ -17,3 +17,6 @@ HOME_PATH = os.getenv("HOME")
 if not HOME_PATH:
     HOME_PATH = os.path.expanduser("~")
 DEFAULT_CACHE_FOLDER = os.getenv(BBCLIENT_CACHE_ENV) or os.path.join(HOME_PATH, ".bbcache/")
+
+DEFALUT_BUCKET_NAME = "bedbase"
+DEFAULT_BUCKET_FOLDER = "bed_files"
