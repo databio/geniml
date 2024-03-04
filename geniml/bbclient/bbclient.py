@@ -176,7 +176,7 @@ class BBClient(BedCacheManager):
         endpoint_url: str = None,
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
-        s3_path: str = DEFALUT_BUCKET_FOLDER,
+        s3_path: str = DEFAULT_BUCKET_FOLDER,
     ) -> str:
         """
         Add a cached BED file to S3
