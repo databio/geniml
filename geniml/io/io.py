@@ -177,8 +177,22 @@ class RegionSet:
                 mode = "r"
 
             with open_func(self.path, mode) as f:
+                skipped_lines = 0
+                max_skipped_lines = 5
                 for line in f:
-                    chr, start, stop = line.split("\t")[:3]
+
+                    try:
+                        chr, start, stop = line.split("\t")[:3]
+                    except ValueError as _:
+                        if skipped_lines < max_skipped_lines:
+                            skipped_lines += 1
+                            continue
+                        else:
+                            raise BEDFileReadError(f"Could not read line bed file")
+                    if skipped_lines > 0:
+                        _LOGGER.info(
+                            f"Skipped {skipped_lines} lines while opening file. File: '{self.path}'"
+                        )
                     yield Region(chr, int(start), int(stop))
         else:
             for region in self.regions:
