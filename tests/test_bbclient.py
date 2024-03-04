@@ -67,6 +67,7 @@ class TestBBClientCaching:
         bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path)
         assert bedfile_id is not None
 
+    @pytest.mark.parametrize("bedfile_path", local_bedfile_path())
     def test_bed_caching_from_region_set(self, tmp_path, local_bedfile_path):
         bbclient = BBClient(cache_folder=tmp_path)
         bedfile = RegionSet(local_bedfile_path)
