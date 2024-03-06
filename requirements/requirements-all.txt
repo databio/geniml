@@ -8,7 +8,7 @@ logmuse
 matplotlib
 numpy >= 1.24.0
 paramiko >= 3.0.0
-peppy>=0.40.0a4
+peppy>=0.40.1
 pyBigWig
 qdrant_client
 requests >= 2.31.0
@@ -19,3 +19,5 @@ ubiquerg >= 0.6.3
 pyarrow
 iranges
 lightning
+botocore >= 1.34.54
+boto3 >=  1.34.54

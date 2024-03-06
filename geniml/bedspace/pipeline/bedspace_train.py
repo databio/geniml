@@ -2,7 +2,6 @@
 bedfile embeding pipeline (train)
 """
 
-
 import argparse
 import itertools
 import os
