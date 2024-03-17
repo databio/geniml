@@ -1,3 +1,4 @@
+import os.path
 from typing import Dict, List, Tuple, Union
 
 from ... import _LOGGER
@@ -28,14 +29,12 @@ else:
     class HNSWBackend(EmSearchBackend):
         """A search backend that uses a local HNSW index to store and search embeddings"""
 
-        # the index
-        idx: hnswlib.Index
-        payloads: dict  # in the format of {<id>: <info dict>}, equivalent to payloads in Qdrant
-        idx_path: str  # local path where the index is saved to
+        # instance variables, should not be class variables
 
         def __init__(
             self,
             local_index_path: str = DEFAULT_INDEX_PATH,
+            payloads: Dict = {},
             space: str = DEFAULT_HNSW_SPACE,
             dim: int = DEFAULT_DIM,
             ef: int = DEFAULT_EF,
@@ -51,14 +50,25 @@ else:
             :param m: connected with internal dimensionality of the data, higher M -> higher accuracy/run_time
             when ef is fixed
             """
-
+            # super(HNSWBackend, self).__init__()
             # initiate the index
             self.idx = hnswlib.Index(space=space, dim=dim)  # possible options are l2, cosine or ip
             self.idx.init_index(max_elements=0, ef_construction=ef, M=m)
 
+            # load from local index that alrady store vectors
+            if os.path.exists(local_index_path):
+                self.idx.load_index(local_index_path)
+                _LOGGER.info(
+                    f"Using index {local_index_path} with {self.idx.element_count} points."
+                )
+                self.payloads = payloads
+                # self.payloads = {}
             # save the index to local file path
-            self.idx.save_index(local_index_path)
-            self.payloads = {}
+            else:
+                _LOGGER.info(f"Index {local_index_path} does not exist, creating it.")
+                self.idx.save_index(local_index_path)
+                self.payloads = {}
+            # self.payloads = payloads
             self.idx_path = local_index_path
 
         def load(
@@ -108,7 +118,8 @@ else:
             offset: int = 0,
         ) -> Union[
             List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
-            List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
+            # List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
+            List[List[Dict[str, Union[int, float, Dict[str, str], np.ndarray]]]],
         ]:
             """
             With query vector(s), get the limit nearest neighbors.
@@ -142,7 +153,7 @@ else:
                 result_id = ids[i]
                 result_distances = distances[i]
                 if with_vectors:
-                    result_vectors = self.idx.get_items(result_id)
+                    result_vectors = self.idx.get_items(result_id, return_type="numpy")
                 for j in range(limit):
                     output_dict = {"id": result_id[j], "distance": result_distances[j]}
                     if with_payload:
@@ -160,7 +171,9 @@ else:
         def __len__(self) -> int:
             return self.idx.element_count
 
-        def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
+        def retrieve_info(
+            self, ids: Union[List[int], int], with_vec: bool = False
+        ) -> Union[
             Dict[str, Union[int, List[float], Dict[str, str]]],
             List[Dict[str, Union[int, List[float], Dict[str, str]]]],
         ]:
@@ -179,7 +192,7 @@ else:
                 output_list.append(output_dict)
 
             if with_vec:
-                vecs = self.idx.get_items(ids)
+                vecs = self.idx.get_items(ids, return_type="numpy")
                 for i in range(len(vecs)):
                     output_list[i]["vector"] = vecs[i]
 
