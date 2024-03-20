@@ -1,5 +1,5 @@
 import os.path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 
 from ... import _LOGGER
 
