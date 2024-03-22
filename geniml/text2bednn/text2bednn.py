@@ -467,7 +467,7 @@ class Text2BEDSearchInterface(object):
         with_payload: bool = True,
         with_vectors: bool = False,
         **kwargs,
-    ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
+    ) -> List[Dict[str, Union[int, str, float, Dict[str, str], List[float]]]]:
         """
         Given an input natural language, suggest region sets
 
