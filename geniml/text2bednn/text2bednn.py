@@ -463,10 +463,9 @@ class Text2BEDSearchInterface(object):
         self,
         query: Union[str, np.ndarray],
         limit: int = 10,
-        # offset: int = 0,
+        offset: int = 0,
         with_payload: bool = True,
         with_vectors: bool = False,
-        **kwargs,
     ) -> List[Dict[str, Union[int, str, float, Dict[str, str], List[float]]]]:
         """
         Given an input natural language, suggest region sets
@@ -497,8 +496,7 @@ class Text2BEDSearchInterface(object):
             limit,
             with_payload=with_payload,
             with_vectors=with_vectors,
-            # offset=offset)
-            **kwargs,
+            offset=offset,
         )
 
     def __repr__(self):
