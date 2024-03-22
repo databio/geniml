@@ -1,7 +1,6 @@
 import gzip
 import os
 from typing import List, Union, NoReturn
-import pyarrow
 from ubiquerg import is_url
 import logging
 
@@ -22,7 +21,7 @@ from .const import (
     MAF_START_COL_NAME,
     MAF_STRAND_COL_NAME,
 )
-from .utils import extract_maf_col_positions, is_gzipped, read_bedset_file
+from .utils import extract_maf_col_positions, is_gzipped, read_bedset_file, compute_md5sum_bedset
 from .exceptions import BackedFileNotAvailableError, BEDFileReadError
 
 _LOGGER = logging.getLogger("bbclient")
@@ -353,9 +352,7 @@ class BedSet:
             bedfile_ids = []
             for bedfile in self.region_sets:
                 bedfile_ids.append(bedfile.compute_bed_identifier())
-            self._bedset_identifier = md5(
-                ";".join(sorted(bedfile_ids)).encode("utf-8")
-            ).hexdigest()
+            self._bedset_identifier = compute_md5sum_bedset(bedfile_ids)
 
             return self._bedset_identifier
 
