@@ -204,7 +204,7 @@ def get_rbs_from_assessment_file(file, cs_each_file=False, flexible=False):
     else:
         df["f_t_u"] = df["median_dist_file_to_universe"]
         df["u_t_f"] = df["median_dist_universe_to_file"]
-    df["RBS"] = get_rbs(df["f_t_u"], df["u_t_t"])
+    df["RBS"] = get_rbs(df["f_t_u"], df["u_t_f"])
     if cs_each_file:
         return df
     else:
