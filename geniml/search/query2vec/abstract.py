@@ -10,8 +10,7 @@ from ...text2bednn.embedder.abstract import TextEmbedder
 class Query2Vec(ABC):
     """
     An abstract class representing query embedder. In retrieval of region sets,
-    this allows embedding a query region set/ bed file, and embedding a query
-    natural language string.
+    it embeds the query into a vector, which is used for KNN search in backend
     """
 
     def __init__(self) -> None:
@@ -19,4 +18,15 @@ class Query2Vec(ABC):
 
     @abstractmethod
     def forward(self, query: Union[str, RegionSet]) -> np.ndarray:
+        """
+
+        Parameters
+        ----------
+        query : a natural language string (query term or path to a BED file in disk),
+        or a RegionSet object
+
+        Returns
+        -------
+        the embedding vector
+        """
         raise NotImplementedError
