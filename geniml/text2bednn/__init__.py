@@ -1,5 +1,6 @@
+from .embedder import BioGPTEmbedder, FastEmbedder, SentTranEmbedder
 from .text2bednn import Text2BEDSearchInterface, Vec2VecFNN
-from .utils import RegionSetInfo  # bioGPT_sentence_transformer,
+from .utils import RegionSetInfo
 from .utils import (
     arrays_to_torch_dataloader,
     build_regionset_info_list_from_files,
