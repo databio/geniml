@@ -30,3 +30,5 @@ DEFAULT_MUST_TRAINED = True
 DEFAULT_PLOT_FILE_NAME = "training_history"
 DEFAULT_PLOT_TITLE = "Diagram of loss and epochs"
 DEFAULT_HUGGINGFACE_MODEL_NAME = "checkpoint.pt"
+
+BIO_GPT_REPO = "microsoft/biogpt"
