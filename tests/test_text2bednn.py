@@ -2,172 +2,33 @@ import os
 
 import numpy as np
 import pytest
-from fastembed.embedding import FlagEmbedding
-
-
-from geniml.region2vec.main import Region2VecExModel
-from geniml.search.backends import HNSWBackend, QdrantBackend
-from geniml.text2bednn.text2bednn import Text2BEDSearchInterface, Vec2VecFNN
-from geniml.text2bednn.utils import (
-    build_regionset_info_list_from_files,
-    build_regionset_info_list_from_PEP,
-    prepare_vectors_for_database,
-    region_info_list_to_vectors,
-    vectors_from_backend,
-)
-from geniml.tokenization.main import ITTokenizer
-from sklearn.model_selection import train_test_split
-
+from geniml.search.backends import HNSWBackend
+from geniml.text2bednn.text2bednn import Vec2VecFNN
+from geniml.text2bednn.utils import metadata_dict_from_csv, vec_pairs
 
 DATA_FOLDER_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data"
 )
 
-
-@pytest.fixture
-def metadata_path():
-    """
-    :return: the path to the metadata file (sorted)
-    """
-    return os.path.join(DATA_FOLDER_PATH, "testing_hg38_metadata_sorted.tab")
+np.random.seed(100)
 
 
 @pytest.fixture
-def bed_folder():
-    """
-    :return: the path to the folder where bed files are stored
-    """
-    return os.path.join(DATA_FOLDER_PATH, "hg38_sample")
-
-
-@pytest.fixture
-def universe_path():
-    """
-    :return: the universe file for tokenizer
-    """
-    return os.path.join(DATA_FOLDER_PATH, "universe.bed")
-
-
-@pytest.fixture
-def tokenizer(universe_path):
-    """
-    :return: a tokenizer
-    """
-    return ITTokenizer(universe_path)
-
-
-@pytest.fixture
-def r2v_model(bed_folder, tokenizer):
-    """
-    :return: a Region2VecExModel that is trained within very short of time
-    """
-    r2v_model = Region2VecExModel(model_path=None, tokenizer=tokenizer, min_count=1)
-    r2v_model.train([f"{bed_folder}/{name}" for name in os.listdir(bed_folder)], epochs=15)
-
-    return r2v_model
-
-
-@pytest.fixture
-def r2v_hf_repo():
-    """
-    :return: the huggingface repo of Region2VecExModel
-    """
-    return "databio/r2v-ChIP-atlas-hg38-v2"
-
-
-@pytest.fixture
-def r2v_hf_model(r2v_hf_repo):
-    """
-    :param r2v_hf_repo:
-    :return: the Region2VecExModel
-    """
-    return Region2VecExModel(r2v_hf_repo)
-
-
-@pytest.fixture
-def st_hf_repo():
-    """
-    :return: the huggingface repo of SentenceTransformer
-    """
-    return "sentence-transformers/all-MiniLM-L12-v2"
-
-
-@pytest.fixture
-def nl_embed(st_hf_repo):
-    """
-    :param st_hf_repo:
-    :return: the SentenceTransformer
-    """
-    return FlagEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-
-@pytest.fixture
-def local_model_path():
-    """
-    :return: path to save the Vec2VecFNN model, will be deleted after testing
-    """
-    return "./testing_local_model.h5"
-
-
-@pytest.fixture
-def random_input():
-    """
-    :return: a random generated np.ndarray,
-    with same dimension as a sentence embedding vector of SentenceTransformer
-    """
-    np.random.seed(100)
-    return np.random.random((384,))
-
-
-@pytest.fixture
-def collection():
-    """
-    collection name for qdrant client storage
+def csv_path():
     """
 
-    return "hg38_sample"
+    Returns: path of the testing metadata csv file
 
-
-@pytest.fixture
-def query_term():
     """
-    :return: a query string
-    """
-    return "human, kidney, blood"
-
-
-@pytest.fixture
-def k_nearest_neighbours():
-    """
-    :return: number of nearest neighbor to search
-    """
-    return 5
-
-
-@pytest.fixture
-def random_input_biogpt():
-    """
-    :return: a random generated np.ndarray,
-    with same dimension as a sentence embedding vector of SentenceTransformer
-    """
-    np.random.seed(100)
-    return np.random.random((1024,))
-
-
-@pytest.fixture
-def yaml_path():
-    """
-    :return: path to the yaml file of testing PEP
-    """
-    return os.path.join(DATA_FOLDER_PATH, "testing_hg38.yaml")
+    return os.path.join(DATA_FOLDER_PATH, "ATAC_hg38_sample_for_geniml.csv")
 
 
 @pytest.fixture
 def col_names():
     """
-    :return: the columns that are needed in the testing PEP's csv for metadata
+    :return: the columns that are needed metadata csv
     """
-    return [
+    return {
         "tissue",
         "cell_line",
         "tissue_lineage",
@@ -175,43 +36,98 @@ def col_names():
         "diagnosis",
         "sample_name",
         "antibody",
+    }
+
+
+@pytest.fixture
+def nl_payloads():
+    """A list of mock payloads containing natural langauge metadata and matching BED files"""
+    return [
+        {"text": "heart muscle", "files": ["b1.bed", "b2.bed", "b3.bed"]},
+        {"text": "ipf", "files": ["b1.bed", "b3.bed"]},
+        {"text": "healthy control", "files": ["b2.bed"]},
     ]
 
 
-def test_reading_data(bed_folder, metadata_path, yaml_path, col_names, r2v_model, nl_embed):
-    """
-    Test reading data from files and PEP
-    """
-    # TODO: we shouldn't set environment variable in tests. This is workaround for now.
-    os.environ["TEST_FOLDER"] = bed_folder
-    ri_list_PEP = build_regionset_info_list_from_PEP(
-        yaml_path,
-        col_names,
-        r2v_model,
-        nl_embed,
-    )
-    X, Y = region_info_list_to_vectors(ri_list_PEP)
-    assert isinstance(X, np.ndarray)
-    assert isinstance(Y, np.ndarray)
-    assert X.shape[1] == 384
-    assert Y.shape[1] == 100
+@pytest.fixture
+def bed_payloads():
+    """A list of mock payloads containing BED file names"""
+    return [
+        {"name": "b1.bed"},
+        {"name": "b2.bed"},
+        {"name": "b3.bed"},
+        {"name": "b4.bed"},
+        {"name": "b5.bed"},
+        {"name": "b6.bed"},
+    ]
 
-    ri_list_file = build_regionset_info_list_from_files(
-        bed_folder, metadata_path, r2v_model, nl_embed
+
+def test_metadata_dict(csv_path, col_names):
+    """
+    Test reading metadata from csv file
+    """
+    metadata_dict1 = metadata_dict_from_csv(csv_path, col_names)
+    assert metadata_dict1
+
+    metadata_dict2 = metadata_dict_from_csv(csv_path, col_names, chunk_size=1)
+    assert metadata_dict2
+
+    assert metadata_dict1 == metadata_dict2
+
+
+def test_vec_pair(nl_payloads, bed_payloads, tmp_path_factory):
+    """
+    Test extracting vector pairs for training/validating from backends
+    """
+    # mock vectors
+    nl_vecs = []
+    bed_vecs = []
+    for i in range(3):
+        nl_vecs.append(np.random.random((3,)))
+
+    for i in range(6):
+        bed_vecs.append(np.random.random((2,)))
+
+    temp_data_dir = tmp_path_factory.mktemp("data")
+    bed_idx_path = temp_data_dir / "bed_idx.bin"
+    nl_idx_path = temp_data_dir / "nl_idx.bin"
+
+    bed_backend = HNSWBackend(local_index_path=str(bed_idx_path), payloads={}, dim=2)
+    nl_backend = HNSWBackend(
+        local_index_path=str(nl_idx_path),
+        payloads={},
+        dim=3,
     )
-    X, Y = region_info_list_to_vectors(ri_list_file)
-    assert isinstance(X, np.ndarray)
-    assert isinstance(Y, np.ndarray)
-    assert X.shape[1] == 384
-    assert Y.shape[1] == 100
+
+    bed_backend.load(vectors=np.array(bed_vecs), payloads=bed_payloads)
+    nl_backend.load(vectors=np.array(nl_vecs), payloads=nl_payloads)
+
+    # only target pairs
+    X, Y, target = vec_pairs(nl_backend, bed_backend, "name", "files")
+
+    assert X.shape[0] == 6
+    assert Y.shape[0] == 6
+
+    # target & non-target pairs
+    X, Y, target = vec_pairs(nl_backend, bed_backend, "name", "files", True, 1.0)
+
+    assert X.shape[0] == 12
+    assert Y.shape[0] == 12
+
+    assert (target == 1).sum() == 6
+    assert (target == -1).sum() == 6
 
 
 def test_torch_running(tmp_path_factory):
+    """
+    Test model training
+    """
     training_X = np.random.random((90, 1024))
     training_Y = np.random.random((90, 100))
-
+    training_target = np.random.choice([1, -1], size=90)
     validating_X = np.random.random((10, 1024))
     validating_Y = np.random.random((10, 100))
+    validating_target = np.random.choice([1, -1], size=10)
 
     best_embed_folder = tmp_path_factory.mktemp("best_embed")
 
@@ -250,86 +166,22 @@ def test_torch_running(tmp_path_factory):
     # train the model without validate data
     v2v_torch2.train(training_X, training_Y, num_epochs=10)
 
+    # train the model with contrastiv loss
+    v2v_torch_contrast = Vec2VecFNN()
 
-@pytest.mark.skipif(
-    "not config.getoption('--r2vhf')",
-    reason="Only run when --r2vhf is given",
-)
-@pytest.mark.skipif(
-    "not config.getoption('--qdrant')",
-    reason="Only run when --qdrant is given",
-)
-def test_data_nn_search_interface(
-    bed_folder,
-    metadata_path,
-    r2v_hf_model,
-    nl_embed,
-    local_model_path,
-    random_input,
-    collection,
-    query_term,
-    k_nearest_neighbours,
-    tmp_path_factory,
-):
-    def test_vector_from_backend(search_backend, nl_embed):
-        """
-        repeated test of vectors_from_backend
-        """
-        # get the vectors
-        X, Y = vectors_from_backend(search_backend, nl_embed)
-        assert X.shape == (len(search_backend), 384)
-        assert Y.shape == (len(search_backend), 100)
-
-        # see if the vectors match the storage from backend
-        for i in range(len(search_backend)):
-            retrieval = search_backend.retrieve_info(i, with_vec=True)
-            assert np.array_equal(np.array(retrieval["vector"]), Y[i])
-            nl_embedding = next(nl_embed.embed(retrieval["payload"]["metadata"]))
-            assert np.array_equal(nl_embedding, X[i])
-
-    # construct a list of RegionSetInfo
-    ri_list = build_regionset_info_list_from_files(
-        bed_folder, metadata_path, r2v_hf_model, nl_embed
+    v2v_torch_contrast.train(
+        training_X,
+        training_Y,
+        (validating_X, validating_Y),
+        save_best=False,
+        folder_path=best_embed_folder,
+        early_stop=True,
+        patience=0.1,
+        loss_func="cosine_embedding_loss",
+        num_epochs=100,
+        batch_size=16,
+        num_units=[512, 256],
+        num_extra_hidden_layers=1,
+        training_target=training_target,
+        validating_target=validating_target,
     )
-    assert len(ri_list) == len(os.listdir(bed_folder))
-
-    # split the RegionSetInfo list to training, validating, and testing set
-    train_list, validate_list = train_test_split(ri_list, test_size=0.2)
-    train_X, train_Y = region_info_list_to_vectors(train_list)
-    validate_X, validate_Y = region_info_list_to_vectors(validate_list)
-    assert isinstance(train_X, np.ndarray)
-    assert isinstance(train_Y, np.ndarray)
-    assert train_X.shape[1] == 384
-    assert train_Y.shape[1] == 100
-
-    # fit the Vec2VecFNN model
-    v2vnn = Vec2VecFNN()
-    v2vnn.train(train_X, train_Y, validating_data=(validate_X, validate_Y), num_epochs=50)
-
-    # loading data to search backend
-    embeddings, labels = prepare_vectors_for_database(ri_list)
-    qd_search_backend = QdrantBackend(collection=collection)
-    qd_search_backend.load(vectors=embeddings, payloads=labels)
-
-    # construct a search interface
-    db_interface = Text2BEDSearchInterface(nl_embed, v2vnn, qd_search_backend)
-    db_search_result = db_interface.nl_vec_search(query_term, k_nearest_neighbours, offset=0)
-    for i in range(len(db_search_result)):
-        assert isinstance(db_search_result[i], dict)
-    # test vectors_from_backend
-    test_vector_from_backend(db_interface.search_backend, nl_embed)
-    # delete testing collection
-    db_interface.search_backend.qd_client.delete_collection(collection_name=collection)
-
-    # construct a search interface with file backend
-    temp_data_dir = tmp_path_factory.mktemp("data")
-    temp_idx_path = temp_data_dir / "testing_idx.bin"
-    hnsw_backend = HNSWBackend(local_index_path=str(temp_idx_path))
-    hnsw_backend.load(vectors=embeddings, payloads=labels)
-    file_interface = Text2BEDSearchInterface(nl_embed, v2vnn, hnsw_backend)
-
-    file_search_result = file_interface.nl_vec_search(query_term, k_nearest_neighbours)
-    for i in range(len(file_search_result)):
-        assert isinstance(file_search_result[i], dict)
-
-    test_vector_from_backend(file_interface.search_backend, nl_embed)

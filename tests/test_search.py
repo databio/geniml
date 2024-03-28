@@ -4,8 +4,17 @@ from typing import Dict, List
 
 import numpy as np
 import pytest
+from geniml.io import RegionSet
+from geniml.region2vec import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.search.backends.filebackend import DEP_HNSWLIB
+from geniml.search.interfaces import (BED2BEDSearchInterface,
+                                      Text2BEDSearchInterface)
+from geniml.search.query2vec import Bed2Vec, Text2Vec
+
+DATA_FOLDER_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data"
+)
 
 
 @pytest.fixture
@@ -97,6 +106,63 @@ def hnswb(temp_idx_path):
     return HNSWBackend(local_index_path=str(temp_idx_path))
 
 
+@pytest.fixture
+def bed_folder():
+    """
+    :return: the path to the folder where testing bed files are stored
+    """
+    return os.path.join(DATA_FOLDER_PATH, "hg38_sample")
+
+
+@pytest.fixture
+def r2v_hf_repo():
+    """
+    :return: the huggingface repo of region2vec model
+    """
+    return "databio/r2v-ChIP-atlas-hg38-v2"
+
+
+@pytest.fixture
+def v2v_hf_repo():
+    """
+    Returns: the huggingface repo of vec2vec model
+    """
+    return "databio/v2v-geo-hg38"
+
+
+@pytest.fixture
+def collection():
+    """
+    Returns: collection name for qdrant client storage
+    """
+
+    return "hg38_sample"
+
+
+@pytest.fixture
+def query_term():
+    """
+    Returns: a query string
+    """
+    return "human, kidney, blood"
+
+
+@pytest.fixture
+def nl_embed_repo():
+    """
+    Returns: text embedding model for search backend
+    """
+    return "sentence-transformers/all-MiniLM-L6-v2"
+
+
+@pytest.fixture
+def query_bed():
+    """
+    Returns: path to a BED file in testing data
+    """
+    return "./data/s1_a.bed"
+
+
 @pytest.mark.skipif(
     "not config.getoption('--qdrant')",
     reason="Only run when --qdrant is given",
@@ -119,7 +185,7 @@ def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
         assert isinstance(result, dict)
         assert isinstance(result["id"], int)
         assert isinstance(result["score"], float)
-        assert isinstance(result["vector"], np.ndarray)
+        assert isinstance(result["vector"], list)
         for i in result["vector"]:
             assert isinstance(i, float)
         assert isinstance(result["payload"], dict)
@@ -251,3 +317,146 @@ def test_HNSWBackend_save(filenames, hnswb, embeddings, temp_idx_path, temp_data
     new_idx_path = temp_data_dir / "new_idx.bin"
     empty_hnswb = HNSWBackend(local_index_path=str(new_idx_path))
     assert len(empty_hnswb.payloads) == 0
+
+
+@pytest.mark.skipif(
+    "not config.getoption('--huggingface')",
+    reason="Only run when --huggingface is given",
+)
+def test_bed2vec(r2v_hf_repo, bed_folder):
+    bed2vec = Bed2Vec(r2v_hf_repo)
+    for bed_name in os.listdir(bed_folder):
+        assert bed2vec.forward(os.path.join(bed_folder, bed_name)).shape == (100,)
+
+
+@pytest.mark.skipif(
+    "not config.getoption('--huggingface')",
+    reason="Only run when --huggingface is given",
+)
+def test_text2vec(nl_embed_repo, v2v_hf_repo):
+    text2vec = Text2Vec(nl_embed_repo, v2v_hf_repo)
+    assert text2vec.forward("Hematopoietic cells").shape == (100,)
+
+
+@pytest.mark.skipif(
+    "not config.getoption('--huggingface')",
+    reason="Only run when --huggingface is given",
+)
+@pytest.mark.skipif(
+    "not config.getoption('--qdrant')",
+    reason="Only run when --qdrant is given",
+)
+def test_text2bed_search_interface(
+    bed_folder,
+    r2v_hf_repo,
+    nl_embed_repo,
+    v2v_hf_repo,
+    collection,
+    query_term,
+    tmp_path_factory,
+):
+    r2v_model = Region2VecExModel(r2v_hf_repo)
+    query_dict = {"Mock1": [2, 3], "Mock2": [1], "Mock3": [2, 4, 5], "Mock4": [0]}
+    vecs = []
+    payloads = []
+
+    for bed_name in os.listdir(bed_folder):
+        rs = RegionSet(os.path.join(bed_folder, bed_name))
+        # bed_vecs.append(r2v.encode(bed_path))
+        region_embeddings = r2v_model.encode(rs)
+        bed_file_embedding = np.mean(region_embeddings, axis=0)
+        vecs.append(bed_file_embedding)
+        file_payload = {"name": bed_name}
+        payloads.append(file_payload)
+
+    vecs = np.array(vecs)
+
+    qd_search_backend = QdrantBackend(collection=collection)
+    qd_search_backend.load(vectors=vecs, payloads=payloads)
+    # #
+    text2vec = Text2Vec(nl_embed_repo, v2v_hf_repo)
+    # #
+    # # construct a search interface
+    db_interface = Text2BEDSearchInterface(qd_search_backend, text2vec)
+    db_search_result = db_interface.query_search(query_term, 5, offset=0)
+    for i in range(len(db_search_result)):
+        assert isinstance(db_search_result[i], dict)
+    # test evaluation
+    MAP, AUC, RP = db_interface.eval(query_dict)
+    assert MAP > 0
+    assert AUC > 0
+    assert RP > 0
+    # delete testing collection
+    db_interface.backend.qd_client.delete_collection(collection_name=collection)
+
+    # construct a search interface with file backend
+    temp_data_dir = tmp_path_factory.mktemp("data")
+    temp_idx_path = temp_data_dir / "testing_idx.bin"
+    hnsw_backend = HNSWBackend(local_index_path=str(temp_idx_path))
+    hnsw_backend.load(vectors=vecs, payloads=payloads)
+    file_interface = Text2BEDSearchInterface(hnsw_backend, text2vec)
+
+    file_search_result = file_interface.query_search(query_term, 5)
+    for i in range(len(file_search_result)):
+        assert isinstance(file_search_result[i], dict)
+
+    # test evaluation
+    MAP, AUC, RP = file_interface.eval(query_dict)
+    assert MAP > 0
+    assert AUC > 0
+    assert RP > 0
+
+
+@pytest.mark.skipif(
+    "not config.getoption('--huggingface')",
+    reason="Only run when --huggingface is given",
+)
+@pytest.mark.skipif(
+    "not config.getoption('--qdrant')",
+    reason="Only run when --qdrant is given",
+)
+def test_bed2bed_search_interface(
+    bed_folder,
+    r2v_hf_repo,
+    collection,
+    query_bed,
+    tmp_path_factory,
+):
+    r2v_model = Region2VecExModel(r2v_hf_repo)
+    vecs = []
+    payloads = []
+
+    for bed_name in os.listdir(bed_folder):
+        rs = RegionSet(os.path.join(bed_folder, bed_name))
+        region_embeddings = r2v_model.encode(rs)
+        bed_file_embedding = np.mean(region_embeddings, axis=0)
+        vecs.append(bed_file_embedding)
+        file_payload = {"name": bed_name}
+        payloads.append(file_payload)
+
+    vecs = np.array(vecs)
+
+    qd_search_backend = QdrantBackend(collection=collection)
+    qd_search_backend.load(vectors=vecs, payloads=payloads)
+
+    bed2vec = Bed2Vec(r2v_hf_repo)
+
+    # # construct a search interface
+    db_interface = BED2BEDSearchInterface(qd_search_backend, bed2vec)
+    db_search_result = db_interface.query_search(query_bed, 5, offset=0)
+    for i in range(len(db_search_result)):
+        assert isinstance(db_search_result[i], dict)
+
+    # delete testing collection
+    db_interface.backend.qd_client.delete_collection(collection_name=collection)
+
+    # construct a search interface with file backend
+    temp_data_dir = tmp_path_factory.mktemp("data")
+    temp_idx_path = temp_data_dir / "testing_idx.bin"
+    hnsw_backend = HNSWBackend(local_index_path=str(temp_idx_path))
+    hnsw_backend.load(vectors=vecs, payloads=payloads)
+    file_interface = Text2BEDSearchInterface(hnsw_backend, bed2vec)
+
+    file_search_result = file_interface.query_search(query_bed, 5)
+    for i in range(len(file_search_result)):
+        assert isinstance(file_search_result[i], dict)

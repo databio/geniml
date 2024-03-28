@@ -1,309 +1,21 @@
 import logging
-import os
-from dataclasses import dataclass, replace
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
-import peppy
+import pandas as pd
 import torch
-from fastembed.embedding import FlagEmbedding
 from torch.utils.data import DataLoader, TensorDataset
 
-from ..io import RegionSet
-from ..region2vec import Region2VecExModel
-from ..search.backends import HNSWBackend, QdrantBackend
+from ..search import HNSWBackend
 from .const import *
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 
 
-@dataclass
-class RegionSetInfo:
-    """
-    Store the information of a bed file, its metadata, and embeddings
-    """
-
-    file_name: str  # the name of the bed file
-    metadata: str  # the metadata of the bed file
-    region_set: Union[
-        RegionSet, None
-    ]  # the RegionSet that contains intervals in that bed file, not tokenized
-    metadata_embedding: np.ndarray  # the embedding vector of the metadata by sentence transformer
-    region_set_embedding: np.ndarray  # the embedding vector of region set
-
-
-def build_regionset_info_list_from_PEP(
-    yaml_path: str,
-    col_names: List[str],
-    r2v_model: Region2VecExModel,
-    nl_embed: FlagEmbedding,
-    with_regions: bool = False,
-    bed_vec_necessary: bool = True,
-) -> List[RegionSetInfo]:
-    """
-    With each bed file and its metadata and from a Portable Encapsulated Projects (PEP),
-    create a RegionSetInfo with each, and return the list containing all.
-
-    :param yaml_path: the path to the yaml file, which is the metadata validation framework of the PEP
-    :param col_names: the name of needed columns in the metadata csv
-    :param r2v_model: a Region2VecExModel that can embed region sets
-    :param nl_embed: a FlagEmbedding that can embed metadata
-    :param with_regions: if false, no RegionSetInfo in the output list will contain the RegionSet object from the bedfile (replaced by None).
-    :param bed_vec_necessary: whether the embedding vector of a bed file has to be valid (not None)
-    to be included into the list
-
-    :return: a list of RegionSetInfo
-    """
-
-    output_list = []
-    project = peppy.Project(yaml_path)
-    # assure the column list is not empty
-    if len(col_names) == 0:
-        _LOGGER.error(
-            "ValueError: please give the name of at least one column in the metadata csv"
-        )
-    for sample in project.samples:
-        # get the path to the bed file
-        bed_file_path = sample.output_file_path
-        if not os.path.exists(bed_file_path):
-            _LOGGER.warning(f"Warning: {bed_file_path}' does not exist")
-            continue
-        bed_file_name = os.path.split(bed_file_path)[1]
-        # get the metadata
-        bed_metadata = ";".join(sample[col] for col in col_names if sample[col] is not None)
-        region_set = RegionSet(bed_file_path)
-        metadata_embedding = next(nl_embed.embed(bed_metadata))
-        region_set_embedding = r2v_model.encode(region_set)
-        if region_set_embedding is None and bed_vec_necessary:
-            _LOGGER.warning(f"Warning: {bed_file_name}'s embedding is None, exclude from dataset")
-            continue
-        if not with_regions:
-            region_set = None
-        bed_metadata_dc = RegionSetInfo(
-            bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
-        )
-        output_list.append(bed_metadata_dc)
-    return output_list
-
-
-def build_regionset_info_list_from_files(
-    bed_folder: str,
-    metadata_path: str,
-    r2v_model: Region2VecExModel,
-    nl_embed: FlagEmbedding,
-    with_regions: bool = False,
-    bed_vec_necessary: bool = True,
-) -> List[RegionSetInfo]:
-    """
-    With each bed file in the given folder and its matching metadata from the metadata file,
-    create a RegionSetInfo with each, and return the list containing all.
-
-    :param bed_folder: folder where bed files are stored
-    :param metadata_path: path to the metadata file
-    :param r2v_model: a Region2VecExModel that can embed region sets
-    :param nl_embed: a model that can embed natural language
-    :param with_regions: if false, no RegionSetInfo in the output list will contain the RegionSet object from the bedfile (replaced by None).
-    :param bed_vec_necessary: whether the embedding vector of a bed file has to be valid (not None)
-    to be included into the list
-
-    :return: a list of RegionSetInfo
-    """
-
-    file_name_list = os.listdir(bed_folder)
-    file_name_list.sort()
-
-    output_list = []
-
-    # read the lines from the metadata file
-    with open(metadata_path) as m:
-        metadata_lines = m.readlines()
-
-    # index to traverse metadata and file list
-    # make sure metadata is sorted by the name of interval set
-    # this can be done by this command
-    # sort -k1 1 metadata_file >  new_metadata_file
-    metadata_file_index = 0
-    bed_folder_index = 0
-
-    while metadata_file_index < len(metadata_lines):
-        # end loop when all bed files have been processed
-        if bed_folder_index == len(file_name_list):
-            break
-        # read the line of metadata
-        metadata_line = metadata_lines[metadata_file_index]
-        # get the name of the interval set
-        set_name = metadata_line.split("\t")[0]
-
-        if bed_folder_index < len(file_name_list) and file_name_list[bed_folder_index].startswith(
-            set_name
-        ):
-            bed_file_name = file_name_list[bed_folder_index]
-            bed_file_path = os.path.join(bed_folder, bed_file_name)
-            bed_metadata = clean_escape_characters(metadata_line)
-            region_set = RegionSet(bed_file_path)
-            metadata_embedding = next(nl_embed.embed(bed_metadata))
-            region_set_embedding = r2v_model.encode(region_set)
-            if region_set_embedding is None and bed_vec_necessary:
-                _LOGGER.info(f"{bed_file_name}'s embedding is None, exclude from dataset")
-                bed_folder_index += 1
-                metadata_file_index += 1
-                continue
-            if not with_regions:
-                region_set = None
-            bed_metadata_dc = RegionSetInfo(
-                bed_file_name, bed_metadata, region_set, metadata_embedding, region_set_embedding
-            )
-            output_list.append(bed_metadata_dc)
-            bed_folder_index += 1
-
-        metadata_file_index += 1
-        # print a message if not all bed files are matched to metadata rows
-    if metadata_file_index < bed_folder_index:
-        _LOGGER.warning(
-            "An incomplete list will be returned, some files cannot be matched to any rows by first column"
-        )
-
-    return output_list
-
-
-def update_bed_metadata_list(
-    old_list: List[RegionSetInfo], r2v_model: Region2VecExModel
-) -> List[RegionSetInfo]:
-    """
-    With an old list of RegionSetInfo, re-embed the region set with a new Region2Vec model,
-    then return the list of new RegionSetInfo with re-embedded region set vectors.
-    :param old_list:
-    :param r2v_model:
-
-    :return:
-    """
-    new_list = []
-    for region_set_info in old_list:
-        # update reach RegionSetInfo with new embedding
-        new_ri = replace(
-            region_set_info, region_set_embedding=r2v_model.encode(region_set_info.region_set)
-        )
-        new_list.append(new_ri)
-
-    return new_list
-
-
-def clean_escape_characters(metadata_line: str) -> str:
-    """
-    Remove formatting characters from metadata
-
-    :param metadata_line: the metadata text
-
-    :return: the metadata text without interval set name and formatting characters
-    """
-
-    metadata_line = metadata_line.replace("\t", " ")
-    metadata_line = metadata_line.replace("\n", "")
-
-    return metadata_line
-
-
-def region_info_list_to_vectors(ri_list: List[RegionSetInfo]) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    With a given list of RegionSetInfo, returns two np.ndarrays,
-    one represents embeddings of bed files, the other represents embedding of metadata,
-    used as data preprocessing for fitting models.
-
-    :param ri_list: RegionSetInfo list
-
-    :return: two np.ndarray with shape (n, <embedding dimension>)
-    """
-    X = []
-    Y = []
-    for ri in ri_list:
-        # X: metadata embedding
-        if ri.region_set_embedding is None:
-            _LOGGER.info(f"{ri.file_name}'s embedding is None, exclude from dataset")
-            continue
-        if ri.region_set_embedding.shape != DEFAULT_EMBEDDING_DIM:
-            _LOGGER.warning(
-                f"WARNING: {ri.file_name}'s embedding has shape of {ri.region_set_embedding.shape}, exclude from dataset"
-            )
-            # _LOGGER.error()
-            continue
-        X.append(ri.metadata_embedding)
-        # Y: bed file embedding
-        Y.append(ri.region_set_embedding)
-    return np.array(X), np.array(Y)
-
-
-def prepare_vectors_for_database(
-    ri_list: List[RegionSetInfo],
-    filename_key: str = DEFAULT_FILENAME_KEY,
-    metadata_key: str = DEFAULT_METADATA_KEY,
-) -> Tuple[np.ndarray, List[Dict[str, str]]]:
-    """
-    With a given list of RegionSetInfo, returns one np.ndarray representing bed files embeddings,
-    and one list of dictionary that stores names of bed files and metadata,
-    used as data preprocessing for upload to search backend (geniml.search)
-
-    :param ri_list: RegionSetInfo list
-
-    :return: one np.ndarray with shape (n, <Region2vec embedding dimension>),
-    and one list of dictionary in the format of:
-    {
-        <filename_key>: <bed file name>,
-        <metadata_key>>: <region set metadata>
-    }
-    """
-    embeddings = []
-    labels = []
-    for ri in ri_list:
-        embeddings.append(ri.region_set_embedding)
-        # file name and metadata
-        labels.append({filename_key: ri.file_name, metadata_key: ri.metadata})
-
-    return np.array(embeddings), labels
-
-
-def vectors_from_backend(
-    search_backend: Union[HNSWBackend, QdrantBackend],
-    encoding_model: FlagEmbedding,
-    payload_key: str = DEFAULT_PAYLOAD_KEY,
-    vec_key: str = DEFAULT_VECTOR_KEY,
-    metadata_key: str = DEFAULT_METADATA_KEY,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Load vectors from a search backend's qdrant client or hnsw index
-    and the metadata from payloads, then encode metadata into vectors.
-
-    Return the two np.ndarrays, one contains vectors from search backend,
-    and one contains matching metadata embedding vectors.
-
-    :param search_backend: the search backend where vectors are stored
-    :param payload_key: the key of payload in the retrieval output
-    :param vec_key: the key of vector in the retrieval output
-    :param metadata_key: the key of metadata content in the payload dictionary
-    :param encoding_model: model that can encode natural language, like FastEmbedding
-
-    :return: two np.ndarray with shape (n, <embedding dimension>)
-    """
-    X = []
-    Y = []
-    n = len(search_backend)
-    for i in range(n):
-        # retrieve vector and metadata/payload
-        vec_info = search_backend.retrieve_info(i, with_vec=True)
-        # add vector to output list
-        vec = vec_info[vec_key]
-        Y.append(vec)
-        # embed metadata and add embedding vector to output list
-        metadata = vec_info[payload_key][metadata_key]
-        metadata_vec = next(encoding_model.embed(metadata))
-        X.append(metadata_vec)
-
-    # return output in np.ndarray format
-    return np.array(X), np.array(Y)
-
-
 def arrays_to_torch_dataloader(
     X: np.ndarray,
     Y: np.ndarray,
+    target: np.ndarray,
     batch_size: int = DEFAULT_BATCH_SIZE,
     shuffle: bool = DEFAULT_DATALOADER_SHUFFLE,
 ) -> DataLoader:
@@ -311,10 +23,21 @@ def arrays_to_torch_dataloader(
     Based on https://stackoverflow.com/questions/44429199/how-to-load-a-list-of-numpy-arrays-to-pytorch-dataset-loader
 
     Store np.ndarray of X and Y into a torch.DataLoader
+
+    Args:
+        X: embedding vectors of input data (natural language embeddings)
+        Y: embedding vectors of output data (BED file embeddings)
+        target: vector of 1 and -1, indicating if each vector pair of (X, Y) are target pairs or not
+        batch_size: size of small batch
+        shuffle: shuffle dataset or not
+
+    Returns:
+
     """
     tensor_X = torch.from_numpy(dtype_check(X))
     tensor_Y = torch.from_numpy(dtype_check(Y))
-    my_dataset = TensorDataset(tensor_X, tensor_Y)  # create your datset
+    tensor_target = torch.from_numpy(dtype_check(target))
+    my_dataset = TensorDataset(tensor_X, tensor_Y, tensor_target)  # create your dataset
 
     return DataLoader(my_dataset, batch_size=batch_size, shuffle=shuffle)
 
@@ -324,9 +47,267 @@ def dtype_check(vecs: np.ndarray) -> np.ndarray:
     Since the default float in np is float64, but in pytorch tensor it's float32,
     to avoid errors, the dtype will be switched
 
-    :return: np.ndarray with dtype of float32
+    Args:
+        vecs:
+
+    Returns: np.ndarray with dtype of float32
+
     """
     if not isinstance(vecs.dtype, type(np.dtype("float32"))):
         vecs = vecs.astype(np.float32)
 
     return vecs
+
+
+def metadata_dict_from_csv(
+    csv_path: str,
+    col_names: Set[str],
+    file_key: str = DEFAULT_FILE_KEY,
+    genomes: Union[Set[str], None] = None,
+    genomes_key: Union[str, None] = DEFAULT_GENOME_KEY,
+    series_key: Union[str, None] = DEFAULT_SERIES_KEY,
+    chunk_size: Union[int, None] = None,
+) -> Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]:
+    """
+    Read selected columns from a metadata csv and return metadata dictionary,
+    can filter genomes with given list of genomes and the column name of genome
+
+    Args:
+        csv_path: path to the csv file that contain metadata
+        col_names: list of columns that contain informative metadata
+        file_key: name of column of file names
+        genomes: list of genomes
+        genomes_key: name of column of sample genomes
+        chunk_size: size of chunk to read when the csv file is large
+        series_key: name of column of series
+
+    Returns: a dictionary that contains metadata,
+
+    if series information is in the csv, the dictionary format will be:
+    {
+        <series>:[
+            {
+                "name": <file name>
+                "metadata": {
+                    <csv column name>: <metadata string>,
+                    ...
+                }
+            },
+            ...
+        ],
+        ...
+    }
+
+    else, the dictionary format will be:
+    {
+        <file name>: {
+            <csv column name>: <metadata string>,
+            ...
+        },
+        ...
+    }
+
+    """
+    # dictionary to store data
+    output_dict = dict()
+    # count number of series, files, and csv chunks
+    series_count = 0
+    bed_count = 0
+    text_count = 0
+    empty_count = 0
+    read_chunk = True
+    # read csv
+    for chunk in pd.read_csv(csv_path, chunksize=chunk_size):
+        # if chunk size is None
+        if isinstance(chunk, str):
+            read_chunk = False
+            rows_to_ite = pd.read_csv(csv_path)
+        else:
+            rows_to_ite = chunk
+
+        for index, row in rows_to_ite.iterrows():
+            genome_filter = True
+            # select genome if list of genomes and genome key are given
+            if genomes is not None and genomes_key is not None:
+                if row[genomes_key].strip() not in genomes:
+                    genome_filter = False
+
+            if genome_filter:
+                # collect metadata
+                metadata_dict = dict()
+
+                for col in col_names:
+                    if isinstance(row[col], str):  #
+                        text_count += 1
+                        metadata_dict[col] = row[col]
+
+                if len(metadata_dict) == 0:
+                    empty_count += 1
+                # add the metadata into output dictionary
+                else:
+                    if series_key is None or not series_key in rows_to_ite.columns:
+                        output_dict[row[file_key]] = metadata_dict
+
+                    else:
+                        payload = {
+                            "name": row[file_key],
+                            "metadata": metadata_dict,
+                        }
+                        try:
+                            output_dict[row[series_key]].append(payload)
+                        except:
+                            output_dict[row[series_key]] = [payload]
+                            series_count += 1
+                bed_count += 1
+        if not read_chunk:
+            break
+
+    # output of summary statistics
+    if series_key is not None:
+        _LOGGER.info(f"Number of series: {series_count}")
+
+    _LOGGER.info(f"Number of files: {bed_count}")
+    _LOGGER.info(f"Number of metadata strings: {text_count}")
+    _LOGGER.info(f"Number of files with 0 metadata strings: {empty_count}")
+
+    return output_dict
+
+
+def sample_non_target_vec(
+    max_id: int, matching_ids: List[Union[int, np.int64]], size: int
+) -> List[Union[int, np.int64]]:
+    """
+    Sample non-matching vectors pairs for contrastive loss
+
+    Args:
+        max_id: maximum id = total number of vectors - 1
+        matching_ids: ids of matching vectors (target pairs)
+        size: number of samples
+
+    Returns: a list of ids
+
+    """
+
+    # sample range
+    if (size + len(matching_ids)) > max_id + 1:
+        _LOGGER.error("IndexError: Sample size + matching size should below the maximum ID")
+
+    full_range = np.arange(0, max_id + 1)
+
+    # skipping ids of matching vectors
+    eligible_integers = np.setdiff1d(full_range, matching_ids)
+    # sample result
+    sampled_integer = np.random.choice(eligible_integers, size=size, replace=False)
+
+    return list(sampled_integer)
+
+
+def reverse_payload(payload: Dict[np.int64, Dict], target_key: str) -> Dict[str, np.int64]:
+    """
+    The payload dictionary of a HNSWBackend is in this format:
+    {
+        <store id>: <metadata dictionary of that vector>,
+        ...
+    }
+    This function will return a reversal dictionary, in which each key is one value in the metadata dict,
+    and each value is storage id.
+
+    For example, if the payload dictionary is:
+    {
+       1: {
+           "name": "A0001.bed",
+           "summary": <summary>,
+           ...
+       }
+    }
+
+    if target_key is "name", the output will be:
+    {
+        "A0001.bed": 1,
+    }
+
+    Args:
+        payload: payload dictionary of a HNSWBackend
+        target_key: a key in metadata dictionary
+
+    Returns: the reversal payload dictionary
+
+    """
+    output_dict = dict()
+    for i in payload.keys():
+        output_dict[payload[i][target_key]] = i
+
+    return output_dict
+
+
+def vec_pairs(
+    nl_backend: HNSWBackend,
+    bed_backend: HNSWBackend,
+    bed_payload_key: str = "name",
+    nl_payload_key: str = "files",
+    non_target_pairs: bool = False,
+    non_target_pairs_prop: float = 1.0,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Extract vector pairs for training / validating from file backends that store embedding vectors of BED and metadata.
+    The payloads of BED backend must contain the file name of each embedding vector.
+    The payloads of metadata backend must contain names of matching files of each metadata string.
+
+    Args:
+        nl_backend: backend where embedding vectors of natural language metadata are stored
+        bed_backend: backend where embedding vectors of BED files are stored
+        bed_payload_key: the key of BED file name in the payload of BED embedding backend
+        nl_payload_key: the key of matching BED files in the payload of metadata embedding backend
+        non_target_pairs: whether non-target pairs will be sampled
+        non_target_pairs_prop: proportion of <number of non-target pairs> :  <number of target pairs>
+
+    Returns:
+
+    """
+    # maximum id of metadata embedding vectors
+    max_num_nl = nl_backend.idx.get_max_elements()
+
+    # maximum id of BED embedding vectors
+    max_num_bed = bed_backend.idx.get_max_elements()
+
+    # List of embedding vectors
+    X = []
+    Y = []
+
+    # list of 1 and -1, indicate whether the vector pair is target pair or not
+    target = []
+
+    # reverse the BED backend payload dictionary into {<file name>: store id}
+    bed_reversal_payload = reverse_payload(bed_backend.payloads, bed_payload_key)
+
+    # pair vectors
+    for i in range(max_num_nl):
+        nl_vec = nl_backend.idx.get_items([i])[0]
+        bed_vec_ids = []
+        # get target pairs
+        for file_name in nl_backend.payloads[i][nl_payload_key]:
+            try:
+                bed_vec_ids.append(bed_reversal_payload[file_name])
+            except:
+                continue
+        if len(bed_vec_ids) == 0:
+            continue
+        bed_vecs = bed_backend.idx.get_items(bed_vec_ids, return_type="numpy")
+        for y_vec in bed_vecs:
+            X.append(nl_vec)
+            Y.append(y_vec)
+            target.append(1)
+
+        # sample non target pairs if needed for contrastive loss
+        if non_target_pairs:
+            non_match_ids = sample_non_target_vec(
+                max_num_bed, bed_vec_ids, int(non_target_pairs_prop * len(bed_vec_ids))
+            )
+            print(f"Non match ids: {non_match_ids}")
+            non_match_vecs = bed_backend.idx.get_items(non_match_ids, return_type="numpy")
+            for y_vec in non_match_vecs:
+                X.append(nl_vec)
+                Y.append(y_vec)
+                target.append(-1)
+
+    return np.array(X), np.array(Y), np.array(target)

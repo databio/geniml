@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union, List, Dict
+from typing import Dict, List, Union
 
 import numpy as np
 
@@ -11,8 +11,9 @@ from ..query2vec.abstract import Query2Vec
 class BEDSearchInterface(ABC):
     """
     An abstract class representing BED files search interface.
-    Consist of a backend that stores BED embedding vectors,
-    and a module that embeds the query (natural langauge string or region set)
+    The query will be embedded by one of the subclass of Query2Vec,
+    and the embedding is used to do KNN search in the backend
+    where BED embeddings are stored.
     """
 
     def __init__(self, backend: EmSearchBackend, query2vec: Query2Vec) -> None:

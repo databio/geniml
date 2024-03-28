@@ -43,6 +43,8 @@ setup(
         "geniml.bbclient",
         "geniml.search",
         "geniml.search.backends",
+        "geniml.search.interfaces",
+        "geniml.search.query2vec",
         "geniml.nn",
     ],
     version=version,
