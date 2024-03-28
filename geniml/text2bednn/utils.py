@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from ..search import HNSWBackend
+from ..search.backends.filebackend import HNSWBackend
 from .const import *
 
 _LOGGER = logging.getLogger(MODULE_NAME)

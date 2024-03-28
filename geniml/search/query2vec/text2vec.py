@@ -4,8 +4,9 @@ from typing import Union
 import numpy as np
 
 from ...const import PKG_NAME
-from ...text2bednn import FastEmbedder, Vec2VecFNN
 from ...text2bednn.embedder.abstract import TextEmbedder
+from ...text2bednn.embedder.fastembedder import FastEmbedder
+from ...text2bednn.text2bednn import Vec2VecFNN
 from .abstract import Query2Vec
 
 _LOGGER = logging.getLogger(PKG_NAME)
