@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import List, Union
+from typing import Union
 
 import numpy as np
 
 from ...io import RegionSet
-from ...text2bednn.embedder.abstract import TextEmbedder
 
 
 class Query2Vec(ABC):
