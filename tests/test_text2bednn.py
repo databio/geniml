@@ -2,9 +2,10 @@ import os
 
 import numpy as np
 import pytest
+from geniml.search import vec_pairs
 from geniml.search.backends import HNSWBackend
 from geniml.text2bednn.text2bednn import Vec2VecFNN
-from geniml.text2bednn.utils import metadata_dict_from_csv, vec_pairs
+from geniml.text2bednn.utils import metadata_dict_from_csv
 
 DATA_FOLDER_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data"
