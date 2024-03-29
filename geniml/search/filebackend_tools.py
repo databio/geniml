@@ -69,10 +69,10 @@ def sample_non_target_vec(
     """
 
     # sample range
-    if (size + len(matching_ids)) > max_id + 1:
+    if (size + len(matching_ids)) > max_id:
         _LOGGER.error("IndexError: Sample size + matching size should below the maximum ID")
 
-    full_range = np.arange(0, max_id + 1)
+    full_range = np.arange(0, max_id)
 
     # skipping ids of matching vectors
     eligible_integers = np.setdiff1d(full_range, matching_ids)
