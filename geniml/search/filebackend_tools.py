@@ -183,7 +183,6 @@ def vec_pairs(
             non_match_ids = sample_non_target_vec(
                 max_num_bed, bed_vec_ids, int(non_target_pairs_prop * len(bed_vec_ids))
             )
-            print(f"Non match ids: {non_match_ids}")
             non_match_vecs = bed_backend.idx.get_items(non_match_ids, return_type="numpy")
             for y_vec in non_match_vecs:
                 X.append(nl_vec)
