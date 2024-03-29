@@ -19,7 +19,7 @@ class Text2BEDSearchInterface(BEDSearchInterface):
     def __init__(
         self,
         backend: Union[QdrantBackend, HNSWBackend],
-        query2vec: Union[Text2Vec],
+        query2vec: Text2Vec,
     ):
         """
         Initiate the search interface
@@ -34,7 +34,7 @@ class Text2BEDSearchInterface(BEDSearchInterface):
 
     def query_search(
         self,
-        query: Union[str, RegionSet, np.ndarray],
+        query: Union[str, np.ndarray],
         limit: int,
         with_payload: bool = True,
         with_vectors: bool = True,
