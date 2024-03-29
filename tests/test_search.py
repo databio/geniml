@@ -8,8 +8,7 @@ from geniml.io import RegionSet
 from geniml.region2vec import Region2VecExModel
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.search.backends.filebackend import DEP_HNSWLIB
-from geniml.search.interfaces import (BED2BEDSearchInterface,
-                                      Text2BEDSearchInterface)
+from geniml.search.interfaces import BED2BEDSearchInterface, Text2BEDSearchInterface
 from geniml.search.query2vec import Bed2Vec, Text2Vec
 
 DATA_FOLDER_PATH = os.path.join(
