@@ -1,12 +1,31 @@
 import logging
 from typing import Dict, List, Tuple, Union
-
+import pickle
 import numpy as np
 
 from ..const import *
 from .backends.filebackend import HNSWBackend
 
 _LOGGER = logging.getLogger(PKG_NAME)
+
+
+def load_local_backend(bin_path: str, pkl_path: str, dim: int) -> HNSWBackend:
+    """
+    Load a HNSWBackend from the local index file and the saved payloads dictinoary
+
+    Parameters
+    ----------
+    bin_path : path of the index file (.bin)
+    pkl_path : path of saved payloads (.pkl)
+
+    Returns
+    -------
+    the saved HNSWBackend
+    """
+    payloads = pickle.load(open(pkl_path, "rb"))
+    return HNSWBackend(
+        local_index_path=bin_path, payloads=payloads, dim=dim
+    )
 
 
 def merge_backends(
