@@ -17,12 +17,10 @@ class BED2BEDSearchInterface(BEDSearchInterface):
         query2vec: Union[str, Bed2Vec],
     ):
         """
-        Initiate the search interface
 
-        Parameters
-        ----------
-        backend : vector backend where the BED embeddings are stored
-        query2vec : used to embed query region set
+        :param backend: the backend where vectors are stored
+
+        :param query2vec: a Bed2Vec model, or a hugging face model repository of geniml.region2vec.Region2VecExModel
         """
         if isinstance(query2vec, str):
             self.query2vec = Bed2Vec(query2vec)
@@ -40,18 +38,9 @@ class BED2BEDSearchInterface(BEDSearchInterface):
         offset: int = 0,
     ) -> List[Dict]:
         """
+        :param query: a region set, s path to a BED file in disk, or a region set embedding vector
 
-        Parameters
-        ----------
-        query : the region set, path to a BED file in disk, or region set embedding vector
-        limit : see docstrings of def search() in QdrantBackend or HNSWBackend
-        with_payload :
-        with_vectors :
-        offset :
-
-        Returns
-        -------
-        see docstrings of def search() in QdrantBackend or HNSWBackend
+        for rest of the parameters, check the docstring of QdrantBackend.search() or HNSWBackend.search()
         """
         if isinstance(query, np.ndarray):
             search_vec = query

@@ -19,15 +19,13 @@ class Text2BEDSearchInterface(BEDSearchInterface):
     def __init__(
         self,
         backend: Union[QdrantBackend, HNSWBackend],
-        query2vec: Union[Text2Vec],
+        query2vec: Text2Vec,
     ):
         """
         Initiate the search interface
 
-        Parameters
-        ----------
-        backend : vector backend where the BED embeddings are stored
-        query2vec : used to map the query string into the embedding space of region sets
+        :param backend: the backend where vectors are stored
+        :param query2vec: a Text2Vec, for details, see docstrings in geniml.search.query2vec.text2vec
         """
         self.query2vec = query2vec
         self.backend = backend
@@ -42,17 +40,9 @@ class Text2BEDSearchInterface(BEDSearchInterface):
     ) -> List[Dict]:
         """
 
-        Parameters
-        ----------
-        query : the natural langauge query string, or a vector in the embedding space of region sets
-        limit : see docstrings of def search() in QdrantBackend or HNSWBackend
-        with_payload :
-        with_vectors :
-        offset :
+        :param query: the natural langauge query string, or a vector in the embedding space of region sets
 
-        Returns
-        -------
-        see docstrings of def search() in QdrantBackend or HNSWBackend
+        for rest of the parameters, check the docstring of QdrantBackend.search() or HNSWBackend.search()
         """
         if isinstance(query, np.ndarray):
             search_vec = query
@@ -67,8 +57,7 @@ class Text2BEDSearchInterface(BEDSearchInterface):
         """
         With a query dictionary, return the Mean Average Precision, AUC-ROC and R-precision of query retrieval
 
-        Args:
-            query_dict: a dictionary that contains query and relevant results in this format:
+        :param query_dict:a dictionary that contains query and relevant results in this format:
             {
                 <query string>:[
                     <store id in backend>,
@@ -77,8 +66,7 @@ class Text2BEDSearchInterface(BEDSearchInterface):
                 ...
             }
 
-        Returns: a Tuple: (Mean Average Precision, Average AUC-ROC, Average R-precision)
-
+        :return: a Tuple of (Mean Average Precision, Average AUC-ROC, Average R-precision)
         """
 
         # number

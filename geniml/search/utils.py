@@ -22,12 +22,10 @@ def single_query_eval(search_results: List, relevant_results: List) -> Tuple[flo
     """
     Evaluate a single query
 
-    Args:
-        search_results: List of store ids, by the order of similarity in search
-        relevant_results: List if store id which are relevant search results
+    :param search_results: List of store ids, by the order of similarity in search
+    :param relevant_results: List if store id which are relevant search results
 
-    Returns: a Tuple: (Average Precision, AUC-ROC, R-precision)
-
+    :return: a Tuple of (Average Precision, AUC-ROC, R-precision)
     """
     num_relevant = len(relevant_results)
     retrieved_relevant = 0
@@ -63,15 +61,22 @@ def single_query_eval(search_results: List, relevant_results: List) -> Tuple[flo
     return average_precision, auc, r_precision
 
 
-def rand_eval(n: int, query_dict: Dict):
+def rand_eval(n: int, query_dict: Dict) -> Tuple[float, float, float]:
     """
     Evaluation results if the retrieval is completely random
-    Args:
-        n: total number of results
-        query_dict: dictionary of query result, see docstring of query_eval()
 
-    Returns: see docstring of query_eval()
+    :param n: total number of results
 
+    :param query_dict:  a dictionary that contains query and relevant results in this format:
+        {
+            <query string>:[
+                <store id in backend>,
+                ...
+            ],
+            ...
+        }
+
+    :return: a Tuple of (Average Precision, AUC-ROC, R-precision)
     """
     sum_ap = 0  # sum of all average precisions
     sum_auc = 0
