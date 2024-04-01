@@ -32,7 +32,7 @@ class Text2BEDSearchInterface(BEDSearchInterface):
 
     def query_search(
         self,
-        query: Union[str, RegionSet, np.ndarray],
+        query: Union[str, np.ndarray],
         limit: int,
         with_payload: bool = True,
         with_vectors: bool = True,
