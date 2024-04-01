@@ -4,7 +4,8 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
-from ..const import *
+from geniml.const import *
+
 from .backends.filebackend import HNSWBackend
 
 _LOGGER = logging.getLogger(PKG_NAME)
@@ -12,16 +13,13 @@ _LOGGER = logging.getLogger(PKG_NAME)
 
 def load_local_backend(bin_path: str, pkl_path: str, dim: int) -> HNSWBackend:
     """
-    Load a HNSWBackend from the local index file and the saved payloads dictinoary
+    Load a HNSWBackend from the local index file and the saved payloads dictionary
 
-    Parameters
-    ----------
-    bin_path : path of the index file (.bin)
-    pkl_path : path of saved payloads (.pkl)
+    :param bin_path: path of the index file (.bin)
+    :param pkl_path: path of saved payloads (.pkl)
+    :param dim: the dimension of vectors stored in the hnsw index
 
-    Returns
-    -------
-    the saved HNSWBackend
+    :return: the HNSWBackend from saved index and payloads
     """
     payloads = pickle.load(open(pkl_path, "rb"))
     return HNSWBackend(local_index_path=bin_path, payloads=payloads, dim=dim)
@@ -32,6 +30,12 @@ def merge_backends(
 ) -> HNSWBackend:
     """
     merge multiple backends into one
+
+    :param backends_to_merge: a list of [HNSWBackend]
+    :param local_index_path: the path to the local index file of the merged output HNSWBackend
+    :param dim: the dimension of vectors stored in the HNSWBackend
+
+    :return: a HNSWBackend that comes from merge all HNSWBackend in the input list backends_to_merge
     """
 
     result_backend = HNSWBackend(
@@ -56,15 +60,17 @@ def sample_non_target_vec(
     max_id: int, matching_ids: List[Union[int, np.int64]], size: int
 ) -> List[Union[int, np.int64]]:
     """
-    Sample non-matching vectors pairs for contrastive loss
+    When the torch loss function for text2bednn training is CosineEmbeddingLoss,
+    the goal is to maximize the cosine similarity when the input metadata (embedding) matches
+    the input BED file (embedding), and minimize otherwise. Therefore, besides target pairs
+    (matching metadata embedding and BED embedding), non-target pairs also need sampling.
+    This function samples ids of non-matching vectors in the backend.
 
-    Args:
-        max_id: maximum id = total number of vectors - 1
-        matching_ids: ids of matching vectors (target pairs)
-        size: number of samples
+    :param max_id: maximum id = total number of vectors - 1
+    :param matching_ids: ids of matching vectors (target pairs)
+    :param size: number of vectors to sample
 
-    Returns: a list of ids
-
+    :return: a list of ids in the backend.
     """
 
     # sample range
@@ -83,34 +89,28 @@ def sample_non_target_vec(
 
 def reverse_payload(payload: Dict[np.int64, Dict], target_key: str) -> Dict[str, np.int64]:
     """
-    The payload dictionary of a HNSWBackend is in this format:
-    {
-        <store id>: <metadata dictionary of that vector>,
-        ...
-    }
-    This function will return a reversal dictionary, in which each key is one value in the metadata dict,
-    and each value is storage id.
 
+    :param payload: payload dictionary of a HNSWBackend, in this format:
+        {
+            <store id>: <metadata dictionary of that vector>,
+            ...
+        }
+    :param target_key: a key in metadata dictionary
     For example, if the payload dictionary is:
-    {
-       1: {
-           "name": "A0001.bed",
-           "summary": <summary>,
-           ...
-       }
-    }
-
+        {
+           1: {
+               "name": "A0001.bed",
+               "summary": <summary>,
+               ...
+           }
+        }
     if target_key is "name", the output will be:
-    {
-        "A0001.bed": 1,
-    }
+        {
+            "A0001.bed": 1,
+        }
 
-    Args:
-        payload: payload dictionary of a HNSWBackend
-        target_key: a key in metadata dictionary
 
-    Returns: the reversal payload dictionary
-
+    :return: the reversal payload dictionary
     """
     output_dict = dict()
     for i in payload.keys():
@@ -122,25 +122,29 @@ def reverse_payload(payload: Dict[np.int64, Dict], target_key: str) -> Dict[str,
 def vec_pairs(
     nl_backend: HNSWBackend,
     bed_backend: HNSWBackend,
-    bed_payload_key: str = "name",
     nl_payload_key: str = "files",
+    bed_payload_key: str = "name",
     non_target_pairs: bool = False,
     non_target_pairs_prop: float = 1.0,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Extract vector pairs for training / validating from file backends that store embedding vectors of BED and metadata.
+    The training of geniml.text2bednn needs pairs of vectors (natural language embeddings & region set embeddings).
+    This function extract vector pairs file backends that store embedding vectors of region set (BED) and metadata.
     The payloads of BED backend must contain the file name of each embedding vector.
     The payloads of metadata backend must contain names of matching files of each metadata string.
 
-    Args:
-        nl_backend: backend where embedding vectors of natural language metadata are stored
-        bed_backend: backend where embedding vectors of BED files are stored
-        bed_payload_key: the key of BED file name in the payload of BED embedding backend
-        nl_payload_key: the key of matching BED files in the payload of metadata embedding backend
-        non_target_pairs: whether non-target pairs will be sampled
-        non_target_pairs_prop: proportion of <number of non-target pairs> :  <number of target pairs>
+    :param nl_backend: backend where embedding vectors of natural language metadata are stored
+    :param bed_backend: backend where embedding vectors of BED files are stored
+    :param nl_payload_key: the key of matching BED files in the payload of metadata embedding backend
+    :param bed_payload_key: the key of BED file name in the payload of BED embedding backend
+    :param non_target_pairs: whether non-target pairs will be sampled, for details, see the docstring of sample_non_target_vec()
+    :param non_target_pairs_prop: proportion of <number of non-target pairs> / <number of target pairs>
 
-    Returns:
+    :return: A tuple of 3 np.ndarrays:
+        X: with shape of (n, <natural language embedding dimension>)
+        Y: with shape of (n, <region set embedding dimension>)
+        target: with shape of (n,), contain only 1 and -1, indicating if the X-Y vector pair is target or not
+        (see the docstring of sample_non_target_vec())
 
     """
     # maximum id of metadata embedding vectors
