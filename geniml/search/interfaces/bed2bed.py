@@ -4,7 +4,7 @@ import numpy as np
 
 from ...io import RegionSet
 from ..backends import HNSWBackend, QdrantBackend
-from ..query2vec import Bed2Vec
+from ..query2vec import BED2Vec
 from .abstract import BEDSearchInterface
 
 
@@ -14,16 +14,16 @@ class BED2BEDSearchInterface(BEDSearchInterface):
     def __init__(
         self,
         backend: Union[QdrantBackend, HNSWBackend],
-        query2vec: Union[str, Bed2Vec],
+        query2vec: Union[str, BED2Vec],
     ):
         """
 
         :param backend: the backend where vectors are stored
 
-        :param query2vec: a Bed2Vec model, or a hugging face model repository of geniml.region2vec.Region2VecExModel
+        :param query2vec: a BED2Vec model, or a hugging face model repository of geniml.region2vec.Region2VecExModel
         """
         if isinstance(query2vec, str):
-            self.query2vec = Bed2Vec(query2vec)
+            self.query2vec = BED2Vec(query2vec)
         else:
             self.query2vec = query2vec
 

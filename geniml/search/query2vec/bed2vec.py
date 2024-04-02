@@ -11,7 +11,7 @@ from .abstract import Query2Vec
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
-class Bed2Vec(Query2Vec):
+class BED2Vec(Query2Vec):
     """Embed a query region set into a vector"""
 
     def __init__(self, model: Union[str, Region2VecExModel]):

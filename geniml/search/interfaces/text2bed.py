@@ -3,8 +3,8 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
-from ...const import PKG_NAME
-from ...io import RegionSet
+from geniml.const import PKG_NAME
+
 from ..backends import HNSWBackend, QdrantBackend
 from ..query2vec import Text2Vec
 from ..utils import single_query_eval
