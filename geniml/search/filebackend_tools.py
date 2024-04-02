@@ -1,6 +1,6 @@
 import logging
 import pickle
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
 
@@ -126,6 +126,8 @@ def vec_pairs(
     bed_payload_key: str = "name",
     non_target_pairs: bool = False,
     non_target_pairs_prop: float = 1.0,
+    exclusions: Union[Set[str], None] = None,
+    exclusion_key: str = "series",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     The training of geniml.text2bednn needs pairs of vectors (natural language embeddings & region set embeddings).
@@ -139,6 +141,8 @@ def vec_pairs(
     :param bed_payload_key: the key of BED file name in the payload of BED embedding backend
     :param non_target_pairs: whether non-target pairs will be sampled, for details, see the docstring of sample_non_target_vec()
     :param non_target_pairs_prop: proportion of <number of non-target pairs> / <number of target pairs>
+    :param exclusions: a set of
+    :param exclusion_key: the payload key that
 
     :return: A tuple of 3 np.ndarrays:
         X: with shape of (n, <natural language embedding dimension>)
@@ -169,10 +173,19 @@ def vec_pairs(
         bed_vec_ids = []
         # get target pairs
         for file_name in nl_backend.payloads[i][nl_payload_key]:
+            # get the HNSWBackend store id if the BED is stored
             try:
-                bed_vec_ids.append(bed_reversal_payload[file_name])
+                bed_id = bed_reversal_payload[file_name]
             except:
                 continue
+
+            if exclusions is not None:
+                bed_info = bed_backend.payloads[bed_id][exclusion_key]
+                if bed_info in exclusions:
+                    continue
+
+            bed_vec_ids.append(bed_id)
+
         if len(bed_vec_ids) == 0:
             continue
         bed_vecs = bed_backend.idx.get_items(bed_vec_ids, return_type="numpy")
