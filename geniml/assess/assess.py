@@ -247,8 +247,8 @@ def get_f_10_score_from_assessment_file(file, f10_each_file=False):
     :param bool f10_each_file: if report F10 for each file, not average for the collection
     """
     df = pd.read_csv(file, index_col=(0))
-    r = df["universe&file"] / (df["universe&file"]+ df["file/universe"] )
-    p = df["universe&file"] / (df["universe&file"]+ df["univers/file"] )
+    r = df["universe&file"] / (df["universe&file"] + df["file/universe"])
+    p = df["universe&file"] / (df["universe&file"] + df["univers/file"])
     df["F_10"] = (1 + 10**2) * (p * r) / ((10**2 * p) + r)
     if f10_each_file:
         return df["F_10"]
