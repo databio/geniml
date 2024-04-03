@@ -60,7 +60,7 @@ class BBClient(BedCacheManager):
         if os.path.exists(file_path):
             _LOGGER.info(f"BED set {bedset_id} already exists in cache.")
             with open(file_path, "r") as file:
-                extracted_data = file.readlines()
+                extracted_data = file.read().splitlines()
         else:
             extracted_data = self._download_bedset_data(bedset_id)
             # write the identifiers of BED files in the BedSet to a local .txt file
@@ -84,8 +84,8 @@ class BBClient(BedCacheManager):
         """
         bedset_url = BEDSET_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedset_id=bedset_id)
         response = requests.get(bedset_url)
-        data = response.json()
-        extracted_data = [entry.get("record_identifier") for entry in data["bedfile_metadata"]]
+        data = response.json()["results"]
+        extracted_data = [entry.get("id") for entry in data]
 
         return extracted_data
 

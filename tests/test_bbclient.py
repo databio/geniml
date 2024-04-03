@@ -183,3 +183,8 @@ def test_bedbase_caching(tmp_path, bedset_id, bedfile_id, request):
     # check the path and identifier of BED file
     bedfile_path = bbclient.seek(bedfile_id)
     assert bedfile.compute_bed_identifier() == os.path.split(bedfile_path)[1].split(".")[0]
+
+
+def test_bedset_manual():
+    bbclient = BBClient(bedbase_api="http://127.0.0.1:8000")
+    ff = bbclient.load_bedset("gse218680")
