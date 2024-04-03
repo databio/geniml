@@ -136,7 +136,7 @@ def get_uni(file, chrom, bedname):
 
 def ccf_universe(cove, file_out, cove_prefix="all"):
     """
-    Creat cut-off flexible universe based on coverage track
+    Create cut-off flexible universe based on coverage track
     :param str cove: path to coverage folder
     :param str file_out: output file
     :param str cove_prefix: prefixed used for creating signal tracks

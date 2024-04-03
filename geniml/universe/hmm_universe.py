@@ -110,7 +110,7 @@ def hmm_universe(
     save_max_cove=False,
 ):
     """
-    Create HMM based univers from coverage
+    Create HMM based universe from coverage
     :param str coverage_folder: path to folder with coverage files
     :param str start: start coverage file name
     :param str end: end coverage file name

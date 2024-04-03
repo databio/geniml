@@ -1,6 +1,8 @@
 import gzip
 import os
 from typing import Dict, List, Union
+from hashlib import md5
+
 
 from .const import (
     MAF_CHROMOSOME_COL_NAME,
@@ -70,10 +72,27 @@ def extract_maf_col_positions(file: str) -> Dict[MAF_COLUMN, Union[int, None]]:
 
 
 def read_bedset_file(file_path: str) -> List[str]:
-    """Load a bedset from a text file"""
+    """
+    Load a bedset from a text file
+
+    :param file_path: path to the file
+
+    :return: list of bed identifiers
+    """
     bed_identifiers = []
 
     with open(file_path, "r") as f:
         for line in f:
             bed_identifiers.append(line.strip())
     return bed_identifiers
+
+
+def compute_md5sum_bedset(bedset: List[str]) -> str:
+    """
+    Compute the md5sum of a bedset
+
+    :param bedset: list of bed identifiers
+
+    :return: md5sum of the bedset
+    """
+    return md5("".join(bedset).encode()).hexdigest()
