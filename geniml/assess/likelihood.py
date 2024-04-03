@@ -41,11 +41,11 @@ def calc_likelihood_hard(
     :param coverage_folder: path to a folder with genome coverage by tracks
     :param str name: suffix of model file name, which contains information
      about model type
-    :param int s_index: from which position in univers line take assess region
+    :param int s_index: from which position in universe line take assess region
      start position
-    :param int e_index: from which position in univers line take assess region
+    :param int e_index: from which position in universe line take assess region
      end position
-    :return float: likelihood of univers for given model
+    :return float: likelihood of universe for given model
     """
     current_chrom = ""
     missing_chrom = ""
@@ -178,9 +178,9 @@ def weigh_livelihood(start, end, model_process, model_cove, model_out, reverse):
     Calculate weighted likelihood of flexible part of the region
     :param int start: start of the region
     :param int end: end of the region
-    :param array model_process: model for analysed type of flexible region
+    :param array model_process: model for analyzed type of flexible region
     :param array model_cove: model for coverage
-    :param array model_out: model for flexible region that is not being analysed
+    :param array model_out: model for flexible region that is not being analyzed
     :param bool reverse: if model_process corespondents to end we have to reverse the weighs
     :return float: likelihood of flexible part of the region
     """

@@ -70,10 +70,10 @@ def two_region_intersection_diff(
     :param bool inside_d: whether there is still part of the region from universe to analyse
     :param bool inside_q: whether there is still part of the region from query to analyse
     :param int overlap: size of overlap
-    :param int start_d: start position of currently analysed universe region
-    :param int start_q: start position of currently analysed query region
-    :param bool waiting_d: whether waiting for the query to finish chrom
-    :param bool waiting_q: whether waiting for the universe to finish chrom
+    :param int start_d: start position of currently analyzed universe region
+    :param int start_q: start position of currently analyzed query region
+    :param bool waiting_d: whether waiting for the query to finish chromosome
+    :param bool waiting_q: whether waiting for the universe to finish chromosome
     """
     if waiting_q:
         only_in_d += region_d[1] - region_d[0]
