@@ -1,24 +1,20 @@
 import os
-import pickle
-from typing import Union
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
-import argparse
-import multiprocessing as mp
-import time
-from multiprocessing.queues import Queue
 
-import matplotlib.pyplot as plt
+import pickle
+from typing import Union, List, Tuple, Dict
+
+import multiprocessing as mp
+from multiprocessing.queues import Queue
 import numpy as np
-from gensim.models import Word2Vec
-from matplotlib.lines import Line2D
 
 from .utils import genome_distance, load_genomic_embeddings
 
 
 def get_topk_embed(
     i: int, K: int, embed: np.ndarray, dist: str = "cosine"
-) -> tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """Gets the nearest K embedding indexes to the i-th embedding.
 
     Args:
@@ -51,7 +47,7 @@ def get_topk_embed(
     return indexes, s
 
 
-def find_Kneighbors(region_array: list[tuple[str, int, int]], index: int, K: int) -> list[int]:
+def find_kneighbors(region_array: List[Tuple[str, int, int]], index: int, k: int) -> List[int]:
     """Finds the indexes of the K nearest regions of a query region on genome.
 
     region_array must be sorted, and all regions are on the same chromosome.
@@ -60,22 +56,22 @@ def find_Kneighbors(region_array: list[tuple[str, int, int]], index: int, K: int
         region_array (list[tuple[str, int, int]]): A list of (chromosome, start
             position, end position) tuples.
         index (int): The index of the query region.
-        K (int): Specifies the number of nearest neighbors of the query region.
+        k (int): Specifies the number of nearest neighbors of the query region.
 
     Returns:
         list[int]: A list of indexes of the K nearest neighbors in
             region_array.
     """
-    if len(region_array) < K:
-        K = len(region_array)
+    if len(region_array) < k:
+        k = len(region_array)
     qregion = region_array[index]
-    left_idx = max(index - K, 0)
-    right_idx = min(index + K, len(region_array) - 1)
+    left_idx = max(index - k, 0)
+    right_idx = min(index + k, len(region_array) - 1)
     rdist_arr = []
     for idx in range(left_idx, right_idx + 1):
         rdist_arr.append(genome_distance(qregion, region_array[idx]))
     rdist_arr = np.array(rdist_arr)
-    Kneighbors_idx = np.argsort(rdist_arr)[1 : K + 1]
+    Kneighbors_idx = np.argsort(rdist_arr)[1 : k + 1]
     Kneighbors_idx = Kneighbors_idx + left_idx
     return Kneighbors_idx
 
@@ -84,7 +80,7 @@ def calculate_overlap_bins(
     local_idx: int,
     K: int,
     chromo: str,
-    region_array: list[tuple[str, int, int]],
+    region_array: List[Tuple[str, int, int]],
     region2index: dict[str, int],
     embed_rep: np.ndarray,
     res: int = 10,
@@ -115,7 +111,7 @@ def calculate_overlap_bins(
     Returns:
         np.ndarray: An array of overlap ratios.
     """
-    Kindices = find_Kneighbors(region_array, local_idx, K)
+    Kindices = find_kneighbors(region_array, local_idx, K)
     if len(Kindices) == 0:
         return 0
     str_kregions = [
@@ -151,26 +147,21 @@ def calculate_overlap_bins(
 def cal_snpr(ratio_embed: np.ndarray, ratio_random: np.ndarray) -> np.ndarray:
     """Calculates SNPR values.
 
-    Args:
-        ratio_embed (np.ndarray): Overlap ratios for query embeddings.
-        ratio_random (np.ndarray): Overlap ratios for random embeddings.
+    :param ratio_embed: Overlap ratios for query embeddings.
+    :param ratio_random: Overlap ratios for random embeddings.
 
-    Returns:
-        np.ndarray: SNPR values.
+    :return: SNPR values.
     """
     res = np.log10((ratio_embed + 1.0e-10) / (ratio_random + 1.0e-10))
     res = np.maximum(res, 0)
     return res
 
 
-var_dict = {}
-
-
 def worker_func(
     i: int,
     K: int,
     chromo: str,
-    region_array: list[tuple[str, int, int]],
+    region_array: List[Tuple[str, int, int]],
     embed_type: str,
     resolution: int,
     dist: str,
@@ -190,6 +181,8 @@ def worker_func(
     Returns:
         np.ndarray: An array of overlap ratios.
     """
+    var_dict = {}
+
     if embed_type == "embed":
         embeds = var_dict["embed_rep"]
     elif embed_type == "random":
@@ -208,7 +201,7 @@ def worker_func(
 
 
 def init_worker(
-    embed_rep: np.ndarray, ref_embed: np.ndarray, region2index: dict[str, int]
+    embed_rep: np.ndarray, ref_embed: np.ndarray, region2index: Dict[str, int]
 ) -> None:
     """Initializes data used by workers.
 
@@ -217,6 +210,7 @@ def init_worker(
         ref_embed (np.ndarray): Random embeddings.
         region2index (dict[str, int]): A region to index dictionary.
     """
+    var_dict = {}
     var_dict["embed_rep"] = embed_rep
     var_dict["ref_embed"] = ref_embed
     var_dict["region2vec_index"] = region2index
@@ -231,7 +225,7 @@ def get_npt_score(
     resolution: int = 10,
     dist: str = "cosine",
     num_workers: int = 10,
-) -> dict[str, Union[int, np.ndarray, str]]:
+) -> Dict[str, Union[int, np.ndarray, str]]:
     """Runs the NPT on a mdoel.
 
     If num_samples > 0, then randomly sample num_samples regions proportional
@@ -386,7 +380,7 @@ def get_npt_score(
     return result
 
 
-def writer_multiprocessing(save_path: str, num: int, q: Queue) -> list[tuple[str, float]]:
+def writer_multiprocessing(save_path: str, num: int, q: Queue) -> List[Tuple[str, float]]:
     """Writes results from multiple processes to a list.
 
     Args:
@@ -412,7 +406,7 @@ def writer_multiprocessing(save_path: str, num: int, q: Queue) -> list[tuple[str
 
 
 def get_npt_score_batch(
-    batch: list[tuple[str, str]],
+    batch: List[Tuple[str, str]],
     K: int,
     num_samples: int = 100,
     num_workers: int = 10,
@@ -420,7 +414,7 @@ def get_npt_score_batch(
     resolution: int = 10,
     dist: str = "cosine",
     save_path: str = None,
-) -> list[dict[str, Union[int, np.ndarray, str]]]:
+) -> List[Dict[str, Union[int, np.ndarray, str]]]:
     """Runs the NPT on a batch of models.
 
     Args:
@@ -462,7 +456,7 @@ def get_npt_score_batch(
 
 
 def npt_eval(
-    batch: list[tuple[str, str]],
+    batch: List[Tuple[str, str]],
     K: int,
     num_samples: int = 100,
     num_workers: int = 10,
@@ -470,7 +464,7 @@ def npt_eval(
     resolution: int = 10,
     dist: str = "cosine",
     save_folder: str = None,
-) -> list[tuple[str, np.ndarray, int]]:
+) -> List[Tuple[str, np.ndarray, int]]:
     """Runs the NPT on a batch of models for multiple times.
 
     Args:
