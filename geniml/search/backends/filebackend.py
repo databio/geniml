@@ -3,11 +3,11 @@ from typing import Dict, List, Union
 
 from ... import _LOGGER
 import hnswlib
-
+DEP_HNSWLIB = True
 # try:
 #
 #
-#     DEP_HNSWLIB = True
+#
 # except ImportError:
 #     DEP_HNSWLIB = False
 #     _LOGGER.error(
