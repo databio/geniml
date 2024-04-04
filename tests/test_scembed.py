@@ -48,7 +48,9 @@ def test_model_training(universe_file: str, pbmc_data: sc.AnnData):
     # remove gensim logging
     logging.getLogger("gensim").setLevel(logging.ERROR)
     model = ScEmbed(tokenizer=ITTokenizer(universe_file))  # set to 1 for testing
-    model.train(pbmc_data, epochs=3)
+
+    dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
+    model.train(dataset, epochs=3, min_count=1)
 
     # keep only columns with values > 0
     pbmc_data = pbmc_data[:, pbmc_data.X.sum(axis=0) > 0]

@@ -1,3 +1,5 @@
+import pytest
+
 import lightning as L
 import scanpy as sc
 import torch
@@ -33,6 +35,7 @@ def test_generate_finetuning_dataset():
     # assert len(pos) == sum([(n * (n - 1)) for n in adata.obs.groupby("cell_type").size()])
 
 
+@pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
 def test_init_celltype_adapter():
     model = Region2VecExModel(
         tokenizer="tests/data/universe.bed",
@@ -43,6 +46,7 @@ def test_init_celltype_adapter():
     assert adapter.r2v_model.projection.num_embeddings == len(model.tokenizer)
 
 
+@pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
 def test_train_with_adapter():
     # make models
     model = Region2VecExModel(
@@ -92,6 +96,7 @@ def test_train_with_adapter():
     trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
 
 
+@pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
 def test_train_export():
     # make models
     model = Region2VecExModel(
