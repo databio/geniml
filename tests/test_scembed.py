@@ -56,11 +56,13 @@ def test_model_training(universe_file: str, pbmc_data: sc.AnnData):
     assert model.trained
 
 
-def test_model_train_and_export(universe_file: str, pbmc_data: sc.AnnData):
+def test_model_train_and_export(universe_file: str):
     # remove gensim logging
     logging.getLogger("gensim").setLevel(logging.ERROR)
     model = ScEmbed(tokenizer=ITTokenizer(universe_file))  # set to 1 for testing
-    model.train(pbmc_data, epochs=3)
+
+    dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
+    model.train(dataset, epochs=3, min_count=1)
 
     assert model.trained
 

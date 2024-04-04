@@ -42,7 +42,7 @@ def test_ittokenize_region_set(universe_bed_file: str):
     rs = RegionSet(bed_file)
 
     # tokenize
-    tokens = t.tokenize(rs)
+    tokens = t.tokenize(rs, ids_only=False)
     region_tokens = tokens.regions
 
     # filter out UNK tokens
@@ -63,7 +63,7 @@ def test_yield_tokens(universe_bed_file: str):
     rs = RegionSet(bed_file)
 
     # tokenize
-    tokens = t.tokenize(rs)
+    tokens = t.tokenize(rs, ids_only=False)
     region_tokens = tokens.regions
 
     # filter out UNK tokens
