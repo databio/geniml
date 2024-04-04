@@ -1,15 +1,14 @@
 import logging
 import os
 from glob import glob
-from typing import Tuple, List
+from typing import List, Tuple
 
 import scanpy as sc
-
 import torch
+from genimtools.utils import read_tokens_from_gtok
+from rich.progress import track
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
-from rich.progress import track
-from genimtools.utils import read_tokens_from_gtok
 
 from .const import DEFAULT_CHUNK_SIZE
 

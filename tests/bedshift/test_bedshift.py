@@ -1,8 +1,8 @@
 import os
+
 import pytest
 
-from geniml.bedshift import bedshift
-from geniml.bedshift import BedshiftYAMLHandler
+from geniml.bedshift import BedshiftYAMLHandler, bedshift
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
