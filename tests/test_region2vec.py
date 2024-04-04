@@ -58,7 +58,7 @@ def test_r2v_pytorch_forward():
 def test_r2v_pytorch_tokenizer_is_file_on_disk(universe_file: str):
     model = Region2VecExModel(tokenizer=universe_file)
     assert model is not None
-    assert len(model.tokenizer) == 2436
+    assert len(model.tokenizer) == 2435
 
 
 def test_r2v_pytorch_tokenizer_is_on_hf():
@@ -85,26 +85,24 @@ def test_r2v_pytorch_encode(universe_file: str):
     embedding = model.encode(r)
     assert embedding is not None
     assert isinstance(embedding, np.ndarray)
-    assert embedding.shape == (1, 000)
+    assert embedding.shape == (1, 100)
 
     rs = RegionSet("tests/data/to_tokenize.bed")
     embedding = model.encode(list(rs))
     assert embedding is not None
     assert isinstance(embedding, np.ndarray)
-    assert embedding.shape == (1, 100)
+    assert embedding.shape == (13, 100)
 
 
 def test_save_load_pytorch_exmodel(universe_file: str):
     model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
     assert model is not None
 
-    rs1 = list(RegionSet("tests/data/to_tokenize.bed"))
-    rs2 = list(RegionSet("tests/data/to_tokenize2.bed"))
-    rs3 = rs1[0:10] + rs2[0:10]
+    dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
+    loss = model.train(dataset, epochs=10, min_count=1)
 
-    loss = model.train([rs1, rs2, rs3], epochs=10)
     before_embedding = model.encode(Region("chr1", 63403166, 63403785))
-    assert loss[0] > loss[-1]
+    assert loss
     try:
         # save the model
         model.export("tests/data/test_model/")

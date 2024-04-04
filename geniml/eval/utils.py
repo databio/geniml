@@ -62,8 +62,8 @@ def get_bin_embeddings(universe_file: str, tokenized_files: list[str]) -> BaseEm
     vocab = []
     with open(universe_file, "r") as f:
         for line in f:
-            eles = line.strip().split("\t")
-            region = f"{eles[0]}:{eles[1]}-{eles[2]}"
+            elements = line.strip().split("\t")
+            region = f"{elements[0]}:{elements[1]}-{elements[2]}"
             vocab.append(region)
     vocab_dict = {v: i for i, v in enumerate(vocab)}
     print("vocab size is", len(vocab))
@@ -71,8 +71,8 @@ def get_bin_embeddings(universe_file: str, tokenized_files: list[str]) -> BaseEm
     for i, token_file in enumerate(tokenized_files):
         with open(token_file, "r") as f:
             for line in f:
-                eles = line.strip().split("\t")
-                region = f"{eles[0]}:{eles[1]}-{eles[2]}"
+                elements = line.strip().split("\t")
+                region = f"{elements[0]}:{elements[1]}-{elements[2]}"
                 if region in vocab_dict:
                     bin_embeds[vocab_dict[region]][i] = 1
     bin_embed_obj = BaseEmbeddings(bin_embeds, vocab)
@@ -180,15 +180,15 @@ def sort_key(x: str) -> Tuple[int, int]:
     Returns:
         tuple[int, int]: Chromosome in number and the start position.
     """
-    eles = x.split(":")
-    chr_idx = eles[0][3:]
+    elements = x.split(":")
+    chr_idx = elements[0][3:]
     try:
         idx = int(chr_idx)
     except ValueError:
         idx = 23
         for c in chr_idx:
             idx += ord(c)
-    start = int(eles[1].split("-")[0].strip())
+    start = int(elements[1].split("-")[0].strip())
     return idx, start
 
 
@@ -224,9 +224,9 @@ def write_vocab(vocab: List[str], file_name: str) -> None:
     """
     with open(file_name, "w") as f:
         for v in vocab:
-            eles = v.split(":")
-            chr = eles[0].strip()
-            s, e = eles[1].split("-")
+            elements = v.split(":")
+            chr = elements[0].strip()
+            s, e = elements[1].split("-")
             s = s.strip()
             e = e.strip()
             f.write(f"{chr}\t{s}\t{e}\n")
