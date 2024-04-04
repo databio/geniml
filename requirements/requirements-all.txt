@@ -6,6 +6,7 @@ genomicranges >= 0.4.1
 huggingface_hub
 logmuse
 matplotlib
+hnswlib
 numpy >= 1.24.0
 paramiko >= 3.0.0
 peppy>=0.40.1
