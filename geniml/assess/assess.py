@@ -204,7 +204,7 @@ def get_rbs_from_assessment_file(file, cs_each_file=False, flexible=False):
     else:
         df["f_t_u"] = df["median_dist_file_to_universe"]
         df["u_t_f"] = df["median_dist_universe_to_file"]
-    df["RBS"] = get_rbs(df["f_t_u"], df["u_t_t"])
+    df["RBS"] = get_rbs(df["f_t_u"], df["u_t_f"])
     if cs_each_file:
         return df
     else:
@@ -247,8 +247,8 @@ def get_f_10_score_from_assessment_file(file, f10_each_file=False):
     :param bool f10_each_file: if report F10 for each file, not average for the collection
     """
     df = pd.read_csv(file, index_col=(0))
-    r = df["A&U/A"]
-    p = df["A&U/U"]
+    r = df["universe&file"] / (df["universe&file"] + df["file/universe"])
+    p = df["universe&file"] / (df["universe&file"] + df["univers/file"])
     df["F_10"] = (1 + 10**2) * (p * r) / ((10**2 * p) + r)
     if f10_each_file:
         return df["F_10"]

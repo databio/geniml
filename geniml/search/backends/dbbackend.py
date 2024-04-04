@@ -7,8 +7,9 @@ import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
 
-from ...const import PKG_NAME
-from ..const import *
+from geniml.const import PKG_NAME
+from geniml.search.const import *
+
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
 

@@ -14,9 +14,7 @@ class TextEmbedder(ABC):
         """
         initiated by giving a model repository (on Hugging Face)
 
-        Parameters
-        ----------
-        model_name : a model repository (on Hugging Face)
+        :param model_name: a model repository (on Hugging Face)
         """
         raise NotImplementedError
 
@@ -25,12 +23,8 @@ class TextEmbedder(ABC):
         """
         Embed the input natural language string
 
-        Parameters
-        ----------
-        input_text : a natural language string to embed
+        :param input_text: a natural language string to embed
 
-        Returns
-        -------
-        The text embedding vector
+        :return: the text embedding vector
         """
         raise NotImplementedError

@@ -11,16 +11,14 @@ from .abstract import Query2Vec
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
-class Bed2Vec(Query2Vec):
+class BED2Vec(Query2Vec):
     """Embed a query region set into a vector"""
 
     def __init__(self, model: Union[str, Region2VecExModel]):
         """
         set the Region2VecExModel
 
-        Parameters
-        ----------
-        model : a Region2VecExModel or a model repository on Hugging Face
+        :param model: a Region2VecExModel or a model repository on Hugging Face
         """
         if isinstance(model, str):
             self.model = Region2VecExModel(model)
@@ -33,14 +31,11 @@ class Bed2Vec(Query2Vec):
 
     def forward(self, query: Union[str, RegionSet]) -> np.ndarray:
         """
+        Embed the query region set
 
-        Parameters
-        ----------
-        query : a RegionSet, or the path to a BED file in disk
+        :param query: a RegionSet, or the path to a BED file in disk
 
-        Returns
-        -------
-        the region set embedding
+        :return: the region set embedding
         """
         # if query is a BED file name, read it as a RegionSet class
         if isinstance(query, str):

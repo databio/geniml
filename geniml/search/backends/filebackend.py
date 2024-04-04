@@ -15,7 +15,8 @@ except ImportError:
 
 import numpy as np
 
-from ..const import *
+from geniml.search.const import *
+
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
 
