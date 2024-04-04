@@ -1,16 +1,11 @@
-import argparse
-import glob
-import multiprocessing as mp
-import os
 import pickle
-import time
-from typing import Union
+from typing import Union, List, Tuple, Dict
 
 import numpy as np
 from gensim.models import Word2Vec
 
 
-def genome_distance(u: tuple[int, int], v: tuple[int, int]) -> float:
+def genome_distance(u: Tuple[int, int], v: Tuple[int, int]) -> float:
     """Computes the genome distance between two regions.
 
     Assumes that the two regions, u and v, are on the same chromosome.
@@ -85,7 +80,7 @@ def get_bin_embeddings(universe_file: str, tokenized_files: list[str]) -> BaseEm
 
 
 def get_pca_embeddings(
-    bin_embed_obj: BaseEmbeddings, dim: int, kwargs: dict[str, Union[int, float]] = {}
+    bin_embed_obj: BaseEmbeddings, dim: int, kwargs: Dict[str, Union[int, float]] = {}
 ) -> BaseEmbeddings:
     """Gets PCA embeddings from binary embeddings.
 
@@ -106,7 +101,7 @@ def get_pca_embeddings(
 
 
 def get_umap_embeddings(
-    bin_embed_obj: BaseEmbeddings, dim: int, kwargs: dict[str, Union[int, float]] = {}
+    bin_embed_obj: BaseEmbeddings, dim: int, kwargs: Dict[str, Union[int, float]] = {}
 ) -> BaseEmbeddings:
     """Gets UMAP embeddings from binary embeddings.
 
@@ -137,7 +132,7 @@ def save_base_embeddings(base_embed_obj: BaseEmbeddings, file_name: str) -> None
         pickle.dump(base_embed_obj, f)
 
 
-def load_base_embeddings(path: str) -> tuple[np.ndarray, list[str]]:
+def load_base_embeddings(path: str) -> Tuple[np.ndarray, List[str]]:
     """Loads a BaseEmbeddings object.
 
     Args:
@@ -154,7 +149,7 @@ def load_base_embeddings(path: str) -> tuple[np.ndarray, list[str]]:
 
 def load_genomic_embeddings(
     model_path: str, embed_type: str = "region2vec"
-) -> tuple[np.ndarray, list[str]]:
+) -> Tuple[np.ndarray, List[str]]:
     """Loads genomic region embeddings based on the type.
 
     Args:
@@ -176,7 +171,7 @@ def load_genomic_embeddings(
         return embed_rep, regions_r2v
 
 
-def sort_key(x: str) -> tuple[int, int]:
+def sort_key(x: str) -> Tuple[int, int]:
     """Extracts chromosome in number and the start position of a region.
 
     Args:
@@ -197,7 +192,7 @@ def sort_key(x: str) -> tuple[int, int]:
     return idx, start
 
 
-def get_vocab(model_path: str, type: str = "base", ordered: bool = True) -> list[str]:
+def get_vocab(model_path: str, type: str = "base", ordered: bool = True) -> List[str]:
     """Gets vocab from a model.
 
     Args:
@@ -220,7 +215,7 @@ def get_vocab(model_path: str, type: str = "base", ordered: bool = True) -> list
     return regions_r2v
 
 
-def write_vocab(vocab: list[str], file_name: str) -> None:
+def write_vocab(vocab: List[str], file_name: str) -> None:
     """Writes a list of regions to a file.
 
     Args:

@@ -1,6 +1,7 @@
 import os
 from glob import glob
 from math import ceil
+from typing import List, Tuple
 
 import torch
 from torch.utils.data import Dataset
@@ -44,7 +45,7 @@ class AtacformerMLMDataset(Dataset):
     def __len__(self):
         return len(self.files)
 
-    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         This should return a tuple of (tokens, masked_tokens, mask_ids).
         """
@@ -72,8 +73,8 @@ class AtacformerMLMDataset(Dataset):
         return tokens, masked_tokens, mask_ids
 
     def collate_batch(
-        batch: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], padding_token: int
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        self, batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]], padding_token: int
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Collate function for the MLM dataset. This should take a batch of
         (tokens, masked_tokens, mask_ids) and return a tuple of (tokens, masked_tokens, mask_ids) that are padded
