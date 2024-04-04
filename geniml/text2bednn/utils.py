@@ -20,18 +20,14 @@ def arrays_to_torch_dataloader(
 ) -> DataLoader:
     """
     Based on https://stackoverflow.com/questions/44429199/how-to-load-a-list-of-numpy-arrays-to-pytorch-dataset-loader
-
     Store np.ndarray of X and Y into a torch.DataLoader
 
-    Args:
-        X: embedding vectors of input data (natural language embeddings)
-        Y: embedding vectors of output data (BED file embeddings)
-        target: vector of 1 and -1, indicating if each vector pair of (X, Y) are target pairs or not
-        batch_size: size of small batch
-        shuffle: shuffle dataset or not
-
-    Returns:
-
+    :param X: embedding vectors of input data (natural language embeddings)
+    :param Y: embedding vectors of output data (BED file embeddings)
+    :param target: vector of 1 and -1, indicating if each vector pair of (X, Y) are target pairs or not
+    :param batch_size: size of small batch
+    :param shuffle: shuffle dataset or not
+    :return: a Dataset for pytorch training in format of torch.DataLoader
     """
     tensor_X = torch.from_numpy(dtype_check(X))
     tensor_Y = torch.from_numpy(dtype_check(Y))
@@ -46,11 +42,9 @@ def dtype_check(vecs: np.ndarray) -> np.ndarray:
     Since the default float in np is float64, but in pytorch tensor it's float32,
     to avoid errors, the dtype will be switched
 
-    Args:
-        vecs:
+    :param vecs: input np.ndarray
 
-    Returns: np.ndarray with dtype of float32
-
+    :return: np.ndarray with dtype of float32
     """
     if not isinstance(vecs.dtype, type(np.dtype("float32"))):
         vecs = vecs.astype(np.float32)
@@ -71,17 +65,15 @@ def metadata_dict_from_csv(
     Read selected columns from a metadata csv and return metadata dictionary,
     can filter genomes with given list of genomes and the column name of genome
 
-    Args:
-        csv_path: path to the csv file that contain metadata
-        col_names: list of columns that contain informative metadata
-        file_key: name of column of file names
-        genomes: list of genomes
-        genomes_key: name of column of sample genomes
-        chunk_size: size of chunk to read when the csv file is large
-        series_key: name of column of series
+    :param csv_path: path to the csv file that contain metadata
+    :param col_names: set of csv columns that contain informative metadata
+    :param file_key: name of column of file names
+    :param genomes: set of genomes
+    :param genomes_key: name of column of sample genomes
+    :param series_key: name of column of series
+    :param chunk_size: size of chunk to read when the csv file is large
 
-    Returns: a dictionary that contains metadata,
-
+    :return: a metadata dictionary in this format:
     if series information is in the csv, the dictionary format will be:
     {
         <series>:[
@@ -105,8 +97,8 @@ def metadata_dict_from_csv(
         },
         ...
     }
-
     """
+
     # dictionary to store data
     output_dict = dict()
     # count number of series, files, and csv chunks

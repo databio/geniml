@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 from geniml.io import RegionSet
 from geniml.region2vec import Region2VecExModel
+from geniml.search import (BED2BEDSearchInterface, BED2Vec,
+                           Text2BEDSearchInterface, Text2Vec)
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.search.backends.filebackend import DEP_HNSWLIB
-from geniml.search.interfaces import BED2BEDSearchInterface, Text2BEDSearchInterface
-from geniml.search.query2vec import Bed2Vec, Text2Vec
 
 DATA_FOLDER_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data"
@@ -323,7 +323,7 @@ def test_HNSWBackend_save(filenames, hnswb, embeddings, temp_idx_path, temp_data
     reason="Only run when --huggingface is given",
 )
 def test_bed2vec(r2v_hf_repo, bed_folder):
-    bed2vec = Bed2Vec(r2v_hf_repo)
+    bed2vec = BED2Vec(r2v_hf_repo)
     for bed_name in os.listdir(bed_folder):
         assert bed2vec.forward(os.path.join(bed_folder, bed_name)).shape == (100,)
 
@@ -438,7 +438,7 @@ def test_bed2bed_search_interface(
     qd_search_backend = QdrantBackend(collection=collection)
     qd_search_backend.load(vectors=vecs, payloads=payloads)
 
-    bed2vec = Bed2Vec(r2v_hf_repo)
+    bed2vec = BED2Vec(r2v_hf_repo)
 
     # # construct a search interface
     db_interface = BED2BEDSearchInterface(qd_search_backend, bed2vec)

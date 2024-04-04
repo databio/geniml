@@ -299,13 +299,13 @@ class Region2VecExModel(ExModel):
         )
 
     def encode(
-        self, regions: Union[Region, List[Region]], pooling: POOLING_TYPES = None
+        self, regions: Union[Region, List[Region], RegionSet], pooling: POOLING_TYPES = None
     ) -> np.ndarray:
         """
         Get the vector for a region.
 
-        :param Region region: Region to get the vector for.
-        :param str pooling: Pooling type to use.
+        :param regions: Region to get the vector for.
+        :param pooling: Pooling type to use.
 
         :return np.ndarray: Vector for the region.
         """

@@ -104,13 +104,13 @@ def test_vec_pair(nl_payloads, bed_payloads, tmp_path_factory):
     nl_backend.load(vectors=np.array(nl_vecs), payloads=nl_payloads)
 
     # only target pairs
-    X, Y, target = vec_pairs(nl_backend, bed_backend, "name", "files")
+    X, Y, target = vec_pairs(nl_backend, bed_backend, "files", "name")
 
     assert X.shape[0] == 6
     assert Y.shape[0] == 6
 
     # target & non-target pairs
-    X, Y, target = vec_pairs(nl_backend, bed_backend, "name", "files", True, 1.0)
+    X, Y, target = vec_pairs(nl_backend, bed_backend, "files", "name", True, 1.0)
 
     assert X.shape[0] == 12
     assert Y.shape[0] == 12
