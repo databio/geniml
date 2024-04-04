@@ -1,2 +1,3 @@
 numba
-hnswlib
+hnswlib >= 0.8.0
+pickle

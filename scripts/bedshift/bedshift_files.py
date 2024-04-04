@@ -1,6 +1,6 @@
-import bedshift
 import os
 
+import bedshift
 
 datafolder = "."
 

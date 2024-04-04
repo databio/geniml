@@ -1,9 +1,10 @@
-import pytest
 import os
 
-from geniml.io.io import SNP, Maf, Region, RegionSet
-from geniml.io.exceptions import GenimlBaseError
 import genomicranges
+import pytest
+
+from geniml.io.exceptions import GenimlBaseError
+from geniml.io.io import SNP, Maf, Region, RegionSet
 
 DATA_TEST_FOLDER = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

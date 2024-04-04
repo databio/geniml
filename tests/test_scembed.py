@@ -4,12 +4,12 @@ import sys
 
 import pytest
 import scanpy as sc
-
-from tqdm import tqdm
 from genimtools.utils import write_tokens_to_gtok
+from tqdm import tqdm
+
 from geniml.region2vec.utils import Region2VecDataset
-from geniml.tokenization.main import ITTokenizer
 from geniml.scembed.main import ScEmbed
+from geniml.tokenization.main import ITTokenizer
 
 # add parent directory to path
 sys.path.append("../")
@@ -87,8 +87,8 @@ def test_pretrained_scembed_model(hf_model: str, pbmc_data: sc.AnnData):
 
 @pytest.mark.skip(reason="This is for my own testing")
 def test_end_to_end_training():
-    from umap import UMAP
     import matplotlib.pyplot as plt
+    from umap import UMAP
 
     data_path = os.path.expandvars("$HOME/Desktop/buenrostro2018.h5ad")
     tokens_path = os.path.expandvars("$HOME/Desktop/tokens")
