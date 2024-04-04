@@ -223,7 +223,7 @@ class Region2VecExModel(ExModel):
         save_checkpoint_path: str = None,
         gensim_params: dict = {},
         load_from_checkpoint: str = None,
-    ) -> np.ndarray:
+    ) -> bool:
         """
         Train the model.
 

@@ -39,8 +39,8 @@ def test_init_celltype_adapter():
     )
     adapter = CellTypeFineTuneAdapter(model)
     assert adapter is not None
-    assert isinstance(adapter.nn_model, Region2Vec)
-    assert adapter.nn_model.projection.num_embeddings == len(model.tokenizer)
+    assert isinstance(adapter.r2v_model, Region2Vec)
+    assert adapter.r2v_model.projection.num_embeddings == len(model.tokenizer)
 
 
 def test_train_with_adapter():
