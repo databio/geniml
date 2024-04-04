@@ -15,7 +15,7 @@ from ..io.utils import is_gzipped
 from .const import (
     BEDFILE_URL_PATTERN,
     BEDSET_URL_PATTERN,
-    DEFALUT_BUCKET_NAME,
+    DEFAULT_BUCKET_NAME,
     DEFAULT_BEDBASE_API,
     DEFAULT_BEDFILE_EXT,
     DEFAULT_BEDFILE_SUBFOLDER,
@@ -172,7 +172,7 @@ class BBClient(BedCacheManager):
     def add_bed_to_s3(
         self,
         identifier: str,
-        bucket: str = DEFALUT_BUCKET_NAME,
+        bucket: str = DEFAULT_BUCKET_NAME,
         endpoint_url: str = None,
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
@@ -209,7 +209,7 @@ class BBClient(BedCacheManager):
     def get_bed_from_s3(
         self,
         identifier: str,
-        bucket: str = DEFALUT_BUCKET_NAME,
+        bucket: str = DEFAULT_BUCKET_NAME,
         endpoint_url: str = None,
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,

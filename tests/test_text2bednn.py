@@ -43,7 +43,7 @@ def col_names():
 
 @pytest.fixture
 def nl_payloads():
-    """A list of mock payloads containing natural langauge metadata and matching BED files"""
+    """A list of mock payloads containing natural language metadata and matching BED files"""
     return [
         {"text": "heart muscle", "files": ["b1.bed", "b2.bed", "b3.bed"]},
         {"text": "ipf", "files": ["b1.bed", "b3.bed"]},

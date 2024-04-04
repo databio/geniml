@@ -228,7 +228,7 @@ def hard_tokenization_main(
 
     Args:
         src_folder (str): The folder where raw BED files reside.
-        dst_folder (str): The foder to store tokenized BED files.
+        dst_folder (str): The folder to store tokenized BED files.
         universe_file (str): The path to a universe file.
         fraction (float, optional): A parameter for bedtools.intersect.
             Defaults to 1e-9.
