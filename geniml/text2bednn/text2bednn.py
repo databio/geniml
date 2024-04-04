@@ -165,7 +165,7 @@ class Vec2VecFNN:
         margin: Union[float, None] = DEFAULT_MARGIN,
     ):
         """
-        Configures the model for training.
+        Configure the model for training. This includes setting the optimizer and loss function.
 
         :param optimizer: the name of optimizer
         :param loss: the name of loss function
@@ -394,14 +394,14 @@ class Vec2VecFNN:
         save_path: Union[str, None] = None,
         plot_file_name: Union[str, None] = DEFAULT_PLOT_FILE_NAME,
         title: Union[str, None] = DEFAULT_PLOT_TITLE,
-    ):
+    ) -> None:
         """
         Plot the training & validating loss of the most recent training
 
         :param save_path: the path of folder where image will be saved
         :param plot_file_name: the file name of the png file
         :param title: the title in the image
-        :return:
+        :return: None
         """
 
         epoch_range = range(1, len(self.most_recent_train["loss"]) + 1)

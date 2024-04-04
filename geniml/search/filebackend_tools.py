@@ -28,7 +28,7 @@ def merge_backends(
     backends_to_merge: List[HNSWBackend], local_index_path: str, dim: int
 ) -> HNSWBackend:
     """
-    merge multiple backends into one
+    Merge multiple backends into one
 
     :param backends_to_merge: a list of [HNSWBackend]
     :param local_index_path: the path to the local index file of the merged output HNSWBackend
@@ -68,13 +68,13 @@ def sample_non_target_vec(
     :param max_id: maximum id = total number of vectors - 1
     :param matching_ids: ids of matching vectors (target pairs)
     :param size: number of vectors to sample
-
     :return: a list of ids in the backend.
     """
 
     # sample range
     if (size + len(matching_ids)) > max_id:
-        _LOGGER.error("IndexError: Sample size + matching size should below the maximum ID")
+        # _LOGGER.error("IndexError: Sample size + matching size should below the maximum ID")
+        raise IndexError("Sample size + matching size should below the maximum ID")
 
     full_range = np.arange(0, max_id)
 
@@ -88,26 +88,26 @@ def sample_non_target_vec(
 
 def reverse_payload(payload: Dict[np.int64, Dict], target_key: str) -> Dict[str, np.int64]:
     """
+    Reverse the payload dictionary of a HNSWBackend, in this format: {<store id>: <metadata dictionary of that vector>}
 
     :param payload: payload dictionary of a HNSWBackend, in this format:
-        {
-            <store id>: <metadata dictionary of that vector>,
-            ...
-        }
+            {
+                <store id>: <metadata dictionary of that vector>,
+                ...
+            }
     :param target_key: a key in metadata dictionary
-    For example, if the payload dictionary is:
-        {
-           1: {
-               "name": "A0001.bed",
-               "summary": <summary>,
-               ...
-           }
-        }
-    if target_key is "name", the output will be:
-        {
-            "A0001.bed": 1,
-        }
-
+            For example, if the payload dictionary is:
+                {
+                   1: {
+                       "name": "A0001.bed",
+                       "summary": <summary>,
+                       ...
+                   }
+                }
+            if target_key is "name", the output will be:
+                {
+                    "A0001.bed": 1,
+                }
 
     :return: the reversal payload dictionary
     """
