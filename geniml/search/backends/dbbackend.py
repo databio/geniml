@@ -2,13 +2,18 @@ import logging
 import os
 from typing import Dict, List, Union
 
-import logmuse
 import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
 
 from geniml.const import PKG_NAME
-from geniml.search.const import *
+from geniml.search.const import (
+    DEFAULT_COLLECTION_NAME,
+    DEFAULT_QDRANT_CONFIG,
+    DEFAULT_QDRANT_HOST,
+    DEFAULT_QDRANT_PORT,
+    DEFAULT_QUANTIZATION_CONFIG,
+)
 
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
@@ -34,6 +39,9 @@ class QdrantBackend(EmSearchBackend):
 
         :param config: the vector parameter
         :param collection: name of collection
+        :param qdrant_host: host of qdrant server
+        :param qdrant_port: port of qdrant server
+        :param qdrant_api_key: api key
         """
         super().__init__()
         self.collection = collection
@@ -144,9 +152,7 @@ class QdrantBackend(EmSearchBackend):
         """
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 
-    def retrieve_info(
-        self, ids: Union[List[int], int], with_vec: bool = False
-    ) -> Union[
+    def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
         Dict[str, Union[int, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, List[float], Dict[str, str]]]],
     ]:

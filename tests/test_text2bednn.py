@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pytest
+
 from geniml.search import vec_pairs
 from geniml.search.backends import HNSWBackend
 from geniml.text2bednn.text2bednn import Vec2VecFNN

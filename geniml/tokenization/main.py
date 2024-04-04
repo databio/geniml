@@ -9,8 +9,14 @@ import numpy as np
 import scanpy as sc
 from genimtools.tokenizers import (
     Region as GRegion,
-    TreeTokenizer as GTreeTokenizer,
+)
+from genimtools.tokenizers import (
     TokenizedRegionSet as GTokenizedRegionSet,
+)
+from genimtools.tokenizers import (
+    TreeTokenizer as GTreeTokenizer,
+)
+from genimtools.tokenizers import (
     Universe as GUniverse,
 )
 from huggingface_hub import hf_hub_download
@@ -18,10 +24,10 @@ from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
 
-from .const import UNIVERSE_FILE_NAME, CHR_KEY, START_KEY, END_KEY
 from ..io import Region, RegionSet
+from .const import CHR_KEY, END_KEY, START_KEY, UNIVERSE_FILE_NAME
 from .hard_tokenization_batch import main as hard_tokenization
-from .utils import time_str, Timer
+from .utils import Timer, time_str
 
 
 class Tokenizer(ABC):

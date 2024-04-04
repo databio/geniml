@@ -1,6 +1,8 @@
 # %%
 import os
+
 import scanpy as sc
+
 from geniml.scembed import ScEmbed
 
 # %%

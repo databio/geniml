@@ -1,11 +1,10 @@
 import contextlib
 import random
 from random import shuffle
-from typing import Tuple, List
+from typing import List, Tuple
 
-import torch
 import scanpy as sc
-
+import torch
 from rich.progress import track
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset

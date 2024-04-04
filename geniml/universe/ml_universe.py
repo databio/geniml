@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import importlib.util
 import os
 from functools import cmp_to_key
 
@@ -10,9 +11,6 @@ from geniml.likelihood.build_model import ModelLH
 
 from ..utils import natural_chr_sort, read_chromosome_from_bw, timer_func
 from .utils import find_full, predictions_to_bed
-
-
-import importlib.util
 
 package_name = "numba"
 

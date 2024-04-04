@@ -1,13 +1,13 @@
 import os
-
-import genomicranges
-import pytest
 from unittest.mock import Mock
-from geniml.bbclient import BBClient
-from geniml.io import BedSet, RegionSet
 
 import boto3
 import botocore
+import genomicranges
+import pytest
+
+from geniml.bbclient import BBClient
+from geniml.io import BedSet, RegionSet
 
 DATA_TEST_FOLDER = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
