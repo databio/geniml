@@ -15,7 +15,7 @@ from .utils import check_if_uni_flexible, check_if_uni_sorted, prep_data, proces
 def flexible_distance_between_two_regions(region, query):
     """Calculate distance between region and flexible region from flexible universe
     :param [int, int] region: region from flexible universe
-    :param int query: analysed region
+    :param int query: analyzed region
     :return int: distance
     """
     if region[0] <= query <= region[1]:
@@ -40,8 +40,8 @@ def distance_to_closest_region(
     Calculate distance from given peak to the closest region in database
     :param file db: database file
     :param list db_queue: queue of three last positions in database
-    :param i: analysed position from the query
-    :param str current_chrom: current analysed chromosome from query
+    :param i: analyzed position from the query
+    :param str current_chrom: current analyzed chromosome from query
     :param list unused_db: list of positions from universe that were not compared to query
     :param list pos_index: which indexes from universe region use to calculate distance
     :param bool flexible: whether the universe if flexible
@@ -90,7 +90,7 @@ def read_in_new_universe_regions(
     Read in new universe regions closest to the peak
     :param file db: universe file
     :param str q_chrom: new peak's chromosome
-    :param str current_chrom: chromosome that was analysed so far
+    :param str current_chrom: chromosome that was analyzed so far
     :param list unused_db: list of positions from universe that were not compared to query
     :param list db_queue: que of three last positions in universe
     :param bool waiting: whether iterating through file, without calculating

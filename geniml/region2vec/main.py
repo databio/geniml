@@ -4,34 +4,31 @@ from typing import List, Union
 
 import numpy as np
 import torch
-
-from rich.progress import track
 from huggingface_hub import hf_hub_download
+from rich.progress import track
 
-from ..models import ExModel
 from ..io import Region, RegionSet
+from ..models import ExModel
 from ..tokenization.main import ITTokenizer, Tokenizer
-
+from .const import (
+    CONFIG_FILE_NAME,
+    DEFAULT_EMBEDDING_DIM,
+    DEFAULT_EPOCHS,
+    DEFAULT_MIN_COUNT,
+    DEFAULT_WINDOW_SIZE,
+    MODEL_FILE_NAME,
+    MODULE_NAME,
+    POOLING_METHOD_KEY,
+    POOLING_TYPES,
+    UNIVERSE_FILE_NAME,
+)
 from .models import Region2Vec
 from .utils import (
     Region2VecDataset,
-    train_region2vec_model,
     export_region2vec_model,
     load_local_region2vec_model,
+    train_region2vec_model,
 )
-from .const import (
-    MODULE_NAME,
-    DEFAULT_WINDOW_SIZE,
-    DEFAULT_EMBEDDING_DIM,
-    DEFAULT_MIN_COUNT,
-    DEFAULT_EPOCHS,
-    UNIVERSE_FILE_NAME,
-    MODEL_FILE_NAME,
-    CONFIG_FILE_NAME,
-    POOLING_TYPES,
-    POOLING_METHOD_KEY,
-)
-
 
 _GENSIM_LOGGER = getLogger("gensim")
 _LOGGER = getLogger(MODULE_NAME)
@@ -226,7 +223,7 @@ class Region2VecExModel(ExModel):
         save_checkpoint_path: str = None,
         gensim_params: dict = {},
         load_from_checkpoint: str = None,
-    ) -> np.ndarray:
+    ) -> bool:
         """
         Train the model.
 
@@ -299,13 +296,13 @@ class Region2VecExModel(ExModel):
         )
 
     def encode(
-        self, regions: Union[Region, List[Region]], pooling: POOLING_TYPES = None
+        self, regions: Union[Region, List[Region], RegionSet], pooling: POOLING_TYPES = None
     ) -> np.ndarray:
         """
         Get the vector for a region.
 
-        :param Region region: Region to get the vector for.
-        :param str pooling: Pooling type to use.
+        :param regions: Region to get the vector for.
+        :param pooling: Pooling type to use.
 
         :return np.ndarray: Vector for the region.
         """

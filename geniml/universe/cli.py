@@ -31,7 +31,7 @@ def build_subparser_cc(parser):
     )
     parser.add_argument(
         "--filter-size",
-        help="minimal siez of the region in the universe",
+        help="minimal size of the region in the universe",
         default=0,
         type=int,
     )

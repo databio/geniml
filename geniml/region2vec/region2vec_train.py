@@ -165,9 +165,9 @@ def main(args: argparse.Namespace) -> None:
     with open(os.path.join(model_dir, "loss_all.pickle"), "wb") as f:
         pickle.dump(loss_all, f)
 
-    elasped_time = run_timer.t()
+    elapsed_time = run_timer.t()
     cur_time = datetime.datetime.now().strftime("%x-%X")
-    utils.log(f"[{cur_time}] Training finished, training Time {utils.time_str(elasped_time)}")
+    utils.log(f"[{cur_time}] Training finished, training Time {utils.time_str(elapsed_time)}")
     # remove intermediate datasets
     os.system(f"rm -rf {data_folder}")  # remove the generated shuffled datasets
 

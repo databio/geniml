@@ -4,7 +4,9 @@ import shutil
 from logging import getLogger
 from typing import List, NoReturn, Union
 
+import boto3
 import requests
+from botocore.exceptions import ClientError
 from ubiquerg import is_url
 
 from .._version import __version__
@@ -13,15 +15,17 @@ from ..io.utils import is_gzipped
 from .const import (
     BEDFILE_URL_PATTERN,
     BEDSET_URL_PATTERN,
+    DEFAULT_BUCKET_NAME,
     DEFAULT_BEDBASE_API,
     DEFAULT_BEDFILE_EXT,
     DEFAULT_BEDFILE_SUBFOLDER,
     DEFAULT_BEDSET_EXT,
     DEFAULT_BEDSET_SUBFOLDER,
+    DEFAULT_BUCKET_FOLDER,
     DEFAULT_CACHE_FOLDER,
     MODULE_NAME,
 )
-from .utils import BedCacheManager, get_bbclient_path_folder
+from .utils import BedCacheManager, get_abs_path
 
 _LOGGER = getLogger(MODULE_NAME)
 
@@ -29,7 +33,7 @@ _LOGGER = getLogger(MODULE_NAME)
 class BBClient(BedCacheManager):
     def __init__(
         self,
-        cache_folder: str = DEFAULT_CACHE_FOLDER,
+        cache_folder: Union[str, os.PathLike] = DEFAULT_CACHE_FOLDER,
         bedbase_api: str = DEFAULT_BEDBASE_API,
     ):
         """
@@ -39,15 +43,16 @@ class BBClient(BedCacheManager):
         if not given it will be the environment variable `BBCLIENT_CACHE`
         :param bedbase_api: url to bedbase
         """
-        # get default cache folder from environment variable set by user
-        super().__init__(get_bbclient_path_folder(cache_folder))
+        cache_folder = get_abs_path(cache_folder)
+        super().__init__(cache_folder)
+
         self.bedbase_api = bedbase_api
 
     def load_bedset(self, bedset_id: str) -> BedSet:
         """
-        Loads a BED set from cache, or downloads and caches it plus BED files in it if it doesn't exist
+        Load a BEDset from cache, or download and add it to the cache with its BED files
 
-        :param bedset_id: unique identifier of BED set
+        :param BedSet: BedSet object
         """
 
         file_path = self._bedset_path(bedset_id)
@@ -55,7 +60,7 @@ class BBClient(BedCacheManager):
         if os.path.exists(file_path):
             _LOGGER.info(f"BED set {bedset_id} already exists in cache.")
             with open(file_path, "r") as file:
-                extracted_data = file.readlines()
+                extracted_data = file.read().splitlines()
         else:
             extracted_data = self._download_bedset_data(bedset_id)
             # write the identifiers of BED files in the BedSet to a local .txt file
@@ -79,8 +84,8 @@ class BBClient(BedCacheManager):
         """
         bedset_url = BEDSET_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedset_id=bedset_id)
         response = requests.get(bedset_url)
-        data = response.json()
-        extracted_data = [entry.get("record_identifier") for entry in data["bedfile_metadata"]]
+        data = response.json()["results"]
+        extracted_data = [entry.get("id") for entry in data]
 
         return extracted_data
 
@@ -89,6 +94,7 @@ class BBClient(BedCacheManager):
         Loads a BED file from cache, or downloads and caches it if it doesn't exist
 
         :param bed_id: unique identifier of a BED file
+        :return: the RegionSet object
         """
         file_path = self._bedfile_path(bed_id)
 
@@ -130,8 +136,8 @@ class BBClient(BedCacheManager):
         """
         Add a BED file to the cache
 
-        :param bedfile: a RegionSet class or a path to a BED file to be added to cache
-        :return: the identifier if the BedFile object
+        :param bedfile: a RegionSet object or a path or url to the BED file
+        :return: the RegionSet identifier
         """
         if isinstance(bedfile, str):
             bedfile = RegionSet(bedfile)
@@ -163,12 +169,96 @@ class BBClient(BedCacheManager):
 
         return bedfile_id
 
+    def add_bed_to_s3(
+        self,
+        identifier: str,
+        bucket: str = DEFAULT_BUCKET_NAME,
+        endpoint_url: str = None,
+        aws_access_key_id: str = None,
+        aws_secret_access_key: str = None,
+        s3_path: str = DEFAULT_BUCKET_FOLDER,
+    ) -> str:
+        """
+        Add a cached BED file to S3
+
+        :param identifier: the unique identifier of the BED file
+        :param bucket: the name of the bucket
+        :param endpoint_url: the URL of the S3 endpoint [Default: set up by the environment vars]
+        :param aws_access_key_id: the access key of the AWS account [Default: set up by the environment vars]
+        :param aws_secret_access_key: the secret access key of the AWS account [Default: set up by the environment vars]
+        :param s3_path: the path on S3
+
+        :return: full path on S3
+        """
+        s3_client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+        local_file_path = self.seek(identifier)
+        bed_file_name = os.path.basename(local_file_path)
+        s3_bed_path = os.path.join(identifier[0], identifier[1], bed_file_name)
+        if s3_path:
+            s3_bed_path = os.path.join(s3_path, s3_bed_path)
+
+        s3_client.upload_file(local_file_path, bucket, s3_bed_path)
+        _LOGGER.info(f"Project was uploaded successfully to s3://{bucket}/{s3_bed_path}")
+        return s3_bed_path
+
+    def get_bed_from_s3(
+        self,
+        identifier: str,
+        bucket: str = DEFAULT_BUCKET_NAME,
+        endpoint_url: str = None,
+        aws_access_key_id: str = None,
+        aws_secret_access_key: str = None,
+        s3_path: str = DEFAULT_BUCKET_FOLDER,
+    ) -> str:
+        """
+        Get a cached BED file from S3 and cache it locally
+
+        :param identifier: the unique identifier of the BED file
+        :param bucket: the name of the bucket
+        :param endpoint_url: the URL of the S3 endpoint [Default: set up by the environment vars]
+        :param aws_access_key_id: the access key of the AWS account [Default: set up by the environment vars]
+        :param aws_secret_access_key: the secret access key of the AWS account [Default: set up by the environment vars]
+        :param s3_path: the path on S3
+
+        :return: bed file id
+        :raise FileNotFoundError: if the identifier does not exist in cache
+        """
+        s3_bed_path = os.path.join(
+            identifier[0], identifier[1], f"{identifier}{DEFAULT_BEDFILE_EXT}"
+        )
+        if s3_path:
+            s3_bed_path = os.path.join(s3_path, s3_bed_path)
+
+        s3_client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+        try:
+            s3_client.download_file(
+                bucket, s3_bed_path, self._bedfile_path(identifier, create=True)
+            )
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                raise FileNotFoundError(f"{identifier} does not exist in S3.")
+            else:
+                raise e
+
+        return identifier
+
     def seek(self, identifier: str) -> str:
         """
         Get local path to BED file or BED set with specific identifier
 
         :param identifier: the unique identifier
         :return: the local path of the file
+        :raise FileNotFoundError: if the identifier does not exist in cache
         """
 
         # check if any BED set has that identifier
