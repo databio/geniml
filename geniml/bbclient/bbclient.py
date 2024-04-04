@@ -3,10 +3,10 @@ import os
 import shutil
 from logging import getLogger
 from typing import List, NoReturn, Union
-import boto3
-from botocore.exceptions import ClientError
 
+import boto3
 import requests
+from botocore.exceptions import ClientError
 from ubiquerg import is_url
 
 from .._version import __version__
@@ -15,15 +15,15 @@ from ..io.utils import is_gzipped
 from .const import (
     BEDFILE_URL_PATTERN,
     BEDSET_URL_PATTERN,
+    DEFALUT_BUCKET_NAME,
     DEFAULT_BEDBASE_API,
     DEFAULT_BEDFILE_EXT,
     DEFAULT_BEDFILE_SUBFOLDER,
     DEFAULT_BEDSET_EXT,
     DEFAULT_BEDSET_SUBFOLDER,
+    DEFAULT_BUCKET_FOLDER,
     DEFAULT_CACHE_FOLDER,
     MODULE_NAME,
-    DEFAULT_BUCKET_FOLDER,
-    DEFALUT_BUCKET_NAME,
 )
 from .utils import BedCacheManager, get_abs_path
 

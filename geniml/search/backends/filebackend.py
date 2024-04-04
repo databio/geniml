@@ -15,7 +15,13 @@ except ImportError:
 
 import numpy as np
 
-from geniml.search.const import *
+from geniml.search.const import (
+    DEFAULT_DIM,
+    DEFAULT_EF,
+    DEFAULT_HNSW_SPACE,
+    DEFAULT_INDEX_PATH,
+    DEFAULT_M,
+)
 
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
@@ -35,7 +41,7 @@ else:
         def __init__(
             self,
             local_index_path: str = DEFAULT_INDEX_PATH,
-            payloads: Dict = {},
+            payloads: dict = {},
             space: str = DEFAULT_HNSW_SPACE,
             dim: int = DEFAULT_DIM,
             ef: int = DEFAULT_EF,
@@ -119,7 +125,6 @@ else:
             offset: int = 0,
         ) -> Union[
             List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
-            # List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
             List[List[Dict[str, Union[int, float, Dict[str, str], np.ndarray]]]],
         ]:
             """
@@ -172,9 +177,7 @@ else:
         def __len__(self) -> int:
             return self.idx.element_count
 
-        def retrieve_info(
-            self, ids: Union[List[int], int], with_vec: bool = False
-        ) -> Union[
+        def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
             Dict[str, Union[int, List[float], Dict[str, str]]],
             List[Dict[str, Union[int, List[float], Dict[str, str]]]],
         ]:

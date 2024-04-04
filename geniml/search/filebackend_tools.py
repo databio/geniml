@@ -4,8 +4,7 @@ from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
 
-from geniml.const import *
-
+from ..const import PKG_NAME
 from .backends.filebackend import HNSWBackend
 
 _LOGGER = logging.getLogger(PKG_NAME)
