@@ -53,7 +53,7 @@ def generate_tokens(
     in token_folder.
 
     Args:
-        raw_data_folder (str): The foder where raw BED files reside.
+        raw_data_folder (str): The folder where raw BED files reside.
         token_folder (str): The folder to store tokenized BED files.
         universe (str): The path to a universe file.
         file_list (str): The path to a file which contains selected BED files per row.

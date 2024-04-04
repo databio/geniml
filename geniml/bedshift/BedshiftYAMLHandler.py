@@ -1,7 +1,8 @@
+import logging
 import os
 import sys
+
 import yaml
-import logging
 
 
 class BedshiftYAMLHandler(object):

@@ -16,7 +16,7 @@ def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=No
     """
     Save HMM prediction into a file
     :param ndarray states: result of HMM prediction
-    :param str chrom: which chromosome is being analysed
+    :param str chrom: which chromosome is being analyzed
     :param str bedname: path to the output file
     :param bool save_max_cove: whether to save the maximum peak coverage to output
      file, can result in nonstandard bed file
@@ -79,7 +79,7 @@ def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=No
 def find_full_full_pos(seq, gap_size=1000, area_size=500):
     """Look for nonzero positions in coverage matrix, when most of the positions are zero
     :param ndarray seq: vector with information about non-zero positions
-    :param int gap_size: size of minium gap between non-zero positions that are separated
+    :param int gap_size: size of minimum gap between non-zero positions that are separated
     :param int area_size: size of the area around non-zero positions to be included in the result
     :return list: list of starts of non-zero regions and list of ends of non-zero regions
     """
@@ -101,7 +101,7 @@ def find_full_full_pos(seq, gap_size=1000, area_size=500):
 def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
     """Look for nonzero positions in coverage matrix, when most of the positions are nonzero
     :param ndarray seq: vector with information about non-zero positions
-    :param int gap_size: size of minium gap between non-zero positions that are separated
+    :param int gap_size: size of minimum gap between non-zero positions that are separated
     :param int area_size: size of the area around non-zero positions to be included in the result
     :return list: list of starts of non-zero regions and list of ends of non-zero regions
     """

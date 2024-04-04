@@ -1,5 +1,5 @@
 import os
-from typing import Union, List
+from typing import List, Union
 
 import torch
 import torch.nn as nn
@@ -9,16 +9,16 @@ from yaml import safe_dump, safe_load
 from ..models.main import ExModel
 from ..tokenization.main import ITTokenizer
 from .const import (
-    POOLING_TYPES,
-    POOLING_METHOD_KEY,
-    D_MODEL_KEY,
-    VOCAB_SIZE_KEY,
-    NUM_LAYERS_KEY,
-    NHEAD_KEY,
-    DEFAULT_EMBEDDING_DIM,
     CONFIG_FILE_NAME,
+    D_MODEL_KEY,
+    DEFAULT_EMBEDDING_DIM,
     MODEL_FILE_NAME,
+    NHEAD_KEY,
+    NUM_LAYERS_KEY,
+    POOLING_METHOD_KEY,
+    POOLING_TYPES,
     UNIVERSE_FILE_NAME,
+    VOCAB_SIZE_KEY,
 )
 
 

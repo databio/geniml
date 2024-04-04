@@ -1,2 +1,2 @@
 from .io import *
-from .io import RegionSet, BedSet
+from .io import BedSet, RegionSet

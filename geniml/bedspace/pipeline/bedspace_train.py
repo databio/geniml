@@ -1,7 +1,6 @@
 """
-bedfile embeding pipeline (train)
+bedfile embedding pipeline (train)
 """
-
 
 import argparse
 import itertools

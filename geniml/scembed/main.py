@@ -8,26 +8,25 @@ import torch
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
+from ..region2vec.const import (
+    CONFIG_FILE_NAME,
+    DEFAULT_EMBEDDING_DIM,
+    DEFAULT_EPOCHS,
+    DEFAULT_MIN_COUNT,
+    DEFAULT_WINDOW_SIZE,
+    MODEL_FILE_NAME,
+    POOLING_METHOD_KEY,
+    POOLING_TYPES,
+    UNIVERSE_FILE_NAME,
+)
+from ..region2vec.main import Region2Vec
 from ..region2vec.utils import (
+    Region2VecDataset,
     export_region2vec_model,
     load_local_region2vec_model,
     train_region2vec_model,
 )
-from ..region2vec.main import Region2Vec
 from ..tokenization import ITTokenizer, Tokenizer
-from ..region2vec.const import (
-    POOLING_TYPES,
-    DEFAULT_EMBEDDING_DIM,
-    DEFAULT_WINDOW_SIZE,
-    DEFAULT_MIN_COUNT,
-    DEFAULT_EPOCHS,
-    MODEL_FILE_NAME,
-    UNIVERSE_FILE_NAME,
-    CONFIG_FILE_NAME,
-    POOLING_METHOD_KEY,
-)
-from ..region2vec.utils import Region2VecDataset
-
 from .const import MODULE_NAME
 
 _GENSIM_LOGGER = getLogger("gensim")
