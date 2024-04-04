@@ -5,6 +5,7 @@ on:
     branches: [master, dev]
 
 jobs:
+
   pytest:
     runs-on: ${{ matrix.os }}
     strategy:
