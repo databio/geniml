@@ -150,7 +150,7 @@ class TestS3Caching:
         assert download_mock.called
 
 
-# TODO: rewrite it so that it mokes the requests
+# TODO: rewrite it so that it makes the requests
 # @pytest.mark.bedbase
 @pytest.mark.skipif(
     "not config.getoption('--bedbase')",
