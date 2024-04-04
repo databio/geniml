@@ -1,14 +1,14 @@
 import gzip
-import os
-from typing import List, Union, NoReturn
-from ubiquerg import is_url
 import logging
+import os
+from hashlib import md5
+from typing import List, NoReturn, Union
 
+import genomicranges
 import numpy as np
 import pandas as pd
-import genomicranges
 from iranges import IRanges
-from hashlib import md5
+from ubiquerg import is_url
 
 from .const import (
     MAF_CENTER_COL_NAME,
@@ -21,8 +21,8 @@ from .const import (
     MAF_START_COL_NAME,
     MAF_STRAND_COL_NAME,
 )
-from .utils import extract_maf_col_positions, is_gzipped, read_bedset_file, compute_md5sum_bedset
 from .exceptions import BackedFileNotAvailableError, BEDFileReadError
+from .utils import compute_md5sum_bedset, extract_maf_col_positions, is_gzipped, read_bedset_file
 
 _LOGGER = logging.getLogger("bbclient")
 

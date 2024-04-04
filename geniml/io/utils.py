@@ -1,12 +1,12 @@
 import gzip
 import os
-from typing import Dict, List, Union
 from hashlib import md5
-
+from typing import Dict, List, Union
 
 from .const import (
-    MAF_CHROMOSOME_COL_NAME,
     MAF_CENTER_COL_NAME,
+    MAF_CHROMOSOME_COL_NAME,
+    MAF_COLUMN,
     MAF_END_COL_NAME,
     MAF_ENTREZ_GENE_ID_COL_NAME,
     MAF_FILE_DELIM,
@@ -14,7 +14,6 @@ from .const import (
     MAF_NCBI_BUILD_COL_NAME,
     MAF_START_COL_NAME,
     MAF_STRAND_COL_NAME,
-    MAF_COLUMN,
 )
 
 

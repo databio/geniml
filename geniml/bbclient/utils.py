@@ -1,8 +1,8 @@
 import gzip
 import os
 from io import BytesIO
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 import genomicranges
 import pandas as pd

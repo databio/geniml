@@ -1,5 +1,7 @@
 import os
+
 import scanpy as sc
+
 from geniml.io import RegionSet
 from geniml.region2vec import Region2VecExModel
 
