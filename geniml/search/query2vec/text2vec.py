@@ -41,7 +41,7 @@ class Text2Vec(Query2Vec):
 
     def forward(self, query: str) -> np.ndarray:
         """
-        Embed the query natural langauge string
+        Embed the query natural language string
 
         :param query: a natural language string
 

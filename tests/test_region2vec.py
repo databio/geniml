@@ -124,6 +124,6 @@ def test_save_load_pytorch_exmodel(universe_file: str):
             os.rmdir("tests/data/test_model/")
         except Exception as e:
             # just try to remove it, if it doesn't work, then pass, means something
-            # else wrong occured up the stack
+            # else wrong occurred up the stack
             print(e)
             pass

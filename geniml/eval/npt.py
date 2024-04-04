@@ -89,8 +89,8 @@ def calculate_overlap_bins(
 ) -> np.ndarray:
     """Calculates the overlap ratios for a region.
 
-    Calculates the overlap ratios for a region between its K-nearest neighor
-    set obtained using genome distance and its K-nearest neighor set obtained
+    Calculates the overlap ratios for a region between its K-nearest neighbor
+    set obtained using genome distance and its K-nearest neighbor set obtained
     using embedding distance. If res < K, then calculates ratios for size
     res*1, res*2, ..., min(res*n, K).
 
@@ -105,7 +105,7 @@ def calculate_overlap_bins(
         res (int, optional): Resolution. Size of neighborhood set. Defaults to
             10.
         dist (str, optional): Distance function. Defaults to "cosine".
-        same_chromo (bool, optional): Whether to find nearest neighors on the
+        same_chromo (bool, optional): Whether to find nearest neighbors on the
             same chromosome in the embedding space. Defaults to True.
 
     Returns:
@@ -226,7 +226,7 @@ def get_npt_score(
     dist: str = "cosine",
     num_workers: int = 10,
 ) -> Dict[str, Union[int, np.ndarray, str]]:
-    """Runs the NPT on a mdoel.
+    """Runs the NPT on a model.
 
     If num_samples > 0, then randomly sample num_samples regions proportional
     from each chromosome. If num_samples == 0, all regions are used in the
@@ -483,7 +483,7 @@ def npt_eval(
 
     Returns:
         list[tuple[str, np.ndarray, int]]: A list of (model path, snprs from
-            num_runs, resoultion) tuples.
+            num_runs, resolution) tuples.
     """
     results_seeds = []
     assert resolution <= K, "resolution <= K"

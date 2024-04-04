@@ -29,7 +29,7 @@ class Vec2Vec(Sequential):
         # check if number of layers match length of num_units
         if len(num_units) != 1 + num_extra_hidden_layers:
             raise ValueError("list of units number does not match number of layers")
-        # input and first hiden layer
+        # input and first hidden layer
         current_layer_units_num = num_units[0]
         layers_list = [Linear(in_features=input_dim, out_features=current_layer_units_num), ReLU()]
         previous_layer_units_num = current_layer_units_num
@@ -52,7 +52,7 @@ class Vec2Vec(Sequential):
 class Vec2VecFNN:
     def __init__(self, model_path: Union[str, None] = None):
         """
-        Initializate Vec2VecFNNtorch.
+        Initialize Vec2VecFNNtorch.
 
         :param model_path: path to the pretrained model on huggingface.
         """
@@ -226,7 +226,7 @@ class Vec2VecFNN:
         :param save_best: whether the best performance model is saved after each epoch (based on validation loss)
         :param folder_path: the path to the folder to save the model and config
         :param best_model_file_name: the name of the file of saved best model
-        :param early_stop: whether the training should be stoped early to prevent overfitting
+        :param early_stop: whether the training should be stopped early to prevent overfitting
         :param patience: the percentage of epoches to stop training if no validation loss improvement
         :param opt_name: name of optimizer
         :param loss_func: name of loss function
@@ -369,7 +369,7 @@ class Vec2VecFNN:
         self, outputs: torch.Tensor, y: torch.Tensor, target: torch.Tensor
     ) -> torch.Tensor:
         """
-        Calculating loss when different loss funcion is given
+        Calculating loss when different loss function is given
 
         :param outputs: the output of model
         :param y: the correct label

@@ -14,7 +14,7 @@ _LOGGER = logging.getLogger(PKG_NAME)
 
 
 class Text2BEDSearchInterface(BEDSearchInterface):
-    """Search interface for the query that is a natural langauge string"""
+    """Search interface for the query that is a natural language string"""
 
     def __init__(
         self,
@@ -40,7 +40,7 @@ class Text2BEDSearchInterface(BEDSearchInterface):
     ) -> List[Dict]:
         """
 
-        :param query: the natural langauge query string, or a vector in the embedding space of region sets
+        :param query: the natural language query string, or a vector in the embedding space of region sets
 
         for rest of the parameters, check the docstring of QdrantBackend.search() or HNSWBackend.search()
         """

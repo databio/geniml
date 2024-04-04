@@ -62,7 +62,7 @@ else:
             self.idx = hnswlib.Index(space=space, dim=dim)  # possible options are l2, cosine or ip
             self.idx.init_index(max_elements=0, ef_construction=ef, M=m)
 
-            # load from local index that alrady store vectors
+            # load from local index that already store vectors
             if os.path.exists(local_index_path):
                 self.idx.load_index(local_index_path)
                 _LOGGER.info(
