@@ -7,7 +7,7 @@ def pytest_addoption(parser):
     To actually run some test, use this command in terminal:
     pytest <test file name> <option>
     For example:
-    pytest test_text2bednn.py --qdrant --r2vhf
+    pytest test_text2bednn.py --qdrant --huggingface
     pytest --bedbase
     """
     parser.addoption(
@@ -25,9 +25,9 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
-        "--r2vhf",
+        "--huggingface",
         action="store_true",
         default=False,
-        help="Run tests that needs importing Region2Vec models form huggingface",
+        help="Run tests that needs importing models form huggingface",
     )
     # add an --all option to set other option as True

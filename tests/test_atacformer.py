@@ -1,11 +1,11 @@
 import os
-import pytest
 
-import torch
 import lightning as L
-
-from torch.utils.data import DataLoader
+import pytest
+import torch
 from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
+
 from geniml.atacformer.main import Atacformer, AtacformerExModel
 from geniml.atacformer.utils import AtacformerMLMDataset
 from geniml.tokenization.main import ITTokenizer

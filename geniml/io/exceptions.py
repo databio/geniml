@@ -1,5 +1,6 @@
-from ..exceptions import GenimlBaseError
 from typing import Optional
+
+from ..exceptions import GenimlBaseError
 
 
 class BackedFileNotAvailableError(GenimlBaseError):

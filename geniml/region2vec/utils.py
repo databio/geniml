@@ -1,41 +1,39 @@
+import glob
 import logging
 import os
-import glob
+import random
 import select
 import shutil
 import sys
 import time
-import random
-
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Union, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-
-from yaml import safe_dump, safe_load
 from genimtools.utils import read_tokens_from_gtok
+from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
     from gensim.models import Word2Vec as GensimWord2Vec
 
 from ..const import GTOK_EXT
-from ..tokenization.main import Tokenizer, ITTokenizer
+from ..tokenization.main import ITTokenizer, Tokenizer
 from .const import (
-    LR_TYPES,
-    DEFAULT_INIT_LR,
-    DEFAULT_MIN_LR,
-    MODULE_NAME,
     CONFIG_FILE_NAME,
-    MODEL_FILE_NAME,
-    UNIVERSE_FILE_NAME,
-    VOCAB_SIZE_KEY,
+    DEFAULT_EMBEDDING_DIM,
+    DEFAULT_EPOCHS,
+    DEFAULT_INIT_LR,
+    DEFAULT_MIN_COUNT,
+    DEFAULT_MIN_LR,
+    DEFAULT_WINDOW_SIZE,
     EMBEDDING_DIM_KEY,
     EMBEDDING_DIM_KEY_OLD,
-    DEFAULT_EMBEDDING_DIM,
-    DEFAULT_WINDOW_SIZE,
-    DEFAULT_EPOCHS,
-    DEFAULT_MIN_COUNT,
+    LR_TYPES,
+    MODEL_FILE_NAME,
+    MODULE_NAME,
+    UNIVERSE_FILE_NAME,
+    VOCAB_SIZE_KEY,
 )
 from .models import Region2Vec
 
