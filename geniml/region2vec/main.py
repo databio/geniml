@@ -4,6 +4,7 @@ from typing import List, Union
 
 import numpy as np
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
@@ -326,18 +327,27 @@ class Region2VecExModel(ExModel):
 
         # tokenize the region
         tokens = [self.tokenizer.tokenize(r) for r in regions]
+        token_tensors = [torch.tensor(token_set, dtype=torch.long) for token_set in tokens]
+        padded_tokens = pad_sequence(
+            token_tensors, batch_first=True, padding_value=self.tokenizer.padding_token_id()
+        )
 
-        # get the embeddings
-        embeddings = []
-        for token_set in track(tokens, total=len(tokens), description="Getting embeddings"):
-            region_embeddings = self._model.projection(torch.tensor(token_set))
-            if pooling == "mean":
-                region_embeddings = torch.mean(region_embeddings, axis=0).detach().numpy()
-            elif pooling == "max":
-                region_embeddings = torch.max(region_embeddings, axis=0).values.detach().numpy()
-            else:
-                # this should be unreachable
-                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
-            embeddings.append(region_embeddings)
+        batch_embeddings = self._model.projection(padded_tokens)
 
-        return np.vstack(embeddings)
+        attention_mask = padded_tokens != self.tokenizer.padding_token_id()
+
+        if pooling == "mean":
+            region_embeddings = (
+                torch.mean(batch_embeddings * attention_mask.unsqueeze(-1), axis=1)
+                .detach()
+                .numpy()
+            )
+        elif pooling == "max":
+            region_embeddings = (
+                torch.max(batch_embeddings * attention_mask.unsqueeze(-1), axis=1).detach().numpy()
+            )
+        else:
+            # this should be unreachable
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+
+        return np.vstack(region_embeddings)
