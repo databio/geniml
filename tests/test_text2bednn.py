@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pytest
-
 from geniml.search import vec_pairs
 from geniml.search.backends import HNSWBackend
 from geniml.text2bednn.text2bednn import Vec2VecFNN
@@ -147,7 +146,6 @@ def test_torch_running(tmp_path_factory):
         num_epochs=100,
         batch_size=16,
         num_units=[512, 256],
-        num_extra_hidden_layers=1,
     )
     v2v_torch1.plot_training_hist(best_embed_folder)
     v2v_torch1.export(best_embed_folder, "v2v_best_epoch.pt")
@@ -183,7 +181,6 @@ def test_torch_running(tmp_path_factory):
         num_epochs=100,
         batch_size=16,
         num_units=[512, 256],
-        num_extra_hidden_layers=1,
         training_target=training_target,
         validating_target=validating_target,
     )

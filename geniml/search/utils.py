@@ -31,28 +31,28 @@ def single_query_eval(search_results: List, relevant_results: List) -> Tuple[flo
     retrieved_relevant = 0
     k = len(search_results)
     sum_precision = 0
-    x = [0]  # (fp/(fp + tn)
-    y = [0]  # recall or  tp / (tp + fn)
-    fp = 0
-    tn = k - num_relevant
-    tp = 0
-    fn = num_relevant
+    x = [0]  # (false_positive/(false_positive + true_negative)
+    y = [0]  # recall or  true_positive / (true_positive + false_negative)
+    false_positive = 0
+    true_negative = k - num_relevant
+    true_positive = 0
+    false_negative = num_relevant
 
     for i in range(k):
         result = search_results[i]
         result_id = result["id"]
         if result_id in relevant_results:  # one relevant is retrieved
-            tp += 1
-            fn -= 1
+            true_positive += 1
+            false_negative -= 1
             retrieved_relevant += 1
 
             sum_precision += retrieved_relevant / (i + 1)
 
         else:  # one irrelevant is retrieved
-            fp += 1
-            tn -= 1
-        x.append(fp / (fp + tn))
-        y.append(tp / (tp + fn))
+            false_positive += 1
+            true_negative -= 1
+        x.append(false_positive / (false_positive + true_negative))
+        y.append(true_positive / (true_positive + false_negative))
         if i == num_relevant - 1:
             r_precision = retrieved_relevant / num_relevant
     average_precision = sum_precision / num_relevant
