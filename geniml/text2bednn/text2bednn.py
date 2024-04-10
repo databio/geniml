@@ -1,16 +1,23 @@
 import logging
 import math
 import os
-from typing import Dict, List, Tuple, Union
+from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from huggingface_hub import hf_hub_download
-from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
+from torch.nn import (CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss,
+                      ReLU, Sequential)
 from yaml import safe_dump, safe_load
 
-from .const import *
+from .const import (CONFIG_FILE_NAME, DEFAULT_BATCH_SIZE,
+                    DEFAULT_HUGGINGFACE_MODEL_NAME, DEFAULT_LEARNING_RATE,
+                    DEFAULT_LOSS_NAME, DEFAULT_MARGIN, DEFAULT_MUST_TRAINED,
+                    DEFAULT_NUM_EPOCHS, DEFAULT_NUM_UNITS,
+                    DEFAULT_OPTIMIZER_NAME, DEFAULT_PATIENCE,
+                    DEFAULT_PLOT_FILE_NAME, DEFAULT_PLOT_TITLE, MODULE_NAME,
+                    TORCH_MODEL_FILE_NAME_PATTERN)
 from .utils import arrays_to_torch_dataloader, dtype_check
 
 _LOGGER = logging.getLogger(MODULE_NAME)
@@ -22,13 +29,10 @@ class Vec2Vec(Sequential):
         input_dim: int,
         output_dim: int,
         num_units: Union[int, List[int]],
-        num_extra_hidden_layers: int,
     ):
         if not isinstance(num_units, list):
-            num_units = [num_units] * (1 + num_extra_hidden_layers)
-        # check if number of layers match length of num_units
-        if len(num_units) != 1 + num_extra_hidden_layers:
-            raise ValueError("list of units number does not match number of layers")
+            num_units = [num_units]
+        num_extra_hidden_layers = len(num_units) - 1
         # input and first hidden layer
         current_layer_units_num = num_units[0]
         layers_list = [Linear(in_features=input_dim, out_features=current_layer_units_num), ReLU()]
@@ -112,7 +116,6 @@ class Vec2VecFNN:
             config["input_dim"],
             config["output_dim"],
             config["num_units"],
-            config["num_extra_hidden_layers"],
         )
 
         # load the Sequential model from saved files
@@ -246,14 +249,10 @@ class Vec2VecFNN:
             self.config["input_dim"] = input_dim
             self.config["output_dim"] = output_dim
             self.config["num_units"] = kwargs.get("num_units") or DEFAULT_NUM_UNITS
-            self.config["num_extra_hidden_layers"] = (
-                kwargs.get("num_extra_hidden_layers") or DEFAULT_NUM_EXTRA_HIDDEN_LAYERS
-            )
             self.model = Vec2Vec(
                 input_dim=input_dim,
                 output_dim=output_dim,
                 num_units=self.config["num_units"],
-                num_extra_hidden_layers=self.config["num_extra_hidden_layers"],
             )
 
         if training_target is None:
