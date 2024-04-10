@@ -51,9 +51,7 @@ class Text2BEDSearchInterface(BEDSearchInterface):
 
         return self.backend.search(search_vec, limit, with_payload, with_vectors, offset)
 
-    def eval(
-        self, query_dict: Dict[str, List[Union[int, np.int64]]]
-    ) -> Tuple[float, float, float]:
+    def eval(self, query_dict: Dict[str, List[Union[int, np.int64]]]) -> Dict[str, float]:
         """
         With a query dictionary, return the Mean Average Precision, AUC-ROC and R-precision of query retrieval
 
@@ -71,6 +69,9 @@ class Text2BEDSearchInterface(BEDSearchInterface):
 
         # number
         n = len(self.backend)
+        # set ef for search
+        # ef cannot be set lower than the number of queried nearest neighbors k
+        self.backend.idx.set_ef(n)
 
         sum_ap = 0  # sum of all average precision
         sum_auc = 0  # sum of all AUC-ROC
@@ -99,7 +100,11 @@ class Text2BEDSearchInterface(BEDSearchInterface):
             sum_rp += rp
 
         if query_count > 0:
-            return sum_ap / query_count, sum_auc / query_count, sum_rp / query_count
+            return {
+                "Mean Average Precision": sum_ap / query_count,
+                "Mean AUC-ROC": sum_auc / query_count,
+                "Average R-Precision": sum_rp / query_count,
+            }
 
         else:
-            return 0.0, 0.0, 0.0
+            return {"Mean Average Precision": 0.0, "Mean AUC-ROC": 0.0, "Average R-Precision": 0.0}
