@@ -108,7 +108,7 @@ class HNSWBackend(EmSearchBackend):
 
         # update hnsw index and load embedding vectors
         self.idx.load_index(self.idx_path, max_elements=new_max)
-        self.idx.add_items(vectors, ids)
+        self.idx.add_items(vectors)
 
         # save hnsw index to local file
         self.idx.save_index(self.idx_path)
