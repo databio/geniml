@@ -3,6 +3,7 @@ DEFAULT_GENOME_KEY = "sample_genome"
 DEFAULT_SERIES_KEY = "gse"
 DEFAULT_FILE_KEY = "file"
 BIO_GPT_REPO = "microsoft/biogpt"
+BIO_BERT_REPO = "dmis-lab/biobert-v1.1"
 
 
 DEFAULT_TRAIN_P = 0.85 * 0.9
