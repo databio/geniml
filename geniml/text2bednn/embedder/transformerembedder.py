@@ -41,5 +41,6 @@ else:
                 model_output = self.model(**encoded_input)
 
             embeddings = model_output.last_hidden_state
+            pooled_embeddings = embeddings.mean(dim=1)
 
-            return embeddings.mean(dim=1)
+            return pooled_embeddings.detach().cpu().numpy().reshape(-1)
