@@ -6,8 +6,17 @@ from abc import ABC, abstractmethod
 from typing import List
 
 import numpy as np
+import scanpy as sc
+from huggingface_hub import hf_hub_download
+from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
+from geniml.io import Region
+from genimtools.tokenizers import (
+    TreeTokenizer as GTreeTokenizer,
+    TokenizedRegionSet as GTokenizedRegionSet,
+    Region as GRegion,
+)
 
 from .hard_tokenization_batch import main as hard_tokenization
 from .utils import Timer, time_str
@@ -22,6 +31,164 @@ class Tokenizer(ABC):
 class Namespace:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+
+
+class AnnDataTokenizer(Tokenizer):
+    """
+    A fast, in memory, tokenizer that uses `gtokenizers` - a rust based tokenizer.
+
+    This is actually a wrapper around the core TreeTokenizer. Ideally, we'd tokenize the
+    AnnData natively in Rust, but that's a bit more involved. So, we'll just use the
+    Python wrapper for now.
+    """
+
+    @classmethod
+    def from_pretrained(cls, model_path: str, **kwargs):
+        """
+        Create a new tokenizer from a pretrained model's vocabulary.
+
+        Usage:
+        ```
+        tokenizer = AnnDataTokenizer.from_pretrained("path/to/universe.bed")
+        ```
+
+        :param str model_path: The path to the pretrained model on huggingface.
+        """
+        universe_file_path = hf_hub_download(model_path, "universe.bed")
+        return cls(universe_file_path, **kwargs)
+
+    def __init__(self, universe: str = None):
+        """
+        Create a new tokenizer.
+
+        This tokenizer only accepts a path to a BED file containing regions.
+
+        :param str universe: The universe to use for tokenization.
+        """
+        if universe is not None:
+            self._tokenizer: GTreeTokenizer = GTreeTokenizer(universe)
+        else:
+            self._tokenizer = None
+
+    def _tokenize_anndata(self, adata: sc.AnnData) -> List[GTokenizedRegionSet]:
+        """
+        Tokenize an AnnData object. This is more involved, so it gets its own function.
+
+        :param sc.AnnData query: The query to tokenize.
+        """
+        # extract regions from AnnData
+        # its weird because of how numpy handle Intervals, the parent class of Region,
+        # see here:
+        # https://stackoverflow.com/a/43722306/13175187
+        adata_features = [
+            Region(chr, int(start), int(end))
+            for chr, start, end in track(
+                zip(adata.var["chr"], adata.var["start"], adata.var["end"]),
+                total=adata.var.shape[0],
+                description="Extracting regions from AnnData",
+                disable=not self.verbose,
+            )
+        ]
+        features = np.ndarray(len(adata_features), dtype=object)
+        for i, region in enumerate(adata_features):
+            features[i] = region
+        del adata_features
+
+        # tokenize
+        tokenized = []
+        for row in track(
+            range(adata.shape[0]),
+            total=adata.shape[0],
+            description="Tokenizing",
+            disable=not self.verbose,
+        ):
+            _, non_zeros = adata.X[row].nonzero()
+            regions = features[non_zeros]
+            tokenized.append(self._tokenizer.tokenize(regions.tolist()))
+
+        return tokenized
+
+    def tokenize(self, query: sc.AnnData) -> List[List[Region]]:
+        """
+        Tokenize a Region or RegionSet into the universe
+
+        :param Union[Region, RegionSet, sc.AnnData] query: The query to tokenize.
+        :param bool ids_only: Whether to return only the IDs or the full TokenizedRegionSet
+        :param bool as_strings: Whether to return the IDs as strings or ints
+        """
+        if isinstance(query, sc.AnnData):
+            result = self._tokenize_anndata(query)
+            return [t.to_regions() for t in result]
+        else:
+            raise NotImplementedError("Only AnnData is supported right now.")
+
+    def encode(self, query: sc.AnnData) -> List[List[int]]:
+        """
+        Tokenize an AnnData object to IDs.
+
+        :param sc.AnnData query: The query to tokenize.
+        """
+        if isinstance(query, sc.AnnData):
+            result = self._tokenize_anndata(query)
+            return [t.to_ids() for t in result]
+        else:
+            raise NotImplementedError("Only AnnData is supported right now.")
+
+    def decode(self, query: List[List[int]]) -> List[List[Region]]:
+        """
+        Decode a list of IDs back to regions.
+
+        :param List[List[int]] query: The query to decode.
+        """
+        return [self._tokenizer.decode(ids) for ids in query]
+
+    def padding_token(self) -> GRegion:
+        return self._tokenizer.padding_token()
+
+    def padding_token_id(self) -> int:
+        return self._tokenizer.padding_token_id()
+
+    def unknown_token(self) -> GRegion:
+        return self._tokenizer.unknown_token()
+
+    def unknown_token_id(self) -> int:
+        return self._tokenizer.unknown_token_id()
+
+    def mask_token(self) -> GRegion:
+        return self._tokenizer.mask_token()
+
+    def mask_token_id(self) -> int:
+        return self._tokenizer.mask_token_id()
+
+    def cls_token(self) -> GRegion:
+        return self._tokenizer.cls_token()
+
+    def cls_token_id(self) -> int:
+        return self._tokenizer.cls_token_id()
+
+    def bos_token(self) -> GRegion:
+        return self._tokenizer.bos_token()
+
+    def bos_token_id(self) -> int:
+        return self._tokenizer.bos_token_id()
+
+    def eos_token(self) -> GRegion:
+        return self._tokenizer.eos_token()
+
+    def eos_token_id(self) -> int:
+        return self._tokenizer.eos_token_id()
+
+    def sep_token(self) -> GRegion:
+        return self._tokenizer.sep_token()
+
+    def sep_token_id(self) -> int:
+        return self._tokenizer.sep_token_id()
+
+    def __len__(self):
+        return len(self.universe.regions)
+
+    def __call__(self, query: sc.AnnData) -> List[List[Region]]:
+        return self.tokenize(query)
 
 
 def hard_tokenization_main(
