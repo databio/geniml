@@ -31,6 +31,7 @@ else:
             """
             from https://github.com/UKPLab/sentence-transformers/issues/1824
             """
+            self.model_name = model_name
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.model = AutoModel.from_pretrained("dmis-lab/biobert-v1.1")
 
