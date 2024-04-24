@@ -32,6 +32,7 @@ else:
         """embedding model based on sentence-transformers"""
 
         def __init__(self, model_name: str):
+            self.model_name = model_name
             self.model = SentenceTransformer(model_name)
 
         def forward(self, input_text: str) -> np.ndarray:
@@ -44,6 +45,7 @@ else:
             """
             from https://github.com/UKPLab/sentence-transformers/issues/1824
             """
+            self.model_name = model_name
             word_embedding_model = models.Transformer(model_name)
             pooling_model = models.Pooling(
                 word_embedding_model.get_word_embedding_dimension(), pooling_mode="mean"

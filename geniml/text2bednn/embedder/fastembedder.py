@@ -8,6 +8,7 @@ class FastEmbedder(TextEmbedder):
     """embedding model based on fastembed"""
 
     def __init__(self, model_name: str):
+        self.model_name = model_name
         self.model = TextEmbedding(model_name=model_name)
 
     def forward(self, input_text: str) -> np.ndarray:
