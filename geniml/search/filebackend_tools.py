@@ -125,8 +125,8 @@ def vec_pairs(
     bed_payload_key: str = "name",
     non_target_pairs: bool = False,
     non_target_pairs_prop: float = 1.0,
-    exclusions: Union[Set[str], None] = None,
-    exclusion_key: str = "series",
+    inclusions: Union[Set[str], None] = None,
+    inclusion_key: str = "series",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     The training of geniml.text2bednn needs pairs of vectors (natural language embeddings & region set embeddings).
@@ -140,8 +140,8 @@ def vec_pairs(
     :param bed_payload_key: the key of BED file name in the payload of BED embedding backend
     :param non_target_pairs: whether non-target pairs will be sampled, for details, see the docstring of sample_non_target_vec()
     :param non_target_pairs_prop: proportion of <number of non-target pairs> / <number of target pairs>
-    :param exclusions: a set of
-    :param exclusion_key: the payload key that
+    :param inclusions: a set of values of payloads attributes, only vectors with that value in payloads will be included
+    :param inclusion_key: the payload key of the filter attribute
 
     :return: A tuple of 3 np.ndarrays:
         X: with shape of (n, <natural language embedding dimension>)
@@ -178,9 +178,9 @@ def vec_pairs(
             except:
                 continue
 
-            if exclusions is not None:
-                bed_info = bed_backend.payloads[bed_id][exclusion_key]
-                if bed_info in exclusions:
+            if inclusions is not None:
+                bed_info = bed_backend.payloads[bed_id][inclusion_key]
+                if bed_info not in inclusions:
                     continue
 
             bed_vec_ids.append(bed_id)
