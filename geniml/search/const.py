@@ -16,7 +16,7 @@ DEFAULT_DIM = 100
 
 DEFAULT_EF = 200
 
-DEFAULT_M = 16
+DEFAULT_M = 64
 
 DEFAULT_QUANTIZATION_CONFIG = models.ScalarQuantization(
     scalar=models.ScalarQuantizationConfig(
