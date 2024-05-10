@@ -1,24 +1,20 @@
 import os
+from typing import List, Tuple
 import pickle
 from typing import Union
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
-import argparse
-import glob
 import multiprocessing as mp
-import random
-import time
 from multiprocessing.queues import Queue
 
 import numpy as np
-from gensim.models import Word2Vec
 from sklearn.linear_model import LinearRegression
 
-from .const import *
+from .const import GENOME_DIST_SCALAR
 from .utils import cosine_distance, genome_distance, load_genomic_embeddings
 
 
-def sample_from_vocab(vocab: list[str], num_samples: int, seed: int = 42) -> list[str]:
+def sample_from_vocab(vocab: List[str], num_samples: int, seed: int = 42) -> List[str]:
     """Samples regions from vocab.
 
     Samples regions proportionally from each chromosome.
@@ -81,7 +77,7 @@ def get_gdst_score(
     seed: int = 42,
     queue: Queue = None,
     worker_id: int = None,
-) -> Union[float, tuple[int, str, float]]:
+) -> Union[float, Tuple[int, str, float]]:
     """Runs the GDST on a model.
 
     Args:
@@ -121,7 +117,7 @@ def get_gdst_score(
         return slope
 
 
-def writer_multiprocessing(save_path: str, num: int, q: Queue) -> list[tuple[str, float]]:
+def writer_multiprocessing(save_path: str, num: int, q: Queue) -> List[Tuple[str, float]]:
     """Writes results from multiple processes to a list.
 
     Args:
@@ -147,12 +143,12 @@ def writer_multiprocessing(save_path: str, num: int, q: Queue) -> list[tuple[str
 
 
 def get_gdst_score_batch(
-    batch: list[tuple[str, str]],
+    batch: List[Tuple[str, str]],
     num_samples: int = 10000,
     seed: int = 42,
     save_path: str = None,
     num_workers: int = 1,
-) -> list[tuple[str, float]]:
+) -> List[Tuple[str, float]]:
     """Runs the GDST on a batch of models.
 
     Args:
@@ -199,12 +195,12 @@ def get_gdst_score_batch(
 
 
 def gdst_eval(
-    batch: list[tuple[str, str]],
+    batch: List[Tuple[str, str]],
     num_runs: int = 20,
     num_samples: int = 1000,
     save_folder: str = None,
     num_workers: int = 10,
-) -> list[tuple[str, list[float]]]:
+) -> List[Tuple[str, List[float]]]:
     """Runs the GDST on a batch of models for multiple times.
 
     Args:

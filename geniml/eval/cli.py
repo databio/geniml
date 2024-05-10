@@ -177,7 +177,7 @@ def build_subparser(parser):
     sp = parser.add_subparsers(dest="subcommand")
     msg_by_cmd = {
         "gdst": "Genome distance scaling test",
-        "npt": "Neighorhood preserving test",
+        "npt": "Neighborhood preserving test",
         "ctt": "Cluster tendency test",
         "rct": "Reconstruction test",
         "bin-gen": "Generate binary embeddings",

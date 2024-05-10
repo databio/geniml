@@ -2,19 +2,13 @@ import os
 import pickle
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
-import argparse
-import glob
-import multiprocessing as mp
-import random
-import time
 
+from typing import Tuple, List
 import numpy as np
-import pandas as pd
-from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 
-from .const import *
-from .utils import cosine_distance, genome_distance, load_genomic_embeddings
+from .const import CTT_QUANTILE_MAX, CTT_QUANTILE_MIN, CTT_TEST_RATIO
+from .utils import load_genomic_embeddings
 
 
 def get_ctt_score(
@@ -78,12 +72,12 @@ def get_ctt_score(
 
 
 def get_ctt_batch(
-    batch: list[tuple[str, str]],
+    batch: List[Tuple[str, str]],
     seed: int = 42,
     num_data: int = 10000,
     save_path: str = None,
     num_workers: int = 10,
-) -> list[tuple[str, float]]:
+) -> List[Tuple[str, float]]:
     """Runs the cluster tendency test (CTT) on a batch of models.
 
     Args:
@@ -98,7 +92,7 @@ def get_ctt_batch(
             Defaults to 10.
 
     Returns:
-        list[tuple[str, float]]: A list of (model path, CTT score) tuples.
+        List[Tuple[str, float]]: A list of (model path, CTT score) tuples.
     """
     ctt_arr = []
     for path, embed_type in batch:
@@ -113,12 +107,12 @@ def get_ctt_batch(
 
 
 def ctt_eval(
-    batch: list[tuple[str, str]],
+    batch: List[Tuple[str, str]],
     num_runs: int = 20,
     num_data: int = 10000,
     save_folder: str = None,
     num_workers: int = 10,
-) -> list[tuple[str, list[float]]]:
+) -> List[Tuple[str, list[float]]]:
     """Runs the CTT on a batch of models for multiple times.
 
     Runs the cluster tendency test (CTT) for a batch of models for num_runs
@@ -155,7 +149,7 @@ def ctt_eval(
 
     mean_ctt = [np.array(r).mean() for r in ctt_res]
     std_ctt = [np.array(r).std() for r in ctt_res]
-    models = [t[0] for t in batch]
+    # models = [t[0] for t in batch]
     for i in range(len(mean_ctt)):
         print(f"{batch[i][0]}\n CTT (std): {mean_ctt[i]:.4f} ({std_ctt[i]:.4f}) \n")
     ctt_arr = [(batch[i][0], ctt_res[i]) for i in range(len(batch))]

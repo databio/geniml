@@ -1,18 +1,19 @@
-import torch
+import pytest
+
 import lightning as L
 import scanpy as sc
-
-from torch.utils.data import DataLoader
+import torch
 from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader
 
+from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.tokenization.main import ITTokenizer
+from geniml.training import CellTypeFineTuneAdapter
 from geniml.training.utils import (
-    generate_fine_tuning_dataset,
     FineTuningDataset,
     collate_finetuning_batch,
+    generate_fine_tuning_dataset,
 )
-from geniml.training import CellTypeFineTuneAdapter
-from geniml.region2vec.main import Region2Vec, Region2VecExModel
 
 
 def test_generate_finetuning_dataset():
@@ -34,16 +35,18 @@ def test_generate_finetuning_dataset():
     # assert len(pos) == sum([(n * (n - 1)) for n in adata.obs.groupby("cell_type").size()])
 
 
+@pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
 def test_init_celltype_adapter():
     model = Region2VecExModel(
         tokenizer="tests/data/universe.bed",
     )
     adapter = CellTypeFineTuneAdapter(model)
     assert adapter is not None
-    assert isinstance(adapter.nn_model, Region2Vec)
-    assert adapter.nn_model.projection.num_embeddings == len(model.tokenizer)
+    assert isinstance(adapter.r2v_model, Region2Vec)
+    assert adapter.r2v_model.projection.num_embeddings == len(model.tokenizer)
 
 
+@pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
 def test_train_with_adapter():
     # make models
     model = Region2VecExModel(
@@ -93,6 +96,7 @@ def test_train_with_adapter():
     trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
 
 
+@pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
 def test_train_export():
     # make models
     model = Region2VecExModel(

@@ -1,7 +1,11 @@
 import os
+from unittest.mock import Mock
 
+import boto3
+import botocore
 import genomicranges
 import pytest
+
 from geniml.bbclient import BBClient
 from geniml.io import BedSet, RegionSet
 
@@ -43,13 +47,17 @@ def local_bedfile_list():
     return ALL_BEDFILE_PATH
 
 
+class TestBedCaching:
+    pass
+
+
 class TestBBClientCaching:
     def test_init(self, cache_path):
         """
         Test initialization of BBClient
         """
         bbclient = BBClient(cache_folder=cache_path)
-        assert bbclient is not None
+        assert isinstance(bbclient, BBClient)
 
     def test_init_no_cache_folder(self):
         """
@@ -58,14 +66,16 @@ class TestBBClientCaching:
         with pytest.raises(TypeError):
             BBClient(cache_folder=None)
 
-    def test_bed_caching_from_path(self, tmp_path, local_bedfile_path):
+    @pytest.mark.parametrize("bedfile_path", ALL_BEDFILE_PATH)
+    def test_bed_caching_from_path(self, bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
-        bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path)
+        bedfile_id = bbclient.add_bed_to_cache(bedfile_path)
         assert bedfile_id is not None
 
-    def test_bed_caching_from_region_set(self, tmp_path, local_bedfile_path):
+    @pytest.mark.parametrize("bedfile_path", ALL_BEDFILE_PATH)
+    def test_bed_caching_from_region_set(self, tmp_path, bedfile_path):
         bbclient = BBClient(cache_folder=tmp_path)
-        bedfile = RegionSet(local_bedfile_path)
+        bedfile = RegionSet(bedfile_path)
         bbclient.add_bed_to_cache(bedfile)
         path_in_cache = bbclient.seek(bedfile.identifier)
         assert bedfile.compute_bed_identifier() == os.path.split(path_in_cache)[1].split(".")[0]
@@ -77,14 +87,14 @@ class TestBBClientCaching:
         path_in_cache = bbclient.seek(bedset_id)
         assert bedset_id == os.path.split(path_in_cache)[1].split(".")[0]
 
-    def test_error_bed_not_in_cache(self, tmp_path, local_bedfile_path):
+    def test_bed_not_in_cache_error(self, tmp_path, local_bedfile_path):
         bbclient = BBClient(cache_folder=tmp_path)
         # skip caching
         bedfile = RegionSet(local_bedfile_path)
         with pytest.raises(FileNotFoundError):
             bbclient.seek(bedfile.identifier)
 
-    def test_error_bedset_not_in_cache(self, tmp_path, local_bedfile_list):
+    def test_bedset_not_in_cache_error(self, tmp_path, local_bedfile_list):
         bbclient = BBClient(cache_folder=tmp_path)
         bedset_id = BedSet(local_bedfile_list).identifier
         with pytest.raises(FileNotFoundError):
@@ -108,6 +118,39 @@ class TestBBClientCaching:
             bbclient.seek(bedset_id)
 
 
+class TestS3Caching:
+    def test_upload_s3(self, mocker, local_bedfile_path, tmp_path):
+        bbclient = BBClient(cache_folder=tmp_path)
+        bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path)
+        upload_mock = mocker.patch(
+            "boto3.s3.inject.upload_file",
+        )
+        bbclient.add_bed_to_s3(bedfile_id, s3_path="test_test")
+        assert upload_mock.called
+
+    def test_download_s3(self, mocker, local_bedfile_path, tmp_path):
+        bbclient = BBClient(cache_folder=tmp_path)
+        download_mock = mocker.patch(
+            "boto3.s3.inject.download_file",
+        )
+        bbclient.get_bed_from_s3("test_id", s3_path="test_test")
+        assert download_mock.called
+
+    def test_download_s3_404(self, mocker, local_bedfile_path, tmp_path):
+        bbclient = BBClient(cache_folder=tmp_path)
+        download_mock = mocker.patch(
+            "boto3.s3.inject.download_file",
+            side_effect=botocore.exceptions.ClientError(
+                {"Error": {"Code": "404"}}, "operation_name"
+            ),
+        )
+        with pytest.raises(FileNotFoundError):
+            bbclient.get_bed_from_s3("test_id", s3_path="test_test")
+
+        assert download_mock.called
+
+
+# TODO: rewrite it so that it makes the requests
 # @pytest.mark.bedbase
 @pytest.mark.skipif(
     "not config.getoption('--bedbase')",
