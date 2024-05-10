@@ -4,12 +4,12 @@ import sys
 
 import pytest
 import scanpy as sc
-
-from tqdm import tqdm
 from genimtools.utils import write_tokens_to_gtok
+from tqdm import tqdm
+
 from geniml.region2vec.utils import Region2VecDataset
-from geniml.tokenization.main import ITTokenizer
 from geniml.scembed.main import ScEmbed
+from geniml.tokenization.main import ITTokenizer
 
 # add parent directory to path
 sys.path.append("../")
@@ -48,7 +48,9 @@ def test_model_training(universe_file: str, pbmc_data: sc.AnnData):
     # remove gensim logging
     logging.getLogger("gensim").setLevel(logging.ERROR)
     model = ScEmbed(tokenizer=ITTokenizer(universe_file))  # set to 1 for testing
-    model.train(pbmc_data, epochs=3)
+
+    dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
+    model.train(dataset, epochs=3, min_count=1)
 
     # keep only columns with values > 0
     pbmc_data = pbmc_data[:, pbmc_data.X.sum(axis=0) > 0]
@@ -56,11 +58,13 @@ def test_model_training(universe_file: str, pbmc_data: sc.AnnData):
     assert model.trained
 
 
-def test_model_train_and_export(universe_file: str, pbmc_data: sc.AnnData):
+def test_model_train_and_export(universe_file: str):
     # remove gensim logging
     logging.getLogger("gensim").setLevel(logging.ERROR)
     model = ScEmbed(tokenizer=ITTokenizer(universe_file))  # set to 1 for testing
-    model.train(pbmc_data, epochs=3)
+
+    dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
+    model.train(dataset, epochs=3, min_count=1)
 
     assert model.trained
 
@@ -87,8 +91,8 @@ def test_pretrained_scembed_model(hf_model: str, pbmc_data: sc.AnnData):
 
 @pytest.mark.skip(reason="This is for my own testing")
 def test_end_to_end_training():
-    from umap import UMAP
     import matplotlib.pyplot as plt
+    from umap import UMAP
 
     data_path = os.path.expandvars("$HOME/Desktop/buenrostro2018.h5ad")
     tokens_path = os.path.expandvars("$HOME/Desktop/tokens")

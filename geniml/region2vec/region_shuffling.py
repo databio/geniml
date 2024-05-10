@@ -197,7 +197,7 @@ def main(args: argparse.Namespace) -> None:
             time.sleep(1)  # wait for 10 seconds
             # print('Waiting for the data to be consumed',end="\r")
         else:
-            # delete the used dataset and generate a new dataset in the same foler
+            # delete the used dataset and generate a new dataset in the same folder
             sel_file = files[random.randint(0, len(files) - 1)]
             fname = sel_file.split("/")[-1][:-4]
             os.system(f"rm -f {sel_file}")  # delete the dataset

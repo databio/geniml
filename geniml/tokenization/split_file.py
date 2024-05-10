@@ -26,7 +26,7 @@ def split_file(file_path: str, dest_folder: str, num_parts: int) -> None:
 
     Args:
         file_path (str): The path to a file with BED file names per row.
-        dest_folder (str): The folder to store splitted file lists.
+        dest_folder (str): The folder to store split file lists.
         num_parts (int): Number of batches to split.
     """
     if os.path.exists(dest_folder):

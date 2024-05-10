@@ -1,16 +1,15 @@
 import logging
 from typing import Tuple, Union
-from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
+import lightning as L
 import torch
 import torch.nn as nn
-import lightning as L
+from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
+from ..atacformer import AtacformerExModel
 from ..nn import GradientReversal
 from ..region2vec import Region2VecExModel
 from ..scembed import ScEmbed
-from ..atacformer import AtacformerExModel
-
 from .const import BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES
 
 _LOGGER = logging.getLogger(__name__)

@@ -26,8 +26,8 @@ from sklearn.preprocessing import MinMaxScaler
 from ubiquerg import VersionInHelpParser
 
 
-def data_preprocessing(path_embeded_document):
-    document_embedding = pd.read_csv(path_embeded_document, header=None)
+def data_preprocessing(path_embedded_document):
+    document_embedding = pd.read_csv(path_embedded_document, header=None)
     document_embedding = document_embedding[0].str.split("__label__", expand=True)
     document_embedding[list(document_embedding)[1:]] = document_embedding[
         list(document_embedding)[1:]

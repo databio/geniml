@@ -1,6 +1,7 @@
 import os
 
 from genimtools.utils import write_tokens_to_gtok
+
 from geniml.io import RegionSet
 from geniml.tokenization import ITTokenizer
 
