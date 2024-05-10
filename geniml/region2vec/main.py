@@ -4,13 +4,14 @@ from typing import List, Union
 
 import numpy as np
 import torch
+from genimtools.tokenizers import TreeTokenizer
 from torch.nn.utils.rnn import pad_sequence
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
 from ..io import Region, RegionSet
 from ..models import ExModel
-from ..tokenization.main import ITTokenizer, Tokenizer
+from ..tokenization.main import Tokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -42,7 +43,7 @@ class Region2VecExModel(ExModel):
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: ITTokenizer = None,
+        tokenizer: TreeTokenizer = None,
         device: str = None,
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
@@ -56,7 +57,7 @@ class Region2VecExModel(ExModel):
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: ITTokenizer
+        self.tokenizer: TreeTokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
         self.pooling_method = pooling_method
@@ -73,7 +74,7 @@ class Region2VecExModel(ExModel):
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_tokenizer(self, tokenizer: Union[ITTokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[TreeTokenizer, str]):
         """
         Initialize the tokenizer.
 
@@ -81,15 +82,15 @@ class Region2VecExModel(ExModel):
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
-                self.tokenizer = ITTokenizer(tokenizer)
+                self.tokenizer = TreeTokenizer(tokenizer)
             else:
-                self.tokenizer = ITTokenizer.from_pretrained(
+                self.tokenizer = TreeTokenizer.from_pretrained(
                     tokenizer
                 )  # download from huggingface (or at least try to)
-        elif isinstance(tokenizer, ITTokenizer):
+        elif isinstance(tokenizer, TreeTokenizer):
             self.tokenizer = tokenizer
         else:
-            raise TypeError("tokenizer must be a path to a bed file or an ITTokenizer object.")
+            raise TypeError("tokenizer must be a path to a bed file or an TreeTokenizer object.")
 
     def _init_model(self, tokenizer, **kwargs):
         """

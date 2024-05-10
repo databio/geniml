@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 import torch
 
+from genimtools.tokenizers import TreeTokenizer
 from geniml.io.io import Region, RegionSet
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.region2vec.utils import Region2VecDataset
-from geniml.tokenization.main import ITTokenizer
 
 
 @pytest.fixture
@@ -68,7 +68,7 @@ def test_r2v_pytorch_tokenizer_is_on_hf():
 
 
 def test_r2v_pytorch_exmodel_train(universe_file: str):
-    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
     assert model is not None
 
     dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
@@ -78,7 +78,7 @@ def test_r2v_pytorch_exmodel_train(universe_file: str):
 
 
 def test_r2v_pytorch_encode(universe_file: str):
-    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
     assert model is not None
 
     r = Region("chr1", 63403166, 63403785)
@@ -95,7 +95,7 @@ def test_r2v_pytorch_encode(universe_file: str):
 
 
 def test_save_load_pytorch_exmodel(universe_file: str):
-    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
     assert model is not None
 
     dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
