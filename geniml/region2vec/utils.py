@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
+from genimtools.tokenizers import TreeTokenizer
 from genimtools.utils import read_tokens_from_gtok
 from yaml import safe_dump, safe_load
 
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
     from gensim.models import Word2Vec as GensimWord2Vec
 
 from ..const import GTOK_EXT
-from ..tokenization.main import ITTokenizer, Tokenizer
+from ..tokenization.main import Tokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -448,7 +449,7 @@ def load_local_region2vec_model(
     model_path: str,
     vocab_path: str,
     config_path: str,
-) -> Tuple[Region2Vec, ITTokenizer, dict]:
+) -> Tuple[Region2Vec, TreeTokenizer, dict]:
     """
     Load a region2vec model from a local directory
 
@@ -457,7 +458,7 @@ def load_local_region2vec_model(
     :param str vocab_path: The path to the model vocabulary file
     """
     # init the tokenizer - only one option for now
-    tokenizer = ITTokenizer(vocab_path)
+    tokenizer = TreeTokenizer(vocab_path)
 
     # load the model state dict (weights)
     params = torch.load(model_path)

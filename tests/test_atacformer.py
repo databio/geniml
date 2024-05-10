@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from geniml.atacformer.main import Atacformer, AtacformerExModel
 from geniml.atacformer.utils import AtacformerMLMDataset
-from geniml.tokenization.main import ITTokenizer
+from geniml.tokenization.main import AnnDataTokenizer
 from geniml.training.adapters import MLMAdapter
 
 
@@ -42,7 +42,7 @@ def test_atacformer_init():
 
 @pytest.mark.skip("Too new to test")
 def test_atacformer_exmodel_init(universe_file: str):
-    tokenizer = ITTokenizer(universe_file)
+    tokenizer = AnnDataTokenizer(universe_file)
     model = AtacformerExModel(
         tokenizer=tokenizer,
     )
@@ -57,7 +57,7 @@ def test_atacformer_exmodel_init(universe_file: str):
 @pytest.mark.skip("Too new to test")
 def test_train_atacformer_ex_model(universe_file: str, data: str):
     # make tokenizer and model
-    tokenizer = ITTokenizer(universe_file)
+    tokenizer = AnnDataTokenizer(universe_file)
     model = AtacformerExModel(
         tokenizer=tokenizer,
     )

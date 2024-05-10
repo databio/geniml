@@ -57,7 +57,7 @@ class AnnDataTokenizer(Tokenizer):
         universe_file_path = hf_hub_download(model_path, "universe.bed")
         return cls(universe_file_path, **kwargs)
 
-    def __init__(self, universe: str = None):
+    def __init__(self, universe: str = None, verbose: bool = False):
         """
         Create a new tokenizer.
 
@@ -65,12 +65,13 @@ class AnnDataTokenizer(Tokenizer):
 
         :param str universe: The universe to use for tokenization.
         """
+        self.verbose = verbose
         if universe is not None:
             self._tokenizer: GTreeTokenizer = GTreeTokenizer(universe)
         else:
             self._tokenizer = None
 
-    def _tokenize_anndata(self, adata: sc.AnnData) -> List[GTokenizedRegionSet]:
+    def _tokenize_anndata(self, adata: sc.AnnData) -> List[List[Region]]:
         """
         Tokenize an AnnData object. This is more involved, so it gets its own function.
 
@@ -104,7 +105,7 @@ class AnnDataTokenizer(Tokenizer):
         ):
             _, non_zeros = adata.X[row].nonzero()
             regions = features[non_zeros]
-            tokenized.append(self._tokenizer.tokenize(regions.tolist()))
+            tokenized.append(self._tokenizer(regions.tolist()))
 
         return tokenized
 
@@ -118,7 +119,11 @@ class AnnDataTokenizer(Tokenizer):
         """
         if isinstance(query, sc.AnnData):
             result = self._tokenize_anndata(query)
-            return [t.to_regions() for t in result]
+            return [result.to_regions() for result in result]
+        elif isinstance(query, str):
+            query = sc.read_h5ad(query)
+            result = self._tokenize_anndata(query)
+            return [result.to_regions() for result in result]
         else:
             raise NotImplementedError("Only AnnData is supported right now.")
 
@@ -129,6 +134,10 @@ class AnnDataTokenizer(Tokenizer):
         :param sc.AnnData query: The query to tokenize.
         """
         if isinstance(query, sc.AnnData):
+            result = self._tokenize_anndata(query)
+            return [t.to_ids() for t in result]
+        elif isinstance(query, str):
+            query = sc.read_h5ad(query)
             result = self._tokenize_anndata(query)
             return [t.to_ids() for t in result]
         else:
@@ -188,7 +197,15 @@ class AnnDataTokenizer(Tokenizer):
         return len(self.universe.regions)
 
     def __call__(self, query: sc.AnnData) -> List[List[Region]]:
-        return self.tokenize(query)
+        if isinstance(query, sc.AnnData):
+            result = self._tokenize_anndata(query)
+            return result
+        elif isinstance(query, str):
+            query = sc.read_h5ad(query)
+            result = self._tokenize_anndata(query)
+            return result
+        else:
+            raise NotImplementedError("Only AnnData is supported right now.")
 
 
 def hard_tokenization_main(

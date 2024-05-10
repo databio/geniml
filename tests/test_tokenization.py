@@ -2,7 +2,8 @@ import pytest
 import scanpy as sc
 
 from geniml.io.io import RegionSet
-from geniml.tokenization.main import ITTokenizer
+from genimtools.tokenizers import TreeTokenizer
+from geniml.tokenization.main import AnnDataTokenizer
 
 
 @pytest.fixture
@@ -26,13 +27,13 @@ def test_create_universe(universe_bed_file: str):
     assert len(u) == 2_378
 
 
-def test_make_ittokenizer(universe_bed_file: str):
-    t = ITTokenizer(universe_bed_file)
+def test_make_tree_tokenizer(universe_bed_file: str):
+    t = TreeTokenizer(universe_bed_file)
     assert t is not None
 
 
-def test_ittokenize_region_set(universe_bed_file: str):
-    t = ITTokenizer(universe_bed_file)
+def test_tree_tokenize_region_set(universe_bed_file: str):
+    t = TreeTokenizer(universe_bed_file)
     assert t is not None
 
     # tokenize a bed file
@@ -42,8 +43,8 @@ def test_ittokenize_region_set(universe_bed_file: str):
     rs = RegionSet(bed_file)
 
     # tokenize
-    tokens = t.tokenize(rs, ids_only=False)
-    region_tokens = tokens.regions
+    tokens = t.tokenize(rs)
+    region_tokens = tokens
 
     # filter out UNK tokens
     assert len(region_tokens) == 14  # one of the regions gets split into two tokens
@@ -54,7 +55,7 @@ def test_ittokenize_region_set(universe_bed_file: str):
 
 
 def test_yield_tokens(universe_bed_file: str):
-    t = ITTokenizer(universe_bed_file)
+    t = TreeTokenizer(universe_bed_file)
 
     # tokenize a bed file
     bed_file = "tests/data/to_tokenize.bed"
@@ -63,8 +64,8 @@ def test_yield_tokens(universe_bed_file: str):
     rs = RegionSet(bed_file)
 
     # tokenize
-    tokens = t.tokenize(rs, ids_only=False)
-    region_tokens = tokens.regions
+    tokens = t(rs)
+    region_tokens = tokens.to_regions()
 
     # filter out UNK tokens
     assert len(region_tokens) == 14  # one of the regions gets split into two tokens
@@ -80,7 +81,7 @@ def test_yield_tokens(universe_bed_file: str):
 
 
 def test_tokenize_anndata(universe_bed_file: str):
-    t = ITTokenizer(universe_bed_file)
+    t = AnnDataTokenizer(universe_bed_file)
 
     # tokenize anndata
     adata = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
@@ -90,10 +91,3 @@ def test_tokenize_anndata(universe_bed_file: str):
 
     # count tokens
     assert len(tokens) == 20
-
-
-def test_ittokenizer_get_padding(universe_bed_file: str):
-    t = ITTokenizer(universe_bed_file)
-    padding = t.padding_token()
-
-    assert padding.id == 2379
