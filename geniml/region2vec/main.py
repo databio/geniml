@@ -298,7 +298,7 @@ class Region2VecExModel(ExModel):
         )
 
     def encode(
-        self, regions: Union[Region, List[Region], RegionSet], pooling: POOLING_TYPES = None
+        self, regions: Union[str, Region, List[Region], RegionSet], pooling: POOLING_TYPES = None
     ) -> np.ndarray:
         """
         Get the vector for a region.
@@ -315,27 +315,27 @@ class Region2VecExModel(ExModel):
         if isinstance(regions, Region):
             regions = [regions]
         if isinstance(regions, str):
-            regions = list(RegionSet(regions))
+            regions = RegionSet(regions)
         if isinstance(regions, RegionSet):
-            regions = list(regions)
-        if not isinstance(regions, list):
-            regions = [regions]
+            pass
         if not isinstance(regions[0], Region):
             raise TypeError("regions must be a list of Region objects.")
 
         if pooling not in ["mean", "max"]:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
-        # tokenize the region
-        tokens = [self.tokenizer.tokenize(r) for r in regions]
-        token_tensors = [torch.tensor(token_set, dtype=torch.long) for token_set in tokens]
+        # tokenize the regionm -- need to pass it as a list because the tokenizer expects a list
+        tokens = [self.tokenizer([r]) for r in regions]
+        token_tensors = [
+            torch.tensor(token_set.to_ids(), dtype=torch.long) for token_set in tokens
+        ]
         padded_tokens = pad_sequence(
-            token_tensors, batch_first=True, padding_value=self.tokenizer.padding_token_id()
+            token_tensors, batch_first=True, padding_value=self.tokenizer.padding_token_id
         )
 
         batch_embeddings = self._model.projection(padded_tokens)
 
-        attention_mask = padded_tokens != self.tokenizer.padding_token_id()
+        attention_mask = padded_tokens != self.tokenizer.padding_token_id
 
         if pooling == "mean":
             region_embeddings = (

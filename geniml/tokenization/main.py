@@ -109,6 +109,10 @@ class AnnDataTokenizer(Tokenizer):
 
         return tokenized
 
+    @property
+    def universe(self):
+        return self._tokenizer.universe
+
     def tokenize(self, query: sc.AnnData) -> List[List[Region]]:
         """
         Tokenize a Region or RegionSet into the universe
