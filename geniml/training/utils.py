@@ -118,7 +118,7 @@ def generate_fine_tuning_dataset(
     cell_types = adata.obs[cell_type_key].unique()
 
     # tokenize every cell first, so we don't have to do it multiple times
-    tokens = tokenizer.tokenize(adata)
+    tokens = tokenizer(adata)
     tokens = [
         [t.id for t in subset]
         for subset in track(tokens, description="Converting to ids", total=len(tokens))
