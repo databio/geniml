@@ -12,7 +12,7 @@ from geniml.region2vec.utils import Region2VecDataset
 
 @pytest.fixture
 def universe_file():
-    return "tests/data/universe.bed"
+    return "tests/data/universe.uniq.bed"
 
 
 def test_init_region2vec():
@@ -58,13 +58,15 @@ def test_r2v_pytorch_forward():
 def test_r2v_pytorch_tokenizer_is_file_on_disk(universe_file: str):
     model = Region2VecExModel(tokenizer=universe_file)
     assert model is not None
-    assert len(model.tokenizer) == 2435
+    assert (
+        len(model.tokenizer) == 2_385
+    )  # 2378 + 7 special tokens (unk, pad, mask, sep, cls, eos, bos)
 
 
 def test_r2v_pytorch_tokenizer_is_on_hf():
     model = Region2VecExModel(tokenizer="databio/r2v-ChIP-atlas-hg38-v2")
     assert model is not None
-    assert len(model.tokenizer) == 1_698_713
+    assert len(model.tokenizer) == 1_698_718
 
 
 def test_r2v_pytorch_exmodel_train(universe_file: str):
@@ -88,7 +90,7 @@ def test_r2v_pytorch_encode(universe_file: str):
     assert embedding.shape == (1, 100)
 
     rs = RegionSet("tests/data/to_tokenize.bed")
-    embedding = model.encode(list(rs))
+    embedding = model.encode(rs)
     assert embedding is not None
     assert isinstance(embedding, np.ndarray)
     assert embedding.shape == (13, 100)
