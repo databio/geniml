@@ -39,7 +39,9 @@ class BedCacheManager:
         return gr_bed_local
 
     @staticmethod
-    def decompress_and_convert_to_genomic_ranges(content: bytes) -> genomicranges.GenomicRanges:
+    def decompress_and_convert_to_genomic_ranges(
+        content: bytes,
+    ) -> genomicranges.GenomicRanges:
         """Decompress a BED file and convert it to a GenomicRanges object"""
         is_gzipped = content[:2] == b"\x1f\x8b"
 

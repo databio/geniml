@@ -22,7 +22,12 @@ from .const import (
     MAF_STRAND_COL_NAME,
 )
 from .exceptions import BackedFileNotAvailableError, BEDFileReadError
-from .utils import compute_md5sum_bedset, extract_maf_col_positions, is_gzipped, read_bedset_file
+from .utils import (
+    compute_md5sum_bedset,
+    extract_maf_col_positions,
+    is_gzipped,
+    read_bedset_file,
+)
 
 _LOGGER = logging.getLogger("bbclient")
 
