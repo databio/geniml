@@ -8,6 +8,7 @@ import boto3
 import requests
 from botocore.exceptions import ClientError
 from ubiquerg import is_url
+from pybiocfilecache import BiocFileCache
 
 from .._version import __version__
 from ..io.io import BedSet, RegionSet
@@ -45,6 +46,8 @@ class BBClient(BedCacheManager):
         """
         cache_folder = get_abs_path(cache_folder)
         super().__init__(cache_folder)
+
+        self.bioc_cache = BiocFileCache(cache_folder)
 
         self.bedbase_api = bedbase_api
 
@@ -100,17 +103,15 @@ class BBClient(BedCacheManager):
 
         if os.path.exists(file_path):
             _LOGGER.info(f"BED file {bed_id} already exists in cache.")
+        # if not in the cache, download from BEDbase and write to file in cache
         else:
-            file_path = self._bedfile_path(bed_id)
+            bed_data = self._download_bed_file_from_bb(bed_id)
+            with open(file_path, "wb") as f:
+                f.write(bed_data)
 
-            if os.path.exists(file_path):
-                _LOGGER.info(f"BED file {bed_id} already exists in cache.")
-            # if not in the cache, download from BEDbase and write to file in cache
-            else:
-                bed_data = self._download_bed_file_from_bb(bed_id)
-                with open(file_path, "wb") as f:
-                    f.write(bed_data)
-                _LOGGER.info(f"BED file {bed_id} was downloaded and cached successfully")
+            self.bioc_cache.add(bed_id, fpath=file_path, action="asis")
+
+            _LOGGER.info(f"BED file {bed_id} was downloaded and cached successfully")
 
         return RegionSet(regions=file_path)
 
@@ -166,7 +167,7 @@ class BBClient(BedCacheManager):
                     with open(bedfile.path, "rb") as f_in:
                         with gzip.open(file_path, "wb") as f_out:
                             shutil.copyfileobj(f_in, f_out)
-
+            self.bioc_cache.add(bedfile_id, fpath=file_path, action="asis")
         return bedfile_id
 
     def add_bed_to_s3(
@@ -332,7 +333,11 @@ class BBClient(BedCacheManager):
         return self._cache_path(bedfile_id, subfolder_name, file_extension, create)
 
     def _cache_path(
-        self, identifier: str, subfolder_name: str, file_extension: str, create: bool = True
+        self,
+        identifier: str,
+        subfolder_name: str,
+        file_extension: str,
+        create: bool = True,
     ) -> str:
         """
         Get the path of a file in cache folder

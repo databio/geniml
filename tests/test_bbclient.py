@@ -117,6 +117,12 @@ class TestBBClientCaching:
         with pytest.raises(FileNotFoundError):
             bbclient.seek(bedset_id)
 
+    @pytest.mark.parametrize("bedfile_path", ALL_BEDFILE_PATH)
+    def test_bioconductor_cach(self, bedfile_path, tmp_path):
+        bbclient = BBClient(cache_folder=tmp_path)
+        bedfile_id = bbclient.add_bed_to_cache(bedfile_path)
+        assert bbclient.bioc_cache.get(bedfile_id).fpath == bbclient.seek(bedfile_id)
+
 
 class TestS3Caching:
     def test_upload_s3(self, mocker, local_bedfile_path, tmp_path):
