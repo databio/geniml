@@ -157,6 +157,12 @@ class TreeTokenizer(Tokenizer):
         else:
             raise NotImplementedError("Only AnnData is supported for this tokenizer.")
 
+    def __repr__(self):
+        return "TreeTokenizer()"
+
+    def __str__(self):
+        return "TreeTokenizer()"
+
 
 class AnnDataTokenizer(Tokenizer):
     """
@@ -335,6 +341,12 @@ class AnnDataTokenizer(Tokenizer):
             return result
         else:
             raise NotImplementedError("Only AnnData is supported for this tokenizer.")
+
+    def __repr__(self):
+        return "AnnDataTokenizer()"
+
+    def __str__(self):
+        return "AnnDataTokenizer()"
 
 
 def hard_tokenization_main(
