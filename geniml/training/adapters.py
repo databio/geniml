@@ -42,7 +42,9 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         return self.r2v_model(x)
 
     def training_step(
-        self, batch: Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor], batch_idx: int
+        self,
+        batch: Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor],
+        batch_idx: int,
     ):
         """
         Perform a training step.
@@ -140,7 +142,9 @@ class MLMAdapter(L.LightningModule):
         return optimizer
 
     def training_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        batch_idx: int,
     ):
         """
         Perform a training step.
