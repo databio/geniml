@@ -116,7 +116,6 @@ def main(test_args=None):
     if args.command == "bbclient":
         if args.subcommand is not None:
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-
             from .bbclient import BBClient
 
             bbc = BBClient()
@@ -147,8 +146,11 @@ def main(test_args=None):
                 bedfile = RegionSet(args.identifier[0])
                 bbc.add_bed_to_cache(bedfile)
                 _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
+            else:
+                bbc.load_bed(args.identifier[0])
 
         if args.subcommand == "cache-bedset":
+
             if os.path.isdir(args.identifier[0]):
                 from .io import BedSet
 
@@ -160,6 +162,9 @@ def main(test_args=None):
                 )
                 bbc.add_bedset_to_cache(bedset)
                 _LOGGER.info(f"BED set {bedset.compute_bedset_identifier()} has been cached")
+
+            else:
+                bbc.load_bedset(args.identifier[0])
 
         if args.subcommand == "seek":
             handler = logging.StreamHandler(sys.stdout)
