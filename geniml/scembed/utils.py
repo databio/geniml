@@ -73,7 +73,9 @@ class BatchCorrectionDataset(Dataset):
             self.data = [
                 (torch.tensor(read_tokens_from_gtok(gtok_file)), torch.tensor(batch))
                 for gtok_file, batch in track(
-                    self.data, total=len(self.data), description="Loading data into memory..."
+                    self.data,
+                    total=len(self.data),
+                    description="Loading data into memory...",
                 )
             ]
 
