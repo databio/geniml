@@ -151,7 +151,7 @@ class TreeTokenizer(Tokenizer):
         return len(self.universe.regions)
 
     def __call__(self, query: Union[str, RegionSet]) -> List[List[Region]]:
-        if isinstance(query, sc.AnnData) or isinstance(query, RegionSet):
+        if isinstance(query, str) or isinstance(query, RegionSet):
             result = self._tokenizer(query)
             return result
         else:
