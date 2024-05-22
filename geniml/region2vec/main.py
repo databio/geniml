@@ -296,7 +296,9 @@ class Region2VecExModel(ExModel):
         )
 
     def encode(
-        self, regions: Union[Region, List[Region], RegionSet], pooling: POOLING_TYPES = None
+        self,
+        regions: Union[Region, List[Region], RegionSet],
+        pooling: POOLING_TYPES = None,
     ) -> np.ndarray:
         """
         Get the vector for a region.
