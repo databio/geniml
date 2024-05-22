@@ -2,6 +2,8 @@ import sys
 from typing import Dict
 
 import logmuse
+import logging
+import os
 from ubiquerg import VersionInHelpParser
 
 from ._version import __version__
@@ -114,17 +116,10 @@ def main(test_args=None):
     if args.command == "bbclient":
         if args.subcommand is not None:
             _LOGGER.info(f"Subcommand: {args.subcommand}")
-            import os
 
             from .bbclient import BBClient
 
-            cache_path = os.environ.get("BBCLIENT_CACHE", args.cache_folder)
-            if cache_path is None:
-                _LOGGER.error(
-                    "Please give a valid cache folder, or set it in the environment variable $BBCLIENT_CACHE`."
-                )
-                sys.exit(1)
-            bbc = BBClient(cache_path)
+            bbc = BBClient()
 
         else:
             # if no subcommand, print help format of bbclient subparser
@@ -152,12 +147,8 @@ def main(test_args=None):
                 bedfile = RegionSet(args.identifier[0])
                 bbc.add_bed_to_cache(bedfile)
                 _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
-            else:
-                bedfile = bbc.load_bed(args.identifier[0])
 
         if args.subcommand == "cache-bedset":
-            import os
-
             if os.path.isdir(args.identifier[0]):
                 from .io import BedSet
 
@@ -170,24 +161,17 @@ def main(test_args=None):
                 bbc.add_bedset_to_cache(bedset)
                 _LOGGER.info(f"BED set {bedset.compute_bedset_identifier()} has been cached")
 
-            else:
-                bedset = bbc.load_bedset(args.identifier[0])
-
         if args.subcommand == "seek":
-            import logging
-
             handler = logging.StreamHandler(sys.stdout)
             _LOGGER.addHandler(handler)
             _LOGGER.info(bbc.seek(args.identifier[0]))
-            # sys.stdout.write(bbc.seek(args.identifier[0))
-        if args.subcommand == "inspect":
-            import os
 
+        if args.subcommand == "inspect":
             _LOGGER.info(f"Bedfiles directory:")
-            os.system(f"tree {os.path.join(cache_path, 'bedfiles')} | tail -n 1")
+            os.system(f"tree {bbc.bedfile_cache}")
 
             _LOGGER.info(f"Bedsets directory:")
-            os.system(f"tree {os.path.join(cache_path, 'bedsets')} | tail -n 1")
+            os.system(f"tree {bbc.bedset_cache}")
 
         if args.subcommand == "rm":
             file_path = bbc.seek(args.identifier[0])
@@ -322,7 +306,6 @@ def main(test_args=None):
             print(rct_score)
         if args.subcommand == "bin-gen":
             import glob
-            import os
             import pickle
 
             from geniml.eval.utils import get_bin_embeddings
