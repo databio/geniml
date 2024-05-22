@@ -6,7 +6,12 @@ import torch.nn as nn
 from rich.progress import track
 from torch.utils.data import Dataset
 
-from .const import DEFAULT_N_SHUFFLES, DEFAULT_NS_POWER, DEFAULT_WINDOW_SIZE, MODULE_NAME
+from .const import (
+    DEFAULT_N_SHUFFLES,
+    DEFAULT_NS_POWER,
+    DEFAULT_WINDOW_SIZE,
+    MODULE_NAME,
+)
 from .utils import shuffle_documents
 
 _LOGGER = logging.getLogger(MODULE_NAME)
@@ -169,7 +174,9 @@ def generate_frequency_distribution(tokens: List[List[int]], vocab_length: int) 
 
     # count the number of times each token appears
     for token in track(
-        tokens_flat, total=len(tokens_flat), description="Generating frequency distribution"
+        tokens_flat,
+        total=len(tokens_flat),
+        description="Generating frequency distribution",
     ):
         freq_dist[token] += 1
 
@@ -181,7 +188,10 @@ def generate_frequency_distribution(tokens: List[List[int]], vocab_length: int) 
 
 class NegativeSampler:
     def __init__(
-        self, freq_dist: torch.Tensor, power: float = DEFAULT_NS_POWER, batch_size: int = None
+        self,
+        freq_dist: torch.Tensor,
+        power: float = DEFAULT_NS_POWER,
+        batch_size: int = None,
     ):
         """
         Initialize the negative sampler.
@@ -225,7 +235,12 @@ class NSLoss(nn.Module):
     def __init__(self):
         super(NSLoss, self).__init__()
 
-    def forward(self, context: torch.Tensor, negative_samples: torch.Tensor, target: torch.Tensor):
+    def forward(
+        self,
+        context: torch.Tensor,
+        negative_samples: torch.Tensor,
+        target: torch.Tensor,
+    ):
         """
         :param torch.Tensor context: The context vectors.
         :param torch.Tensor negative_samples: The negative sample vectors.
@@ -236,7 +251,9 @@ class NSLoss(nn.Module):
             context.shape[0], context.shape[1], context.shape[2]
         )
         target_v_neg = target.unsqueeze(1).expand(
-            negative_samples.shape[0], negative_samples.shape[1], negative_samples.shape[2]
+            negative_samples.shape[0],
+            negative_samples.shape[1],
+            negative_samples.shape[2],
         )
 
         # target is now of shape (batch_size, num_context_vectors, embedding_size)

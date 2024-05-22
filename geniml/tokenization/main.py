@@ -129,7 +129,10 @@ class ITTokenizer(Tokenizer):
         return tokenized
 
     def tokenize(
-        self, query: Union[Region, RegionSet], ids_only: bool = True, as_strings: bool = False
+        self,
+        query: Union[Region, RegionSet],
+        ids_only: bool = True,
+        as_strings: bool = False,
     ) -> GTokenizedRegionSet:
         """
         Tokenize a Region or RegionSet into the universe

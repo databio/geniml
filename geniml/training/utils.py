@@ -92,7 +92,10 @@ def generate_fine_tuning_dataset(
     sample_size: int = None,
     negative_ratio: float = None,
 ) -> Tuple[
-    List[Tuple[List[int], List[int]]], List[Tuple[List[int], List[int]]], List[int], List[int]
+    List[Tuple[List[int], List[int]]],
+    List[Tuple[List[int], List[int]]],
+    List[int],
+    List[int],
 ]:
     """
     Generates a dataset for fine tuning the region2vec model using siamese networks. These
@@ -168,4 +171,9 @@ def generate_fine_tuning_dataset(
 
         negative_pairs.extend(neg)
 
-    return positive_pairs, negative_pairs, [1] * len(positive_pairs), [-1] * len(negative_pairs)
+    return (
+        positive_pairs,
+        negative_pairs,
+        [1] * len(positive_pairs),
+        [-1] * len(negative_pairs),
+    )
