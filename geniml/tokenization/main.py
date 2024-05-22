@@ -3,7 +3,7 @@ import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import scanpy as sc
@@ -11,10 +11,9 @@ from huggingface_hub import hf_hub_download
 from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
-from geniml.io import Region
+from geniml.io import Region, RegionSet
 from genimtools.tokenizers import (
     TreeTokenizer as GTreeTokenizer,
-    TokenizedRegionSet as GTokenizedRegionSet,
     Region as GRegion,
 )
 
@@ -31,6 +30,132 @@ class Tokenizer(ABC):
 class Namespace:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+
+
+class TreeTokenizer(Tokenizer):
+    """
+    A fast, in memory, tokenizer that uses `gtokenizers` - a rust based tokenizer.
+
+    This should be used to tokenize bulk data, like BED files. If you need to tokenize single cell data, use
+    the `AnnDataTokenizer` instead.
+    """
+
+    @classmethod
+    def from_pretrained(cls, model_path: str, **kwargs):
+        """
+        Create a new tokenizer from a pretrained model's vocabulary.
+
+        Usage:
+        ```
+        tokenizer = TreeTokenizer.from_pretrained("path/to/universe.bed")
+        ```
+
+        :param str model_path: The path to the pretrained model on huggingface.
+        """
+        universe_file_path = hf_hub_download(model_path, "universe.bed")
+        return cls(universe_file_path, **kwargs)
+
+    def __init__(self, universe: str) -> GTreeTokenizer:
+        """
+        Create a new tokenizer.
+
+        This tokenizer only accepts a path to a BED file containing regions.
+
+        :param str universe: The universe to use for tokenization.
+        """
+        self._tokenizer = GTreeTokenizer(universe)
+
+    @property
+    def universe(self):
+        return self._tokenizer.universe
+
+    def tokenize(self, query: Union[str, RegionSet]) -> List[List[Region]]:
+        """
+        Tokenize a Region or RegionSet into the universe
+
+        :param Union[Region, RegionSet] query: The query to tokenize.
+        """
+        if isinstance(query, sc.AnnData) or isinstance(query, RegionSet):
+            result = self._tokenizer(query)
+            return result.to_regions()
+        else:
+            raise ValueError(
+                f"Please pass a RegionSet object or a path to a BED file. You passed: {type(query)}"
+            )
+
+    def encode(self, query: sc.AnnData) -> List[List[int]]:
+        """
+        Tokenize an AnnData object to IDs.
+
+        :param sc.AnnData query: The query to tokenize.
+        """
+        if isinstance(query, sc.AnnData) or isinstance(query, RegionSet):
+            result = self._tokenizer(query)
+            return result.to_ids()
+        else:
+            raise ValueError(
+                f"Please pass a RegionSet object or a path to a BED file. You passed: {type(query)}"
+            )
+
+    def decode(self, query: List[List[int]]) -> List[List[Region]]:
+        """
+        Decode a list of IDs back to regions.
+
+        :param List[List[int]] query: The query to decode.
+        """
+        return [self._tokenizer.decode(ids) for ids in query]
+
+    def padding_token(self) -> GRegion:
+        return self._tokenizer.padding_token()
+
+    def padding_token_id(self) -> int:
+        return self._tokenizer.padding_token_id()
+
+    def unknown_token(self) -> GRegion:
+        return self._tokenizer.unknown_token()
+
+    def unknown_token_id(self) -> int:
+        return self._tokenizer.unknown_token_id()
+
+    def mask_token(self) -> GRegion:
+        return self._tokenizer.mask_token()
+
+    def mask_token_id(self) -> int:
+        return self._tokenizer.mask_token_id()
+
+    def cls_token(self) -> GRegion:
+        return self._tokenizer.cls_token()
+
+    def cls_token_id(self) -> int:
+        return self._tokenizer.cls_token_id()
+
+    def bos_token(self) -> GRegion:
+        return self._tokenizer.bos_token()
+
+    def bos_token_id(self) -> int:
+        return self._tokenizer.bos_token_id()
+
+    def eos_token(self) -> GRegion:
+        return self._tokenizer.eos_token()
+
+    def eos_token_id(self) -> int:
+        return self._tokenizer.eos_token_id()
+
+    def sep_token(self) -> GRegion:
+        return self._tokenizer.sep_token()
+
+    def sep_token_id(self) -> int:
+        return self._tokenizer.sep_token_id()
+
+    def __len__(self):
+        return len(self.universe.regions)
+
+    def __call__(self, query: Union[str, RegionSet]) -> List[List[Region]]:
+        if isinstance(query, sc.AnnData) or isinstance(query, RegionSet):
+            result = self._tokenizer(query)
+            return result
+        else:
+            raise NotImplementedError("Only AnnData is supported for this tokenizer.")
 
 
 class AnnDataTokenizer(Tokenizer):
@@ -209,7 +334,7 @@ class AnnDataTokenizer(Tokenizer):
             result = self._tokenize_anndata(query)
             return result
         else:
-            raise NotImplementedError("Only AnnData is supported right now.")
+            raise NotImplementedError("Only AnnData is supported for this tokenizer.")
 
 
 def hard_tokenization_main(
