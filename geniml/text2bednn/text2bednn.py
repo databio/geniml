@@ -7,7 +7,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from huggingface_hub import hf_hub_download
-from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
+from torch.nn import (
+    CosineEmbeddingLoss,
+    CosineSimilarity,
+    Linear,
+    MSELoss,
+    ReLU,
+    Sequential,
+)
 from yaml import safe_dump, safe_load
 
 from .const import *
@@ -31,14 +38,20 @@ class Vec2Vec(Sequential):
             raise ValueError("list of units number does not match number of layers")
         # input and first hidden layer
         current_layer_units_num = num_units[0]
-        layers_list = [Linear(in_features=input_dim, out_features=current_layer_units_num), ReLU()]
+        layers_list = [
+            Linear(in_features=input_dim, out_features=current_layer_units_num),
+            ReLU(),
+        ]
         previous_layer_units_num = current_layer_units_num
 
         # extra hidden layer
         for i in range(num_extra_hidden_layers):
             current_layer_units_num = num_units[i + 1]
             layers_list.append(
-                Linear(in_features=previous_layer_units_num, out_features=current_layer_units_num)
+                Linear(
+                    in_features=previous_layer_units_num,
+                    out_features=current_layer_units_num,
+                )
             )
             layers_list.append(ReLU())
             previous_layer_units_num = current_layer_units_num
@@ -264,7 +277,11 @@ class Vec2VecFNN:
             if validating_target is None:
                 validating_target = np.repeat(1, validating_X.shape[0])
             validating_data = arrays_to_torch_dataloader(
-                validating_X, validating_Y, validating_target, batch_size=batch_size, shuffle=False
+                validating_X,
+                validating_Y,
+                validating_target,
+                batch_size=batch_size,
+                shuffle=False,
             )
 
             self.most_recent_train["val_loss"] = []

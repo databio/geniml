@@ -8,7 +8,12 @@ from genimtools.utils import read_tokens_from_gtok
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
-from .const import KEEP_RATE, MASK_RATE, REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE
+from .const import (
+    KEEP_RATE,
+    MASK_RATE,
+    REPLACE_WITH_MASK_RATE,
+    REPLACE_WITH_RANDOM_RATE,
+)
 
 
 class AtacformerMLMDataset(Dataset):
@@ -61,7 +66,8 @@ class AtacformerMLMDataset(Dataset):
         # mask the tokens
         for i in mask_ids:
             val = torch.multinomial(
-                torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE]), 1
+                torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE]),
+                1,
             )
             if val == 0:
                 masked_tokens[i] = self.mask_token_id
@@ -73,7 +79,9 @@ class AtacformerMLMDataset(Dataset):
         return tokens, masked_tokens, mask_ids
 
     def collate_batch(
-        self, batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]], padding_token: int
+        self,
+        batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
+        padding_token: int,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Collate function for the MLM dataset. This should take a batch of
