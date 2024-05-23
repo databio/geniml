@@ -181,7 +181,7 @@ class BBClient(BedCacheManager):
             self.bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
         return bedfile_id
 
-    def add_bed_tokens_to_cache(self, bed_id: str, universe_id: str) -> str:
+    def add_bed_tokens_to_cache(self, bed_id: str, universe_id: str) -> None:
         """
         Add a tokenized BED file to the cache
 
