@@ -236,7 +236,7 @@ class AnnDataTokenizer(Tokenizer):
         ):
             _, non_zeros = adata.X[row].nonzero()
             regions = features[non_zeros]
-            tokenized.append(self._tokenizer(regions.tolist()))
+            tokenized.append(self._tokenizer(regions))
 
         return tokenized
 
