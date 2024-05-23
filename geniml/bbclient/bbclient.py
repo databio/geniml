@@ -29,6 +29,8 @@ from .const import (
     DEFAULT_CACHE_FOLDER,
     MODULE_NAME,
     DEFAULT_ZARR_FOLDER,
+    S3_TOKENIZED_CACHE_PATH,
+    S3_ENDPOINT_URL,
 )
 from .utils import BedCacheManager, get_abs_path
 
@@ -189,8 +191,8 @@ class BBClient(BedCacheManager):
         :return: the identifier of the tokenized BED file
         """
 
-        s3fc_obj = s3fs.S3FileSystem(endpoint_url="https://s3.us-west-002.backblazeb2.com/")
-        s3_path = os.path.join("s3://bedbase/tokenized.zarr/", universe_id, bed_id)
+        s3fc_obj = s3fs.S3FileSystem(endpoint_url=S3_ENDPOINT_URL)
+        s3_path = os.path.join(S3_TOKENIZED_CACHE_PATH, universe_id, bed_id)
         zarr_store = s3fs.S3Map(root=s3_path, s3=s3fc_obj, check=False, create=False)
         cache_obj = zarr.LRUStoreCache(zarr_store, max_size=2**28)
 
