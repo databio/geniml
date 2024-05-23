@@ -23,7 +23,7 @@ lightning
 botocore >= 1.34.54
 boto3 >=  1.34.54
 scipy <= 1.11.0
-pybiocfilecache >= 0.3.1
+pybiocfilecache >= 0.4.0
 zarr >= 2.17.2
 pyyaml >= 6.0.1 # for s3fs because of the errors
 s3fs >= 2024.3.1
