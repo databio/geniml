@@ -491,7 +491,10 @@ def load_local_region2vec_model(
 
 class Region2VecDataset:
     def __init__(
-        self, data: Union[str, List[str]], shuffle: bool = True, convert_to_str: bool = False
+        self,
+        data: Union[str, List[str]],
+        shuffle: bool = True,
+        convert_to_str: bool = False,
     ):
         """
         Initialize a Region2VecDataset.

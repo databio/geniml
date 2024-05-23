@@ -117,6 +117,19 @@ class TestBBClientCaching:
         with pytest.raises(FileNotFoundError):
             bbclient.seek(bedset_id)
 
+    @pytest.mark.parametrize("bedfile_path", ALL_BEDFILE_PATH)
+    def test_bioc_cache_bedfile(self, bedfile_path, tmp_path):
+        bbclient = BBClient(cache_folder=tmp_path)
+        bedfile_id = bbclient.add_bed_to_cache(bedfile_path)
+        assert bbclient.bedfile_cache.get(bedfile_id).fpath == bbclient.seek(bedfile_id)
+
+    def test_bioc_cache_bedset(self, tmp_path, local_bedfile_list):
+        bbclient = BBClient(cache_folder=tmp_path)
+        bedset = BedSet(local_bedfile_list)
+        bedset_id = bbclient.add_bedset_to_cache(bedset)
+        path_in_cache = bbclient.seek(bedset_id)
+        assert bbclient.bedset_cache.get(bedset_id).fpath == path_in_cache
+
 
 class TestS3Caching:
     def test_upload_s3(self, mocker, local_bedfile_path, tmp_path):

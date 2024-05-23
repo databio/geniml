@@ -69,7 +69,11 @@ def anndata_to_regionsets(adata: sc.AnnData) -> List[List[Region]]:
         raise ValueError("The input must be a scanpy AnnData object.")
 
     if not all(
-        ["chr" in adata.var.columns, "start" in adata.var.columns, "end" in adata.var.columns]
+        [
+            "chr" in adata.var.columns,
+            "start" in adata.var.columns,
+            "end" in adata.var.columns,
+        ]
     ):
         raise ValueError(
             "The AnnData object must have chr, start, and end in the `.var` attribute."
