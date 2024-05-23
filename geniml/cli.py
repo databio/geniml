@@ -149,6 +149,9 @@ def main(test_args=None):
             else:
                 bbc.load_bed(args.identifier[0])
 
+        if args.subcommand == "cache-tokens":
+            bbc.add_bed_tokens_to_cache(args.bed_id[0], args.universe_id[0])
+
         if args.subcommand == "cache-bedset":
 
             if os.path.isdir(args.identifier[0]):
