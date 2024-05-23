@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import shutil
 import subprocess
+import time
 from abc import ABC, abstractmethod
 from typing import List, Union
 
@@ -234,9 +235,23 @@ class AnnDataTokenizer(Tokenizer):
             description="Tokenizing",
             disable=not self.verbose,
         ):
+            start = time.time()
             _, non_zeros = adata.X[row].nonzero()
+            end = time.time()
+
+            print(f"Nonzero time: {end - start}")
+
+            start = time.time()
             regions = features[non_zeros]
+            end = time.time()
+
+            print(f"Regions time: {end - start}")
+
+            start = time.time()
             tokenized.append(self._tokenizer(regions))
+            end = time.time()
+
+            print(f"Tokenize time: {end - start}")
 
         return tokenized
 
