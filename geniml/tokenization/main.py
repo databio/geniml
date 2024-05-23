@@ -106,46 +106,46 @@ class TreeTokenizer(Tokenizer):
         return [self._tokenizer.decode(ids) for ids in query]
 
     def padding_token(self) -> GRegion:
-        return self._tokenizer.padding_token()
+        return self._tokenizer.padding_token
 
     def padding_token_id(self) -> int:
-        return self._tokenizer.padding_token_id()
+        return self._tokenizer.padding_token_id
 
     def unknown_token(self) -> GRegion:
-        return self._tokenizer.unknown_token()
+        return self._tokenizer.unknown_token
 
     def unknown_token_id(self) -> int:
-        return self._tokenizer.unknown_token_id()
+        return self._tokenizer.unknown_token_id
 
     def mask_token(self) -> GRegion:
-        return self._tokenizer.mask_token()
+        return self._tokenizer.mask_token
 
     def mask_token_id(self) -> int:
-        return self._tokenizer.mask_token_id()
+        return self._tokenizer.mask_token_id
 
     def cls_token(self) -> GRegion:
-        return self._tokenizer.cls_token()
+        return self._tokenizer.cls_token
 
     def cls_token_id(self) -> int:
-        return self._tokenizer.cls_token_id()
+        return self._tokenizer.cls_token_id
 
     def bos_token(self) -> GRegion:
-        return self._tokenizer.bos_token()
+        return self._tokenizer.bos_token
 
     def bos_token_id(self) -> int:
-        return self._tokenizer.bos_token_id()
+        return self._tokenizer.bos_token_id
 
     def eos_token(self) -> GRegion:
-        return self._tokenizer.eos_token()
+        return self._tokenizer.eos_token
 
     def eos_token_id(self) -> int:
-        return self._tokenizer.eos_token_id()
+        return self._tokenizer.eos_token_id
 
     def sep_token(self) -> GRegion:
-        return self._tokenizer.sep_token()
+        return self._tokenizer.sep_token
 
     def sep_token_id(self) -> int:
-        return self._tokenizer.sep_token_id()
+        return self._tokenizer.sep_token_id
 
     def __len__(self):
         return len(self.universe.regions)
@@ -287,46 +287,46 @@ class AnnDataTokenizer(Tokenizer):
         return [self._tokenizer.decode(ids) for ids in query]
 
     def padding_token(self) -> GRegion:
-        return self._tokenizer.padding_token()
+        return self._tokenizer.padding_token
 
     def padding_token_id(self) -> int:
-        return self._tokenizer.padding_token_id()
+        return self._tokenizer.padding_token_id
 
     def unknown_token(self) -> GRegion:
-        return self._tokenizer.unknown_token()
+        return self._tokenizer.unknown_token
 
     def unknown_token_id(self) -> int:
-        return self._tokenizer.unknown_token_id()
+        return self._tokenizer.unknown_token_id
 
     def mask_token(self) -> GRegion:
-        return self._tokenizer.mask_token()
+        return self._tokenizer.mask_token
 
     def mask_token_id(self) -> int:
-        return self._tokenizer.mask_token_id()
+        return self._tokenizer.mask_token_id
 
     def cls_token(self) -> GRegion:
-        return self._tokenizer.cls_token()
+        return self._tokenizer.cls_token
 
     def cls_token_id(self) -> int:
-        return self._tokenizer.cls_token_id()
+        return self._tokenizer.cls_token_id
 
     def bos_token(self) -> GRegion:
-        return self._tokenizer.bos_token()
+        return self._tokenizer.bos_token
 
     def bos_token_id(self) -> int:
-        return self._tokenizer.bos_token_id()
+        return self._tokenizer.bos_token_id
 
     def eos_token(self) -> GRegion:
-        return self._tokenizer.eos_token()
+        return self._tokenizer.eos_token
 
     def eos_token_id(self) -> int:
-        return self._tokenizer.eos_token_id()
+        return self._tokenizer.eos_token_id
 
     def sep_token(self) -> GRegion:
-        return self._tokenizer.sep_token()
+        return self._tokenizer.sep_token
 
     def sep_token_id(self) -> int:
-        return self._tokenizer.sep_token_id()
+        return self._tokenizer.sep_token_id
 
     def __len__(self):
         return len(self.universe.regions)
