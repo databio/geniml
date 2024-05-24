@@ -17,3 +17,10 @@ class TokenizedFileNotFoundError(BBClientError):
 
     def __init__(self, msg):
         super(TokenizedFileNotFoundError, self).__init__(msg)
+
+
+class TokenizedFileNotFoundInCacheError(BBClientError):
+    """Error raised when a tokenized file is not found in cache."""
+
+    def __init__(self, msg):
+        super(TokenizedFileNotFoundInCacheError, self).__init__(msg)
