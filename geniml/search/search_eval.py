@@ -1,12 +1,13 @@
 import json
 from typing import Dict
 
-from backends import HNSWBackend
 from huggingface_hub import hf_hub_download
 from interfaces import Text2BEDSearchInterface
-from query2vec import Text2Vec
 
 from const import HF_INDEX, HF_METADATA, HF_PAYLOADS
+
+from .backends import HNSWBackend
+from .query2vec import Text2Vec
 
 
 def anecdotal_search_from_hf_data(
