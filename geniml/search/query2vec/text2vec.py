@@ -1,11 +1,11 @@
 import logging
 from typing import Union
-from langchain_community.embeddings import HuggingFaceEmbeddings
+
 import numpy as np
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from ...const import PKG_NAME
 from ...text2bednn import Vec2VecFNN
-
 from .abstract import Query2Vec
 
 _LOGGER = logging.getLogger(PKG_NAME)
