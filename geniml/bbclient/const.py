@@ -18,5 +18,9 @@ if not HOME_PATH:
     HOME_PATH = os.path.expanduser("~")
 DEFAULT_CACHE_FOLDER = os.getenv(BBCLIENT_CACHE_ENV) or os.path.join(HOME_PATH, ".bbcache/")
 
+DEFAULT_ZARR_FOLDER = "tokens.zarr"
+S3_TOKENIZED_CACHE_PATH = "s3://bedbase/tokenized.zarr/"
+S3_ENDPOINT_URL = "https://s3.us-west-002.backblazeb2.com/"
+
 DEFAULT_BUCKET_NAME = "bedbase"
 DEFAULT_BUCKET_FOLDER = "bed_files"

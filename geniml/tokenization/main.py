@@ -7,18 +7,10 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
-from genimtools.tokenizers import (
-    Region as GRegion,
-)
-from genimtools.tokenizers import (
-    TokenizedRegionSet as GTokenizedRegionSet,
-)
-from genimtools.tokenizers import (
-    TreeTokenizer as GTreeTokenizer,
-)
-from genimtools.tokenizers import (
-    Universe as GUniverse,
-)
+from genimtools.tokenizers import Region as GRegion
+from genimtools.tokenizers import TokenizedRegionSet as GTokenizedRegionSet
+from genimtools.tokenizers import TreeTokenizer as GTreeTokenizer
+from genimtools.tokenizers import Universe as GUniverse
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
