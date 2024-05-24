@@ -16,7 +16,7 @@ class Text2Vec(Query2Vec):
 
     def __init__(self, hf_repo: str, v2v: Union[str, Vec2VecFNN]):
         """
-        :param text_embedder: a subclass of TextEmbedder, or a model repository on Hugging Face
+        :param text_embedder: a model repository on Hugging Face
         :param v2v: a Vec2VecFNN (see geniml/text2bednn/text2bednn.py) or a model repository on Hugging Face
         """
         # Set model that embed natural language
