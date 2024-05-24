@@ -407,9 +407,11 @@ class Vec2VecFNN:
         train_loss = self.most_recent_train["loss"]
         plt.figure()
         plt.plot(epoch_range, train_loss, "r", label="Training loss")
-        if self.most_recent_train["val_loss"]:
+        try:
             valid_loss = self.most_recent_train["val_loss"]
             plt.plot(epoch_range, valid_loss, "b", label="Validation loss")
+        except:
+            pass
         plt.title(title)
         plt.legend()
         if save_path:
