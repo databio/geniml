@@ -12,6 +12,7 @@ from botocore.exceptions import ClientError
 from pybiocfilecache import BiocFileCache
 from ubiquerg import is_url
 from zarr.errors import PathNotFoundError
+from zarr import Array
 
 from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet, RegionSet
@@ -211,7 +212,7 @@ class BBClient(BedCacheManager):
             f"Tokenized BED file {bed_id} tokenized using {universe_id} was cached successfully"
         )
 
-    def load_bed_tokens(self, bed_id: str, universe_id: str) -> List[float]:
+    def load_bed_tokens(self, bed_id: str, universe_id: str) -> Array:
         """
         Load a tokenized BED file from cache, or download and cache it if it doesn't exist
 
@@ -232,7 +233,7 @@ class BBClient(BedCacheManager):
                 )
             zarr_array = self.zarr_cache[universe_id][bed_id]
 
-        return list(zarr_array)
+        return zarr_array
 
     def add_bed_to_s3(
         self,
