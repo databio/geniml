@@ -13,7 +13,7 @@ from pybiocfilecache import BiocFileCache
 from ubiquerg import is_url
 from zarr.errors import PathNotFoundError
 
-from ..exceptions import TokenizedFileNotFoundError
+from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
 from .const import (
@@ -226,7 +226,7 @@ class BBClient(BedCacheManager):
             try:
                 self.add_bed_tokens_to_cache(bed_id, universe_id)
             except TokenizedFileNotFoundError:
-                raise TokenizedFileNotFoundError(
+                raise TokenizedFileNotFoundInCacheError(
                     f"Tokenized BED file {bed_id} for {universe_id} does not exist in cache."
                     "And it is not available in bedbase."
                 )
