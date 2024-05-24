@@ -1,7 +1,6 @@
 import os
-from typing import List, Tuple
 import pickle
-from typing import Union
+from typing import List, Tuple, Union
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 import multiprocessing as mp

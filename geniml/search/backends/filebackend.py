@@ -1,8 +1,9 @@
 import os.path
 from typing import Dict, List, Union
 
-from ... import _LOGGER
 import hnswlib
+
+from ... import _LOGGER
 
 DEP_HNSWLIB = True
 # try:
@@ -24,8 +25,9 @@ from geniml.search.const import (
     DEFAULT_INDEX_PATH,
     DEFAULT_M,
 )
-from .abstract import EmSearchBackend
+
 from ..utils import verify_load_inputs
+from .abstract import EmSearchBackend
 
 # if not DEP_HNSWLIB:
 #

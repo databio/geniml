@@ -3,7 +3,8 @@ import pickle
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
-from typing import Tuple, List
+from typing import List, Tuple
+
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 

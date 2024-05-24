@@ -1,9 +1,9 @@
+import logging
+import os
 import sys
 from typing import Dict
 
 import logmuse
-import logging
-import os
 from ubiquerg import VersionInHelpParser
 
 from ._version import __version__

@@ -1,5 +1,5 @@
 import pickle
-from typing import Union, List, Tuple, Dict
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from gensim.models import Word2Vec
