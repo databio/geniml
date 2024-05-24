@@ -2,7 +2,6 @@ import multiprocessing
 import os
 import shutil
 import subprocess
-import time
 from abc import ABC, abstractmethod
 from typing import List, Union
 
@@ -235,23 +234,9 @@ class AnnDataTokenizer(Tokenizer):
             description="Tokenizing",
             disable=not self.verbose,
         ):
-            start = time.time()
             _, non_zeros = adata.X[row].nonzero()
-            end = time.time()
-
-            print(f"Nonzero time: {end - start}")
-
-            start = time.time()
             regions = features[non_zeros]
-            end = time.time()
-
-            print(f"Regions time: {end - start}")
-
-            start = time.time()
             tokenized.append(self._tokenizer(regions))
-            end = time.time()
-
-            print(f"Tokenize time: {end - start}")
 
         return tokenized
 
@@ -268,14 +253,39 @@ class AnnDataTokenizer(Tokenizer):
         :param bool as_strings: Whether to return the IDs as strings or ints
         """
         if isinstance(query, sc.AnnData):
-            result = self._tokenize_anndata(query)
-            return [result.to_regions() for result in result]
+            adata = query
         elif isinstance(query, str):
-            query = sc.read_h5ad(query)
-            result = self._tokenize_anndata(query)
-            return [result.to_regions() for result in result]
+            adata = sc.read_h5ad(query)
         else:
             raise NotImplementedError("Only AnnData is supported right now.")
+
+        adata_features = [
+            Region(chr, int(start), int(end))
+            for chr, start, end in track(
+                zip(adata.var["chr"], adata.var["start"], adata.var["end"]),
+                total=adata.var.shape[0],
+                description="Extracting regions from AnnData",
+                disable=not self.verbose,
+            )
+        ]
+        features = np.ndarray(len(adata_features), dtype=object)
+        for i, region in enumerate(adata_features):
+            features[i] = region
+        del adata_features
+
+        # tokenize
+        tokenized = []
+        for row in track(
+            range(adata.shape[0]),
+            total=adata.shape[0],
+            description="Tokenizing",
+            disable=not self.verbose,
+        ):
+            _, non_zeros = adata.X[row].nonzero()
+            regions = features[non_zeros]
+            tokenized.append(self._tokenizer.tokenize(regions))
+
+        return tokenized
 
     def encode(self, query: sc.AnnData) -> List[List[int]]:
         """
@@ -284,14 +294,39 @@ class AnnDataTokenizer(Tokenizer):
         :param sc.AnnData query: The query to tokenize.
         """
         if isinstance(query, sc.AnnData):
-            result = self._tokenize_anndata(query)
-            return [t.to_ids() for t in result]
+            adata = query
         elif isinstance(query, str):
-            query = sc.read_h5ad(query)
-            result = self._tokenize_anndata(query)
-            return [t.to_ids() for t in result]
+            adata = sc.read_h5ad(query)
         else:
             raise NotImplementedError("Only AnnData is supported right now.")
+
+        adata_features = [
+            Region(chr, int(start), int(end))
+            for chr, start, end in track(
+                zip(adata.var["chr"], adata.var["start"], adata.var["end"]),
+                total=adata.var.shape[0],
+                description="Extracting regions from AnnData",
+                disable=not self.verbose,
+            )
+        ]
+        features = np.ndarray(len(adata_features), dtype=object)
+        for i, region in enumerate(adata_features):
+            features[i] = region
+        del adata_features
+
+        # tokenize
+        tokenized = []
+        for row in track(
+            range(adata.shape[0]),
+            total=adata.shape[0],
+            description="Tokenizing",
+            disable=not self.verbose,
+        ):
+            _, non_zeros = adata.X[row].nonzero()
+            regions = features[non_zeros]
+            tokenized.append(self._tokenizer.encode(regions))
+
+        return tokenized
 
     def decode(self, query: List[List[int]]) -> List[List[Region]]:
         """
