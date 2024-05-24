@@ -2,7 +2,7 @@ import json
 from typing import Dict
 
 from huggingface_hub import hf_hub_download
-from interfaces import Text2BEDSearchInterface
+from .interfaces import Text2BEDSearchInterface
 
 from const import HF_INDEX, HF_METADATA, HF_PAYLOADS
 
