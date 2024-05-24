@@ -6,24 +6,32 @@ from typing import List, NoReturn, Union
 
 import boto3
 import requests
+import s3fs
+import zarr
 from botocore.exceptions import ClientError
-from ubiquerg import is_url
 from pybiocfilecache import BiocFileCache
+from ubiquerg import is_url
+from zarr.errors import PathNotFoundError
+from zarr import Array
 
+from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
 from .const import (
     BEDFILE_URL_PATTERN,
     BEDSET_URL_PATTERN,
-    DEFAULT_BUCKET_NAME,
     DEFAULT_BEDBASE_API,
     DEFAULT_BEDFILE_EXT,
     DEFAULT_BEDFILE_SUBFOLDER,
     DEFAULT_BEDSET_EXT,
     DEFAULT_BEDSET_SUBFOLDER,
     DEFAULT_BUCKET_FOLDER,
+    DEFAULT_BUCKET_NAME,
     DEFAULT_CACHE_FOLDER,
+    DEFAULT_ZARR_FOLDER,
     MODULE_NAME,
+    S3_ENDPOINT_URL,
+    S3_TOKENIZED_CACHE_PATH,
 )
 from .utils import BedCacheManager, get_abs_path
 
@@ -49,6 +57,9 @@ class BBClient(BedCacheManager):
         self.bedfile_cache = BiocFileCache(os.path.join(cache_folder, DEFAULT_BEDFILE_SUBFOLDER))
         self.bedset_cache = BiocFileCache(os.path.join(cache_folder, DEFAULT_BEDSET_SUBFOLDER))
 
+        self.zarr_cache = zarr.group(
+            store=os.path.join(cache_folder, DEFAULT_ZARR_FOLDER), overwrite=False
+        )
         self.bedbase_api = bedbase_api
 
     def load_bedset(self, bedset_id: str) -> BedSet:
@@ -170,6 +181,59 @@ class BBClient(BedCacheManager):
                             shutil.copyfileobj(f_in, f_out)
             self.bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
         return bedfile_id
+
+    def add_bed_tokens_to_cache(self, bed_id: str, universe_id: str) -> None:
+        """
+        Add a tokenized BED file to the cache
+
+        :param bed_id: the identifier of the BED file
+        :param universe_id: the identifier of the universe
+
+        :return: the identifier of the tokenized BED file
+        """
+
+        s3fc_obj = s3fs.S3FileSystem(endpoint_url=S3_ENDPOINT_URL)
+        s3_path = os.path.join(S3_TOKENIZED_CACHE_PATH, universe_id, bed_id)
+        zarr_store = s3fs.S3Map(root=s3_path, s3=s3fc_obj, check=False, create=False)
+        cache_obj = zarr.LRUStoreCache(zarr_store, max_size=2**28)
+
+        try:
+            tokenized_bed = zarr.open(cache_obj, mode="r")
+        except PathNotFoundError:
+            raise TokenizedFileNotFoundError(
+                f"Tokenized BED file {bed_id} for {universe_id} does not exist in bedbase."
+                f"Please make sure the tokenized BED file is available in bedbase."
+            )
+
+        univers_group = self.zarr_cache.require_group(universe_id)
+        univers_group.create_dataset(bed_id, data=tokenized_bed, overwrite=True)
+
+        _LOGGER.info(
+            f"Tokenized BED file {bed_id} tokenized using {universe_id} was cached successfully"
+        )
+
+    def load_bed_tokens(self, bed_id: str, universe_id: str) -> Array:
+        """
+        Load a tokenized BED file from cache, or download and cache it if it doesn't exist
+
+        :param bed_id: the identifier of the BED file
+        :param universe_id: the identifier of the universe
+
+        :return: the list of tokens
+        """
+        try:
+            zarr_array = self.zarr_cache[universe_id][bed_id]
+        except KeyError:
+            try:
+                self.add_bed_tokens_to_cache(bed_id, universe_id)
+            except TokenizedFileNotFoundError:
+                raise TokenizedFileNotFoundInCacheError(
+                    f"Tokenized BED file {bed_id} for {universe_id} does not exist in cache."
+                    "And it is not available in bedbase."
+                )
+            zarr_array = self.zarr_cache[universe_id][bed_id]
+
+        return zarr_array
 
     def add_bed_to_s3(
         self,
