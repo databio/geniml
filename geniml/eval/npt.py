@@ -2,11 +2,11 @@ import os
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
-import pickle
-from typing import Union, List, Tuple, Dict
-
 import multiprocessing as mp
+import pickle
 from multiprocessing.queues import Queue
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
 
 from .utils import genome_distance, load_genomic_embeddings

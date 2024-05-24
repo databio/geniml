@@ -7,14 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from huggingface_hub import hf_hub_download
-from torch.nn import (
-    CosineEmbeddingLoss,
-    CosineSimilarity,
-    Linear,
-    MSELoss,
-    ReLU,
-    Sequential,
-)
+from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
 from yaml import safe_dump, safe_load
 
 from .const import *

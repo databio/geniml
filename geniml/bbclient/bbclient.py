@@ -6,31 +6,31 @@ from typing import List, NoReturn, Union
 
 import boto3
 import requests
-from botocore.exceptions import ClientError
-from ubiquerg import is_url
-from pybiocfilecache import BiocFileCache
-import zarr
-from zarr.errors import PathNotFoundError
 import s3fs
+import zarr
+from botocore.exceptions import ClientError
+from pybiocfilecache import BiocFileCache
+from ubiquerg import is_url
+from zarr.errors import PathNotFoundError
 
-from ..io.io import BedSet, RegionSet
 from ..exceptions import TokenizedFileNotFoundError
+from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
 from .const import (
     BEDFILE_URL_PATTERN,
     BEDSET_URL_PATTERN,
-    DEFAULT_BUCKET_NAME,
     DEFAULT_BEDBASE_API,
     DEFAULT_BEDFILE_EXT,
     DEFAULT_BEDFILE_SUBFOLDER,
     DEFAULT_BEDSET_EXT,
     DEFAULT_BEDSET_SUBFOLDER,
     DEFAULT_BUCKET_FOLDER,
+    DEFAULT_BUCKET_NAME,
     DEFAULT_CACHE_FOLDER,
-    MODULE_NAME,
     DEFAULT_ZARR_FOLDER,
-    S3_TOKENIZED_CACHE_PATH,
+    MODULE_NAME,
     S3_ENDPOINT_URL,
+    S3_TOKENIZED_CACHE_PATH,
 )
 from .utils import BedCacheManager, get_abs_path
 
