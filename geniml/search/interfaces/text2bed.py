@@ -90,8 +90,8 @@ class Text2BEDSearchInterface(BEDSearchInterface):
                     query=query_str, limit=k, with_vectors=False, with_payload=False
                 )
                 query_count += 1
-            except:
-                _LOGGER.error(f"This query caused error when searching: {query_str}")
+            except Exception as e:
+                _LOGGER.error(f"{query_str} caused {e}")
                 continue
 
             ap, auc, rp = single_query_eval(search_results, relevant_results)
