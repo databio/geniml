@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
-from ..atacformer import AtacformerExModel
+from ..atacformer.main import AtacformerExModel
 from ..nn import GradientReversal
 from ..region2vec import Region2VecExModel
 from ..scembed import ScEmbed
@@ -105,14 +105,14 @@ class CellTypeFineTuneAdapter(L.LightningModule):
 
 class MLMAdapter(L.LightningModule):
     """
-    An adapter for training Atacformer on masked language modeling.
+    An adapter for training Atacformer on a masked language modeling task.
     """
 
     def __init__(self, model: AtacformerExModel, **kwargs):
         """
-        Instantiate a fine-tuning trainer.
+        Instantiate the masked-language-modeling adapter.
 
-        :param Atacformer model: The model to fine-tune.
+        :param Atacformer model: The model to train.
         :param int pad_token_id: The token to use for padding
         :param int mask_token_id: The token to use for masking
         :param kwargs: Additional arguments to pass to the LightningModule constructor.
@@ -158,19 +158,19 @@ class MLMAdapter(L.LightningModule):
         """
 
         # move the batch to the device
-        tokens, masked_tokens, mask_ids, attention_mask = batch
+        tokens, masked_tokens, masked_token_ids, attention_mask = batch
 
         # strip the padding
         tokens = tokens[attention_mask]
         masked_tokens = masked_tokens[attention_mask]
-        mask_ids = mask_ids[attention_mask]
+        masked_token_ids = masked_token_ids[attention_mask]
 
         # forward pass for the batch
         output = self.forward(masked_tokens)
 
         # get predictions + targets
-        predictions = output[mask_ids]
-        targets = tokens[mask_ids]
+        predictions = output[masked_token_ids]
+        targets = tokens[masked_token_ids]
 
         # compute the loss
         loss = self.loss_fn(predictions, targets)
