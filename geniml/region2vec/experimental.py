@@ -6,12 +6,7 @@ import torch.nn as nn
 from rich.progress import track
 from torch.utils.data import Dataset
 
-from .const import (
-    DEFAULT_N_SHUFFLES,
-    DEFAULT_NS_POWER,
-    DEFAULT_WINDOW_SIZE,
-    MODULE_NAME,
-)
+from .const import DEFAULT_N_SHUFFLES, DEFAULT_NS_POWER, DEFAULT_WINDOW_SIZE, MODULE_NAME
 from .utils import shuffle_documents
 
 _LOGGER = logging.getLogger(MODULE_NAME)
