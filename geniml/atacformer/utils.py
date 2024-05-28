@@ -46,6 +46,7 @@ class AtacformerMLMDataset(Dataset):
 
         # get list of all files
         self.files = glob(os.path.join(data, "*.gtok"))
+        self.probs = torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE])
 
     def __len__(self):
         return len(self.files)
@@ -64,17 +65,16 @@ class AtacformerMLMDataset(Dataset):
         )
 
         # mask the tokens
-        for i in mask_ids:
-            val = torch.multinomial(
-                torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE]),
-                1,
-            )
-            if val == 0:
-                masked_tokens[i] = self.mask_token_id
-            elif val == 1:
-                masked_tokens[i] = torch.randint(self.vocab_size, (1,))
-            else:
-                pass  # do nothing, keep the original token
+        random_vals = torch.multinomial(self.probs, mask_ids.shape[0], replacement=True)
+
+        # mask the tokens
+        mask_token_indices = mask_ids[random_vals == 0]
+        replace_random_indices = mask_ids[random_vals == 1]
+
+        masked_tokens[mask_token_indices] = self.mask_token_id
+        masked_tokens[replace_random_indices] = torch.randint(
+            self.vocab_size, (replace_random_indices.shape[0],)
+        )
 
         return tokens, masked_tokens, mask_ids
 
@@ -100,3 +100,9 @@ class AtacformerMLMDataset(Dataset):
         attention_mask = tokens != padding_token
 
         return tokens, masked_tokens, mask_ids, attention_mask
+
+    def __str__(self):
+        return f"MLM Dataset with {len(self)} files"
+
+    def __repr__(self):
+        return f"MLM Dataset with {len(self)} files"

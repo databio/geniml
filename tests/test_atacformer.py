@@ -19,10 +19,12 @@ def data():
     return "tests/data/gtok_sample/"
 
 
-@pytest.mark.skip("Too new to test")
+# @pytest.mark.skip("Too new to test")
 def test_atacformer_dataset():
-    path_to_data = "tests/data/gtok_sample/"
-    dataset = AtacformerMLMDataset(path_to_data, 999, 10_000)
+    t = AnnDataTokenizer("/Users/nathanleroy/Desktop/screen.bed")
+    path_to_data = "/Users/nathanleroy/Desktop/gtoks"
+    # path_to_data = "tests/data/gtok_sample/"
+    dataset = AtacformerMLMDataset(path_to_data, t.mask_token_id(), len(t))
 
     assert dataset is not None
     assert all([isinstance(x, tuple) for x in dataset])
