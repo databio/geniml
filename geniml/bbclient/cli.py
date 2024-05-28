@@ -60,6 +60,28 @@ def build_subparser_inspect(parser):
     return parser
 
 
+def build_subparser_cache_tokens(parser):
+    """
+    Builds argument parser to support to cache tokens from local file or BEDbase.
+    """
+    parser.add_argument(
+        "--bed-id", dest="bed_id", nargs=1, help="Token file identifier, url, or file path"
+    )
+    parser.add_argument(
+        "--universe-id",
+        dest="universe_id",
+        nargs=1,
+        help="Unique identifier for the universe of the token file",
+    )
+    parser.add_argument(
+        "--cache-folder",
+        default=None,
+        help="Cache folder path (default: bed_cache)",
+    )
+
+    return parser
+
+
 def build_subparser_remove(parser):
     """
     Builds argument parser to support to remove bed files or bedsets from the cache folder
@@ -81,6 +103,7 @@ def build_subparser(parser):
     sp = parser.add_subparsers(dest="subcommand")
     msg_by_cmd = {
         "cache-bed": "Cache a BED file from local file or BEDbase",
+        "cache-tokens": "Cache tokens from local file or BEDbase",
         "cache-bedset": "Cache a BED set from local folder or BEDbase",
         "seek": "Seek the BED / BEDset path by giving identifier",
         "inspect": "Inspect the contents of cache folder",
@@ -90,6 +113,7 @@ def build_subparser(parser):
     for k, v in msg_by_cmd.items():
         subparsers[k] = sp.add_parser(k, description=v, help=v)
     subparsers["cache-bed"] = build_subparser_cache_bed(subparsers["cache-bed"])
+    subparsers["cache-tokens"] = build_subparser_cache_tokens(subparsers["cache-tokens"])
     subparsers["cache-bedset"] = build_subparser_cache_bedset(subparsers["cache-bedset"])
     subparsers["seek"] = build_subparser_seek(subparsers["seek"])
     subparsers["inspect"] = build_subparser_inspect(subparsers["inspect"])
