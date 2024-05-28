@@ -1,6 +1,5 @@
-import pytest
-
 import lightning as L
+import pytest
 import scanpy as sc
 import torch
 from sklearn.model_selection import train_test_split

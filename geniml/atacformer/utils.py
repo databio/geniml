@@ -8,12 +8,7 @@ from genimtools.utils import read_tokens_from_gtok
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
-from .const import (
-    KEEP_RATE,
-    MASK_RATE,
-    REPLACE_WITH_MASK_RATE,
-    REPLACE_WITH_RANDOM_RATE,
-)
+from .const import KEEP_RATE, MASK_RATE, REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE
 
 
 class AtacformerMLMDataset(Dataset):
