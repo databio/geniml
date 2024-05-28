@@ -30,8 +30,7 @@ from .const import (
     DEFAULT_CACHE_FOLDER,
     DEFAULT_ZARR_FOLDER,
     MODULE_NAME,
-    S3_ENDPOINT_URL,
-    S3_TOKENIZED_CACHE_PATH,
+    BED_TOKENS_PATTERN,
 )
 from .utils import BedCacheManager, get_abs_path
 
@@ -66,7 +65,8 @@ class BBClient(BedCacheManager):
         """
         Load a BEDset from cache, or download and add it to the cache with its BED files
 
-        :param BedSet: BedSet object
+        :param bedset_id: unique identifier of a BED set
+        :return: the BedSet object
         """
 
         file_path = self._bedset_path(bedset_id)
@@ -133,6 +133,7 @@ class BBClient(BedCacheManager):
         :param bedset: the BED set to be added, a BedSet class
         :return: the identifier if the BedSet object
         """
+
         bedset_id = bedset.compute_bedset_identifier()
         file_path = self._bedset_path(bedset_id)
         if os.path.exists(file_path):
@@ -152,6 +153,7 @@ class BBClient(BedCacheManager):
         :param bedfile: a RegionSet object or a path or url to the BED file
         :return: the RegionSet identifier
         """
+
         if isinstance(bedfile, str):
             bedfile = RegionSet(bedfile)
         elif not isinstance(bedfile, RegionSet):
@@ -192,9 +194,21 @@ class BBClient(BedCacheManager):
         :return: the identifier of the tokenized BED file
         """
 
-        s3fc_obj = s3fs.S3FileSystem(endpoint_url=S3_ENDPOINT_URL)
-        s3_path = os.path.join(S3_TOKENIZED_CACHE_PATH, universe_id, bed_id)
-        zarr_store = s3fs.S3Map(root=s3_path, s3=s3fc_obj, check=False, create=False)
+        tokens_info_url = BED_TOKENS_PATTERN.format(
+            bedbase_api=DEFAULT_BEDBASE_API, bed_id=bed_id, universe_id=universe_id
+        )
+        response = requests.get(tokens_info_url)
+        if response.status_code == 404:
+            raise TokenizedFileNotFoundError(
+                f"Tokenized BED file {bed_id} for {universe_id} does not exist in bedbase."
+                f"Please make sure the tokenized BED file is available in bedbase."
+            )
+
+        tokens_info = response.json()
+        file_path = tokens_info["file_path"]
+
+        s3fc_obj = s3fs.S3FileSystem(endpoint_url=tokens_info["endpoint_url"])
+        zarr_store = s3fs.S3Map(root=file_path, s3=s3fc_obj, check=False, create=False)
         cache_obj = zarr.LRUStoreCache(zarr_store, max_size=2**28)
 
         try:
@@ -219,7 +233,7 @@ class BBClient(BedCacheManager):
         :param bed_id: the identifier of the BED file
         :param universe_id: the identifier of the universe
 
-        :return: the list of tokens
+        :return: the zarr array of tokens
         """
         try:
             zarr_array = self.zarr_cache[universe_id][bed_id]
