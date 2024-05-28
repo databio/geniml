@@ -45,16 +45,18 @@ class Atacformer(nn.Module):
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead)
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
         :param torch.Tensor x: Input tensor of shape (batch_size, seq_len)
+        :param torch.Tensor mask: Mask tensor of shape (batch_size, seq_len)
+        :return torch.Tensor: Output tensor of shape (batch_size, seq_len, d_model). I.e. an embedding for each token.
         """
         # get the embeddings
         x = self.embedding(x)
         # set the positional embeddings to 0
         x = x + torch.zeros_like(x)
         # pass through the transformer
-        x = self.transformer_encoder(x)
+        x = self.transformer_encoder(x, mask=mask)
         return x
 
 
