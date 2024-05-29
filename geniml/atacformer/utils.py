@@ -88,6 +88,9 @@ class AtacformerMLMDataset(Dataset):
             self.vocab_size, (replace_random_indices.shape[0],)
         )
 
+        # when training we need to pass the masked tokens to the model
+        # but we also need to know which tokens were masked so we can calculate the loss
+        # and we need to know what those tokens were replaced with so we can calculate the loss
         return tokens, masked_tokens, mask_ids
 
     def collate_batch(
