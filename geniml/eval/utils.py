@@ -1,8 +1,10 @@
 import pickle
-from typing import Union, List, Tuple, Dict
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from gensim.models import Word2Vec
+
+from ..region2vec import Region2VecExModel
 
 
 def genome_distance(u: Tuple[int, int], v: Tuple[int, int]) -> float:
@@ -153,9 +155,9 @@ def load_genomic_embeddings(
     """Loads genomic region embeddings based on the type.
 
     Args:
-        model_path (str): The path to a saved model.
+        model_path (str): The path to a saved model, or a huggingface repo of a model.
         embed_type (str, optional): The model type. Defaults to "region2vec".
-            Can be "region2vec" or "base".
+            Can be "region2vec", "base", or "huggingface".
 
     Returns:
         tuple[np.ndarray, list[str]]: Embedding vectors and the corresponding
@@ -169,6 +171,23 @@ def load_genomic_embeddings(
     elif embed_type == "base":
         embed_rep, regions_r2v = load_base_embeddings(model_path)
         return embed_rep, regions_r2v
+    elif embed_type == "huggingface":
+        exmodel = Region2VecExModel(model_path)
+        embed_rep = exmodel.model.projection.weight.data.numpy()
+        regions_r2v = [region2vocab_modify(r) for r in exmodel.tokenizer.universe.regions]
+        return embed_rep, regions_r2v
+
+
+def region2vocab_modify(region) -> str:
+    """Convert a builtins.Region object to a string in the format of chr:start-end.
+
+    Args:
+        region (builtins.Region): A region in the chr:start-end position.
+
+    Returns:
+        str: region string in standardized format.
+    """
+    return f"{region.chr}:{region.start}-{region.end}"
 
 
 def sort_key(x: str) -> Tuple[int, int]:
