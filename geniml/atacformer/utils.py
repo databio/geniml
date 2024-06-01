@@ -11,6 +11,38 @@ from torch.utils.data import Dataset
 from .const import KEEP_RATE, MASK_RATE, REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE
 
 
+class AtacformerMLMCollator:
+    """
+    Collator for the MLM dataset. This will pad the tokens, masked_tokens, and mask_ids
+    """
+
+    def __init__(self, padding_token: int):
+        self.padding_token = padding_token
+
+    def __call__(
+        self, batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Collate function for the MLM dataset. This should take a batch of
+        (tokens, masked_tokens, mask_ids) and return a tuple of (tokens, masked_tokens, mask_ids) that are padded
+
+        :param list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] batch: Batch of (tokens, masked_tokens, mask_ids)
+        :param int padding_token: Token to use for padding
+        """
+        tokens, masked_tokens, mask_ids = zip(*batch)
+
+        # pad the tokens
+        tokens = pad_sequence(tokens, batch_first=True, padding_value=self.padding_token)
+        masked_tokens = pad_sequence(
+            masked_tokens, batch_first=True, padding_value=self.padding_token
+        )
+        mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=self.padding_token)
+
+        attention_mask = tokens != self.padding_token
+
+        return tokens, masked_tokens, mask_ids, attention_mask
+
+
 class AtacformerMLMDataset(Dataset):
     def __init__(
         self,
@@ -67,8 +99,8 @@ class AtacformerMLMDataset(Dataset):
         #   2. replace the token with a random token
         #   3. keep the token the same as it was
         # each outcome has a different probability of happening (`REPLACE_WITH_MASK_RATE`, `REPLACE_WITH_RANDOM_RATE`, `KEEP_RATE` represented in `self.probs`)
-        #   therefore, we need a decision for each token selected to be masked. this means we set num_samples = mask_ids.shape[0] (total number of
-        #   tokens selected to mask) we need to sample with replacement (replacement=True) because the same outcome can occur multiple times. e.g. multiple
+        #   therefore, we need a decision made for each token selected to be masked. this means we set num_samples = mask_ids.shape[0] (total number of
+        #   tokens selected to mask). we need to sample with replacement (replacement=True) because the same outcome can occur multiple times. e.g. multiple
         #   tokens can be replaced with the mask token.
         random_vals = torch.multinomial(self.probs, mask_ids.shape[0], replacement=True)
 
@@ -93,31 +125,8 @@ class AtacformerMLMDataset(Dataset):
         # and we need to know what those tokens were replaced with so we can calculate the loss
         return tokens, masked_tokens, mask_ids
 
-    def collate_batch(
-        self,
-        batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
-        padding_token: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """
-        Collate function for the MLM dataset. This should take a batch of
-        (tokens, masked_tokens, mask_ids) and return a tuple of (tokens, masked_tokens, mask_ids) that are padded
-
-        :param list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] batch: Batch of (tokens, masked_tokens, mask_ids)
-        :param int padding_token: Token to use for padding
-        """
-        tokens, masked_tokens, mask_ids = zip(*batch)
-
-        # pad the tokens
-        tokens = pad_sequence(tokens, batch_first=True, padding_value=padding_token)
-        masked_tokens = pad_sequence(masked_tokens, batch_first=True, padding_value=padding_token)
-        mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=padding_token)
-
-        attention_mask = tokens != padding_token
-
-        return tokens, masked_tokens, mask_ids, attention_mask
-
     def __str__(self):
-        return f"MLM Dataset with {len(self)} files"
+        return f"AtacformerMLMDataset({len(self)} files)"
 
     def __repr__(self):
-        return f"MLM Dataset with {len(self)} files"
+        return f"AtacformerMLMDataset({len(self)} files)"

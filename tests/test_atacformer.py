@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from geniml.atacformer.main import Atacformer, AtacformerExModel
-from geniml.atacformer.utils import AtacformerMLMDataset
+from geniml.atacformer.utils import AtacformerMLMDataset, AtacformerMLMCollator
 from geniml.tokenization.main import AnnDataTokenizer
 from geniml.training.adapters import MLMAdapter
 
@@ -19,7 +19,7 @@ def data():
     return "tests/data/gtok_sample/"
 
 
-# @pytest.mark.skip("Too new to test")
+@pytest.mark.skip("Too new to test")
 def test_atacformer_dataset():
     t = AnnDataTokenizer("/Users/nathanleroy/Desktop/screen.bed")
     path_to_data = "/Users/nathanleroy/Desktop/gtoks"
@@ -56,7 +56,7 @@ def test_atacformer_exmodel_init(universe_file: str):
     assert model._model.num_layers == 6
 
 
-@pytest.mark.skip("Too new to test")
+# @pytest.mark.skip("Too new to test")
 def test_train_atacformer_ex_model(universe_file: str, data: str):
     # make tokenizer and model
     tokenizer = AnnDataTokenizer(universe_file)
@@ -66,11 +66,15 @@ def test_train_atacformer_ex_model(universe_file: str, data: str):
 
     # curate dataset
     mask_token_id = tokenizer.mask_token_id()
-    dataset = AtacformerMLMDataset(data, mask_token_id=mask_token_id, vocab_size=len(tokenizer))
+    dataset = AtacformerMLMDataset(
+        "/Users/nathanleroy/Desktop/gtoks", mask_token_id=mask_token_id, vocab_size=len(tokenizer)
+    )
+    collator = AtacformerMLMCollator(model.tokenizer.padding_token_id())
     dataloader = DataLoader(
         dataset,
         batch_size=2,
-        num_workers=4,
+        num_workers=1,
+        collate_fn=collator,
     )
 
     # make adapter and trainer
