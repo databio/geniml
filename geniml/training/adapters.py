@@ -125,8 +125,8 @@ class MLMAdapter(L.LightningModule):
         self.r2v_model = model._model
         self.tokenizer = model.tokenizer
 
-    def forward(self, x):
-        token_embeddings = self.r2v_model(x)
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        token_embeddings = self.r2v_model(x, mask=mask)
         logits = self.linear(token_embeddings)
         return logits
 
@@ -156,17 +156,13 @@ class MLMAdapter(L.LightningModule):
         :param batch_idx: The batch index
 
         """
+        # attention_mask.unsqueeze(1).expand(-1, tokens.size(1), -1)
 
         # move the batch to the device
         tokens, masked_tokens, masked_token_ids, attention_mask = batch
 
-        # strip the padding
-        tokens = tokens[attention_mask]
-        masked_tokens = masked_tokens[attention_mask]
-        masked_token_ids = masked_token_ids[attention_mask]
-
         # forward pass for the batch
-        output = self.forward(masked_tokens)
+        output = self.forward(masked_tokens, mask=attention_mask)
 
         # get predictions + targets
         predictions = output[masked_token_ids]

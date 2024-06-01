@@ -42,7 +42,9 @@ class Atacformer(nn.Module):
         self.num_layers = num_layers
         self.vocab_size = vocab_size
         self.embedding = nn.Embedding(vocab_size, d_model)
-        self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead)
+        self.encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model, nhead=nhead, batch_first=True
+        )
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
@@ -55,6 +57,11 @@ class Atacformer(nn.Module):
         x = self.embedding(x)
         # set the positional embeddings to 0
         x = x + torch.zeros_like(x)
+
+        # get attention mask in the correct shape
+        if mask is not None:
+            mask = mask.unsqueeze(1).unsqueeze(2)
+
         # pass through the transformer
         x = self.transformer_encoder(x, mask=mask)
         return x
