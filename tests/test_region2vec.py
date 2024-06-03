@@ -60,7 +60,7 @@ def test_r2v_pytorch_tokenizer_is_file_on_disk(universe_file: str):
     model = Region2VecExModel(tokenizer=universe_file)
     assert model is not None
     assert (
-        len(model.tokenizer) == 2_378
+        len(model.tokenizer) == 2_385
     )  # 2378 + 7 special tokens (unk, pad, mask, sep, cls, eos, bos)
 
 
