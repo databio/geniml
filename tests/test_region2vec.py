@@ -4,15 +4,16 @@ import numpy as np
 import pytest
 import torch
 
+
 from geniml.io.io import Region, RegionSet
+from geniml.tokenization.main import TreeTokenizer
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.region2vec.utils import Region2VecDataset
-from geniml.tokenization.main import ITTokenizer
 
 
 @pytest.fixture
 def universe_file():
-    return "tests/data/universe.bed"
+    return "tests/data/universe.uniq.bed"
 
 
 def test_init_region2vec():
@@ -58,9 +59,12 @@ def test_r2v_pytorch_forward():
 def test_r2v_pytorch_tokenizer_is_file_on_disk(universe_file: str):
     model = Region2VecExModel(tokenizer=universe_file)
     assert model is not None
-    assert len(model.tokenizer) == 2435
+    assert (
+        len(model.tokenizer) == 2_385
+    )  # 2378 + 7 special tokens (unk, pad, mask, sep, cls, eos, bos)
 
 
+@pytest.mark.skip(reason="Downloading the model takes too long.")
 def test_r2v_pytorch_tokenizer_is_on_hf():
     model = Region2VecExModel(tokenizer="databio/r2v-ChIP-atlas-hg38-v2")
     assert model is not None
@@ -68,7 +72,7 @@ def test_r2v_pytorch_tokenizer_is_on_hf():
 
 
 def test_r2v_pytorch_exmodel_train(universe_file: str):
-    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
     assert model is not None
 
     dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
@@ -78,7 +82,7 @@ def test_r2v_pytorch_exmodel_train(universe_file: str):
 
 
 def test_r2v_pytorch_encode(universe_file: str):
-    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
     assert model is not None
 
     r = Region("chr1", 63403166, 63403785)
@@ -88,14 +92,14 @@ def test_r2v_pytorch_encode(universe_file: str):
     assert embedding.shape == (1, 100)
 
     rs = RegionSet("tests/data/to_tokenize.bed")
-    embedding = model.encode(list(rs))
+    embedding = model.encode(rs)
     assert embedding is not None
     assert isinstance(embedding, np.ndarray)
     assert embedding.shape == (13, 100)
 
 
 def test_save_load_pytorch_exmodel(universe_file: str):
-    model = Region2VecExModel(tokenizer=ITTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
     assert model is not None
 
     dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)

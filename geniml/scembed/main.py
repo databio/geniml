@@ -26,7 +26,7 @@ from ..region2vec.utils import (
     load_local_region2vec_model,
     train_region2vec_model,
 )
-from ..tokenization import ITTokenizer, Tokenizer
+from ..tokenization import AnnDataTokenizer, Tokenizer
 from .const import MODULE_NAME
 
 _GENSIM_LOGGER = getLogger("gensim")
@@ -40,7 +40,7 @@ class ScEmbed:
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: ITTokenizer = None,
+        tokenizer: AnnDataTokenizer = None,
         device: str = None,
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
@@ -54,7 +54,7 @@ class ScEmbed:
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: ITTokenizer
+        self.tokenizer: AnnDataTokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
         self.pooling_method: POOLING_TYPES = pooling_method
@@ -71,7 +71,7 @@ class ScEmbed:
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_tokenizer(self, tokenizer: Union[ITTokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[AnnDataTokenizer, str]):
         """
         Initialize the tokenizer.
 
@@ -79,15 +79,15 @@ class ScEmbed:
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
-                self.tokenizer = ITTokenizer(tokenizer)
+                self.tokenizer = AnnDataTokenizer(tokenizer)
             else:
-                self.tokenizer = ITTokenizer.from_pretrained(
+                self.tokenizer = AnnDataTokenizer.from_pretrained(
                     tokenizer
                 )  # download from huggingface (or at least try to)
-        elif isinstance(tokenizer, ITTokenizer):
+        elif isinstance(tokenizer, AnnDataTokenizer):
             self.tokenizer = tokenizer
         else:
-            raise TypeError("tokenizer must be of type ITTokenizer or str.")
+            raise TypeError("tokenizer must be of type AnnDataTokenizer or str.")
 
     def _init_model(self, tokenizer, **kwargs):
         """

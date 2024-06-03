@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from geniml.region2vec.utils import Region2VecDataset
 from geniml.scembed.main import ScEmbed
-from geniml.tokenization.main import ITTokenizer
+from geniml.tokenization.main import AnnDataTokenizer
 
 # add parent directory to path
 sys.path.append("../")
@@ -47,7 +47,7 @@ def test_model_creation():
 def test_model_training(universe_file: str, pbmc_data: sc.AnnData):
     # remove gensim logging
     logging.getLogger("gensim").setLevel(logging.ERROR)
-    model = ScEmbed(tokenizer=ITTokenizer(universe_file))  # set to 1 for testing
+    model = ScEmbed(tokenizer=AnnDataTokenizer(universe_file))  # set to 1 for testing
 
     dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
     model.train(dataset, epochs=3, min_count=1)
@@ -61,7 +61,7 @@ def test_model_training(universe_file: str, pbmc_data: sc.AnnData):
 def test_model_train_and_export(universe_file: str):
     # remove gensim logging
     logging.getLogger("gensim").setLevel(logging.ERROR)
-    model = ScEmbed(tokenizer=ITTokenizer(universe_file))  # set to 1 for testing
+    model = ScEmbed(tokenizer=AnnDataTokenizer(universe_file))  # set to 1 for testing
 
     dataset = Region2VecDataset("tests/data/gtok_sample/", convert_to_str=True)
     model.train(dataset, epochs=3, min_count=1)
@@ -105,7 +105,7 @@ def test_end_to_end_training():
 
     adata = sc.read_h5ad(data_path)
 
-    tokenizer = ITTokenizer(universe_path)
+    tokenizer = AnnDataTokenizer(universe_path)
     tokens = tokenizer.tokenize(adata)
 
     for i, t in tqdm(enumerate(tokens)):

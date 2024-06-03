@@ -3,12 +3,12 @@ import os
 from genimtools.utils import write_tokens_to_gtok
 
 from geniml.io import RegionSet
-from geniml.tokenization import ITTokenizer
+from genimtools import TreeTokenizer
 
 path = "tests/data/to_tokenize/"
 out_path = "tests/data/gtok_sample/"
 universe = "tests/data/universe_mlm.bed"
-tokenizer = ITTokenizer(universe)
+tokenizer = TreeTokenizer(universe)
 
 for bed in os.listdir(path):
     if bed.endswith(".bed"):
