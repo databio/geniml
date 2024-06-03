@@ -29,6 +29,7 @@ class Atacformer(nn.Module):
         d_model: int = DEFAULT_EMBEDDING_DIM,
         nhead: int = 8,
         num_layers: int = 6,
+        context_size: int = 2048,
     ):
         """
         Atacformer is a transformer-based model for ATAC-seq data. It closely follows
@@ -41,6 +42,7 @@ class Atacformer(nn.Module):
         self.nhead = nhead
         self.num_layers = num_layers
         self.vocab_size = vocab_size
+        self.context_size = context_size
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model, nhead=nhead, batch_first=True
@@ -58,12 +60,8 @@ class Atacformer(nn.Module):
         # set the positional embeddings to 0
         x = x + torch.zeros_like(x)
 
-        # get attention mask in the correct shape
-        if mask is not None:
-            mask = mask.unsqueeze(1).unsqueeze(2)
-
         # pass through the transformer
-        x = self.transformer_encoder(x, mask=mask)
+        x = self.transformer_encoder(x, src_key_padding_mask=mask)
         return x
 
 
@@ -140,6 +138,7 @@ class AtacformerExModel(ExModel):
             d_model=kwargs.get("d_model", DEFAULT_EMBEDDING_DIM),
             nhead=kwargs.get("nhead", 8),
             num_layers=kwargs.get("num_layers", 6),
+            context_size=kwargs.get("context_size", 2048),
         )
 
     @property

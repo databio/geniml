@@ -64,6 +64,7 @@ def test_atacformer_exmodel_init(universe_file: str):
 def test_train_atacformer_ex_model(universe_file: str, data: str):
     # make tokenizer and model
     tokenizer = AnnDataTokenizer(universe_file)
+    # tokenizer = AnnDataTokenizer("/Users/nathanleroy/Desktop/screen.bed")
     model = AtacformerExModel(
         tokenizer=tokenizer,
     )
@@ -73,7 +74,7 @@ def test_train_atacformer_ex_model(universe_file: str, data: str):
     dataset = AtacformerMLMDataset(
         "/Users/nathanleroy/Desktop/gtoks", mask_token_id=mask_token_id, vocab_size=len(tokenizer)
     )
-    collator = AtacformerMLMCollator(model.tokenizer.padding_token_id())
+    collator = AtacformerMLMCollator(model.tokenizer.padding_token_id(), model._model.context_size)
     dataloader = DataLoader(
         dataset,
         batch_size=2,

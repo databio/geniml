@@ -16,8 +16,9 @@ class AtacformerMLMCollator:
     Collator for the MLM dataset. This will pad the tokens, masked_tokens, and mask_ids
     """
 
-    def __init__(self, padding_token: int):
+    def __init__(self, padding_token: int, context_size: int):
         self.padding_token = padding_token
+        self.context_size = context_size
 
     def __call__(
         self, batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
@@ -38,10 +39,13 @@ class AtacformerMLMCollator:
         )
         mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=self.padding_token)
 
-        # attention_mask = tokens != self.padding_token
-        # attention mask needs to be of the shape (batch_size, seq_len, seq_len)
-        attention_mask = torch.ones(tokens.shape[0], tokens.shape[1], tokens.shape[1])
-        attention_mask = attention_mask.masked_fill(tokens == self.padding_token, 0)
+        attention_mask = tokens != self.padding_token
+
+        # clip the tokens to the context size
+        tokens = tokens[:, : self.context_size]
+        masked_tokens = masked_tokens[:, : self.context_size]
+        mask_ids = mask_ids[:, : self.context_size]
+        attention_mask = attention_mask[:, : self.context_size]
 
         return tokens, masked_tokens, mask_ids, attention_mask
 

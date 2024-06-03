@@ -4,6 +4,7 @@ from typing import List, Union
 
 import numpy as np
 import torch
+from genimtools.models import RegionSet as GRegionSet
 from torch.nn.utils.rnn import pad_sequence
 from huggingface_hub import hf_hub_download
 from rich.progress import track
@@ -316,6 +317,8 @@ class Region2VecExModel(ExModel):
         if isinstance(regions, str):
             regions = RegionSet(regions)
         if isinstance(regions, RegionSet):
+            pass
+        if isinstance(regions, GRegionSet):
             pass
         if not isinstance(regions[0], Region):
             raise TypeError("regions must be a list of Region objects.")
