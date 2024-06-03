@@ -4,14 +4,13 @@ from typing import List, Union
 
 import numpy as np
 import torch
-from genimtools.tokenizers import TreeTokenizer
 from torch.nn.utils.rnn import pad_sequence
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
 from ..io import Region, RegionSet
 from ..models import ExModel
-from ..tokenization.main import Tokenizer
+from ..tokenization.main import Tokenizer, TreeTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -330,12 +329,12 @@ class Region2VecExModel(ExModel):
             torch.tensor(token_set.to_ids(), dtype=torch.long) for token_set in tokens
         ]
         padded_tokens = pad_sequence(
-            token_tensors, batch_first=True, padding_value=self.tokenizer.padding_token_id
+            token_tensors, batch_first=True, padding_value=self.tokenizer.padding_token_id()
         )
 
         batch_embeddings = self._model.projection(padded_tokens)
 
-        attention_mask = padded_tokens != self.tokenizer.padding_token_id
+        attention_mask = padded_tokens != self.tokenizer.padding_token_id()
 
         if pooling == "mean":
             region_embeddings = (

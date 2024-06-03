@@ -38,7 +38,10 @@ class AtacformerMLMCollator:
         )
         mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=self.padding_token)
 
-        attention_mask = tokens != self.padding_token
+        # attention_mask = tokens != self.padding_token
+        # attention mask needs to be of the shape (batch_size, seq_len, seq_len)
+        attention_mask = torch.ones(tokens.shape[0], tokens.shape[1], tokens.shape[1])
+        attention_mask = attention_mask.masked_fill(tokens == self.padding_token, 0)
 
         return tokens, masked_tokens, mask_ids, attention_mask
 

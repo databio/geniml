@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from genimtools.tokenizers import TreeTokenizer
 from genimtools.utils import read_tokens_from_gtok
 from yaml import safe_dump, safe_load
 
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
     from gensim.models import Word2Vec as GensimWord2Vec
 
 from ..const import GTOK_EXT
-from ..tokenization.main import Tokenizer
+from ..tokenization.main import Tokenizer, TreeTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,

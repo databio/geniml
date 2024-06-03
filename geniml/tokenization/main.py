@@ -148,14 +148,16 @@ class TreeTokenizer(Tokenizer):
         return self._tokenizer.sep_token_id
 
     def __len__(self):
-        return len(self.universe.regions)
+        return len(self._tokenizer)
 
     def __call__(self, query: Union[str, RegionSet]) -> List[List[Region]]:
-        if isinstance(query, str) or isinstance(query, RegionSet):
+        if isinstance(query, str) or isinstance(query, RegionSet) or isinstance(query, list):
             result = self._tokenizer(query)
             return result
         else:
-            raise NotImplementedError("Only AnnData is supported for this tokenizer.")
+            raise NotImplementedError(
+                "Only RegionSet, region, or str is supported for this tokenizer"
+            )
 
     def __repr__(self):
         return "TreeTokenizer()"

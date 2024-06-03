@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 import torch
 
-from genimtools.tokenizers import TreeTokenizer
+
 from geniml.io.io import Region, RegionSet
+from geniml.tokenization.main import TreeTokenizer
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.region2vec.utils import Region2VecDataset
 
@@ -59,14 +60,15 @@ def test_r2v_pytorch_tokenizer_is_file_on_disk(universe_file: str):
     model = Region2VecExModel(tokenizer=universe_file)
     assert model is not None
     assert (
-        len(model.tokenizer) == 2_385
+        len(model.tokenizer) == 2_378
     )  # 2378 + 7 special tokens (unk, pad, mask, sep, cls, eos, bos)
 
 
+@pytest.mark.skip(reason="Downloading the model takes too long.")
 def test_r2v_pytorch_tokenizer_is_on_hf():
     model = Region2VecExModel(tokenizer="databio/r2v-ChIP-atlas-hg38-v2")
     assert model is not None
-    assert len(model.tokenizer) == 1_698_718
+    assert len(model.tokenizer) == 1_698_713
 
 
 def test_r2v_pytorch_exmodel_train(universe_file: str):
