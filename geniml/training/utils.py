@@ -9,7 +9,7 @@ from rich.progress import track
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
-from ..tokenization.main import ITTokenizer
+from genimtools.tokenizers import TreeTokenizer
 
 
 @contextlib.contextmanager
@@ -86,7 +86,7 @@ class FineTuningDataset(Dataset):
 
 def generate_fine_tuning_dataset(
     adata: sc.AnnData,
-    tokenizer: ITTokenizer,
+    tokenizer: TreeTokenizer,
     cell_type_key: str = "cell_type",
     seed: int = 42,
     sample_size: int = None,
@@ -107,7 +107,7 @@ def generate_fine_tuning_dataset(
     and their entanglement labels.
 
     :param sc.AnnData adata: The AnnData object to use for generating the dataset.
-    :param ITTokenizer tokenizer: The tokenizer to use for tokenizing the regions.
+    :param TreeTokenizer tokenizer: The tokenizer to use for tokenizing the regions.
     :param str cell_type_key: The key in the obs that contains the cell type labels.
     :param int seed: The seed to use for generating the pairs.
     :param int sample_size: The number of pairs to sample. If None, all possible pairs will be used.
@@ -121,7 +121,7 @@ def generate_fine_tuning_dataset(
     cell_types = adata.obs[cell_type_key].unique()
 
     # tokenize every cell first, so we don't have to do it multiple times
-    tokens = tokenizer.tokenize(adata)
+    tokens = tokenizer(adata)
     tokens = [
         [t.id for t in subset]
         for subset in track(tokens, description="Converting to ids", total=len(tokens))

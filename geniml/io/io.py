@@ -187,7 +187,7 @@ class RegionSet:
                             skipped_lines += 1
                             continue
                         else:
-                            raise BEDFileReadError(f"Could not read line bed file")
+                            raise BEDFileReadError("Could not read line bed file")
                     if skipped_lines > 0:
                         _LOGGER.info(
                             f"Skipped {skipped_lines} lines while opening file. File: '{self.path}'"

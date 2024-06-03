@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
-from ..atacformer import AtacformerExModel
+from ..atacformer.main import AtacformerExModel
 from ..nn import GradientReversal
 from ..region2vec import Region2VecExModel
 from ..scembed import ScEmbed
@@ -105,14 +105,14 @@ class CellTypeFineTuneAdapter(L.LightningModule):
 
 class MLMAdapter(L.LightningModule):
     """
-    An adapter for training Atacformer on masked language modeling.
+    An adapter for training Atacformer on a masked language modeling task.
     """
 
     def __init__(self, model: AtacformerExModel, **kwargs):
         """
-        Instantiate a fine-tuning trainer.
+        Instantiate the masked-language-modeling adapter.
 
-        :param Atacformer model: The model to fine-tune.
+        :param Atacformer model: The model to train.
         :param int pad_token_id: The token to use for padding
         :param int mask_token_id: The token to use for masking
         :param kwargs: Additional arguments to pass to the LightningModule constructor.
@@ -125,8 +125,8 @@ class MLMAdapter(L.LightningModule):
         self.r2v_model = model._model
         self.tokenizer = model.tokenizer
 
-    def forward(self, x):
-        token_embeddings = self.r2v_model(x)
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        token_embeddings = self.r2v_model(x, mask=mask)
         logits = self.linear(token_embeddings)
         return logits
 
@@ -156,21 +156,17 @@ class MLMAdapter(L.LightningModule):
         :param batch_idx: The batch index
 
         """
+        # attention_mask.unsqueeze(1).expand(-1, tokens.size(1), -1)
 
         # move the batch to the device
-        tokens, masked_tokens, mask_ids, attention_mask = batch
-
-        # strip the padding
-        tokens = tokens[attention_mask]
-        masked_tokens = masked_tokens[attention_mask]
-        mask_ids = mask_ids[attention_mask]
+        tokens, masked_tokens, masked_token_ids, attention_mask = batch
 
         # forward pass for the batch
-        output = self.forward(masked_tokens)
+        output = self.forward(masked_tokens, mask=attention_mask)
 
         # get predictions + targets
-        predictions = output[mask_ids]
-        targets = tokens[mask_ids]
+        predictions = output[masked_token_ids]
+        targets = tokens[masked_token_ids]
 
         # compute the loss
         loss = self.loss_fn(predictions, targets)

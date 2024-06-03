@@ -4,12 +4,13 @@ from typing import List, Union
 
 import numpy as np
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
 from ..io import Region, RegionSet
 from ..models import ExModel
-from ..tokenization.main import ITTokenizer, Tokenizer
+from ..tokenization.main import Tokenizer, TreeTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -41,7 +42,7 @@ class Region2VecExModel(ExModel):
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: ITTokenizer = None,
+        tokenizer: TreeTokenizer = None,
         device: str = None,
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
@@ -55,7 +56,7 @@ class Region2VecExModel(ExModel):
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: ITTokenizer
+        self.tokenizer: TreeTokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
         self.pooling_method = pooling_method
@@ -72,7 +73,7 @@ class Region2VecExModel(ExModel):
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_tokenizer(self, tokenizer: Union[ITTokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[TreeTokenizer, str]):
         """
         Initialize the tokenizer.
 
@@ -80,15 +81,15 @@ class Region2VecExModel(ExModel):
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
-                self.tokenizer = ITTokenizer(tokenizer)
+                self.tokenizer = TreeTokenizer(tokenizer)
             else:
-                self.tokenizer = ITTokenizer.from_pretrained(
+                self.tokenizer = TreeTokenizer.from_pretrained(
                     tokenizer
                 )  # download from huggingface (or at least try to)
-        elif isinstance(tokenizer, ITTokenizer):
+        elif isinstance(tokenizer, TreeTokenizer):
             self.tokenizer = tokenizer
         else:
-            raise TypeError("tokenizer must be a path to a bed file or an ITTokenizer object.")
+            raise TypeError("tokenizer must be a path to a bed file or an TreeTokenizer object.")
 
     def _init_model(self, tokenizer, **kwargs):
         """
@@ -296,9 +297,7 @@ class Region2VecExModel(ExModel):
         )
 
     def encode(
-        self,
-        regions: Union[Region, List[Region], RegionSet],
-        pooling: POOLING_TYPES = None,
+        self, regions: Union[str, Region, List[Region], RegionSet], pooling: POOLING_TYPES = None
     ) -> np.ndarray:
         """
         Get the vector for a region.
@@ -315,31 +314,40 @@ class Region2VecExModel(ExModel):
         if isinstance(regions, Region):
             regions = [regions]
         if isinstance(regions, str):
-            regions = list(RegionSet(regions))
+            regions = RegionSet(regions)
         if isinstance(regions, RegionSet):
-            regions = list(regions)
-        if not isinstance(regions, list):
-            regions = [regions]
+            pass
         if not isinstance(regions[0], Region):
             raise TypeError("regions must be a list of Region objects.")
 
         if pooling not in ["mean", "max"]:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
-        # tokenize the region
-        tokens = [self.tokenizer.tokenize(r) for r in regions]
+        # tokenize the regionm -- need to pass it as a list because the tokenizer expects a list
+        tokens = [self.tokenizer([r]) for r in regions]
+        token_tensors = [
+            torch.tensor(token_set.to_ids(), dtype=torch.long) for token_set in tokens
+        ]
+        padded_tokens = pad_sequence(
+            token_tensors, batch_first=True, padding_value=self.tokenizer.padding_token_id()
+        )
 
-        # get the embeddings
-        embeddings = []
-        for token_set in track(tokens, total=len(tokens), description="Getting embeddings"):
-            region_embeddings = self._model.projection(torch.tensor(token_set))
-            if pooling == "mean":
-                region_embeddings = torch.mean(region_embeddings, axis=0).detach().numpy()
-            elif pooling == "max":
-                region_embeddings = torch.max(region_embeddings, axis=0).values.detach().numpy()
-            else:
-                # this should be unreachable
-                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
-            embeddings.append(region_embeddings)
+        batch_embeddings = self._model.projection(padded_tokens)
 
-        return np.vstack(embeddings)
+        attention_mask = padded_tokens != self.tokenizer.padding_token_id()
+
+        if pooling == "mean":
+            region_embeddings = (
+                torch.mean(batch_embeddings * attention_mask.unsqueeze(-1), axis=1)
+                .detach()
+                .numpy()
+            )
+        elif pooling == "max":
+            region_embeddings = (
+                torch.max(batch_embeddings * attention_mask.unsqueeze(-1), axis=1).detach().numpy()
+            )
+        else:
+            # this should be unreachable
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+
+        return np.vstack(region_embeddings)
