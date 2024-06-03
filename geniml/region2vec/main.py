@@ -7,6 +7,8 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from huggingface_hub import hf_hub_download
 from rich.progress import track
+from genimtools.tokenizers import RegionSet as GRegionSet
+from genimtools.tokenizers import Region as GRegion
 
 from ..io import Region, RegionSet
 from ..models import ExModel
@@ -315,9 +317,7 @@ class Region2VecExModel(ExModel):
             regions = [regions]
         if isinstance(regions, str):
             regions = RegionSet(regions)
-        if isinstance(regions, RegionSet):
-            pass
-        if not isinstance(regions[0], Region):
+        if not isinstance(regions[0], Region) and not isinstance(regions[0], GRegion):
             raise TypeError("regions must be a list of Region objects.")
 
         if pooling not in ["mean", "max"]:
