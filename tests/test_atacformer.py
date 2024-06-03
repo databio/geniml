@@ -21,9 +21,13 @@ def data():
 
 @pytest.mark.skip("Too new to test")
 def test_atacformer_dataset():
-    t = AnnDataTokenizer("/Users/nathanleroy/Desktop/screen.bed")
-    path_to_data = "/Users/nathanleroy/Desktop/gtoks"
+    # t = AnnDataTokenizer("/Users/nathanleroy/Desktop/screen.bed")
+    # path_to_data = "/Users/nathanleroy/Desktop/gtoks"
     # path_to_data = "tests/data/gtok_sample/"
+
+    t = AnnDataTokenizer("tests/data/universe_mlm.bed")
+    path_to_data = "tests/data/gtok_sample/"
+
     dataset = AtacformerMLMDataset(path_to_data, t.mask_token_id(), len(t))
 
     assert dataset is not None
@@ -56,7 +60,7 @@ def test_atacformer_exmodel_init(universe_file: str):
     assert model._model.num_layers == 6
 
 
-# @pytest.mark.skip("Too new to test")
+@pytest.mark.skip("Too new to test")
 def test_train_atacformer_ex_model(universe_file: str, data: str):
     # make tokenizer and model
     tokenizer = AnnDataTokenizer(universe_file)
