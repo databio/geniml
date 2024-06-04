@@ -2,7 +2,6 @@ import logging
 from typing import Dict, List, Union
 
 import numpy as np
-
 from geniml.const import PKG_NAME
 
 from ..backends import HNSWBackend, QdrantBackend
@@ -69,9 +68,12 @@ class Text2BEDSearchInterface(BEDSearchInterface):
 
         # number
         n = len(self.backend)
+
         # set ef for search
         # ef cannot be set lower than the number of queried nearest neighbors k
-        self.backend.idx.set_ef(n)
+
+        if isinstance(self.backend, HNSWBackend):
+            self.backend.idx.set_ef(n)
 
         sum_ap = 0  # sum of all average precision
         sum_auc = 0  # sum of all AUC-ROC
