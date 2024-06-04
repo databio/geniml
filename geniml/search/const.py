@@ -16,7 +16,7 @@ DEFAULT_DIM = 100
 
 DEFAULT_EF = 200
 
-DEFAULT_M = 16
+DEFAULT_M = 64
 
 DEFAULT_QUANTIZATION_CONFIG = models.ScalarQuantization(
     scalar=models.ScalarQuantizationConfig(
@@ -25,3 +25,9 @@ DEFAULT_QUANTIZATION_CONFIG = models.ScalarQuantization(
         always_ram=True,
     ),
 )
+
+
+# for evaluation dataset from huggingface
+HF_INDEX = "index.bin"
+HF_PAYLOADS = "payloads.pkl"
+HF_METADATA = "metadata.json"
