@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 from geniml.io import RegionSet
 from geniml.region2vec import Region2VecExModel
-from geniml.search import BED2BEDSearchInterface, BED2Vec, Text2BEDSearchInterface, Text2Vec
+from geniml.search import (BED2BEDSearchInterface, BED2Vec,
+                           Text2BEDSearchInterface, Text2Vec)
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.search.backends.filebackend import DEP_HNSWLIB
 
@@ -120,7 +121,7 @@ def r2v_hf_repo():
     """
     :return: the huggingface repo of region2vec model
     """
-    return "databio/r2v-ChIP-atlas-hg38-v2"
+    return "databio/r2v-encode-hg38"
 
 
 @pytest.fixture
@@ -128,7 +129,7 @@ def v2v_hf_repo():
     """
     Returns: the huggingface repo of vec2vec model
     """
-    return "databio/v2v-geo-hg38"
+    return "databio/v2v-sentencetransformers-encode"
 
 
 @pytest.fixture
@@ -382,11 +383,12 @@ def test_text2bed_search_interface(
     db_search_result = db_interface.query_search(query_term, 5, offset=0)
     for i in range(len(db_search_result)):
         assert isinstance(db_search_result[i], dict)
-    # test evaluation
-    MAP, AUC, RP = db_interface.eval(query_dict)
-    assert MAP > 0
-    assert AUC > 0
-    assert RP > 0
+
+    eval_results = db_interface.eval(query_dict)
+    assert eval_results["Mean Average Precision"] > 0
+    assert eval_results["Mean AUC-ROC"] > 0
+    assert eval_results["Average R-Precision"] > 0
+
     # delete testing collection
     db_interface.backend.qd_client.delete_collection(collection_name=collection)
 
@@ -402,10 +404,10 @@ def test_text2bed_search_interface(
         assert isinstance(file_search_result[i], dict)
 
     # test evaluation
-    MAP, AUC, RP = file_interface.eval(query_dict)
-    assert MAP > 0
-    assert AUC > 0
-    assert RP > 0
+    eval_results = file_interface.eval(query_dict)
+    assert eval_results["Mean Average Precision"] > 0
+    assert eval_results["Mean AUC-ROC"] > 0
+    assert eval_results["Average R-Precision"] > 0
 
 
 @pytest.mark.skipif(
