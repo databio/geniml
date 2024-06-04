@@ -1,3 +1,4 @@
+import os
 import pickle
 from typing import Dict, List, Tuple, Union
 
@@ -163,15 +164,19 @@ def load_genomic_embeddings(
         tuple[np.ndarray, list[str]]: Embedding vectors and the corresponding
             region list.
     """
-    if embed_type == "region2vec":
-        model = Word2Vec.load(model_path)
-        regions_r2v = model.wv.index_to_key
-        embed_rep = model.wv.vectors
-        return embed_rep, regions_r2v
-    elif embed_type == "base":
-        embed_rep, regions_r2v = load_base_embeddings(model_path)
-        return embed_rep, regions_r2v
-    elif embed_type == "huggingface":
+    if os.path.exists(model_path):
+        # try to load local
+        if embed_type == "region2vec":
+            model = Word2Vec.load(model_path)
+            regions_r2v = model.wv.index_to_key
+            embed_rep = model.wv.vectors
+            return embed_rep, regions_r2v
+        elif embed_type == "base":
+            embed_rep, regions_r2v = load_base_embeddings(model_path)
+            return embed_rep, regions_r2v
+
+    else:
+        # try to load from huggingface
         exmodel = Region2VecExModel(model_path)
         embed_rep = exmodel.model.projection.weight.data.numpy()
         regions_r2v = [region2vocab_modify(r) for r in exmodel.tokenizer.universe.regions]
