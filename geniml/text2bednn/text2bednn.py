@@ -7,17 +7,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from huggingface_hub import hf_hub_download
-from torch.nn import (CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss,
-                      ReLU, Sequential)
+from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
 from yaml import safe_dump, safe_load
 
-from .const import (CONFIG_FILE_NAME, DEFAULT_BATCH_SIZE,
-                    DEFAULT_HUGGINGFACE_MODEL_NAME, DEFAULT_LEARNING_RATE,
-                    DEFAULT_LOSS_NAME, DEFAULT_MARGIN, DEFAULT_MUST_TRAINED,
-                    DEFAULT_NUM_EPOCHS, DEFAULT_NUM_UNITS,
-                    DEFAULT_OPTIMIZER_NAME, DEFAULT_PATIENCE,
-                    DEFAULT_PLOT_FILE_NAME, DEFAULT_PLOT_TITLE, MODULE_NAME,
-                    TORCH_MODEL_FILE_NAME_PATTERN)
+from .const import (
+    CONFIG_FILE_NAME,
+    DEFAULT_BATCH_SIZE,
+    DEFAULT_HUGGINGFACE_MODEL_NAME,
+    DEFAULT_LEARNING_RATE,
+    DEFAULT_LOSS_NAME,
+    DEFAULT_MARGIN,
+    DEFAULT_MUST_TRAINED,
+    DEFAULT_NUM_EPOCHS,
+    DEFAULT_NUM_UNITS,
+    DEFAULT_OPTIMIZER_NAME,
+    DEFAULT_PATIENCE,
+    DEFAULT_PLOT_FILE_NAME,
+    DEFAULT_PLOT_TITLE,
+    MODULE_NAME,
+    TORCH_MODEL_FILE_NAME_PATTERN,
+)
 from .utils import arrays_to_torch_dataloader, dtype_check
 
 _LOGGER = logging.getLogger(MODULE_NAME)

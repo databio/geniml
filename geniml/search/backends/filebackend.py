@@ -20,8 +20,13 @@ DEP_HNSWLIB = True
 
 import numpy as np
 
-from geniml.search.const import (DEFAULT_DIM, DEFAULT_EF, DEFAULT_HNSW_SPACE,
-                                 DEFAULT_INDEX_PATH, DEFAULT_M)
+from geniml.search.const import (
+    DEFAULT_DIM,
+    DEFAULT_EF,
+    DEFAULT_HNSW_SPACE,
+    DEFAULT_INDEX_PATH,
+    DEFAULT_M,
+)
 
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
@@ -189,9 +194,7 @@ class HNSWBackend(EmSearchBackend):
     def __len__(self) -> int:
         return self.idx.element_count
 
-    def retrieve_info(
-        self, ids: Union[List[int], int], with_vec: bool = False
-    ) -> Union[
+    def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
         Dict[str, Union[int, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, List[float], Dict[str, str]]]],
     ]:

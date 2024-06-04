@@ -6,9 +6,14 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from .const import (DEFAULT_BATCH_SIZE, DEFAULT_DATALOADER_SHUFFLE,
-                    DEFAULT_FILE_KEY, DEFAULT_GENOME_KEY, DEFAULT_SERIES_KEY,
-                    MODULE_NAME)
+from .const import (
+    DEFAULT_BATCH_SIZE,
+    DEFAULT_DATALOADER_SHUFFLE,
+    DEFAULT_FILE_KEY,
+    DEFAULT_GENOME_KEY,
+    DEFAULT_SERIES_KEY,
+    MODULE_NAME,
+)
 
 _LOGGER = logging.getLogger(MODULE_NAME)
 
