@@ -15,13 +15,12 @@ def anecdotal_search_from_hf_data(
     """
     Test the retrieval performance of a trained search model on a dataset on huggingface
 
-    @param query: user input search term
-    @param dataset_repo: huggingface repository of the dataset
-    @param search_model_repo: huggingface repository of the search model
-    @param text_embed_model_repo: huggingface repository of the text encoder model
-    @param k: number of returned result
-
-    @return: a dictionary containing search score (distance to the mapped query vector) and
+    :param query: user input search term
+    :param dataset_repo: huggingface repository of the dataset
+    :param search_model_repo: huggingface repository of the search model
+    :param text_embed_model_repo:huggingface repository of the text encoder model
+    :param k: number of returned result
+    :return:a dictionary containing search score (distance to the mapped query vector) and
     search result metadata.
     """
 
