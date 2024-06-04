@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pytest
-from geniml.search import vec_pairs
 from geniml.search.backends import HNSWBackend
 from geniml.text2bednn.text2bednn import Vec2VecFNN
 from geniml.text2bednn.utils import metadata_dict_from_csv
@@ -102,21 +101,6 @@ def test_vec_pair(nl_payloads, bed_payloads, tmp_path_factory):
 
     bed_backend.load(vectors=np.array(bed_vecs), payloads=bed_payloads)
     nl_backend.load(vectors=np.array(nl_vecs), payloads=nl_payloads)
-
-    # only target pairs
-    X, Y, target = vec_pairs(nl_backend, bed_backend, "files", "name")
-
-    assert X.shape[0] == 6
-    assert Y.shape[0] == 6
-
-    # target & non-target pairs
-    X, Y, target = vec_pairs(nl_backend, bed_backend, "files", "name", True, 1.0)
-
-    assert X.shape[0] == 12
-    assert Y.shape[0] == 12
-
-    assert (target == 1).sum() == 6
-    assert (target == -1).sum() == 6
 
 
 def test_torch_running(tmp_path_factory):

@@ -182,10 +182,10 @@ def region2vocab_modify(region) -> str:
     """Convert a builtins.Region object to a string in the format of chr:start-end.
 
     Args:
-        region (builtins.Region): A region in the chr:start-end position.
+        region (builtins.Region): A region stored in tokenizer
 
     Returns:
-        str: region string in standardized format.
+        str: region string in standardized format chr:start-end.
     """
     return f"{region.chr}:{region.start}-{region.end}"
 
