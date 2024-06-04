@@ -1,5 +1,5 @@
 import json
-from typing import Dict
+from typing import Dict, List, Union
 
 from huggingface_hub import hf_hub_download
 
@@ -11,7 +11,7 @@ from .query2vec import Text2Vec
 
 def anecdotal_search_from_hf_data(
     query: str, dataset_repo: str, search_model_repo: str, text_embed_model_repo: str, k: int = 10
-) -> Dict:
+) -> List[Dict[str, Union[float, int, Dict[str, str]]]]:
     """
     Test the retrieval performance of a trained search model on a dataset on huggingface
 
