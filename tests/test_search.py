@@ -4,10 +4,10 @@ from typing import Dict, List
 
 import numpy as np
 import pytest
-
 from geniml.io import RegionSet
 from geniml.region2vec import Region2VecExModel
-from geniml.search import BED2BEDSearchInterface, BED2Vec, Text2BEDSearchInterface, Text2Vec
+from geniml.search import (BED2BEDSearchInterface, BED2Vec,
+                           Text2BEDSearchInterface, Text2Vec)
 from geniml.search.backends import HNSWBackend, QdrantBackend
 from geniml.search.backends.filebackend import DEP_HNSWLIB
 
@@ -184,7 +184,7 @@ def test_QdrantBackend(filenames, embeddings, labels, collection, ids):
     )
     assert isinstance(search_results, list)
     for result in search_results:
-        assert isinstance(result, dict)
+        assert isinstance(result, dict)  # only target pairs
         assert isinstance(result["id"], int)
         assert isinstance(result["score"], float)
         assert isinstance(result["vector"], list)
