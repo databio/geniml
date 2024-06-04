@@ -219,12 +219,7 @@ class BBClient(BedCacheManager):
                 f"Please make sure the tokenized BED file is available in bedbase."
             )
 
-        univers_group = self.zarr_cache.require_group(universe_id)
-        univers_group.create_dataset(bed_id, data=tokenized_bed, overwrite=True)
-
-        _LOGGER.info(
-            f"Tokenized BED file {bed_id} tokenized using {universe_id} was cached successfully"
-        )
+        self.cache_tokens(bed_id, universe_id, tokenized_bed)
 
     def load_bed_tokens(self, bed_id: str, universe_id: str) -> Array:
         """
@@ -248,6 +243,35 @@ class BBClient(BedCacheManager):
             zarr_array = self.zarr_cache[universe_id][bed_id]
 
         return zarr_array
+
+    def remove_tokens(self, bed_id: str, universe_id: str) -> None:
+        """
+        Remove all tokenized BED files from cache
+        """
+        try:
+            del self.zarr_cache[universe_id][bed_id]
+        except KeyError:
+            raise TokenizedFileNotFoundInCacheError(
+                f"Tokenized BED file {bed_id} for {universe_id} does not exist in cache."
+            )
+
+    def cache_tokens(self, bed_id: str, universe_id: str, tokens: Union[list, Array]) -> None:
+        """
+        Cache tokenized BED file
+
+        :param bed_id: the identifier of the BED file
+        :param universe_id: the identifier of the universe
+        :param tokens: the list of tokens
+
+        :return: None
+        """
+
+        univers_group = self.zarr_cache.require_group(universe_id)
+        univers_group.create_dataset(bed_id, data=tokens, overwrite=True)
+
+        _LOGGER.info(
+            f"Tokenized BED file {bed_id} tokenized using {universe_id} was cached successfully"
+        )
 
     def add_bed_to_s3(
         self,
