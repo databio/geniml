@@ -1,4 +1,6 @@
+import json
 import os.path
+import pickle
 from typing import Dict, List, Union
 
 import hnswlib
@@ -17,6 +19,7 @@ DEP_HNSWLIB = True
 #     )
 
 import numpy as np
+
 
 from geniml.search.const import (
     DEFAULT_DIM,
@@ -45,7 +48,7 @@ class HNSWBackend(EmSearchBackend):
     def __init__(
         self,
         local_index_path: str = DEFAULT_INDEX_PATH,
-        payloads: dict = {},
+        payloads: Union[dict, str] = dict(),
         space: str = DEFAULT_HNSW_SPACE,
         dim: int = DEFAULT_DIM,
         ef: int = DEFAULT_EF,
@@ -70,13 +73,26 @@ class HNSWBackend(EmSearchBackend):
         if os.path.exists(local_index_path):
             self.idx.load_index(local_index_path)
             _LOGGER.info(f"Using index {local_index_path} with {self.idx.element_count} points.")
-            self.payloads = payloads
+
+            # load payloads:
+            if isinstance(payloads, str):
+                if payloads.endswith(".json"):
+                    with open(payloads, "r") as f:
+                        self.payloads = json.load(f)
+                elif payloads.endswith(".pkl"):
+                    self.payloads = pickle.load(open(payloads, "rb"))
+                else:
+                    _LOGGER.error(
+                        "ValueError: Only allow reading payloads from .json or .pkl files"
+                    )
+            else:
+                self.payloads = payloads
             # self.payloads = {}
         # save the index to local file path
         else:
             _LOGGER.info(f"Index {local_index_path} does not exist, creating it.")
             self.idx.save_index(local_index_path)
-            self.payloads = {}
+            self.payloads = dict()
         # self.payloads = payloads
         self.idx_path = local_index_path
 
@@ -113,7 +129,7 @@ class HNSWBackend(EmSearchBackend):
 
         # update hnsw index and load embedding vectors
         self.idx.load_index(self.idx_path, max_elements=new_max)
-        self.idx.add_items(vectors, ids)
+        self.idx.add_items(vectors)
 
         # save hnsw index to local file
         self.idx.save_index(self.idx_path)
@@ -179,7 +195,9 @@ class HNSWBackend(EmSearchBackend):
     def __len__(self) -> int:
         return self.idx.element_count
 
-    def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
+    def retrieve_info(
+        self, ids: Union[List[int], int], with_vec: bool = False
+    ) -> Union[
         Dict[str, Union[int, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, List[float], Dict[str, str]]]],
     ]:

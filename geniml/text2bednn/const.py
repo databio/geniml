@@ -3,6 +3,7 @@ DEFAULT_GENOME_KEY = "sample_genome"
 DEFAULT_SERIES_KEY = "gse"
 DEFAULT_FILE_KEY = "file"
 BIO_GPT_REPO = "microsoft/biogpt"
+BIO_BERT_REPO = "dmis-lab/biobert-v1.1"
 
 
 DEFAULT_TRAIN_P = 0.85 * 0.9
@@ -14,7 +15,6 @@ DEFAULT_MAX_SEQ_LENGTH = 1000
 
 DEFAULT_NUM_EPOCHS = 1000
 DEFAULT_NUM_UNITS = 256
-DEFAULT_NUM_EXTRA_HIDDEN_LAYERS = 0
 DEFAULT_BATCH_SIZE = 1
 DEFAULT_OPTIMIZER_NAME = "Adam"
 DEFAULT_LOSS_NAME = "cosine_embedding_loss"
@@ -26,10 +26,7 @@ DEFAULT_LEARNING_RATE = 0.001
 
 # if validation loss does not improve after patience*epoches, training stops
 DEFAULT_PATIENCE = 0.2
-DEFAULT_PAYLOAD_KEY = "payload"
-DEFAULT_VECTOR_KEY = "vector"
-DEFAULT_METADATA_KEY = "metadata"
-DEFAULT_FILENAME_KEY = "name"
+
 
 DEFAULT_DATALOADER_SHUFFLE = True
 MODULE_NAME = "text2bednn"
