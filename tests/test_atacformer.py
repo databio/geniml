@@ -77,14 +77,14 @@ def test_train_atacformer_ex_model(universe_file: str, data: str):
     collator = AtacformerMLMCollator(model.tokenizer.padding_token_id(), model._model.context_size)
     dataloader = DataLoader(
         dataset,
-        batch_size=2,
-        num_workers=1,
+        batch_size=1028,
+        num_workers=4,
         collate_fn=collator,
     )
 
     # make adapter and trainer
     adapter = MLMAdapter(model)
     trainer = L.Trainer(
-        max_epochs=3,
+        max_epochs=100,
     )
     trainer.fit(adapter, train_dataloaders=dataloader)

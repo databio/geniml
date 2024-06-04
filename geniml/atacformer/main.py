@@ -58,7 +58,7 @@ class Atacformer(nn.Module):
         # get the embeddings
         x = self.embedding(x)
         # set the positional embeddings to 0
-        x = x + torch.zeros_like(x)
+        # x = x + torch.zeros_like(x)
 
         # pass through the transformer
         x = self.transformer_encoder(x, src_key_padding_mask=mask)
@@ -123,7 +123,7 @@ class AtacformerExModel(ExModel):
             self.tokenizer = tokenizer
         else:
             raise TypeError(
-                "tokenizer must be a path to a bed file or an AnnDataTokenizer object."
+                "tokenizer must be a path to a bed file or an `AnnDataTokenizer object."
             )
 
     def _init_model(self, tokenizer, **kwargs):
