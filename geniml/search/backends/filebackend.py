@@ -90,7 +90,7 @@ class HNSWBackend(EmSearchBackend):
         else:
             _LOGGER.info(f"Index {local_index_path} does not exist, creating it.")
             self.idx.save_index(local_index_path)
-            self.payloads = dict()
+            self.payloads = {}
         # self.payloads = payloads
         self.idx_path = local_index_path
 
