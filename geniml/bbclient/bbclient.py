@@ -6,24 +6,31 @@ from typing import List, NoReturn, Union
 
 import boto3
 import requests
+import s3fs
+import zarr
 from botocore.exceptions import ClientError
+from pybiocfilecache import BiocFileCache
 from ubiquerg import is_url
+from zarr.errors import PathNotFoundError
+from zarr import Array
 
-from .._version import __version__
+from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
 from .const import (
     BEDFILE_URL_PATTERN,
     BEDSET_URL_PATTERN,
-    DEFAULT_BUCKET_NAME,
     DEFAULT_BEDBASE_API,
     DEFAULT_BEDFILE_EXT,
     DEFAULT_BEDFILE_SUBFOLDER,
     DEFAULT_BEDSET_EXT,
     DEFAULT_BEDSET_SUBFOLDER,
     DEFAULT_BUCKET_FOLDER,
+    DEFAULT_BUCKET_NAME,
     DEFAULT_CACHE_FOLDER,
+    DEFAULT_ZARR_FOLDER,
     MODULE_NAME,
+    BED_TOKENS_PATTERN,
 )
 from .utils import BedCacheManager, get_abs_path
 
@@ -46,13 +53,20 @@ class BBClient(BedCacheManager):
         cache_folder = get_abs_path(cache_folder)
         super().__init__(cache_folder)
 
+        self.bedfile_cache = BiocFileCache(os.path.join(cache_folder, DEFAULT_BEDFILE_SUBFOLDER))
+        self.bedset_cache = BiocFileCache(os.path.join(cache_folder, DEFAULT_BEDSET_SUBFOLDER))
+
+        self.zarr_cache = zarr.group(
+            store=os.path.join(cache_folder, DEFAULT_ZARR_FOLDER), overwrite=False
+        )
         self.bedbase_api = bedbase_api
 
     def load_bedset(self, bedset_id: str) -> BedSet:
         """
         Load a BEDset from cache, or download and add it to the cache with its BED files
 
-        :param BedSet: BedSet object
+        :param bedset_id: unique identifier of a BED set
+        :return: the BedSet object
         """
 
         file_path = self._bedset_path(bedset_id)
@@ -100,17 +114,15 @@ class BBClient(BedCacheManager):
 
         if os.path.exists(file_path):
             _LOGGER.info(f"BED file {bed_id} already exists in cache.")
+        # if not in the cache, download from BEDbase and write to file in cache
         else:
-            file_path = self._bedfile_path(bed_id)
+            bed_data = self._download_bed_file_from_bb(bed_id)
+            with open(file_path, "wb") as f:
+                f.write(bed_data)
 
-            if os.path.exists(file_path):
-                _LOGGER.info(f"BED file {bed_id} already exists in cache.")
-            # if not in the cache, download from BEDbase and write to file in cache
-            else:
-                bed_data = self._download_bed_file_from_bb(bed_id)
-                with open(file_path, "wb") as f:
-                    f.write(bed_data)
-                _LOGGER.info(f"BED file {bed_id} was downloaded and cached successfully")
+            self.bedfile_cache.add(bed_id, fpath=file_path, action="asis")
+
+            _LOGGER.info(f"BED file {bed_id} was downloaded and cached successfully")
 
         return RegionSet(regions=file_path)
 
@@ -121,6 +133,7 @@ class BBClient(BedCacheManager):
         :param bedset: the BED set to be added, a BedSet class
         :return: the identifier if the BedSet object
         """
+
         bedset_id = bedset.compute_bedset_identifier()
         file_path = self._bedset_path(bedset_id)
         if os.path.exists(file_path):
@@ -130,6 +143,7 @@ class BBClient(BedCacheManager):
                 for bedfile in bedset:
                     bedfile_id = self.add_bed_to_cache(bedfile)
                     file.write(bedfile_id + "\n")
+        self.bedset_cache.add(bedset_id, fpath=file_path, action="asis")
         return bedset_id
 
     def add_bed_to_cache(self, bedfile: Union[RegionSet, str]) -> str:
@@ -139,6 +153,7 @@ class BBClient(BedCacheManager):
         :param bedfile: a RegionSet object or a path or url to the BED file
         :return: the RegionSet identifier
         """
+
         if isinstance(bedfile, str):
             bedfile = RegionSet(bedfile)
         elif not isinstance(bedfile, RegionSet):
@@ -166,8 +181,97 @@ class BBClient(BedCacheManager):
                     with open(bedfile.path, "rb") as f_in:
                         with gzip.open(file_path, "wb") as f_out:
                             shutil.copyfileobj(f_in, f_out)
-
+            self.bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
         return bedfile_id
+
+    def add_bed_tokens_to_cache(self, bed_id: str, universe_id: str) -> None:
+        """
+        Add a tokenized BED file to the cache
+
+        :param bed_id: the identifier of the BED file
+        :param universe_id: the identifier of the universe
+
+        :return: the identifier of the tokenized BED file
+        """
+
+        tokens_info_url = BED_TOKENS_PATTERN.format(
+            bedbase_api=DEFAULT_BEDBASE_API, bed_id=bed_id, universe_id=universe_id
+        )
+        response = requests.get(tokens_info_url)
+        if response.status_code == 404:
+            raise TokenizedFileNotFoundError(
+                f"Tokenized BED file {bed_id} for {universe_id} does not exist in bedbase."
+                f"Please make sure the tokenized BED file is available in bedbase."
+            )
+
+        tokens_info = response.json()
+        file_path = tokens_info["file_path"]
+
+        s3fc_obj = s3fs.S3FileSystem(endpoint_url=tokens_info["endpoint_url"])
+        zarr_store = s3fs.S3Map(root=file_path, s3=s3fc_obj, check=False, create=False)
+        cache_obj = zarr.LRUStoreCache(zarr_store, max_size=2**28)
+
+        try:
+            tokenized_bed = zarr.open(cache_obj, mode="r")
+        except PathNotFoundError:
+            raise TokenizedFileNotFoundError(
+                f"Tokenized BED file {bed_id} for {universe_id} does not exist in bedbase."
+                f"Please make sure the tokenized BED file is available in bedbase."
+            )
+
+        self.cache_tokens(bed_id, universe_id, tokenized_bed)
+
+    def load_bed_tokens(self, bed_id: str, universe_id: str) -> Array:
+        """
+        Load a tokenized BED file from cache, or download and cache it if it doesn't exist
+
+        :param bed_id: the identifier of the BED file
+        :param universe_id: the identifier of the universe
+
+        :return: the zarr array of tokens
+        """
+        try:
+            zarr_array = self.zarr_cache[universe_id][bed_id]
+        except KeyError:
+            try:
+                self.add_bed_tokens_to_cache(bed_id, universe_id)
+            except TokenizedFileNotFoundError:
+                raise TokenizedFileNotFoundInCacheError(
+                    f"Tokenized BED file {bed_id} for {universe_id} does not exist in cache."
+                    "And it is not available in bedbase."
+                )
+            zarr_array = self.zarr_cache[universe_id][bed_id]
+
+        return zarr_array
+
+    def remove_tokens(self, bed_id: str, universe_id: str) -> None:
+        """
+        Remove all tokenized BED files from cache
+        """
+        try:
+            del self.zarr_cache[universe_id][bed_id]
+        except KeyError:
+            raise TokenizedFileNotFoundInCacheError(
+                f"Tokenized BED file {bed_id} for {universe_id} does not exist in cache."
+            )
+
+    def cache_tokens(self, bed_id: str, universe_id: str, tokens: Union[list, Array]) -> None:
+        """
+        Cache tokenized BED file
+
+        :param bed_id: the identifier of the BED file
+        :param universe_id: the identifier of the universe
+        :param tokens: the list of tokens
+
+        :return: None
+        """
+
+        univers_group = self.zarr_cache.require_group(universe_id)
+        univers_group.create_dataset(bed_id, data=tokens, overwrite=True)
+
+        _LOGGER.info(
+            f"Tokenized BED file {bed_id} tokenized using {universe_id} was cached successfully"
+        )
 
     def add_bed_to_s3(
         self,
@@ -261,11 +365,12 @@ class BBClient(BedCacheManager):
         :raise FileNotFoundError: if the identifier does not exist in cache
         """
 
-        # check if any BED set has that identifier
+        # bedfile
         file_path = self._bedset_path(identifier, False)
         if os.path.exists(file_path):
             return file_path
         else:
+            # bedset
             file_path = self._bedfile_path(identifier, False)
             if os.path.exists(file_path):
                 return file_path
@@ -288,7 +393,9 @@ class BBClient(BedCacheManager):
             for bedfile_id in extracted_data:
                 self.remove_bedfile_from_cache(bedfile_id)
 
-        self._remove(file_path)
+        self.bedset_cache.remove(bedset_id)
+        # commented due to bioc file cache removal:
+        # self._remove(file_path)
 
     def _download_bed_file_from_bb(self, bedfile: str) -> bytes:
         """
@@ -332,7 +439,11 @@ class BBClient(BedCacheManager):
         return self._cache_path(bedfile_id, subfolder_name, file_extension, create)
 
     def _cache_path(
-        self, identifier: str, subfolder_name: str, file_extension: str, create: bool = True
+        self,
+        identifier: str,
+        subfolder_name: str,
+        file_extension: str,
+        create: bool = True,
     ) -> str:
         """
         Get the path of a file in cache folder
@@ -358,11 +469,13 @@ class BBClient(BedCacheManager):
         :raise FileNotFoundError: if the BED set does not exist in cache
         """
 
-        file_path = self.seek(bedfile_id)
-        self._remove(file_path)
+        # commented due to bioc chacing removal method
+        # file_path = self.seek(bedfile_id)
+        # self._remove(file_path)
+        self.bedfile_cache.remove(bedfile_id)
 
     @staticmethod
-    def _remove(file_path: str) -> NoReturn:
+    def _remove(file_path: str) -> None:
         """
         Remove a file within the cache with given path, and remove empty subfolders after removal
         Structure of folders in cache:
@@ -373,7 +486,7 @@ class BBClient(BedCacheManager):
                 c/d/cd123hij.txt
 
         :param file_path: the path to the file
-        :return: NoReturn
+        :return: None
         """
         # the subfolder that matches the second digit of the identifier
         sub_folder_2 = os.path.split(file_path)[0]
@@ -387,3 +500,5 @@ class BBClient(BedCacheManager):
             os.rmdir(sub_folder_2)
             if len(os.listdir(sub_folder_1)) == 0:
                 os.rmdir(sub_folder_1)
+
+        return None
