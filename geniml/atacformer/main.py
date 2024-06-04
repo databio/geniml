@@ -1,5 +1,5 @@
 import os
-from typing import List, Union
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -7,7 +7,7 @@ from huggingface_hub import hf_hub_download
 from yaml import safe_dump, safe_load
 
 from ..models.main import ExModel
-from ..tokenization.main import ITTokenizer
+from ..tokenization.main import AnnDataTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     D_MODEL_KEY,
@@ -42,19 +42,28 @@ class Atacformer(nn.Module):
         self.num_layers = num_layers
         self.vocab_size = vocab_size
         self.embedding = nn.Embedding(vocab_size, d_model)
-        self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead)
+        self.encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model, nhead=nhead, batch_first=True
+        )
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
         :param torch.Tensor x: Input tensor of shape (batch_size, seq_len)
+        :param torch.Tensor mask: Mask tensor of shape (batch_size, seq_len)
+        :return torch.Tensor: Output tensor of shape (batch_size, seq_len, d_model). I.e. an embedding for each token.
         """
         # get the embeddings
         x = self.embedding(x)
         # set the positional embeddings to 0
         x = x + torch.zeros_like(x)
+
+        # get attention mask in the correct shape
+        if mask is not None:
+            mask = mask.unsqueeze(1).unsqueeze(2)
+
         # pass through the transformer
-        x = self.transformer_encoder(x)
+        x = self.transformer_encoder(x, mask=mask)
         return x
 
 
@@ -68,7 +77,7 @@ class AtacformerExModel(ExModel):
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: ITTokenizer = None,
+        tokenizer: AnnDataTokenizer = None,
         device: str = None,
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
@@ -82,7 +91,7 @@ class AtacformerExModel(ExModel):
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: ITTokenizer
+        self.tokenizer: AnnDataTokenizer
         self.trained: bool = False
         self._model: Atacformer = None
         self.pooling_method = pooling_method
@@ -99,7 +108,7 @@ class AtacformerExModel(ExModel):
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_tokenizer(self, tokenizer: Union[ITTokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[AnnDataTokenizer, str]):
         """
         Initialize the tokenizer.
 
@@ -107,15 +116,17 @@ class AtacformerExModel(ExModel):
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
-                self.tokenizer = ITTokenizer(tokenizer)
+                self.tokenizer = AnnDataTokenizer(tokenizer)
             else:
-                self.tokenizer = ITTokenizer.from_pretrained(
+                self.tokenizer = AnnDataTokenizer.from_pretrained(
                     tokenizer
                 )  # download from huggingface (or at least try to)
-        elif isinstance(tokenizer, ITTokenizer):
+        elif isinstance(tokenizer, AnnDataTokenizer):
             self.tokenizer = tokenizer
         else:
-            raise TypeError("tokenizer must be a path to a bed file or an ITTokenizer object.")
+            raise TypeError(
+                "tokenizer must be a path to a bed file or an AnnDataTokenizer object."
+            )
 
     def _init_model(self, tokenizer, **kwargs):
         """
@@ -146,7 +157,7 @@ class AtacformerExModel(ExModel):
         :param str vocab_path: Path to the vocabulary file.
         """
         # init the tokenizer - only one option for now
-        self.tokenizer = ITTokenizer(vocab_path)
+        self.tokenizer = AnnDataTokenizer(vocab_path)
 
         # load the model state dict (weights)
         params = torch.load(model_path)

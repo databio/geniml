@@ -35,7 +35,11 @@ class TestBedshift:
 
     def test_add_valid_regions(self, bs):
         added = bs.add(
-            0.5, 2000, 1000, valid_bed=os.path.join(SCRIPT_PATH, "small_test.bed"), delimiter="\t"
+            0.5,
+            2000,
+            1000,
+            valid_bed=os.path.join(SCRIPT_PATH, "small_test.bed"),
+            delimiter="\t",
         )
         assert added == 500
         # bs.to_bed(os.path.join(SCRIPT_PATH, "add_valid_test.bed"))
@@ -152,7 +156,8 @@ class TestBedshiftYAMLHandler:
             chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes"),
         )
         yamled = BedshiftYAMLHandler.BedshiftYAMLHandler(
-            bedshifter=bedshifter, yaml_fp=os.path.join(SCRIPT_PATH, "bedshift_analysis.yaml")
+            bedshifter=bedshifter,
+            yaml_fp=os.path.join(SCRIPT_PATH, "bedshift_analysis.yaml"),
         ).handle_yaml()
         bedshifter.reset_bed()
 

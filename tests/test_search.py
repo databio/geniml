@@ -23,7 +23,10 @@ def bed_folder():
     """
 
     return os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data", "hg38_sample"
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "tests",
+        "data",
+        "hg38_sample",
     )
 
 

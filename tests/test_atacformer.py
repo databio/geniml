@@ -4,8 +4,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from geniml.atacformer.main import Atacformer, AtacformerExModel
-from geniml.atacformer.utils import AtacformerMLMDataset
-from geniml.tokenization.main import ITTokenizer
+from geniml.atacformer.utils import AtacformerMLMDataset, AtacformerMLMCollator
+from geniml.tokenization.main import AnnDataTokenizer
 from geniml.training.adapters import MLMAdapter
 
 
@@ -21,8 +21,14 @@ def data():
 
 @pytest.mark.skip("Too new to test")
 def test_atacformer_dataset():
+    # t = AnnDataTokenizer("/Users/nathanleroy/Desktop/screen.bed")
+    # path_to_data = "/Users/nathanleroy/Desktop/gtoks"
+    # path_to_data = "tests/data/gtok_sample/"
+
+    t = AnnDataTokenizer("tests/data/universe_mlm.bed")
     path_to_data = "tests/data/gtok_sample/"
-    dataset = AtacformerMLMDataset(path_to_data, 999, 10_000)
+
+    dataset = AtacformerMLMDataset(path_to_data, t.mask_token_id(), len(t))
 
     assert dataset is not None
     assert all([isinstance(x, tuple) for x in dataset])
@@ -42,7 +48,7 @@ def test_atacformer_init():
 
 @pytest.mark.skip("Too new to test")
 def test_atacformer_exmodel_init(universe_file: str):
-    tokenizer = ITTokenizer(universe_file)
+    tokenizer = AnnDataTokenizer(universe_file)
     model = AtacformerExModel(
         tokenizer=tokenizer,
     )
@@ -57,18 +63,22 @@ def test_atacformer_exmodel_init(universe_file: str):
 @pytest.mark.skip("Too new to test")
 def test_train_atacformer_ex_model(universe_file: str, data: str):
     # make tokenizer and model
-    tokenizer = ITTokenizer(universe_file)
+    tokenizer = AnnDataTokenizer(universe_file)
     model = AtacformerExModel(
         tokenizer=tokenizer,
     )
 
     # curate dataset
     mask_token_id = tokenizer.mask_token_id()
-    dataset = AtacformerMLMDataset(data, mask_token_id=mask_token_id, vocab_size=len(tokenizer))
+    dataset = AtacformerMLMDataset(
+        "/Users/nathanleroy/Desktop/gtoks", mask_token_id=mask_token_id, vocab_size=len(tokenizer)
+    )
+    collator = AtacformerMLMCollator(model.tokenizer.padding_token_id())
     dataloader = DataLoader(
         dataset,
         batch_size=2,
-        num_workers=4,
+        num_workers=1,
+        collate_fn=collator,
     )
 
     # make adapter and trainer
