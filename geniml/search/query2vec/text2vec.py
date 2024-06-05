@@ -2,7 +2,7 @@ import logging
 from typing import Union
 
 import numpy as np
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 from ...const import PKG_NAME
 from ...text2bednn import Vec2VecFNN
