@@ -20,7 +20,7 @@ ubiquerg >= 0.6.3
 pyarrow
 iranges
 lightning
-langchain-community
+langchain-huggingface==0.0.2
 botocore >= 1.34.54
 boto3 >=  1.34.54
 scipy <= 1.12.0
