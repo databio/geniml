@@ -19,6 +19,7 @@ from .const import (
     POOLING_TYPES,
     UNIVERSE_FILE_NAME,
     VOCAB_SIZE_KEY,
+    CONTEXT_SIZE_KEY,
 )
 
 
@@ -283,6 +284,7 @@ class AtacformerExModel(ExModel):
         num_layers = self._model.num_layers
         nhead = self._model.nhead
         vocab_size = len(self.tokenizer)
+        context_size = self._model.context_size
 
         config = {
             POOLING_METHOD_KEY: self.pooling_method,
@@ -290,6 +292,7 @@ class AtacformerExModel(ExModel):
             VOCAB_SIZE_KEY: vocab_size,
             NUM_LAYERS_KEY: num_layers,
             NHEAD_KEY: nhead,
+            CONTEXT_SIZE_KEY: context_size,
         }
 
         if kwargs:
