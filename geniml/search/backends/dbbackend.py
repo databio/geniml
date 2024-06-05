@@ -152,7 +152,9 @@ class QdrantBackend(EmSearchBackend):
         """
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 
-    def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
+    def retrieve_info(
+        self, ids: Union[List[int], int], with_vec: bool = False
+    ) -> Union[
         Dict[str, Union[int, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, List[float], Dict[str, str]]]],
     ]:

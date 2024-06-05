@@ -20,8 +20,13 @@ DEP_HNSWLIB = True
 #     )
 
 import numpy as np
-from geniml.search.const import (DEFAULT_DIM, DEFAULT_EF, DEFAULT_HNSW_SPACE,
-                                 DEFAULT_INDEX_PATH, DEFAULT_M)
+from geniml.search.const import (
+    DEFAULT_DIM,
+    DEFAULT_EF,
+    DEFAULT_HNSW_SPACE,
+    DEFAULT_INDEX_PATH,
+    DEFAULT_M,
+)
 
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
