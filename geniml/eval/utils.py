@@ -180,7 +180,8 @@ def load_genomic_embeddings(
         exmodel = Region2VecExModel(model_path)
         embed_rep = exmodel.model.projection.weight.data.numpy()
         regions_r2v = [region2vocab_modify(r) for r in exmodel.tokenizer.universe.regions]
-        return embed_rep, regions_r2v
+        # remove embeddings representing unknown token and padding token
+        return embed_rep[:-2], regions_r2v
 
 
 def region2vocab_modify(region) -> str:
