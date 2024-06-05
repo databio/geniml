@@ -79,7 +79,7 @@ class AtacformerMLMDataset(Dataset):
         self.shuffle = shuffle
 
         # get list of all files
-        self.files = glob(os.path.join(data, "*.gtok"))
+        self.files = glob(os.path.join(data, "**/*.gtok"))
         self.probs = torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE])
 
     def __len__(self):
