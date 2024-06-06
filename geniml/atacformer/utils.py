@@ -42,6 +42,7 @@ class AtacformerMLMCollator:
         attention_mask = tokens != self.padding_token
 
         # clip the tokens to the context size
+        # actually, we should randomly sample a subset of the tokens
         tokens = tokens[:, : self.context_size]
         masked_tokens = masked_tokens[:, : self.context_size]
         mask_ids = mask_ids[:, : self.context_size]
