@@ -39,7 +39,6 @@ setup(
         "geniml.universe",
         "geniml.io",
         "geniml.text2bednn",
-        "geniml.text2bednn.embedder",
         "geniml.bbclient",
         "geniml.search",
         "geniml.search.backends",

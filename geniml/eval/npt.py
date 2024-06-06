@@ -157,6 +157,9 @@ def cal_snpr(ratio_embed: np.ndarray, ratio_random: np.ndarray) -> np.ndarray:
     return res
 
 
+var_dict = {}
+
+
 def worker_func(
     i: int,
     K: int,
@@ -181,8 +184,6 @@ def worker_func(
     Returns:
         np.ndarray: An array of overlap ratios.
     """
-    var_dict = {}
-
     if embed_type == "embed":
         embeds = var_dict["embed_rep"]
     elif embed_type == "random":
@@ -210,7 +211,6 @@ def init_worker(
         ref_embed (np.ndarray): Random embeddings.
         region2index (dict[str, int]): A region to index dictionary.
     """
-    var_dict = {}
     var_dict["embed_rep"] = embed_rep
     var_dict["ref_embed"] = ref_embed
     var_dict["region2vec_index"] = region2index

@@ -1,7 +1,10 @@
+import json
 import os.path
+import pickle
 from typing import Dict, List, Union
 
 import hnswlib
+import yaml
 
 from ... import _LOGGER
 
@@ -17,7 +20,6 @@ DEP_HNSWLIB = True
 #     )
 
 import numpy as np
-
 from geniml.search.const import (
     DEFAULT_DIM,
     DEFAULT_EF,
@@ -45,7 +47,7 @@ class HNSWBackend(EmSearchBackend):
     def __init__(
         self,
         local_index_path: str = DEFAULT_INDEX_PATH,
-        payloads: dict = {},
+        payloads: Union[dict, str] = dict(),
         space: str = DEFAULT_HNSW_SPACE,
         dim: int = DEFAULT_DIM,
         ef: int = DEFAULT_EF,
@@ -70,7 +72,24 @@ class HNSWBackend(EmSearchBackend):
         if os.path.exists(local_index_path):
             self.idx.load_index(local_index_path)
             _LOGGER.info(f"Using index {local_index_path} with {self.idx.element_count} points.")
-            self.payloads = payloads
+
+            # load payloads:
+            if isinstance(payloads, str):
+                if payloads.endswith(".json"):
+                    with open(payloads, "r") as f:
+                        self.payloads = json.load(f)
+                elif payloads.endswith(".pkl"):
+                    self.payloads = pickle.load(open(payloads, "rb"))
+                elif payloads.endswith(".yaml"):
+                    with open(payloads, "r") as f:
+                        self.payloads = yaml.load(f, Loader=yaml.SafeLoader)
+
+                else:
+                    raise ValueError(
+                        f"payload should be either a json, pickle, or yaml file. you supplied: {payloads.split('.')[-1]}"
+                    )
+            else:
+                self.payloads = payloads
             # self.payloads = {}
         # save the index to local file path
         else:
@@ -113,7 +132,7 @@ class HNSWBackend(EmSearchBackend):
 
         # update hnsw index and load embedding vectors
         self.idx.load_index(self.idx_path, max_elements=new_max)
-        self.idx.add_items(vectors, ids)
+        self.idx.add_items(vectors)
 
         # save hnsw index to local file
         self.idx.save_index(self.idx_path)
