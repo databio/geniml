@@ -153,7 +153,6 @@ def main(test_args=None):
             bbc.add_bed_tokens_to_cache(args.bed_id[0], args.universe_id[0])
 
         if args.subcommand == "cache-bedset":
-
             if os.path.isdir(args.identifier[0]):
                 from .io import BedSet
 

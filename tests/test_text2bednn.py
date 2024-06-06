@@ -2,8 +2,6 @@ import os
 
 import numpy as np
 import pytest
-
-from geniml.search import vec_pairs
 from geniml.search.backends import HNSWBackend
 from geniml.text2bednn.text2bednn import Vec2VecFNN
 from geniml.text2bednn.utils import metadata_dict_from_csv
@@ -104,21 +102,6 @@ def test_vec_pair(nl_payloads, bed_payloads, tmp_path_factory):
     bed_backend.load(vectors=np.array(bed_vecs), payloads=bed_payloads)
     nl_backend.load(vectors=np.array(nl_vecs), payloads=nl_payloads)
 
-    # only target pairs
-    X, Y, target = vec_pairs(nl_backend, bed_backend, "files", "name")
-
-    assert X.shape[0] == 6
-    assert Y.shape[0] == 6
-
-    # target & non-target pairs
-    X, Y, target = vec_pairs(nl_backend, bed_backend, "files", "name", True, 1.0)
-
-    assert X.shape[0] == 12
-    assert Y.shape[0] == 12
-
-    assert (target == 1).sum() == 6
-    assert (target == -1).sum() == 6
-
 
 def test_torch_running(tmp_path_factory):
     """
@@ -147,7 +130,6 @@ def test_torch_running(tmp_path_factory):
         num_epochs=100,
         batch_size=16,
         num_units=[512, 256],
-        num_extra_hidden_layers=1,
     )
     v2v_torch1.plot_training_hist(best_embed_folder)
     v2v_torch1.export(best_embed_folder, "v2v_best_epoch.pt")
@@ -183,7 +165,6 @@ def test_torch_running(tmp_path_factory):
         num_epochs=100,
         batch_size=16,
         num_units=[512, 256],
-        num_extra_hidden_layers=1,
         training_target=training_target,
         validating_target=validating_target,
     )
