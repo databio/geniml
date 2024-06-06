@@ -1,8 +1,8 @@
-name: Run pytests
+name: Run pytests for dev
 
 on:
   pull_request:
-    branches: [master, dev]
+    branches: [dev]
 
 jobs:
 
@@ -10,16 +10,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.12"]
         os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'  # caching can speed up the workflow by reusing the installed dependencies
 
       - name: Install dev dependencies
         run: if [ -f requirements/requirements-dev.txt ]; then pip install -r requirements/requirements-dev.txt; fi
