@@ -330,26 +330,20 @@ class Region2VecExModel(ExModel):
         token_tensors = [
             torch.tensor(token_set.to_ids(), dtype=torch.long) for token_set in tokens
         ]
-        padded_tokens = pad_sequence(
-            token_tensors, batch_first=True, padding_value=self.tokenizer.padding_token_id()
-        )
 
-        batch_embeddings = self._model.projection(padded_tokens)
+        region_embeddings = []
 
-        attention_mask = padded_tokens != self.tokenizer.padding_token_id()
-
-        if pooling == "mean":
-            region_embeddings = (
-                torch.mean(batch_embeddings * attention_mask.unsqueeze(-1), axis=1)
-                .detach()
-                .numpy()
-            )
-        elif pooling == "max":
-            region_embeddings = (
-                torch.max(batch_embeddings * attention_mask.unsqueeze(-1), axis=1).detach().numpy()
-            )
-        else:
-            # this should be unreachable
-            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+        for token_tensor in token_tensors:
+            if pooling == "mean":
+                region_embeddings.append(
+                    torch.mean(self._model.projection(token_tensor), axis=0).detach().numpy()
+                )
+            elif pooling == "max":
+                region_embeddings.append(
+                    torch.max(self._model.projection(token_tensor), axis=0).detach().numpy()
+                )
+            else:
+                # this should be unreachable
+                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         return np.vstack(region_embeddings)
