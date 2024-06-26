@@ -9,7 +9,7 @@ from rich.progress import track
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
-from genimtools.tokenizers import TreeTokenizer
+from gtars.tokenizers import TreeTokenizer
 
 
 @contextlib.contextmanager

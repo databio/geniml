@@ -12,7 +12,8 @@ from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
 from geniml.io import Region, RegionSet
-from genimtools.tokenizers import (
+from gtars.tokenizers import (
+    MetaTokenizer as GMetaTokenizer,
     TreeTokenizer as GTreeTokenizer,
     Region as GRegion,
 )
@@ -190,7 +191,7 @@ class AnnDataTokenizer(Tokenizer):
         universe_file_path = hf_hub_download(model_path, "universe.bed")
         return cls(universe_file_path, **kwargs)
 
-    def __init__(self, universe: str = None, verbose: bool = False):
+    def __init__(self, universe: str = None, verbose: bool = False, tokenizer_type: str = "tree"):
         """
         Create a new tokenizer.
 
@@ -199,8 +200,12 @@ class AnnDataTokenizer(Tokenizer):
         :param str universe: The universe to use for tokenization.
         """
         self.verbose = verbose
+        self._tokenizer: Union[GTreeTokenizer, GMetaTokenizer]
         if universe is not None:
-            self._tokenizer: GTreeTokenizer = GTreeTokenizer(universe)
+            if tokenizer_type == "meta":
+                self._tokenizer = GMetaTokenizer(universe)
+            else:
+                self._tokenizer = GTreeTokenizer(universe)
         else:
             self._tokenizer = None
 

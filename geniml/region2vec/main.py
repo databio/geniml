@@ -7,8 +7,8 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from huggingface_hub import hf_hub_download
 from rich.progress import track
-from genimtools.tokenizers import RegionSet as GRegionSet
-from genimtools.tokenizers import Region as GRegion
+from gtars.tokenizers import RegionSet as GRegionSet
+from gtars.tokenizers import Region as GRegion
 
 from ..io import Region, RegionSet
 from ..models import ExModel

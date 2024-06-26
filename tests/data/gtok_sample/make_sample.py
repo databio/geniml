@@ -1,9 +1,9 @@
 import os
 
-from genimtools.utils import write_tokens_to_gtok
+from gtars.utils import write_tokens_to_gtok
 
 from geniml.io import RegionSet
-from genimtools import TreeTokenizer
+from gtars import TreeTokenizer
 
 path = "tests/data/to_tokenize/"
 out_path = "tests/data/gtok_sample/"
