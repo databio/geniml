@@ -165,7 +165,7 @@ class ScEmbed:
         tokenizer_cfg_folder = os.path.dirname(tokenizer_cfg_path).split("/")[-1]
 
         # read in tokenizer cfg to see what else needs to be downloaded
-        with open(tokenizer_cfg_path, "r") as f:
+        with open(tokenizer_cfg_path, "rb") as f:
             tokenizer_cfg = tomllib.load(f)
 
         for universe in tokenizer_cfg["universes"]:

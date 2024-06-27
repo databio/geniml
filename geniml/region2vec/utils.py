@@ -456,7 +456,7 @@ def load_local_region2vec_model(
     :param str vocab_path: The path to the model vocabulary file
     """
     # read toml file
-    with open(tokenizer_cfg_path, "r") as f:
+    with open(tokenizer_cfg_path, "rb") as f:
         tokenizer_cfg = tomllib.load(f)
 
     # detect tokenizer type
@@ -508,7 +508,7 @@ def load_local_scembed_model(
     :param str vocab_path: The path to the model vocabulary file
     """
     # read toml file
-    with open(tokenizer_cfg_path, "r") as f:
+    with open(tokenizer_cfg_path, "rb") as f:
         tokenizer_cfg = tomllib.load(f)
 
     # detect tokenizer type
