@@ -17,13 +17,13 @@ from ..region2vec.const import (
     MODEL_FILE_NAME,
     POOLING_METHOD_KEY,
     POOLING_TYPES,
-    UNIVERSE_FILE_NAME,
+    TOKENIZER_CFG_FILE_NAME,
 )
 from ..region2vec.main import Region2Vec
 from ..region2vec.utils import (
     Region2VecDataset,
     export_region2vec_model,
-    load_local_region2vec_model,
+    load_local_scembed_model,
     train_region2vec_model,
 )
 from ..tokenization import AnnDataTokenizer, Tokenizer
@@ -124,15 +124,16 @@ class ScEmbed:
         if not self.trained:
             self._init_model(**kwargs)
 
-    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
+    def _load_local_model(self, model_path: str, tokenizer_cfg_path: str, config_path: str):
         """
         Load the model from a checkpoint.
 
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
+        :param str config_path: Path to the config file.
         """
-        _model, tokenizer, config = load_local_region2vec_model(
-            model_path, vocab_path, config_path
+        _model, tokenizer, config = load_local_scembed_model(
+            model_path, tokenizer_cfg_path, config_path
         )
         self._model = _model
         self.tokenizer = tokenizer
@@ -143,7 +144,7 @@ class ScEmbed:
         self,
         model_path: str,
         model_file_name: str = MODEL_FILE_NAME,
-        universe_file_name: str = UNIVERSE_FILE_NAME,
+        tokenizer_cfg_file: str = TOKENIZER_CFG_FILE_NAME,
         config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
@@ -158,17 +159,17 @@ class ScEmbed:
         :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
-        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        tokenizer_cfg_path = hf_hub_download(model_path, tokenizer_cfg_file, **kwargs)
         config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
-        self._load_local_model(model_file_path, universe_path, config_path)
+        self._load_local_model(model_file_path, tokenizer_cfg_path, config_path)
 
     @classmethod
     def from_pretrained(
         cls,
         path_to_files: str,
         model_file_name: str = MODEL_FILE_NAME,
-        universe_file_name: str = UNIVERSE_FILE_NAME,
+        tokenizer_cfg_name: str = TOKENIZER_CFG_FILE_NAME,
         config_file_name: str = CONFIG_FILE_NAME,
     ) -> "ScEmbed":
         """
@@ -182,11 +183,11 @@ class ScEmbed:
         :return: The loaded model.
         """
         model_file_path = os.path.join(path_to_files, model_file_name)
-        universe_file_path = os.path.join(path_to_files, universe_file_name)
+        tokenizer_cfg_name = os.path.join(path_to_files, tokenizer_cfg_name)
         config_file_path = os.path.join(path_to_files, config_file_name)
 
         instance = cls()
-        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
+        instance._load_local_model(model_file_path, tokenizer_cfg_name, config_file_path)
         instance.trained = True
 
         return instance
@@ -255,7 +256,7 @@ class ScEmbed:
         self,
         path: str,
         checkpoint_file: str = MODEL_FILE_NAME,
-        universe_file: str = UNIVERSE_FILE_NAME,
+        tokenizer_cfg_file: str = TOKENIZER_CFG_FILE_NAME,
         config_file: str = CONFIG_FILE_NAME,
     ):
         """
@@ -274,7 +275,7 @@ class ScEmbed:
             self.tokenizer,
             path,
             checkpoint_file=checkpoint_file,
-            universe_file=universe_file,
+            tokenizer_cfg_file=tokenizer_cfg_file,
             config_file=config_file,
         )
 
@@ -302,12 +303,14 @@ class ScEmbed:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         # tokenize the region
-        tokens = self.tokenizer.tokenize(regions)
-        tokens = [[t.id for t in sublist] for sublist in tokens]
+        tokens = self.tokenizer(regions)
+        tokens_as_ids = [t.to_ids() for t in tokens]
 
         # get the vector
         embeddings = []
-        for token_set in track(tokens, total=len(tokens), description="Getting embeddings"):
+        for token_set in track(
+            tokens_as_ids, total=len(tokens_as_ids), description="Getting embeddings"
+        ):
             region_embeddings = self._model.projection(torch.tensor(token_set))
             if pooling == "mean":
                 region_embeddings = torch.mean(region_embeddings, axis=0).detach().numpy()
