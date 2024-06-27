@@ -514,7 +514,7 @@ def load_local_scembed_model(
     # detect tokenizer type
     tokenizer_type = tokenizer_cfg.get("type", "tree")
 
-    tokenizer = AnnDataTokenizer(tokenizer_cfg, tokenizer_type=tokenizer_type)
+    tokenizer = AnnDataTokenizer(tokenizer_cfg_path, tokenizer_type=tokenizer_type)
 
     # load the model state dict (weights)
     params = torch.load(model_path)
