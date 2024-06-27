@@ -429,7 +429,7 @@ def export_region2vec_model(
     torch.save(model.state_dict(), os.path.join(path, checkpoint_file))
 
     # export the tokenizer as a toml file
-    tokenizer.save(os.path.join(path, tokenizer_cfg_file))
+    tokenizer.export(os.path.join(path, tokenizer_cfg_file))
 
     # export the config (vocab size, embedding size)
     config = {

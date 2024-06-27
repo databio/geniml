@@ -1,4 +1,5 @@
 import os
+import tomllib
 from logging import getLogger
 from typing import Union
 
@@ -27,10 +28,8 @@ from ..region2vec.utils import (
     train_region2vec_model,
 )
 from ..tokenization import AnnDataTokenizer, Tokenizer
-from .const import MODULE_NAME
 
 _GENSIM_LOGGER = getLogger("gensim")
-_LOGGER = getLogger(MODULE_NAME)
 
 # demote gensim logger to warning
 _GENSIM_LOGGER.setLevel("WARNING")
@@ -162,6 +161,15 @@ class ScEmbed:
         tokenizer_cfg_path = hf_hub_download(model_path, tokenizer_cfg_file, **kwargs)
         config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
+        # get subdir/folder of the tokenizer_cfg_path
+        tokenizer_cfg_folder = os.path.dirname(tokenizer_cfg_path).split("/")[-1]
+
+        # read in tokenizer cfg to see what else needs to be downloaded
+        tokenizer_cfg = tomllib.load(tokenizer_cfg_path)
+
+        for universe in tokenizer_cfg["universes"]:
+            hf_hub_download(model_path, universe, subfolder=tokenizer_cfg_folder, **kwargs)
+
         self._load_local_model(model_file_path, tokenizer_cfg_path, config_path)
 
     @classmethod
@@ -183,11 +191,11 @@ class ScEmbed:
         :return: The loaded model.
         """
         model_file_path = os.path.join(path_to_files, model_file_name)
-        tokenizer_cfg_name = os.path.join(path_to_files, tokenizer_cfg_name)
+        tokenizer_cfg_file = os.path.join(path_to_files, tokenizer_cfg_name)
         config_file_path = os.path.join(path_to_files, config_file_name)
 
         instance = cls()
-        instance._load_local_model(model_file_path, tokenizer_cfg_name, config_file_path)
+        instance._load_local_model(model_file_path, tokenizer_cfg_file, config_file_path)
         instance.trained = True
 
         return instance
