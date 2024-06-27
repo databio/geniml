@@ -165,7 +165,8 @@ class ScEmbed:
         tokenizer_cfg_folder = os.path.dirname(tokenizer_cfg_path).split("/")[-1]
 
         # read in tokenizer cfg to see what else needs to be downloaded
-        tokenizer_cfg = tomllib.load(tokenizer_cfg_path)
+        with open(tokenizer_cfg_path, "r") as f:
+            tokenizer_cfg = tomllib.load(f)
 
         for universe in tokenizer_cfg["universes"]:
             hf_hub_download(model_path, universe, subfolder=tokenizer_cfg_folder, **kwargs)
