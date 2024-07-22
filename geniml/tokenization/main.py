@@ -148,6 +148,9 @@ class TreeTokenizer(Tokenizer):
     def sep_token_id(self) -> int:
         return self._tokenizer.sep_token_id
 
+    def export(self, path: str):
+        return self._tokenizer.export(path)
+
     def __len__(self):
         return len(self._tokenizer)
 
@@ -384,6 +387,9 @@ class AnnDataTokenizer(Tokenizer):
 
     def sep_token_id(self) -> int:
         return self._tokenizer.sep_token_id
+
+    def export(self, path: str):
+        return self._tokenizer.export(path)
 
     def __len__(self):
         return len(self.universe.regions)
