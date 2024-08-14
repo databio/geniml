@@ -570,7 +570,7 @@ class Region2VecDataset:
         self.convert_to_str = convert_to_str
 
         if isinstance(data, str):
-            self.data = glob.glob(os.path.join(data, f"*.{GTOK_EXT}"))
+            self.data = glob.glob(os.path.join(data, f"**/*.{GTOK_EXT}"))
         elif isinstance(data, list) and isinstance(data[0], str):
             self.data = data
         else:

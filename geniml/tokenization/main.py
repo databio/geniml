@@ -297,7 +297,7 @@ class AnnDataTokenizer(Tokenizer):
 
         return tokenized
 
-    def encode(self, query: sc.AnnData) -> List[List[int]]:
+    def encode(self, query: Union[sc.AnnData, str]) -> List[List[int]]:
         """
         Tokenize an AnnData object to IDs.
 
@@ -394,7 +394,7 @@ class AnnDataTokenizer(Tokenizer):
     def __len__(self):
         return len(self.universe.regions)
 
-    def __call__(self, query: sc.AnnData) -> List[List[Region]]:
+    def __call__(self, query: Union[sc.AnnData, str]) -> List[List[Region]]:
         if isinstance(query, sc.AnnData):
             result = self._tokenize_anndata(query)
             return result
