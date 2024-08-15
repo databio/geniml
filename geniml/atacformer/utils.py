@@ -38,7 +38,7 @@ class AtacformerMLMCollator:
         )
         mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=self.padding_token)
 
-        attention_mask = tokens != self.padding_token
+        attention_mask = (tokens != self.padding_token).float()
 
         return tokens, masked_tokens, mask_ids, attention_mask
 
@@ -75,6 +75,10 @@ class AtacformerMLMDataset(Dataset):
 
         # get list of all files
         self.files = glob(os.path.join(data, "*.gtok"), recursive=True)
+        if len(self.files) == 0:
+            # try recursive
+            self.files = glob(os.path.join(data, "**/*.gtok"), recursive=True)
+
         self.probs = torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE])
 
     def __len__(self):

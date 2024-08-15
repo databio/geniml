@@ -82,7 +82,7 @@ def test_train_atacformer_ex_model():
         mask_token_id=mask_token_id,
         vocab_size=len(tokenizer),
     )
-    collator = AtacformerMLMCollator(model.tokenizer.padding_token_id(), model._model.context_size)
+    collator = AtacformerMLMCollator(model.tokenizer.padding_token_id())
     dataloader = DataLoader(
         dataset,
         batch_size=BATCH_SIZE,

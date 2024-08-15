@@ -163,7 +163,10 @@ class MLMAdapter(L.LightningModule):
         # forward pass for the batch
         output = self.forward(masked_tokens, mask=attention_mask)
 
-        # get predictions + targets
+        # get predictions and targets
+        # the predictions are the logits for the masked tokens
+        # defined by the masked_token_ids
+        # not sure what to do here...
         predictions = output[masked_token_ids]
         targets = tokens[masked_token_ids]
 
