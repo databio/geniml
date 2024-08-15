@@ -16,8 +16,9 @@ class AtacformerMLMCollator:
     Collator for the MLM dataset. This will pad the tokens, masked_tokens, and mask_ids
     """
 
-    def __init__(self, padding_token: int):
+    def __init__(self, padding_token: int, context_size: int):
         self.padding_token = padding_token
+        self.context_size = context_size
 
     def __call__(
         self, batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]

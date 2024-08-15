@@ -318,7 +318,11 @@ class Region2VecExModel(ExModel):
             regions = [regions]
         if isinstance(regions, str):
             regions = RegionSet(regions)
-        if not isinstance(regions[0], Region) and not isinstance(regions[0], GRegion):
+        if isinstance(regions, RegionSet):
+            pass
+        if isinstance(regions, GRegionSet):
+            pass
+        if not isinstance(regions[0], Region):
             raise TypeError("regions must be a list of Region objects.")
 
         if pooling not in ["mean", "max"]:
