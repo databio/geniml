@@ -29,6 +29,7 @@ class AtacformerMLMCollator:
         :param list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] batch: Batch of (tokens, masked_tokens, mask_ids)
         :param int padding_token: Token to use for padding
         """
+        # unpack the batch
         tokens, masked_tokens, mask_ids = zip(*batch)
 
         # pad the tokens
@@ -55,6 +56,7 @@ class AtacformerMLMDataset(Dataset):
         mask_rate: float = MASK_RATE,
         random_seed: int = 42,
         shuffle: bool = True,
+        context_size: int = 2048,
     ):
         """
         Initialize the MLM dataset. This is heavily based on the MLM dataset
@@ -73,9 +75,10 @@ class AtacformerMLMDataset(Dataset):
         self.vocab_size = vocab_size
         self.random_seed = random_seed
         self.shuffle = shuffle
+        self.context_size = context_size
 
         # get list of all files
-        self.files = glob(os.path.join(data, "*.gtok"))
+        self.files = glob(os.path.join(data, "**/*.gtok"))
         self.probs = torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE])
 
     def __len__(self):
@@ -87,6 +90,11 @@ class AtacformerMLMDataset(Dataset):
         """
         # load the data into memory
         tokens = torch.tensor(read_tokens_from_gtok(self.files[idx]))
+
+        # cut the tokens to the context size
+        if tokens.shape[0] > self.context_size:
+            tokens = tokens[: self.context_size]
+
         masked_tokens = tokens.clone()
 
         # select the tokens to mask
