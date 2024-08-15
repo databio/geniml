@@ -156,7 +156,6 @@ class MLMAdapter(L.LightningModule):
         :param batch_idx: The batch index
 
         """
-        # attention_mask.unsqueeze(1).expand(-1, tokens.size(1), -1)
 
         # move the batch to the device
         tokens, masked_tokens, masked_token_ids, attention_mask = batch
