@@ -56,20 +56,13 @@ class Atacformer(nn.Module):
         :param torch.Tensor mask: Mask tensor of shape (batch_size, seq_len)
         :return torch.Tensor: Output tensor of shape (batch_size, seq_len, d_model). I.e. an embedding for each token.
         """
-        # cut off the sequence to the context size
-        x = x[:, : self.context_size]
-
         # get the embeddings
         x = self.embedding(x)
         # set the positional embeddings to 0
         x = x + torch.zeros_like(x)
 
-        # get attention mask in the correct shape
-        if mask is not None:
-            mask = mask.unsqueeze(1).unsqueeze(2)
-
         # pass through the transformer
-        x = self.transformer_encoder(x, mask=mask)
+        x = self.transformer_encoder(x, src_key_padding_mask=mask)
         return x
 
 

@@ -29,7 +29,6 @@ class AtacformerMLMCollator:
         :param list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] batch: Batch of (tokens, masked_tokens, mask_ids)
         :param int padding_token: Token to use for padding
         """
-        # unpack the batch
         tokens, masked_tokens, mask_ids = zip(*batch)
 
         # pad the tokens
@@ -39,10 +38,7 @@ class AtacformerMLMCollator:
         )
         mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=self.padding_token)
 
-        # attention_mask = tokens != self.padding_token
-        # attention mask needs to be of the shape (batch_size, seq_len, seq_len)
-        attention_mask = torch.ones(tokens.shape[0], tokens.shape[1], tokens.shape[1])
-        attention_mask = attention_mask.masked_fill(tokens == self.padding_token, 0)
+        attention_mask = tokens != self.padding_token
 
         return tokens, masked_tokens, mask_ids, attention_mask
 
@@ -78,7 +74,7 @@ class AtacformerMLMDataset(Dataset):
         self.context_size = context_size
 
         # get list of all files
-        self.files = glob(os.path.join(data, "**/*.gtok"))
+        self.files = glob(os.path.join(data, "*.gtok"), recursive=True)
         self.probs = torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE])
 
     def __len__(self):
