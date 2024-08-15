@@ -142,7 +142,6 @@ class AtacformerExModel(ExModel):
             context_size=kwargs.get("context_size", DEFAULT_CONTEXT_SIZE),
             nhead=kwargs.get("nhead", 8),
             num_layers=kwargs.get("num_layers", 6),
-            context_size=kwargs.get("context_size", 2048),
         )
 
     @property
