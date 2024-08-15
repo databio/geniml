@@ -12,6 +12,7 @@ from .const import (
     CONFIG_FILE_NAME,
     D_MODEL_KEY,
     DEFAULT_EMBEDDING_DIM,
+    DEFAULT_CONTEXT_SIZE,
     MODEL_FILE_NAME,
     NHEAD_KEY,
     NUM_LAYERS_KEY,
@@ -30,7 +31,7 @@ class Atacformer(nn.Module):
         d_model: int = DEFAULT_EMBEDDING_DIM,
         nhead: int = 8,
         num_layers: int = 6,
-        context_size: int = 2048,
+        context_size: int = DEFAULT_CONTEXT_SIZE,
     ):
         """
         Atacformer is a transformer-based model for ATAC-seq data. It closely follows
@@ -49,6 +50,7 @@ class Atacformer(nn.Module):
             d_model=d_model, nhead=nhead, batch_first=True
         )
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)
+        self.context_size = context_size
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
@@ -59,7 +61,7 @@ class Atacformer(nn.Module):
         # get the embeddings
         x = self.embedding(x)
         # set the positional embeddings to 0
-        # x = x + torch.zeros_like(x)
+        x = x + torch.zeros_like(x)
 
         # pass through the transformer
         x = self.transformer_encoder(x, src_key_padding_mask=mask)
@@ -137,6 +139,7 @@ class AtacformerExModel(ExModel):
         self._model = Atacformer(
             len(self.tokenizer),
             d_model=kwargs.get("d_model", DEFAULT_EMBEDDING_DIM),
+            context_size=kwargs.get("context_size", DEFAULT_CONTEXT_SIZE),
             nhead=kwargs.get("nhead", 8),
             num_layers=kwargs.get("num_layers", 6),
             context_size=kwargs.get("context_size", 2048),

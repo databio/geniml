@@ -179,7 +179,6 @@ class RegionSet:
                 skipped_lines = 0
                 max_skipped_lines = 5
                 for line in f:
-
                     try:
                         chr, start, stop = line.split("\t")[:3]
                     except ValueError as _:

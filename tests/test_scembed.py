@@ -4,7 +4,7 @@ import sys
 
 import pytest
 import scanpy as sc
-from genimtools.utils import write_tokens_to_gtok
+from gtars.utils import write_tokens_to_gtok
 from tqdm import tqdm
 
 from geniml.region2vec.utils import Region2VecDataset
@@ -71,6 +71,10 @@ def test_model_train_and_export(universe_file: str):
     # save
     try:
         model.export("tests/data/model-tests")
+
+        # copy universe.bed to model folder
+        os.system("cp tests/data/universe.bed tests/data/model-tests/universe.bed")
+
         model = ScEmbed.from_pretrained("tests/data/model-tests")
 
         # ensure model is still trained and has region2vec
@@ -78,8 +82,9 @@ def test_model_train_and_export(universe_file: str):
 
     finally:
         os.remove("tests/data/model-tests/checkpoint.pt")
-        os.remove("tests/data/model-tests/universe.bed")
+        os.remove("tests/data/model-tests/tokenizer.toml")
         os.remove("tests/data/model-tests/config.yaml")
+        os.remove("tests/data/model-tests/universe.bed")
 
 
 @pytest.mark.skip(reason="Need to get a pretrained model first")

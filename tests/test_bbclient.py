@@ -1,12 +1,10 @@
 import os
-from unittest.mock import Mock
-
-import boto3
 import botocore
 import genomicranges
 import pytest
 
 from geniml.bbclient import BBClient
+from geniml.exceptions import TokenizedFileNotFoundInCacheError
 from geniml.io import BedSet, RegionSet
 
 DATA_TEST_FOLDER = os.path.join(
@@ -129,6 +127,19 @@ class TestBBClientCaching:
         bedset_id = bbclient.add_bedset_to_cache(bedset)
         path_in_cache = bbclient.seek(bedset_id)
         assert bbclient.bedset_cache.get(bedset_id).fpath == path_in_cache
+
+
+class TestBBClientTokens:
+    def test_add_token_to_cache(self, tmp_path):
+        bbclient = BBClient(cache_folder=tmp_path)
+        bbclient.cache_tokens("test_token", "test_id", [1, 2, 5, 7])
+
+        assert list(bbclient.load_bed_tokens("test_token", "test_id")) == [1, 2, 5, 7]
+
+        bbclient.remove_tokens("test_token", "test_id")
+
+        with pytest.raises(TokenizedFileNotFoundInCacheError):
+            bbclient.load_bed_tokens("test_token", "test_id")
 
 
 class TestS3Caching:

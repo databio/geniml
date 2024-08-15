@@ -4,10 +4,10 @@ from typing import List, Union
 
 import numpy as np
 import torch
-from genimtools.models import RegionSet as GRegionSet
-from torch.nn.utils.rnn import pad_sequence
 from huggingface_hub import hf_hub_download
 from rich.progress import track
+from gtars.tokenizers import RegionSet as GRegionSet
+from gtars.tokenizers import Region as GRegion
 
 from ..io import Region, RegionSet
 from ..models import ExModel
@@ -298,7 +298,9 @@ class Region2VecExModel(ExModel):
         )
 
     def encode(
-        self, regions: Union[str, Region, List[Region], RegionSet], pooling: POOLING_TYPES = None
+        self,
+        regions: Union[str, Region, List[Region], RegionSet, GRegionSet],
+        pooling: POOLING_TYPES = None,
     ) -> np.ndarray:
         """
         Get the vector for a region.
@@ -331,26 +333,20 @@ class Region2VecExModel(ExModel):
         token_tensors = [
             torch.tensor(token_set.to_ids(), dtype=torch.long) for token_set in tokens
         ]
-        padded_tokens = pad_sequence(
-            token_tensors, batch_first=True, padding_value=self.tokenizer.padding_token_id()
-        )
 
-        batch_embeddings = self._model.projection(padded_tokens)
+        region_embeddings = []
 
-        attention_mask = padded_tokens != self.tokenizer.padding_token_id()
-
-        if pooling == "mean":
-            region_embeddings = (
-                torch.mean(batch_embeddings * attention_mask.unsqueeze(-1), axis=1)
-                .detach()
-                .numpy()
-            )
-        elif pooling == "max":
-            region_embeddings = (
-                torch.max(batch_embeddings * attention_mask.unsqueeze(-1), axis=1).detach().numpy()
-            )
-        else:
-            # this should be unreachable
-            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+        for token_tensor in token_tensors:
+            if pooling == "mean":
+                region_embeddings.append(
+                    torch.mean(self._model.projection(token_tensor), axis=0).detach().numpy()
+                )
+            elif pooling == "max":
+                region_embeddings.append(
+                    torch.max(self._model.projection(token_tensor), axis=0).detach().numpy()
+                )
+            else:
+                # this should be unreachable
+                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         return np.vstack(region_embeddings)

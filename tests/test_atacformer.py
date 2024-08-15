@@ -60,24 +60,32 @@ def test_atacformer_exmodel_init(universe_file: str):
     assert model._model.num_layers == 6
 
 
-@pytest.mark.skip("Too new to test")
-def test_train_atacformer_ex_model(universe_file: str, data: str):
+# @pytest.mark.skip("Too new to test")
+def test_train_atacformer_ex_model():
+
+    BATCH_SIZE = 2
+    EPOCHS = 3
+
+    universe_file = "/Users/nathanleroy/Desktop/LOLA_meta_universe.toml"
+
     # make tokenizer and model
-    tokenizer = AnnDataTokenizer(universe_file)
-    # tokenizer = AnnDataTokenizer("/Users/nathanleroy/Desktop/screen.bed")
+    tokenizer = AnnDataTokenizer(universe_file, verbose=True, tokenizer_type="meta")
     model = AtacformerExModel(
+        d_model=384,
         tokenizer=tokenizer,
     )
 
     # curate dataset
     mask_token_id = tokenizer.mask_token_id()
     dataset = AtacformerMLMDataset(
-        "/Users/nathanleroy/Desktop/gtoks", mask_token_id=mask_token_id, vocab_size=len(tokenizer)
+        "/Users/nathanleroy/Desktop/gtok-sample",
+        mask_token_id=mask_token_id,
+        vocab_size=len(tokenizer),
     )
     collator = AtacformerMLMCollator(model.tokenizer.padding_token_id(), model._model.context_size)
     dataloader = DataLoader(
         dataset,
-        batch_size=1028,
+        batch_size=BATCH_SIZE,
         num_workers=4,
         collate_fn=collator,
     )
@@ -85,6 +93,6 @@ def test_train_atacformer_ex_model(universe_file: str, data: str):
     # make adapter and trainer
     adapter = MLMAdapter(model)
     trainer = L.Trainer(
-        max_epochs=100,
+        max_epochs=EPOCHS,
     )
     trainer.fit(adapter, train_dataloaders=dataloader)

@@ -4,7 +4,7 @@ from math import ceil
 from typing import List, Tuple
 
 import torch
-from genimtools.utils import read_tokens_from_gtok
+from gtars.utils import read_tokens_from_gtok
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
@@ -41,13 +41,6 @@ class AtacformerMLMCollator:
 
         attention_mask = tokens != self.padding_token
 
-        # clip the tokens to the context size
-        # actually, we should randomly sample a subset of the tokens
-        tokens = tokens[:, : self.context_size]
-        masked_tokens = masked_tokens[:, : self.context_size]
-        mask_ids = mask_ids[:, : self.context_size]
-        attention_mask = attention_mask[:, : self.context_size]
-
         return tokens, masked_tokens, mask_ids, attention_mask
 
 
@@ -60,6 +53,7 @@ class AtacformerMLMDataset(Dataset):
         mask_rate: float = MASK_RATE,
         random_seed: int = 42,
         shuffle: bool = True,
+        context_size: int = 2048,
     ):
         """
         Initialize the MLM dataset. This is heavily based on the MLM dataset
@@ -78,9 +72,10 @@ class AtacformerMLMDataset(Dataset):
         self.vocab_size = vocab_size
         self.random_seed = random_seed
         self.shuffle = shuffle
+        self.context_size = context_size
 
         # get list of all files
-        self.files = glob(os.path.join(data, "**/*.gtok"))
+        self.files = glob(os.path.join(data, "*.gtok"), recursive=True)
         self.probs = torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE])
 
     def __len__(self):
@@ -92,6 +87,11 @@ class AtacformerMLMDataset(Dataset):
         """
         # load the data into memory
         tokens = torch.tensor(read_tokens_from_gtok(self.files[idx]))
+
+        # cut the tokens to the context size
+        if tokens.shape[0] > self.context_size:
+            tokens = tokens[: self.context_size]
+
         masked_tokens = tokens.clone()
 
         # select the tokens to mask

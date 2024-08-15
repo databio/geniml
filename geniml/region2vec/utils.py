@@ -6,19 +6,20 @@ import select
 import shutil
 import sys
 import time
+import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from genimtools.utils import read_tokens_from_gtok
+from gtars.utils import read_tokens_from_gtok
 from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
     from gensim.models import Word2Vec as GensimWord2Vec
 
 from ..const import GTOK_EXT
-from ..tokenization.main import Tokenizer, TreeTokenizer
+from ..tokenization.main import Tokenizer, TreeTokenizer, AnnDataTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -32,7 +33,7 @@ from .const import (
     LR_TYPES,
     MODEL_FILE_NAME,
     MODULE_NAME,
-    UNIVERSE_FILE_NAME,
+    TOKENIZER_CFG_FILE_NAME,
     VOCAB_SIZE_KEY,
 )
 from .models import Region2Vec
@@ -405,7 +406,7 @@ def export_region2vec_model(
     tokenizer: Tokenizer,
     path: str,
     checkpoint_file: str = MODEL_FILE_NAME,
-    universe_file: str = UNIVERSE_FILE_NAME,
+    tokenizer_cfg_file: str = TOKENIZER_CFG_FILE_NAME,
     config_file: str = CONFIG_FILE_NAME,
     **kwargs: Dict[str, any],
 ):
@@ -427,10 +428,8 @@ def export_region2vec_model(
     # export the model weights
     torch.save(model.state_dict(), os.path.join(path, checkpoint_file))
 
-    # export the vocabulary
-    with open(os.path.join(path, universe_file), "a") as f:
-        for region in tokenizer.universe.regions:
-            f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+    # export the tokenizer as a toml file
+    tokenizer.export(os.path.join(path, tokenizer_cfg_file))
 
     # export the config (vocab size, embedding size)
     config = {
@@ -446,7 +445,7 @@ def export_region2vec_model(
 
 def load_local_region2vec_model(
     model_path: str,
-    vocab_path: str,
+    tokenizer_cfg_path: str,
     config_path: str,
 ) -> Tuple[Region2Vec, TreeTokenizer, dict]:
     """
@@ -456,8 +455,66 @@ def load_local_region2vec_model(
     :param str config_path: The path to the model config file
     :param str vocab_path: The path to the model vocabulary file
     """
-    # init the tokenizer - only one option for now
-    tokenizer = TreeTokenizer(vocab_path)
+    # read toml file
+    with open(tokenizer_cfg_path, "rb") as f:
+        tokenizer_cfg = tomllib.load(f)
+
+    # detect tokenizer type
+    tokenizer_type = tokenizer_cfg.get("type", "tree")
+
+    if tokenizer_type == "tree":
+        # init the tokenizer - only one option for now
+        tokenizer = TreeTokenizer(tokenizer_cfg_path)
+
+    # load the model state dict (weights)
+    params = torch.load(model_path)
+
+    # get the model config (vocab size, embedding size)
+    with open(config_path, "r") as f:
+        config = safe_load(f)
+
+    # try with new key first, then old key for backwards compatibility
+    embedding_dim = config.get(EMBEDDING_DIM_KEY, config.get(EMBEDDING_DIM_KEY_OLD))
+    if embedding_dim is None:
+        raise KeyError(
+            f"Could not find embedding dimension in config file. Expected key {EMBEDDING_DIM_KEY} or {EMBEDDING_DIM_KEY_OLD}."
+        )
+    else:
+        if EMBEDDING_DIM_KEY_OLD in config:
+            _LOGGER.warning(
+                f"Found old key {EMBEDDING_DIM_KEY_OLD} in config file. This key will be deprecated in future versions. Please notify this models maintainer."
+            )
+
+    model = Region2Vec(
+        config[VOCAB_SIZE_KEY],
+        embedding_dim=embedding_dim,
+    )
+
+    model.load_state_dict(params)
+
+    return model, tokenizer, config
+
+
+def load_local_scembed_model(
+    model_path: str,
+    tokenizer_cfg_path: str,
+    config_path: str,
+) -> Tuple[Region2Vec, TreeTokenizer, dict]:
+    """
+    Load a region2vec model from a local directory
+
+    :param str model_path: The path to the model checkpoint file
+    :param str config_path: The path to the model config file
+    :param str vocab_path: The path to the model vocabulary file
+    """
+    # read toml file
+    with open(tokenizer_cfg_path, "rb") as f:
+        tokenizer_cfg = tomllib.load(f)
+
+    # detect tokenizer type
+    tokenizer_type = tokenizer_cfg.get("type", "tree")
+
+    tokenizer = AnnDataTokenizer(tokenizer_cfg_path, tokenizer_type=tokenizer_type)
 
     # load the model state dict (weights)
     params = torch.load(model_path)
@@ -513,7 +570,7 @@ class Region2VecDataset:
         self.convert_to_str = convert_to_str
 
         if isinstance(data, str):
-            self.data = glob.glob(os.path.join(data, f"*.{GTOK_EXT}"))
+            self.data = glob.glob(os.path.join(data, f"**/*.{GTOK_EXT}"))
         elif isinstance(data, list) and isinstance(data[0], str):
             self.data = data
         else:
