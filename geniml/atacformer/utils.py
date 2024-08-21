@@ -81,7 +81,6 @@ class AtacformerMLMDataset(Dataset):
             self.files = glob(os.path.join(data, "**/*.gtok"), recursive=True)
 
         self.probs = torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE])
-        torch.seed(seed)
 
     def __len__(self):
         return len(self.files)
