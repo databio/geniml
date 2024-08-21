@@ -53,6 +53,7 @@ class AtacformerMLMDataset(Dataset):
         random_seed: int = 42,
         shuffle: bool = True,
         context_size: int = 2048,
+        seed: int = 42,
     ):
         """
         Initialize the MLM dataset. This is heavily based on the MLM dataset
@@ -80,6 +81,7 @@ class AtacformerMLMDataset(Dataset):
             self.files = glob(os.path.join(data, "**/*.gtok"), recursive=True)
 
         self.probs = torch.tensor([REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE])
+        torch.seed(seed)
 
     def __len__(self):
         return len(self.files)
@@ -91,9 +93,15 @@ class AtacformerMLMDataset(Dataset):
         # load the data into memory
         tokens = torch.tensor(read_tokens_from_gtok(self.files[idx]))
 
-        # cut the tokens to the context size
+        # reduce the tokens to the context size
+        # randomly sample self.context_size tokens from the tokens
+        # but dont just slice it.... actually just
+        # pick self.context_points without replacement
         if tokens.shape[0] > self.context_size:
-            tokens = tokens[: self.context_size]
+            indices = torch.multinomial(
+                torch.ones(tokens.shape[0]), self.context_size, replacement=False
+            )
+            tokens = tokens[indices]
 
         masked_tokens = tokens.clone()
 
