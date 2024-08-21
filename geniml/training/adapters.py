@@ -124,6 +124,7 @@ class MLMAdapter(L.LightningModule):
         self.linear = nn.Linear(model._model.d_model, model._model.vocab_size)
         self.r2v_model = model._model
         self.tokenizer = model.tokenizer
+        self.lr = kwargs.get("lr", 1e-5)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         token_embeddings = self.r2v_model(x, mask=mask)
@@ -138,10 +139,58 @@ class MLMAdapter(L.LightningModule):
 
         > By default, AdamW [62], a variant of Adam which decouples the L2 regularization and the weight decay, is the most widely used optimizer for Transformers.
         """
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
         return optimizer
 
     def training_step(
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        batch_idx: int,
+    ):
+        """
+        Perform a training step.
+
+        The batch is a tuple of (tokens, masked_tokens, mask_ids). This step performs
+        masked language modeling as described in the original BERT paper (https://arxiv.org/abs/1810.04805).
+
+        :param batch: The batch
+        :param batch_idx: The batch index
+
+        """
+
+        # move the batch to the device
+        tokens, masked_tokens, masked_token_indexes, attention_mask = batch
+
+        # forward pass for the batch
+        output = self.forward(masked_tokens, mask=attention_mask)
+
+        # get predictions and targets
+        # the predictions are the logits for the masked tokens
+        # defined by the masked_token_indexes
+        # not sure what to do here...
+        # can we set the logits where tokens are **not** masked
+        # to one-hot vectors of the original tokens?
+        # that way, the loss contributed to tokens we didnt mask
+        # would be zero
+        #
+        # we have indexes which is 2 x 300 - indexes we want to access
+        # organize index matrix as a 600 x 2 tensor
+        # convert original masked_token_index into row-col index
+        predictions = output.view(-1, self.r2v_model.vocab_size)[masked_token_indexes]
+        targets = tokens.view(-1)[masked_token_indexes]
+
+        # reshape once more
+        predictions = predictions.view(predictions.shape[0] * predictions.shape[1], -1)
+        targets = targets.view(targets.shape[0] * targets.shape[1])
+
+        # compute the loss
+        # can I use ignore index here?
+        loss = self.loss_fn(predictions, targets)
+        self.log("train_loss", loss)
+
+        return loss
+
+    def validation_step(
         self,
         batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
         batch_idx: int,
