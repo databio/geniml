@@ -186,7 +186,7 @@ class MLMAdapter(L.LightningModule):
         # compute the loss
         # can I use ignore index here?
         loss = self.loss_fn(predictions, targets)
-        self.log("train_loss", loss)
+        self.log("validation_loss", loss)
 
         return loss
 
