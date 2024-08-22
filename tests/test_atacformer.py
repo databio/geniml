@@ -1,7 +1,7 @@
 import lightning as L
 import pytest
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 
 from geniml.atacformer.main import Atacformer, AtacformerExModel
 from geniml.atacformer.utils import AtacformerMLMDataset, AtacformerMLMCollator
@@ -82,9 +82,23 @@ def test_train_atacformer_ex_model():
         mask_token_id=mask_token_id,
         vocab_size=len(tokenizer),
     )
+
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+
+    # Perform the split
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
     collator = AtacformerMLMCollator(model.tokenizer.padding_token_id())
-    dataloader = DataLoader(
-        dataset,
+
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=BATCH_SIZE,
+        num_workers=4,
+        collate_fn=collator,
+    )
+    val_dataloader = DataLoader(
+        val_dataset,
         batch_size=BATCH_SIZE,
         num_workers=4,
         collate_fn=collator,
@@ -95,4 +109,5 @@ def test_train_atacformer_ex_model():
     trainer = L.Trainer(
         max_epochs=EPOCHS,
     )
-    trainer.fit(adapter, train_dataloaders=dataloader)
+    trainer.fit(adapter, train_dataloader, val_dataloader)
+    # trainer.fit(adapter, train_dataloader)
