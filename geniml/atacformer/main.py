@@ -4,6 +4,7 @@ from typing import Union
 import torch
 import torch.nn as nn
 import tomllib
+import scanpy as sc
 from huggingface_hub import hf_hub_download
 from yaml import safe_dump, safe_load
 
@@ -201,6 +202,8 @@ class AtacformerExModel(ExModel):
         )
         model.load_state_dict(params)
 
+        self._model = model
+
         self.trained = True
         if POOLING_METHOD_KEY in config:
             self.pooling_method = config[POOLING_METHOD_KEY]
@@ -312,7 +315,7 @@ class AtacformerExModel(ExModel):
         with open(os.path.join(path, config_file), "w") as f:
             safe_dump(config, f)
 
-    def encode(self):
+    def encode(self, adata: Union[str, sc.AnnData]) -> torch.Tensor:
         """
         Get the vector for a region.
 
@@ -321,4 +324,22 @@ class AtacformerExModel(ExModel):
 
         :return np.ndarray: Vector for the region.
         """
-        # TODO: write this function
+        if isinstance(adata, str):
+            adata = sc.read_h5ad(adata)
+
+        # get the tokens
+        tokens = self.tokenizer(adata)
+
+        token_ids = tokens.to_ids()
+
+        # pass through the model
+        with torch.no_grad():
+            output = self._model(tokens)
+
+        # pool the output
+        if self.pooling_method == "mean":
+            return output.mean(dim=1)
+        elif self.pooling_method == "max":
+            return output.max(dim=1).values
+        else:
+            raise ValueError(f"Pooling method {self.pooling_method} not supported.")
