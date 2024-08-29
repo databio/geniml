@@ -1,3 +1,5 @@
+import os
+
 import lightning as L
 import pytest
 import torch
@@ -60,7 +62,7 @@ def test_atacformer_exmodel_init(universe_file: str):
     assert model._model.num_layers == 6
 
 
-# @pytest.mark.skip("Too new to test")
+@pytest.mark.skip("Too new to test")
 def test_train_atacformer_ex_model():
 
     BATCH_SIZE = 2
@@ -111,3 +113,11 @@ def test_train_atacformer_ex_model():
     )
     trainer.fit(adapter, train_dataloader, val_dataloader)
     # trainer.fit(adapter, train_dataloader)
+
+
+# @pytest.mark.skip("Too new to test")
+def test_atacformer_from_pretrained():
+    model_path = os.path.expandvars("$HOME/Desktop/atacformer-pretrained")
+    model = AtacformerExModel.from_pretrained(model_path)
+
+    assert model is not None

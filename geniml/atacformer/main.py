@@ -3,6 +3,7 @@ from typing import Union
 
 import torch
 import torch.nn as nn
+import tomllib
 from huggingface_hub import hf_hub_download
 from yaml import safe_dump, safe_load
 
@@ -158,8 +159,16 @@ class AtacformerExModel(ExModel):
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
         """
+
+        # check the type of the tokenizer
+        # open the toml file and read the `tokenizer_type` key
+        with open(vocab_path, "rb") as fp:
+            tokenizer_config = tomllib.load(fp)
+
+        tokenizer_type = tokenizer_config.get("tokenizer_type", "tree")
+
         # init the tokenizer - only one option for now
-        self.tokenizer = AnnDataTokenizer(vocab_path)
+        self.tokenizer = AnnDataTokenizer(vocab_path, tokenizer_type=tokenizer_type)
 
         # load the model state dict (weights)
         params = torch.load(model_path)

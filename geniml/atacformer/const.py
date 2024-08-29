@@ -18,7 +18,7 @@ KEEP_RATE = 0.1
 
 CONFIG_FILE_NAME = "config.yaml"
 MODEL_FILE_NAME = "checkpoint.pt"
-UNIVERSE_FILE_NAME = "universe.bed"
+UNIVERSE_FILE_NAME = "universe.toml"
 
 POOLING_TYPES = Literal["mean", "max"]
 POOLING_METHOD_KEY = "pooling_method"
