@@ -168,15 +168,16 @@ class AtacformerCellTypeFineTuningCollator:
         :param list[tuple[torch.Tensor, torch.Tensor]] batch: Batch of (tokens, labels)
         :param int padding_token: Token to use for padding
         """
-        tokens, labels = zip(*batch)
+        cells1, cells2, labels = zip(*batch)
 
         # pad the tokens
-        tokens = pad_sequence(tokens, batch_first=True, padding_value=self.padding_token)
-        labels = torch.stack(labels)
+        cells1 = pad_sequence(cells1, batch_first=True, padding_value=self.padding_token)
+        cells2 = pad_sequence(cells2, batch_first=True, padding_value=self.padding_token)
 
-        attention_mask = (tokens != self.padding_token).float()
+        attention_mask1 = (cells1 != self.padding_token).float()
+        attention_mask2 = (cells2 != self.padding_token).float()
 
-        return tokens, labels, attention_mask
+        return cells1, cells2, labels, attention_mask1, attention_mask2
 
 
 class AtacformerCellTypeFineTuningDataset(Dataset):
