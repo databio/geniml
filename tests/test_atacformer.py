@@ -117,7 +117,15 @@ def test_train_atacformer_ex_model():
 
 # @pytest.mark.skip("Too new to test")
 def test_atacformer_from_pretrained():
-    model_path = os.path.expandvars("$HOME/Desktop/atacformer-pretrained")
+    model_path = os.path.expandvars("$SCRATCH/atacformer-pretrained")
     model = AtacformerExModel.from_pretrained(model_path)
 
     assert model is not None
+
+
+# @pytest.mark.skip("Too new to test")
+def test_atacformer_cell_type_fine_tune():
+    model_path = os.path.expandvars("$SCRATCH/atacformer-pretrained")
+    model = AtacformerExModel.from_pretrained(model_path)
+
+    data_path = os.path.expandvars("$SCRATCH/cell-type-fine-tune-sample")

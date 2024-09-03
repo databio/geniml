@@ -182,54 +182,68 @@ class AtacformerCellTypeFineTuningCollator:
 class AtacformerCellTypeFineTuningDataset(Dataset):
     def __init__(
         self,
-        data: str,
-        label_map: dict,
-        vocab_size: int,
+        file_path: str,
         context_size: int = 2048,
         seed: int = 42,
     ):
         """
         Initialize the cell type fine-tuning dataset.
 
-        :param str data: Path to the dataset. This should be a file of .gtok files
-        :param dict label_map: Mapping of cell type to label
-        :param int vocab_size: Size of the vocabulary
+        :param str file_path: Path to the file that defines the dataset
         """
-        self.data = data
-        self.label_map = label_map
-        self.vocab_size = vocab_size
-        self.context_size = context_size
+        # check file and not directory
+        if os.path.isdir(file_path):
+            raise ValueError(f"Expected a file, got a directory: {file_path}")
 
-        # get list of all files
-        self.files = glob(os.path.join(data, "*.gtok"), recursive=True)
-        if len(self.files) == 0:
-            # try recursive
-            self.files = glob(os.path.join(data, "**/*.gtok"), recursive=True)
+        if not os.path.exists(file_path):
+            raise ValueError(f"File does not exist: {file_path}")
+
+        # init params
+        self.file_path = file_path
+        self.root_dir = os.path.dirname(self.file_path)
+        self.context_size = context_size
+        self.seed = seed
+
+        # read the file, line by line
+        # format is a\tb\label
+        self.pairs = []
+        with open(file_path, "r") as f:
+            for line in f:
+                barcode1, barcode2, label = line.strip().split("\t")
+                barcode1_path = os.path.join(self.root_dir, barcode1)
+                barcode2_path = os.path.join(self.root_dir, barcode2)
+                self.pairs.append((barcode1_path, barcode2_path, int(label)))
 
     def __len__(self):
-        return len(self.files)
+        return len(self.pairs)
 
     def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         This should return a tuple of (tokens, label).
         """
+        barcode1_path, barcode2_path, label = self.pairs[idx]
+
         # load the data into memory
-        tokens = torch.tensor(read_tokens_from_gtok(self.files[idx]))
+        cell1 = torch.tensor(read_tokens_from_gtok(barcode1_path))
+        cell2 = torch.tensor(read_tokens_from_gtok(barcode2_path))
 
         # reduce the tokens to the context size
         # randomly sample self.context_size tokens from the tokens
-        # but dont just slice it.... actually just
-        # pick self.context_size tokens without replacement
-        if tokens.shape[0] > self.context_size:
+        if cell1.shape[0] > self.context_size:
             indices = torch.multinomial(
-                torch.ones(tokens.shape[0]), self.context_size, replacement=False
+                torch.ones(cell1.shape[0]), self.context_size, replacement=False
             )
-            tokens = tokens[indices]
+            cell1 = cell1[indices]
 
-        # get the label
-        label = self.label_map[self.files[idx].split("/")[-2]]
+        if cell2.shape[0] > self.context_size:
+            indices = torch.multinomial(
+                torch.ones(cell2.shape[0]), self.context_size, replacement=False
+            )
+            cell2 = cell2[indices]
 
-        return tokens, torch.tensor(label)
+            label = torch.tensor(label)
+
+        return cell1, cell2, label
 
     def __str__(self):
         return f"AtacformerCellTypeFineTuningDataset({len(self)} files)"
