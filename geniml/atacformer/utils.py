@@ -148,3 +148,91 @@ class AtacformerMLMDataset(Dataset):
 
     def __repr__(self):
         return f"AtacformerMLMDataset({len(self)} files)"
+
+
+class AtacformerCellTypeFineTuningCollator:
+    """
+    Collator for the cell type fine-tuning dataset. This will pad the tokens, labels, and attention_mask
+    """
+
+    def __init__(self, padding_token: int):
+        self.padding_token = padding_token
+
+    def __call__(
+        self, batch: List[Tuple[torch.Tensor, torch.Tensor]]
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Collate function for the cell type fine-tuning dataset. This should take a batch of
+        (tokens, labels) and return a tuple of (tokens, labels) that are padded
+
+        :param list[tuple[torch.Tensor, torch.Tensor]] batch: Batch of (tokens, labels)
+        :param int padding_token: Token to use for padding
+        """
+        tokens, labels = zip(*batch)
+
+        # pad the tokens
+        tokens = pad_sequence(tokens, batch_first=True, padding_value=self.padding_token)
+        labels = torch.stack(labels)
+
+        attention_mask = (tokens != self.padding_token).float()
+
+        return tokens, labels, attention_mask
+
+
+class AtacformerCellTypeFineTuningDataset(Dataset):
+    def __init__(
+        self,
+        data: str,
+        label_map: dict,
+        vocab_size: int,
+        context_size: int = 2048,
+        seed: int = 42,
+    ):
+        """
+        Initialize the cell type fine-tuning dataset.
+
+        :param str data: Path to the dataset. This should be a file of .gtok files
+        :param dict label_map: Mapping of cell type to label
+        :param int vocab_size: Size of the vocabulary
+        """
+        self.data = data
+        self.label_map = label_map
+        self.vocab_size = vocab_size
+        self.context_size = context_size
+
+        # get list of all files
+        self.files = glob(os.path.join(data, "*.gtok"), recursive=True)
+        if len(self.files) == 0:
+            # try recursive
+            self.files = glob(os.path.join(data, "**/*.gtok"), recursive=True)
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        This should return a tuple of (tokens, label).
+        """
+        # load the data into memory
+        tokens = torch.tensor(read_tokens_from_gtok(self.files[idx]))
+
+        # reduce the tokens to the context size
+        # randomly sample self.context_size tokens from the tokens
+        # but dont just slice it.... actually just
+        # pick self.context_size tokens without replacement
+        if tokens.shape[0] > self.context_size:
+            indices = torch.multinomial(
+                torch.ones(tokens.shape[0]), self.context_size, replacement=False
+            )
+            tokens = tokens[indices]
+
+        # get the label
+        label = self.label_map[self.files[idx].split("/")[-2]]
+
+        return tokens, torch.tensor(label)
+
+    def __str__(self):
+        return f"AtacformerCellTypeFineTuningDataset({len(self)} files)"
+
+    def __repr__(self):
+        return f"AtacformerCellTypeFineTuningDataset({len(self)} files)"

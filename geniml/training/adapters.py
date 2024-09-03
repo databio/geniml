@@ -22,7 +22,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
 
     def __init__(
         self,
-        model: Union[Region2VecExModel, ScEmbed],
+        model: Union[Region2VecExModel, ScEmbed, AtacformerExModel],
         **kwargs,
     ):
         """
@@ -99,7 +99,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
         return optimizer
 
 

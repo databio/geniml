@@ -153,6 +153,10 @@ class AtacformerExModel(ExModel):
         """
         return self._model
 
+    @property
+    def context_size(self):
+        return self._model.context_size
+
     def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
         Load the model from a checkpoint.
@@ -330,7 +334,7 @@ class AtacformerExModel(ExModel):
         # get the tokens
         tokens = self.tokenizer(adata)
 
-        token_ids = tokens.to_ids()
+        tokens_ids = [t.to_ids() for t in tokens]
 
         # pass through the model
         with torch.no_grad():
