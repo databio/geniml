@@ -56,12 +56,11 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         """
 
         # move the batch to the device
-        pair, target = batch
-        t1, t2 = pair
+        cell1, cell2, target, attn1, attn2 = batch
 
         # forward pass for the batch
-        u = self.r2v_model(t1)
-        v = self.r2v_model(t2)
+        u = self.r2v_model(cell1, mask=attn1)
+        v = self.r2v_model(cell2, mask=attn2)
 
         # pool the embeddings using mean
         u = torch.mean(u, dim=1)
@@ -82,12 +81,11 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         :return: The loss
         """
         # move the batch to the device
-        pair, target = batch
-        t1, t2 = pair
+        cell1, cell2, target, attn1, attn2 = batch
 
         # forward pass for the batch
-        u = self.r2v_model(t1)
-        v = self.r2v_model(t2)
+        u = self.r2v_model(cell1, mask=attn1)
+        v = self.r2v_model(cell2, mask=attn2)
 
         # pool the embeddings using mean
         u = torch.mean(u, dim=1)

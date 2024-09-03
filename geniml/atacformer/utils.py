@@ -168,16 +168,18 @@ class AtacformerCellTypeFineTuningCollator:
         :param list[tuple[torch.Tensor, torch.Tensor]] batch: Batch of (tokens, labels)
         :param int padding_token: Token to use for padding
         """
-        cells1, cells2, labels = zip(*batch)
+        cell1, cell2, labels = zip(*batch)
 
         # pad the tokens
-        cells1 = pad_sequence(cells1, batch_first=True, padding_value=self.padding_token)
-        cells2 = pad_sequence(cells2, batch_first=True, padding_value=self.padding_token)
+        cell1 = pad_sequence(cell1, batch_first=True, padding_value=self.padding_token)
+        cell2 = pad_sequence(cell2, batch_first=True, padding_value=self.padding_token)
 
-        attention_mask1 = (cells1 != self.padding_token).float()
-        attention_mask2 = (cells2 != self.padding_token).float()
+        attention_mask1 = (cell1 != self.padding_token).float()
+        attention_mask2 = (cell2 != self.padding_token).float()
 
-        return cells1, cells2, labels, attention_mask1, attention_mask2
+        labels = torch.tensor(labels)
+
+        return cell1, cell2, labels, attention_mask1, attention_mask2
 
 
 class AtacformerCellTypeFineTuningDataset(Dataset):
@@ -225,8 +227,8 @@ class AtacformerCellTypeFineTuningDataset(Dataset):
         barcode1_path, barcode2_path, label = self.pairs[idx]
 
         # load the data into memory
-        cell1 = torch.tensor(read_tokens_from_gtok(barcode1_path))
-        cell2 = torch.tensor(read_tokens_from_gtok(barcode2_path))
+        cell1 = torch.tensor(read_tokens_from_gtok(barcode1_path + ".gtok"))
+        cell2 = torch.tensor(read_tokens_from_gtok(barcode2_path + ".gtok"))
 
         # reduce the tokens to the context size
         # randomly sample self.context_size tokens from the tokens
@@ -242,7 +244,7 @@ class AtacformerCellTypeFineTuningDataset(Dataset):
             )
             cell2 = cell2[indices]
 
-            label = torch.tensor(label)
+        label = torch.tensor(label)
 
         return cell1, cell2, label
 

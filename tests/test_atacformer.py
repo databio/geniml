@@ -6,9 +6,14 @@ import torch
 from torch.utils.data import DataLoader, random_split
 
 from geniml.atacformer.main import Atacformer, AtacformerExModel
-from geniml.atacformer.utils import AtacformerMLMDataset, AtacformerMLMCollator
+from geniml.atacformer.utils import (
+    AtacformerMLMDataset,
+    AtacformerMLMCollator,
+    AtacformerCellTypeFineTuningDataset,
+    AtacformerCellTypeFineTuningCollator,
+)
 from geniml.tokenization.main import AnnDataTokenizer
-from geniml.training.adapters import MLMAdapter
+from geniml.training.adapters import MLMAdapter, CellTypeFineTuneAdapter
 
 
 @pytest.fixture
@@ -128,4 +133,30 @@ def test_atacformer_cell_type_fine_tune():
     model_path = os.path.expandvars("$SCRATCH/atacformer-pretrained")
     model = AtacformerExModel.from_pretrained(model_path)
 
-    data_path = os.path.expandvars("$SCRATCH/cell-type-fine-tune-sample")
+    data_path = os.path.expandvars("$SCRATCH/cell-type-fine-tune-sample/random_pairs.txt")
+
+    dataset = AtacformerCellTypeFineTuningDataset(data_path, context_size=2048)
+    collator = AtacformerCellTypeFineTuningCollator(model.tokenizer.padding_token_id())
+
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=2,
+        num_workers=4,
+        collate_fn=collator,
+    )
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size=2,
+        num_workers=4,
+        collate_fn=collator,
+    )
+
+    adapter = CellTypeFineTuneAdapter(model)
+
+    trainer = L.Trainer(max_epochs=3)
+    trainer.fit(adapter, train_dataloader)
