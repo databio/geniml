@@ -39,6 +39,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         self.r2v_model = model._model
         self.tokenizer = model.tokenizer
         self._exmodel = model
+        self.init_lr = init_lr
 
     def forward(self, x):
         return self.r2v_model(x)

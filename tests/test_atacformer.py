@@ -158,6 +158,6 @@ def test_atacformer_cell_type_fine_tune():
 
     adapter = CellTypeFineTuneAdapter(model)
 
-    trainer = L.Trainer(max_epochs=3)
-    # trainer.fit(adapter, train_dataloader, val_dataloader)
-    trainer.fit(adapter, train_dataloader)
+    trainer = L.Trainer(max_epochs=3, accelerator="cpu")
+    trainer.fit(adapter, train_dataloader, val_dataloader)
+    # trainer.fit(adapter, train_dataloader)
