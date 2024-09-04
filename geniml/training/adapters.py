@@ -4,6 +4,7 @@ from typing import Tuple, Union
 import lightning as L
 import torch
 import torch.nn as nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
 from ..atacformer.main import AtacformerExModel
@@ -23,6 +24,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
     def __init__(
         self,
         model: Union[Region2VecExModel, ScEmbed, AtacformerExModel],
+        init_lr: float = 1e-5,
         **kwargs,
     ):
         """
@@ -97,8 +99,17 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
-        return optimizer
+        init_lr = self.init_lr or 1e-5
+        optimizer = torch.optim.Adam(self.parameters(), lr=init_lr)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": ReduceLROnPlateau(
+                optimizer, mode="min", factor=0.1, patience=10, verbose=True
+            ),
+            "monitor": "val_loss",
+            "interval": "epoch",
+            "frequency": 1,
+        }
 
 
 class MLMAdapter(L.LightningModule):
