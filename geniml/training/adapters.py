@@ -102,15 +102,16 @@ class CellTypeFineTuneAdapter(L.LightningModule):
     def configure_optimizers(self):
         init_lr = self.init_lr or 1e-5
         optimizer = torch.optim.Adam(self.parameters(), lr=init_lr)
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": ReduceLROnPlateau(
-                optimizer, mode="min", factor=0.1, patience=10, verbose=True
-            ),
-            "monitor": "val_loss",
-            "interval": "epoch",
-            "frequency": 1,
-        }
+        return optimizer
+        # return {
+        #     "optimizer": optimizer,
+        #     "lr_scheduler": ReduceLROnPlateau(
+        #         optimizer, mode="min", factor=0.1, patience=10, verbose=True
+        #     ),
+        #     "monitor": "val_loss",
+        #     "interval": "epoch",
+        #     "frequency": 1,
+        # }
 
 
 class MLMAdapter(L.LightningModule):
