@@ -35,29 +35,43 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         :param kwargs: Additional arguments to pass to the LightningModule constructor.
         """
         super().__init__(**kwargs)
-        self.loss_fn = nn.CosineEmbeddingLoss()
+
         self.r2v_model = model._model
         self.tokenizer = model.tokenizer
+        self.loss_fn = torch.nn.CrossEntropyLoss()
+        self.cos_sim = nn.CosineSimilarity()
+        self.ffn = nn.Linear(model._model.d_model * 3, 2)
         self._exmodel = model
         self.init_lr = init_lr
+
+    def mean_pool(token_embeds: torch.Tensor, attention_mask: torch.Tensor):
+        """
+        Perform mean-pooling on the token embeddings.
+
+        From: https://www.pinecone.io/learn/series/nlp/train-sentence-transformers-softmax/
+        """
+        # reshape attention_mask to cover 768-dimension embeddings
+        in_mask = attention_mask.unsqueeze(-1).expand(token_embeds.size()).float()
+        # perform mean-pooling but exclude padding tokens (specified by in_mask)
+        pool = torch.sum(token_embeds * in_mask, 1) / torch.clamp(in_mask.sum(1), min=1e-9)
+        return pool
 
     def forward(self, x):
         return self.r2v_model(x)
 
-    def training_step(
+    def compute_loss(
         self,
-        batch: Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor],
+        batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
         batch_idx: int,
     ):
         """
-        Perform a training step.
+        Compute the loss for the batch.
 
         :param batch: The batch
         :param batch_idx: The batch index
 
         :return: The loss
         """
-
         # move the batch to the device
         cell1, cell2, target, attn1, attn2 = batch
 
@@ -69,8 +83,34 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         u = torch.mean(u, dim=1)
         v = torch.mean(v, dim=1)
 
+        uv = torch.sub(u, v)
+        uv_abs = torch.abs(uv)
+
+        # concatenate the embeddings
+        uv_concat = torch.cat((u, v, uv_abs), dim=1)
+
+        # pass through the linear layer
+        output = self.ffn(uv_concat)
+
         # compute the loss
-        loss = self.loss_fn(u, v, target)
+        loss = self.loss_fn(output, target)
+
+        return loss
+
+    def training_step(
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        batch_idx: int,
+    ):
+        """
+        Perform a training step.
+
+        :param batch: The batch
+        :param batch_idx: The batch index
+
+        :return: The loss
+        """
+        loss = self.compute_loss(batch, batch_idx)
         self.log("train_loss", loss)
         return loss
 
@@ -83,19 +123,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
 
         :return: The loss
         """
-        # move the batch to the device
-        cell1, cell2, target, attn1, attn2 = batch
-
-        # forward pass for the batch
-        u = self.r2v_model(cell1, mask=attn1)
-        v = self.r2v_model(cell2, mask=attn2)
-
-        # pool the embeddings using mean
-        u = torch.mean(u, dim=1)
-        v = torch.mean(v, dim=1)
-
-        # compute the loss
-        loss = self.loss_fn(u, v, target)
+        loss = self.compute_loss(batch, batch_idx)
         self.log("val_loss", loss)
         return loss
 
