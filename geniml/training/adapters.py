@@ -56,8 +56,8 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         pool = torch.sum(token_embeds * in_mask, 1) / torch.clamp(in_mask.sum(1), min=1e-9)
         return pool
 
-    def forward(self, x):
-        return self.r2v_model(x)
+    def forward(self, x, mask=None):
+        return self.r2v_model(x, mask=mask)
 
     def compute_loss(
         self,
@@ -114,6 +114,16 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         self.log("train_loss", loss)
         return loss
 
+    def on_validation_start(self) -> None:
+        """
+        Perform any setup before validation starts.
+
+        This needs to be here because otherwise the
+        TransformerEncoder layers fail (for some reason).
+        """
+        self.eval()
+        torch.set_grad_enabled(True)
+
     def validation_step(self, batch, batch_idx):
         """
         Perform a validation step.
@@ -131,9 +141,10 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         init_lr = self.init_lr or 1e-6
         optimizer = torch.optim.AdamW(self.parameters(), lr=init_lr, weight_decay=0.01)
 
-        total_steps = len(self.train_dataloader()) * self.trainer.max_epochs
+        self.trainer.fit_loop.setup_data()
 
-        # return optimizer
+        total_steps = len(self.trainer.train_dataloader) * self.trainer.max_epochs
+
         scheduler = {
             "scheduler": CosineAnnealingWarmRestarts(
                 optimizer,
@@ -144,6 +155,9 @@ class CellTypeFineTuneAdapter(L.LightningModule):
             "interval": "step",
             "frequency": 1,
         }
+
+        # return optimizer
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
 
 class MLMAdapter(L.LightningModule):
