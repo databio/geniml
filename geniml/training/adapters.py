@@ -129,7 +129,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
 
     def configure_optimizers(self):
         init_lr = self.init_lr or 1e-5
-        optimizer = torch.optim.Adam(self.parameters(), lr=init_lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=init_lr)
         return optimizer
         # return {
         #     "optimizer": optimizer,
