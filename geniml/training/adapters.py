@@ -199,6 +199,38 @@ class MLMAdapter(L.LightningModule):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
         return optimizer
 
+    def compute_loss(
+        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+    ):
+        """
+        Compute the loss for the batch.
+
+        :param batch: The batch
+        :param batch_idx: The batch index
+
+        :return: The loss
+        """
+        # move the batch to the device
+        tokens, masked_tokens, masked_token_indexes, attention_mask = batch
+
+        # forward pass for the batch
+        output = self.forward(masked_tokens, mask=attention_mask)
+
+        # get predictions and targets
+        # the predictions are the logits for the masked tokens
+        # defined by the masked_token_indexes
+        predictions = output.view(-1, self.r2v_model.vocab_size)[masked_token_indexes]
+        targets = tokens.view(-1)[masked_token_indexes]
+
+        # reshape once more
+        predictions = predictions.view(predictions.shape[0] * predictions.shape[1], -1)
+        targets = targets.view(targets.shape[0] * targets.shape[1])
+
+        # compute the loss
+        loss = self.loss_fn(predictions, targets)
+
+        return loss
+
     def training_step(
         self,
         batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
@@ -214,87 +246,39 @@ class MLMAdapter(L.LightningModule):
         :param batch_idx: The batch index
 
         """
-
-        # move the batch to the device
-        tokens, masked_tokens, masked_token_indexes, attention_mask = batch
-
-        # forward pass for the batch
-        output = self.forward(masked_tokens, mask=attention_mask)
-
-        # get predictions and targets
-        # the predictions are the logits for the masked tokens
-        # defined by the masked_token_indexes
-        # not sure what to do here...
-        # can we set the logits where tokens are **not** masked
-        # to one-hot vectors of the original tokens?
-        # that way, the loss contributed to tokens we didnt mask
-        # would be zero
-        #
-        # we have indexes which is 2 x 300 - indexes we want to access
-        # organize index matrix as a 600 x 2 tensor
-        # convert original masked_token_index into row-col index
-        predictions = output.view(-1, self.r2v_model.vocab_size)[masked_token_indexes]
-        targets = tokens.view(-1)[masked_token_indexes]
-
-        # reshape once more
-        predictions = predictions.view(predictions.shape[0] * predictions.shape[1], -1)
-        targets = targets.view(targets.shape[0] * targets.shape[1])
-
-        # compute the loss
-        # can I use ignore index here?
-        loss = self.loss_fn(predictions, targets)
+        loss = self.compute_loss(batch, batch_idx)
         self.log("train_loss", loss)
-
         return loss
 
     # this breaks everything -- and I have NO idea why...
-    # def validation_step(
-    #     self,
-    #     batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
-    #     batch_idx: int,
-    # ):
-    #     """
-    #     Perform a training step.
+    def on_validation_start(self) -> None:
+        """
+        Perform any setup before validation starts.
 
-    #     The batch is a tuple of (tokens, masked_tokens, mask_ids). This step performs
-    #     masked language modeling as described in the original BERT paper (https://arxiv.org/abs/1810.04805).
+        This needs to be here because otherwise the
+        TransformerEncoder layers fail (for some reason).
+        """
+        self.eval()
+        torch.set_grad_enabled(True)
 
-    #     :param batch: The batch
-    #     :param batch_idx: The batch index
+    def validation_step(
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        batch_idx: int,
+    ):
+        """
+        Perform a training step.
 
-    #     """
+        The batch is a tuple of (tokens, masked_tokens, mask_ids). This step performs
+        masked language modeling as described in the original BERT paper (https://arxiv.org/abs/1810.04805).
 
-    #     # move the batch to the device
-    #     tokens, masked_tokens, masked_token_indexes, attention_mask = batch
+        :param batch: The batch
+        :param batch_idx: The batch index
 
-    #     # forward pass for the batch
-    #     output = self.forward(masked_tokens, mask=attention_mask)
-
-    #     # get predictions and targets
-    #     # the predictions are the logits for the masked tokens
-    #     # defined by the masked_token_indexes
-    #     # not sure what to do here...
-    #     # can we set the logits where tokens are **not** masked
-    #     # to one-hot vectors of the original tokens?
-    #     # that way, the loss contributed to tokens we didnt mask
-    #     # would be zero
-    #     #
-    #     # we have indexes which is 2 x 300 - indexes we want to access
-    #     # organize index matrix as a 600 x 2 tensor
-    #     # convert original masked_token_index into row-col index
-    #     predictions = output.view(-1, self.r2v_model.vocab_size)[masked_token_indexes]
-    #     targets = tokens.view(-1)[masked_token_indexes]
-
-    #     # reshape once more
-    #     predictions = predictions.view(predictions.shape[0] * predictions.shape[1], -1)
-    #     targets = targets.view(targets.shape[0] * targets.shape[1])
-
-    #     # compute the loss
-    #     # can I use ignore index here?
-    #     loss = self.loss_fn(predictions, targets)
-    #     self.log("val_loss", loss)
-
-    #     return loss
+        """
+        loss = self.compute_loss(batch, batch_idx)
+        self.log("val_loss", loss)
+        return loss
 
 
 class AdversarialBatchCorrectionAdapter(L.LightningModule):
