@@ -4,7 +4,7 @@ from typing import Tuple, Union
 import lightning as L
 import torch
 import torch.nn as nn
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
 from ..atacformer.main import AtacformerExModel
@@ -128,18 +128,22 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        init_lr = self.init_lr or 1e-5
-        optimizer = torch.optim.AdamW(self.parameters(), lr=init_lr)
-        return optimizer
-        # return {
-        #     "optimizer": optimizer,
-        #     "lr_scheduler": ReduceLROnPlateau(
-        #         optimizer, mode="min", factor=0.1, patience=10, verbose=True
-        #     ),
-        #     "monitor": "val_loss",
-        #     "interval": "epoch",
-        #     "frequency": 1,
-        # }
+        init_lr = self.init_lr or 1e-6
+        optimizer = torch.optim.AdamW(self.parameters(), lr=init_lr, weight_decay=0.01)
+
+        total_steps = len(self.train_dataloader()) * self.trainer.max_epochs
+
+        # return optimizer
+        scheduler = {
+            "scheduler": CosineAnnealingWarmRestarts(
+                optimizer,
+                T_0=total_steps // 10,  # Restart every 1/10th of total steps
+                T_mult=1,  # Keep the same cycle length
+                eta_min=1e-7,  # Minimum learning rate
+            ),
+            "interval": "step",
+            "frequency": 1,
+        }
 
 
 class MLMAdapter(L.LightningModule):
