@@ -181,7 +181,7 @@ class MLMAdapter(L.LightningModule):
         self.linear = nn.Linear(model._model.d_model, model._model.vocab_size)
         self.r2v_model = model._model
         self.tokenizer = model.tokenizer
-        self.lr = kwargs.get("lr", 1e-5)
+        self.init_lr = kwargs.get("init_lr", 1e-5)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         token_embeddings = self.r2v_model(x, mask=mask)
@@ -196,8 +196,26 @@ class MLMAdapter(L.LightningModule):
 
         > By default, AdamW [62], a variant of Adam which decouples the L2 regularization and the weight decay, is the most widely used optimizer for Transformers.
         """
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
-        return optimizer
+        init_lr = self.init_lr or 1e-6
+        optimizer = torch.optim.AdamW(self.parameters(), lr=init_lr, weight_decay=0.01)
+
+        self.trainer.fit_loop.setup_data()
+
+        total_steps = len(self.trainer.train_dataloader) * self.trainer.max_epochs
+
+        scheduler = {
+            "scheduler": CosineAnnealingWarmRestarts(
+                optimizer,
+                T_0=total_steps // 10,  # Restart every 1/10th of total steps
+                T_mult=1,  # Keep the same cycle length
+                eta_min=1e-7,  # Minimum learning rate
+            ),
+            "interval": "step",
+            "frequency": 1,
+        }
+
+        # return optimizer
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
     def compute_loss(
         self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
