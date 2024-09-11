@@ -4,10 +4,10 @@ from typing import List, Union
 
 import numpy as np
 import torch
+from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 from gtars.tokenizers import RegionSet as GRegionSet
-from gtars.tokenizers import Region as GRegion
 
 from ..io import Region, RegionSet
 from ..models import ExModel
@@ -225,6 +225,7 @@ class Region2VecExModel(ExModel):
         save_checkpoint_path: str = None,
         gensim_params: dict = {},
         load_from_checkpoint: str = None,
+        callbacks: List[CallbackAny2Vec] = [],
     ) -> bool:
         """
         Train the model.
@@ -238,6 +239,7 @@ class Region2VecExModel(ExModel):
         :param str save_checkpoint_path: Path to save the model checkpoints to.
         :param dict gensim_params: Additional parameters to pass to the gensim model.
         :param str load_from_checkpoint: Path to a checkpoint to load from.
+        :param List[CallbackAny2Vec] callbacks: List of callbacks to use during training.
 
         :return np.ndarray: Loss values for each epoch.
         """
@@ -258,6 +260,7 @@ class Region2VecExModel(ExModel):
             save_checkpoint_path=save_checkpoint_path,
             gensim_params=gensim_params,
             load_from_checkpoint=load_from_checkpoint,
+            callbacks=callbacks,
         )
 
         # once done training, set the weights of the pytorch model in self._model

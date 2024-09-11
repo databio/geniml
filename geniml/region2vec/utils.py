@@ -17,6 +17,7 @@ from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
     from gensim.models import Word2Vec as GensimWord2Vec
+    from gensim.models.callbacks import CallbackAny2Vec
 
 from ..const import GTOK_EXT
 from ..tokenization.main import Tokenizer, TreeTokenizer, AnnDataTokenizer
@@ -614,6 +615,7 @@ def train_region2vec_model(
     save_checkpoint_path: str = None,
     gensim_params: dict = {},
     load_from_checkpoint: str = None,
+    callbacks: List[CallbackAny2Vec] = [],
 ) -> "GensimWord2Vec":
     """
     Train a gensim Word2Vewc model on the given dataset.
@@ -628,6 +630,7 @@ def train_region2vec_model(
     :param str save_checkpoint_path: Path to save the model checkpoints to.
     :param dict gensim_params: Additional parameters to pass to the gensim model.
     :param str load_from_checkpoint: Path to a checkpoint to load from.
+    :param List[CallbackAny2Vec] callbacks: List of callbacks to use during training.
 
     :return GensimWord2Vec: The gensim model that was trained.
     """
@@ -673,14 +676,40 @@ def train_region2vec_model(
         _LOGGER.info("Building vocabulary.")
         gensim_model.build_vocab(dataset)
 
+    # add the training callback
+    callbacks.append(TrainingCallback())
+
     _LOGGER.info("Training model.")
     gensim_model.train(
         dataset,
         epochs=epochs,  # train for 1 epoch at a time, shuffle data each time
         compute_loss=True,
         total_words=gensim_model.corpus_total_words,
-        callbacks=[TrainingCallback()],
+        callbacks=callbacks,
     )
 
     _LOGGER.info("Training complete. Moving weights to pytorch model.")
     return gensim_model
+
+
+class WandbLoggingCallback(CallbackAny2Vec):
+    def __init__(self):
+        self.epoch = 0
+
+    def on_epoch_end(self, model):
+        try:
+            import wandb
+
+            if wandb.run is None:
+                _LOGGER.warning("Wandb run not found. Skipping logging.")
+                return
+
+            wandb.log({"epoch": self.epoch})
+            loss = model.get_latest_training_loss()
+            wandb.log({"loss": loss})
+        except ImportError:
+            _LOGGER.warning("Wandb not found. Skipping logging.")
+        except Exception as e:
+            _LOGGER.error(f"Error logging to wandb: {e}")
+        finally:
+            self.epoch += 1
