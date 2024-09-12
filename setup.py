@@ -32,7 +32,6 @@ setup(
         "geniml.eval",
         "geniml.likelihood",
         "geniml.models",
-        "geniml.training",
         "geniml.region2vec",
         "geniml.scembed",
         "geniml.tokenization",
