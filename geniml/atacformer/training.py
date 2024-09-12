@@ -1,4 +1,3 @@
-import logging
 from typing import Tuple, Union
 
 import lightning as L
@@ -11,8 +10,6 @@ from ..atacformer.main import AtacformerExModel
 from ..region2vec import Region2VecExModel
 from ..scembed import ScEmbed
 
-_LOGGER = logging.getLogger(__name__)
-
 
 class CellTypeFineTuneAdapter(L.LightningModule):
     """
@@ -22,13 +19,14 @@ class CellTypeFineTuneAdapter(L.LightningModule):
     def __init__(
         self,
         model: Union[Region2VecExModel, ScEmbed, AtacformerExModel],
+        num_classes: int,
         init_lr: float = 1e-5,
         **kwargs,
     ):
         """
         Instantiate a fine-tuning trainer.
 
-        :param Region2VecExModel model: The model to fine-tune.
+        :param Region2VecExModel | scEmbed | Atacformer model: The model to fine-tune.
 
         :param kwargs: Additional arguments to pass to the LightningModule constructor.
         """
@@ -38,7 +36,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         self.tokenizer = model.tokenizer
         self.loss_fn = torch.nn.CrossEntropyLoss()
         self.cos_sim = nn.CosineSimilarity()
-        self.ffn = nn.Linear(model._model.d_model * 3, 2)
+        self.ffn = nn.Linear(model._model.d_model * 3, num_classes)
         self._exmodel = model
         self.init_lr = init_lr
 
