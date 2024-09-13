@@ -22,7 +22,7 @@ UNIVERSE_FILE_NAME = "universe.toml"
 
 POOLING_TYPES = Literal["mean", "max"]
 POOLING_METHOD_KEY = "pooling_method"
-D_MODEL_KEY = "embedding_dim"
+D_MODEL_KEY = "d_model"
 VOCAB_SIZE_KEY = "vocab_size"
 N_HEADS_KEY = "n_heads"
 N_LAYERS_KEY = "n_layers"

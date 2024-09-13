@@ -212,7 +212,7 @@ class AtacformerCellTypeFineTuningDataset(Dataset):
         self.pairs = []
         with open(file_path, "r") as f:
             for line in f:
-                barcode1, barcode2, label = line.strip().split("\t")
+                barcode1, barcode2, label, cell_type1, cell_type2 = line.strip().split("\t")
                 barcode1_path = os.path.join(self.root_dir, barcode1)
                 barcode2_path = os.path.join(self.root_dir, barcode2)
                 self.pairs.append((barcode1_path, barcode2_path, int(label)))
