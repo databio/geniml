@@ -217,6 +217,8 @@ class AtacformerCellTypeFineTuningDataset(Dataset):
                 barcode2_path = os.path.join(self.root_dir, barcode2)
                 self.pairs.append((barcode1_path, barcode2_path, int(label)))
 
+        self.max_label = max([pair[2] for pair in self.pairs])
+
     def __len__(self):
         return len(self.pairs)
 
