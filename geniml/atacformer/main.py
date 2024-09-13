@@ -13,16 +13,15 @@ from ..tokenization.main import AnnDataTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     D_MODEL_KEY,
-    DEFAULT_EMBEDDING_DIM,
-    DEFAULT_CONTEXT_SIZE,
     MODEL_FILE_NAME,
-    NHEAD_KEY,
-    NUM_LAYERS_KEY,
+    N_HEADS_KEY,
+    N_LAYERS_KEY,
     POOLING_METHOD_KEY,
     POOLING_TYPES,
     UNIVERSE_FILE_NAME,
     VOCAB_SIZE_KEY,
     CONTEXT_SIZE_KEY,
+    D_FF_KEY,
 )
 
 
@@ -30,10 +29,10 @@ class Atacformer(nn.Module):
     def __init__(
         self,
         vocab_size: int,
-        d_model: int = DEFAULT_EMBEDDING_DIM,
-        nhead: int = 8,
-        num_layers: int = 6,
-        context_size: int = DEFAULT_CONTEXT_SIZE,
+        d_model: int = 768,
+        n_heads: int = 12,
+        n_layers: int = 12,
+        d_ff: int = 3072,
     ):
         """
         Atacformer is a transformer-based model for ATAC-seq data. It closely follows
@@ -43,16 +42,25 @@ class Atacformer(nn.Module):
         """
         super().__init__()
         self.d_model = d_model
-        self.nhead = nhead
-        self.num_layers = num_layers
+        self.n_heads = n_heads
+        self.n_layers = n_layers
+        self.d_ff = d_ff
         self.vocab_size = vocab_size
-        self.context_size = context_size
+
+        # embedding layer
         self.embedding = nn.Embedding(vocab_size, d_model)
+
+        # transformer encoder
         self.encoder_layer = nn.TransformerEncoderLayer(
-            d_model=d_model, nhead=nhead, batch_first=True
+            d_model=d_model,
+            nhead=n_heads,
+            batch_first=True,
+            dim_feedforward=d_ff,
+            norm_first=True,
         )
-        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)
-        self.context_size = context_size
+
+        # stack the encoder layers
+        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
@@ -62,11 +70,13 @@ class Atacformer(nn.Module):
         """
         # get the embeddings
         x = self.embedding(x)
+
         # set the positional embeddings to 0
         x = x + torch.zeros_like(x)
 
         # pass through the transformer
         x = self.transformer_encoder(x, src_key_padding_mask=mask)
+
         return x
 
 
@@ -81,8 +91,9 @@ class AtacformerExModel(ExModel):
         self,
         model_path: str = None,
         tokenizer: AnnDataTokenizer = None,
-        device: str = None,
         pooling_method: POOLING_TYPES = "mean",
+        device: str = None,
+        context_size: int = 2048,
         **kwargs,
     ):
         """
@@ -98,6 +109,7 @@ class AtacformerExModel(ExModel):
         self.trained: bool = False
         self._model: Atacformer = None
         self.pooling_method = pooling_method
+        self.context_size = context_size
 
         if model_path is not None:
             self._init_from_huggingface(model_path)
@@ -110,6 +122,9 @@ class AtacformerExModel(ExModel):
         self._target_device = torch.device(
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
+
+        if self._model is not None:
+            self._model = self._model.to(self._target_device)
 
     def _init_tokenizer(self, tokenizer: Union[AnnDataTokenizer, str]):
         """
@@ -140,10 +155,10 @@ class AtacformerExModel(ExModel):
         self._init_tokenizer(tokenizer)
         self._model = Atacformer(
             len(self.tokenizer),
-            d_model=kwargs.get("d_model", DEFAULT_EMBEDDING_DIM),
-            context_size=kwargs.get("context_size", DEFAULT_CONTEXT_SIZE),
-            nhead=kwargs.get("nhead", 8),
-            num_layers=kwargs.get("num_layers", 6),
+            d_model=kwargs.get("d_model", 768),
+            n_heads=kwargs.get("n_heads", 12),
+            n_layers=kwargs.get("n_layers", 12),
+            d_ff=kwargs.get("d_ff", 3072),
         )
 
     @property
@@ -152,10 +167,6 @@ class AtacformerExModel(ExModel):
         Get the core Region2Vec model.
         """
         return self._model
-
-    @property
-    def context_size(self):
-        return self._model.context_size
 
     def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
@@ -189,20 +200,26 @@ class AtacformerExModel(ExModel):
                 f"Could not find embedding dimension in config file. Expected key {D_MODEL_KEY}."
             )
 
-        nhead = config.get(NHEAD_KEY, None)
-        if nhead is None:
-            raise KeyError(f"Could not find nhead in config file. Expected key {NHEAD_KEY}.")
+        n_heads = config.get(N_HEADS_KEY, None)
+        if n_heads is None:
+            raise KeyError(f"Could not find n_heads in config file. Expected key {N_HEADS_KEY}.")
 
-        num_layers = config.get(NUM_LAYERS_KEY, None)
-        if num_layers is None:
-            raise KeyError(
-                f"Could not find num_layers in config file. Expected key {NUM_LAYERS_KEY}."
-            )
+        n_layers = config.get(N_LAYERS_KEY, None)
+        if n_layers is None:
+            raise KeyError(f"Could not find n_layers in config file. Expected key {N_LAYERS_KEY}.")
+
+        d_ff = config.get(D_FF_KEY, None)
+        if d_ff is None:
+            raise KeyError(f"Could not find d_ff in config file. Expected key {D_FF_KEY}.")
 
         vocab_size = config.get(VOCAB_SIZE_KEY) or len(self.tokenizer)
 
         model = Atacformer(
-            vocab_size=vocab_size, d_model=d_model, nhead=nhead, num_layers=num_layers
+            vocab_size=vocab_size,
+            d_model=d_model,
+            n_heads=n_heads,
+            n_layers=n_layers,
+            d_ff=d_ff,
         )
         model.load_state_dict(params)
 
@@ -299,17 +316,19 @@ class AtacformerExModel(ExModel):
                 f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
         d_model = self._model.d_model
-        num_layers = self._model.num_layers
-        nhead = self._model.nhead
+        n_layers = self._model.n_layers
+        n_heads = self._model.n_heads
+        d_ff = self._model.d_ff
         vocab_size = len(self.tokenizer)
-        context_size = self._model.context_size
+        context_size = self.context_size
 
         config = {
             POOLING_METHOD_KEY: self.pooling_method,
             D_MODEL_KEY: d_model,
             VOCAB_SIZE_KEY: vocab_size,
-            NUM_LAYERS_KEY: num_layers,
-            NHEAD_KEY: nhead,
+            N_HEADS_KEY: n_heads,
+            N_LAYERS_KEY: n_layers,
+            D_FF_KEY: d_ff,
             CONTEXT_SIZE_KEY: context_size,
         }
 
@@ -328,22 +347,4 @@ class AtacformerExModel(ExModel):
 
         :return np.ndarray: Vector for the region.
         """
-        if isinstance(adata, str):
-            adata = sc.read_h5ad(adata)
-
-        # get the tokens
-        tokens = self.tokenizer(adata)
-
-        tokens_ids = [t.to_ids() for t in tokens]
-
-        # pass through the model
-        with torch.no_grad():
-            output = self._model(tokens)
-
-        # pool the output
-        if self.pooling_method == "mean":
-            return output.mean(dim=1)
-        elif self.pooling_method == "max":
-            return output.max(dim=1).values
-        else:
-            raise ValueError(f"Pooling method {self.pooling_method} not supported.")
+        raise NotImplementedError("This method is not implemented yet. Stay tuned...")
