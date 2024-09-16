@@ -553,6 +553,7 @@ class Region2VecDataset:
         data: Union[str, List[str]],
         shuffle: bool = True,
         convert_to_str: bool = False,
+        subsample: float = None,
     ):
         """
         Initialize a Region2VecDataset.
@@ -566,6 +567,7 @@ class Region2VecDataset:
         :param Tokenizer tokenizer: The tokenizer to use for the dataset.
         :param bool shuffle: Whether or not to shuffle the data before yielding it.
         :param bool convert_to_str: Whether or not to convert the tokens to strings before yielding them.
+        :param float subsample: The fraction of the data to subsample. If None, no subsampling is done.
         """
         self.data = data
         self.shuffle = shuffle
@@ -577,6 +579,13 @@ class Region2VecDataset:
             self.data = data
         else:
             raise ValueError(f"Unknown data type: {type(data)}. Expected str or List[str].")
+
+        # subsample the data if necessary
+        if subsample is not None:
+            if subsample < 0 or subsample > 1:
+                raise ValueError(f"Subsample must be between 0 and 1. Got {subsample}.")
+            n = int(len(self) * subsample)
+            self.data = random.sample(self.data, n)
 
     def __len__(self):
         return len(self.data)
