@@ -18,6 +18,7 @@ from .const import (
     N_LAYERS_KEY,
     POOLING_METHOD_KEY,
     POOLING_TYPES,
+    UNIVERSE_CONFIG_FILE_NAME,
     UNIVERSE_FILE_NAME,
     VOCAB_SIZE_KEY,
     CONTEXT_SIZE_KEY,
@@ -232,9 +233,6 @@ class AtacformerExModel(ExModel):
     def _init_from_huggingface(
         self,
         model_path: str,
-        model_file_name: str = MODEL_FILE_NAME,
-        universe_file_name: str = UNIVERSE_FILE_NAME,
-        config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
         """
@@ -244,36 +242,40 @@ class AtacformerExModel(ExModel):
 
         :param str model_path: Path to the pre-trained model on huggingface.
         :param str model_file_name: Name of the model file.
-        :param str universe_file_name: Name of the universe file.
+        :param str universe_config_file_name: Name of the universe file.
         :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
+        model_file_name: str = MODEL_FILE_NAME
+        universe_config_file_name: str = UNIVERSE_CONFIG_FILE_NAME
+        universe_file_name: str = UNIVERSE_FILE_NAME
+        config_file_name: str = CONFIG_FILE_NAME
+
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
-        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        universe_config_path = hf_hub_download(model_path, universe_config_file_name, **kwargs)
+        _universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
         config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
-        self._load_local_model(model_file_path, universe_path, config_path)
+        self._load_local_model(model_file_path, universe_config_path, config_path)
 
     @classmethod
-    def from_pretrained(
-        cls,
-        path_to_files: str,
-        model_file_name: str = MODEL_FILE_NAME,
-        universe_file_name: str = UNIVERSE_FILE_NAME,
-        config_file_name: str = CONFIG_FILE_NAME,
-    ) -> "AtacformerExModel":
+    def from_pretrained(cls, path_to_files: str) -> "AtacformerExModel":
         """
         Load the model from a set of files that were exported using the export function.
 
         :param str path_to_files: Path to the directory containing the files.
         :param str model_file_name: Name of the model file.
-        :param str universe_file_name: Name of the universe file.
+        :param str universe_config_file_name: Name of the universe file.
         """
+        model_file_name: str = MODEL_FILE_NAME
+        universe_config_file_name: str = UNIVERSE_CONFIG_FILE_NAME
+        config_file_name: str = CONFIG_FILE_NAME
+
         model_file_path = os.path.join(path_to_files, model_file_name)
-        universe_file_path = os.path.join(path_to_files, universe_file_name)
+        universe_config_file_path = os.path.join(path_to_files, universe_config_file_name)
         config_file_path = os.path.join(path_to_files, config_file_name)
 
         instance = cls()
-        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
+        instance._load_local_model(model_file_path, universe_config_file_path, config_file_path)
         instance.trained = True
 
         return instance
@@ -282,7 +284,7 @@ class AtacformerExModel(ExModel):
         self,
         path: str,
         checkpoint_file: str = MODEL_FILE_NAME,
-        universe_file: str = UNIVERSE_FILE_NAME,
+        _universe_config_file: str = UNIVERSE_CONFIG_FILE_NAME,
         config_file: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
@@ -309,11 +311,6 @@ class AtacformerExModel(ExModel):
 
         # export the model weights
         torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
-
-        # export the vocabulary
-        with open(os.path.join(path, universe_file), "a") as f:
-            for region in self.tokenizer.universe.regions:
-                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
         d_model = self._model.d_model
         n_layers = self._model.n_layers

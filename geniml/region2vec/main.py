@@ -23,6 +23,7 @@ from .const import (
     POOLING_METHOD_KEY,
     POOLING_TYPES,
     UNIVERSE_FILE_NAME,
+    UNIVERSE_CONFIG_FILE_NAME,
 )
 from .models import Region2Vec
 from .utils import (
@@ -126,15 +127,16 @@ class Region2VecExModel(ExModel):
         if not self.trained:
             self._init_model(**kwargs)
 
-    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
+    def _load_local_model(self, model_path: str, universe_config_path: str, config_path: str):
         """
         Load the model from a checkpoint.
 
         :param str model_path: Path to the model checkpoint.
-        :param str vocab_path: Path to the vocabulary file.
+        :param str universe_config_path: Path to the vocabulary file.
+        :param str config_path: Path to the config file.
         """
         _model, tokenizer, config = load_local_region2vec_model(
-            model_path, vocab_path, config_path
+            model_path, universe_config_path, config_path
         )
         self._model = _model
         self.tokenizer = tokenizer
@@ -145,9 +147,6 @@ class Region2VecExModel(ExModel):
     def _init_from_huggingface(
         self,
         model_path: str,
-        model_file_name: str = MODEL_FILE_NAME,
-        universe_file_name: str = UNIVERSE_FILE_NAME,
-        config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
         """
@@ -158,21 +157,26 @@ class Region2VecExModel(ExModel):
         :param str model_path: Path to the pre-trained model on huggingface.
         :param str model_file_name: Name of the model file.
         :param str universe_file_name: Name of the universe file.
+        :param str universe_config_file_name: Name of the universe config file.
+        :param str config_file_name: Name of the config file.
         :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
+        model_file_name: str = MODEL_FILE_NAME
+        universe_file_name: str = UNIVERSE_FILE_NAME
+        universe_config_file_name: str = UNIVERSE_CONFIG_FILE_NAME
+        config_file_name: str = CONFIG_FILE_NAME
+
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
-        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        _universe_file_path = hf_hub_download(model_path, universe_file_name, **kwargs)
+        universe_config_path = hf_hub_download(model_path, universe_config_file_name, **kwargs)
         config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
-        self._load_local_model(model_file_path, universe_path, config_path)
+        self._load_local_model(model_file_path, universe_config_path, config_path)
 
     @classmethod
     def from_pretrained(
         cls,
         path_to_files: str,
-        model_file_name: str = MODEL_FILE_NAME,
-        universe_file_name: str = UNIVERSE_FILE_NAME,
-        config_file_name: str = CONFIG_FILE_NAME,
     ) -> "Region2VecExModel":
         """
         Load the model from a set of files that were exported using the export function.
@@ -181,12 +185,16 @@ class Region2VecExModel(ExModel):
         :param str model_file_name: Name of the model file.
         :param str universe_file_name: Name of the universe file.
         """
+        model_file_name: str = MODEL_FILE_NAME
+        universe_config_file_name: str = UNIVERSE_FILE_NAME
+        config_file_name: str = CONFIG_FILE_NAME
+
         model_file_path = os.path.join(path_to_files, model_file_name)
-        universe_file_path = os.path.join(path_to_files, universe_file_name)
+        universe_config_file_path = os.path.join(path_to_files, universe_config_file_name)
         config_file_path = os.path.join(path_to_files, config_file_name)
 
         instance = cls()
-        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
+        instance._load_local_model(model_file_path, universe_config_file_path, config_file_path)
         instance.trained = True
 
         return instance

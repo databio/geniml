@@ -19,7 +19,7 @@ DEFAULT_NS_POWER = 0.75
 CONFIG_FILE_NAME = "config.yaml"
 MODEL_FILE_NAME = "checkpoint.pt"
 UNIVERSE_FILE_NAME = "universe.bed"
-TOKENIZER_CFG_FILE_NAME = "tokenizer.toml"
+UNIVERSE_CONFIG_FILE_NAME = "universe.toml"
 
 POOLING_METHOD_KEY = "pooling_method"
 EMBEDDING_DIM_KEY = "embedding_dim"

@@ -18,7 +18,7 @@ from ..region2vec.const import (
     MODEL_FILE_NAME,
     POOLING_METHOD_KEY,
     POOLING_TYPES,
-    TOKENIZER_CFG_FILE_NAME,
+    UNIVERSE_CONFIG_FILE_NAME,
 )
 from ..region2vec.main import Region2Vec
 from ..region2vec.utils import (
@@ -123,16 +123,16 @@ class ScEmbed:
         if not self.trained:
             self._init_model(**kwargs)
 
-    def _load_local_model(self, model_path: str, tokenizer_cfg_path: str, config_path: str):
+    def _load_local_model(self, model_path: str, universe_config_file_path: str, config_path: str):
         """
         Load the model from a checkpoint.
 
         :param str model_path: Path to the model checkpoint.
-        :param str vocab_path: Path to the vocabulary file.
+        :param str universe_config_file_path: Path to the tokenizer config file.
         :param str config_path: Path to the config file.
         """
         _model, tokenizer, config = load_local_scembed_model(
-            model_path, tokenizer_cfg_path, config_path
+            model_path, universe_config_file_path, config_path
         )
         self._model = _model
         self.tokenizer = tokenizer
@@ -142,9 +142,6 @@ class ScEmbed:
     def _init_from_huggingface(
         self,
         model_path: str,
-        model_file_name: str = MODEL_FILE_NAME,
-        tokenizer_cfg_file: str = TOKENIZER_CFG_FILE_NAME,
-        config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
         """
@@ -157,29 +154,32 @@ class ScEmbed:
         :param str universe_file_name: Name of the universe file.
         :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
+        model_file_name: str = MODEL_FILE_NAME
+        universe_config_file_name: str = UNIVERSE_CONFIG_FILE_NAME
+        config_file_name: str = CONFIG_FILE_NAME
+
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
-        tokenizer_cfg_path = hf_hub_download(model_path, tokenizer_cfg_file, **kwargs)
+        universe_config_file_path = hf_hub_download(
+            model_path, universe_config_file_name, **kwargs
+        )
         config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
-        # get subdir/folder of the tokenizer_cfg_path
-        tokenizer_cfg_folder = os.path.dirname(tokenizer_cfg_path).split("/")[-1]
+        # get subdir/folder of the universe_config_file_path
+        tokenizer_cfg_folder = os.path.dirname(universe_config_file_path).split("/")[-1]
 
         # read in tokenizer cfg to see what else needs to be downloaded
-        with open(tokenizer_cfg_path, "rb") as f:
+        with open(universe_config_file_path, "rb") as f:
             tokenizer_cfg = tomllib.load(f)
 
         for universe in tokenizer_cfg["universes"]:
             hf_hub_download(model_path, universe, subfolder=tokenizer_cfg_folder, **kwargs)
 
-        self._load_local_model(model_file_path, tokenizer_cfg_path, config_path)
+        self._load_local_model(model_file_path, universe_config_file_path, config_path)
 
     @classmethod
     def from_pretrained(
         cls,
         path_to_files: str,
-        model_file_name: str = MODEL_FILE_NAME,
-        tokenizer_cfg_name: str = TOKENIZER_CFG_FILE_NAME,
-        config_file_name: str = CONFIG_FILE_NAME,
     ) -> "ScEmbed":
         """
         Load the model from a set of files that were exported using the export function.
@@ -191,12 +191,16 @@ class ScEmbed:
 
         :return: The loaded model.
         """
+        model_file_name: str = MODEL_FILE_NAME
+        universe_config_file_name: str = UNIVERSE_CONFIG_FILE_NAME
+        config_file_name: str = CONFIG_FILE_NAME
+
         model_file_path = os.path.join(path_to_files, model_file_name)
-        tokenizer_cfg_file = os.path.join(path_to_files, tokenizer_cfg_name)
+        universe_config_file_name = os.path.join(path_to_files, universe_config_file_name)
         config_file_path = os.path.join(path_to_files, config_file_name)
 
         instance = cls()
-        instance._load_local_model(model_file_path, tokenizer_cfg_file, config_file_path)
+        instance._load_local_model(model_file_path, universe_config_file_name, config_file_path)
         instance.trained = True
 
         return instance
@@ -265,7 +269,6 @@ class ScEmbed:
         self,
         path: str,
         checkpoint_file: str = MODEL_FILE_NAME,
-        tokenizer_cfg_file: str = TOKENIZER_CFG_FILE_NAME,
         config_file: str = CONFIG_FILE_NAME,
     ):
         """
@@ -284,7 +287,6 @@ class ScEmbed:
             self.tokenizer,
             path,
             checkpoint_file=checkpoint_file,
-            tokenizer_cfg_file=tokenizer_cfg_file,
             config_file=config_file,
         )
 

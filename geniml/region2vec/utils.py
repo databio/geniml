@@ -408,7 +408,6 @@ def export_region2vec_model(
     tokenizer: Tokenizer,
     path: str,
     checkpoint_file: str = MODEL_FILE_NAME,
-    tokenizer_cfg_file: str = TOKENIZER_CFG_FILE_NAME,
     config_file: str = CONFIG_FILE_NAME,
     **kwargs: Dict[str, any],
 ):
@@ -429,9 +428,6 @@ def export_region2vec_model(
 
     # export the model weights
     torch.save(model.state_dict(), os.path.join(path, checkpoint_file))
-
-    # export the tokenizer as a toml file
-    tokenizer.export(os.path.join(path, tokenizer_cfg_file))
 
     # export the config (vocab size, embedding size)
     config = {
@@ -454,8 +450,8 @@ def load_local_region2vec_model(
     Load a region2vec model from a local directory
 
     :param str model_path: The path to the model checkpoint file
+    :param str tokenizer_cfg_path: The path to the tokenizer config file
     :param str config_path: The path to the model config file
-    :param str vocab_path: The path to the model vocabulary file
     """
     # read toml file
     with open(tokenizer_cfg_path, "rb") as f:
