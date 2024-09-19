@@ -15,14 +15,14 @@ DATA_TEST_FOLDER = os.path.join(
 )
 DATA_TEST_FOLDER_BED = os.path.join(DATA_TEST_FOLDER, "bed")
 DATA_TEST_FOLDER_MAF = os.path.join(DATA_TEST_FOLDER, "maf")
-DATA_TEST_FOLDET_BAD_BED = os.path.join(DATA_TEST_FOLDER, "bed_bad")
+DATA_TEST_FOLDER_BED_BAD = os.path.join(DATA_TEST_FOLDER, "bed_bad")
 
 ALL_BEDFILE_PATH = [
     os.path.join(DATA_TEST_FOLDER_BED, x) for x in os.listdir(DATA_TEST_FOLDER_BED)
 ]
 ALL_MAF_PATH = [os.path.join(DATA_TEST_FOLDER_MAF, x) for x in os.listdir(DATA_TEST_FOLDER_MAF)]
 ALL_BADFILE_BAD_PATH = [
-    os.path.join(DATA_TEST_FOLDET_BAD_BED, x) for x in os.listdir(DATA_TEST_FOLDET_BAD_BED)
+    os.path.join(DATA_TEST_FOLDER_BED_BAD, x) for x in os.listdir(DATA_TEST_FOLDER_BED_BAD)
 ]
 
 
@@ -56,7 +56,7 @@ class TestRegionSet:
     @pytest.mark.parametrize(
         "url",
         [
-            "ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7666nnn/GSM7666464/suppl/GSM7666464_18134-282-06_S51_L003_peaks.narrowPeak.gz",
+            "https://github.com/databio/geniml/raw/master/tests/data/io_data/bed/s1_a.bed.gz",
         ],
     )
     def test_region_set_from_url(self, url):
@@ -82,9 +82,7 @@ class TestRegionSet:
 
     @pytest.mark.parametrize(
         "url",
-        [
-            "ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7666nnn/GSM7666464/suppl/GSM7666464_18134-282-06_S51_L003_peaks.narrowPeak.gz"
-        ],
+        ["https://github.com/databio/geniml/raw/master/tests/data/io_data/bed/s1_a.bed.gz"],
         # TODO: This is not the right way how to do it!
     )
     def test_region_set_from_url_cant_be_backed(self, url):
