@@ -1,6 +1,6 @@
 from logging import getLogger
 
-from .const import MODULE_NAME
+from .const import MODULE_NAME, DEFAULT_CACHE_FOLDER
 
 _LOGGER = getLogger(MODULE_NAME)
 
@@ -12,7 +12,7 @@ def build_subparser_cache_bed(parser):
     parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
     parser.add_argument(
         "--cache-folder",
-        default=None,
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
@@ -26,7 +26,7 @@ def build_subparser_cache_bedset(parser):
     parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
     parser.add_argument(
         "--cache-folder",
-        default=None,
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
@@ -40,7 +40,7 @@ def build_subparser_seek(parser):
     parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
     parser.add_argument(
         "--cache-folder",
-        default=None,
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
@@ -53,7 +53,7 @@ def build_subparser_inspect(parser):
     """
     parser.add_argument(
         "--cache-folder",
-        default=None,
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
@@ -75,7 +75,7 @@ def build_subparser_cache_tokens(parser):
     )
     parser.add_argument(
         "--cache-folder",
-        default=None,
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
@@ -89,7 +89,7 @@ def build_subparser_remove(parser):
     parser.add_argument("identifier", nargs=1, help="BED file identifier, url, or file path")
     parser.add_argument(
         "--cache-folder",
-        default=None,
+        default=DEFAULT_CACHE_FOLDER,
         help="Cache folder path (default: bed_cache)",
     )
 
