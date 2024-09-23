@@ -12,7 +12,7 @@ from geniml.training.utils import (
     collate_finetuning_batch,
     generate_fine_tuning_dataset,
 )
-from geniml.tokenization import AnnDataTokenizer
+from geniml.tokenization.main import AnnDataTokenizer
 
 
 def test_generate_finetuning_dataset():
