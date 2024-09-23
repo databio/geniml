@@ -12,7 +12,7 @@ from rich.progress import track
 
 from geniml.tokenization.split_file import split_file
 from geniml.io import Region, RegionSet
-from genimtools.tokenizers import (
+from gtars.tokenizers import (
     TreeTokenizer as GTreeTokenizer,
     Region as GRegion,
 )

@@ -4,7 +4,7 @@ import sys
 
 import pytest
 import scanpy as sc
-from genimtools.utils import write_tokens_to_gtok
+from gtars.utils import write_tokens_to_gtok
 from tqdm import tqdm
 
 from geniml.region2vec.utils import Region2VecDataset
