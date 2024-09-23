@@ -8,8 +8,8 @@ from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
 from ..atacformer.main import AtacformerExModel
 from ..nn import GradientReversal
-from ..region2vec import Region2VecExModel
-from ..scembed import ScEmbed
+from ..region2vec.main import Region2VecExModel
+from ..scembed.main import ScEmbed
 from .const import BATCH_CORRECTION_ADVERSARIAL_TRAINING_MODES
 
 _LOGGER = logging.getLogger(__name__)
