@@ -5,7 +5,7 @@ from typing import List, Tuple
 
 import scanpy as sc
 import torch
-from genimtools.utils import read_tokens_from_gtok
+from gtars.utils import read_tokens_from_gtok
 from rich.progress import track
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset

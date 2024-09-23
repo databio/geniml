@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
-from genimtools.utils import read_tokens_from_gtok
+from gtars.utils import read_tokens_from_gtok
 from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
