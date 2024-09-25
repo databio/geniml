@@ -21,6 +21,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         model: Union[Region2VecExModel, ScEmbed, AtacformerExModel],
         num_classes: int,
         init_lr: float = 1e-5,
+        adamw_weight_decay: float = 0.01,
         **kwargs,
     ):
         """
@@ -39,6 +40,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
         self.ffn = nn.Linear(model._model.d_model * 3, num_classes)
         self._exmodel = model
         self.init_lr = init_lr
+        self.adamw_weight_decay = adamw_weight_decay
 
     def mean_pool(token_embeds: torch.Tensor, attention_mask: torch.Tensor):
         """
@@ -135,7 +137,9 @@ class CellTypeFineTuneAdapter(L.LightningModule):
 
     def configure_optimizers(self):
         init_lr = self.init_lr or 1e-6
-        optimizer = torch.optim.AdamW(self.parameters(), lr=init_lr, weight_decay=0.01)
+        optimizer = torch.optim.AdamW(
+            self.parameters(), lr=init_lr, weight_decay=self.adamw_weight_decay
+        )
 
         self.trainer.fit_loop.setup_data()
 

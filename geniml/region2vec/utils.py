@@ -35,7 +35,6 @@ from .const import (
     LR_TYPES,
     MODEL_FILE_NAME,
     MODULE_NAME,
-    TOKENIZER_CFG_FILE_NAME,
     VOCAB_SIZE_KEY,
 )
 from .models import Region2Vec
