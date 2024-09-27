@@ -11,13 +11,14 @@ import zarr
 from botocore.exceptions import ClientError
 from pybiocfilecache import BiocFileCache
 from ubiquerg import is_url
-from zarr.errors import PathNotFoundError
 from zarr import Array
+from zarr.errors import PathNotFoundError
 
 from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
 from .const import (
+    BED_TOKENS_PATTERN,
     BEDFILE_URL_PATTERN,
     BEDSET_URL_PATTERN,
     DEFAULT_BEDBASE_API,
@@ -30,7 +31,6 @@ from .const import (
     DEFAULT_CACHE_FOLDER,
     DEFAULT_ZARR_FOLDER,
     MODULE_NAME,
-    BED_TOKENS_PATTERN,
 )
 from .utils import BedCacheManager, get_abs_path
 

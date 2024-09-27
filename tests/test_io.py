@@ -4,7 +4,7 @@ import genomicranges
 import pandas as pd
 import pytest
 
-from geniml.io.exceptions import GenimlBaseError, BEDFileReadError
+from geniml.io.exceptions import BEDFileReadError, GenimlBaseError
 from geniml.io.io import SNP, Maf, Region, RegionSet
 
 DATA_TEST_FOLDER = os.path.join(

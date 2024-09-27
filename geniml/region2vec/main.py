@@ -3,12 +3,18 @@ from logging import getLogger
 from typing import List, Union
 
 import numpy as np
-import torch
-from torch.nn.utils.rnn import pad_sequence
+
+try:
+    import torch
+except ImportError:
+    raise ImportError(
+        "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
+    )
+
+from gtars.tokenizers import Region as GRegion
+from gtars.tokenizers import RegionSet as GRegionSet
 from huggingface_hub import hf_hub_download
 from rich.progress import track
-from gtars.tokenizers import RegionSet as GRegionSet
-from gtars.tokenizers import Region as GRegion
 
 from ..io import Region, RegionSet
 from ..models import ExModel

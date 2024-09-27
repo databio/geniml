@@ -10,7 +10,13 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
-import torch
+
+try:
+    import torch
+except ImportError:
+    raise ImportError(
+        "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
+    )
 from gtars.utils import read_tokens_from_gtok
 from yaml import safe_dump, safe_load
 

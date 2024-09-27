@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Union
 
 import numpy as np
+
 from geniml.const import PKG_NAME
 
 from ..backends import HNSWBackend, QdrantBackend
