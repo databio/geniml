@@ -5,9 +5,15 @@ from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
+
+try:
+    import torch
+    from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
+except ImportError:
+    raise ImportError(
+        "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
+    )
 from huggingface_hub import hf_hub_download
-from torch.nn import CosineEmbeddingLoss, CosineSimilarity, Linear, MSELoss, ReLU, Sequential
 from yaml import safe_dump, safe_load
 
 from .const import (

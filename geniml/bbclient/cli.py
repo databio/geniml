@@ -1,6 +1,6 @@
 from logging import getLogger
 
-from .const import MODULE_NAME, DEFAULT_CACHE_FOLDER
+from .const import DEFAULT_CACHE_FOLDER, MODULE_NAME
 
 _LOGGER = getLogger(MODULE_NAME)
 
