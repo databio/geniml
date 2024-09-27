@@ -20,25 +20,19 @@ with open(PACKAGE_NAME + "/_version.py", "r") as versionfile:
 
 # Optional dependencies
 # Extras requires a dictionary and not a list?
-OPT_DEPENDENCIES = {}
 with open("requirements/requirements-ml.txt", "r") as reqs_file:
     ml_dep = []
     for line in reqs_file:
         if not line.strip():
             continue
-        # OPT_DEPENDENCIES.update({str(line.strip()):line.strip()})
         ml_dep.append(line.strip())
-    OPT_DEPENDENCIES.update()
 
-OPT_DEPENDENCIES = {}
 with open("requirements/requirements-test.txt", "r") as reqs_file:
     test_dep = []
     for line in reqs_file:
         if not line.strip():
             continue
-        # OPT_DEPENDENCIES.update({str(line.strip()):line.strip()})
         test_dep.append(line.strip())
-    OPT_DEPENDENCIES.update()
 
 extra["install_requires"] = DEPENDENCIES
 extra["extras_require"] = {
