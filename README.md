@@ -21,7 +21,7 @@ or install the latest version from the GitHub repository:
 pip install git+https://github.com/databio/geniml.git
 ```
 
-### To install all dependencies use this command:
+### To install Machine learning dependencies use this command:
 
 From pypi:
 ```
