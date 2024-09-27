@@ -10,4 +10,3 @@ scanpy >= 1.10.3
 torch >= 2.4.1
 lightning >=  2.4.0
 langchain-huggingface==0.0.2
-scipy <= 1.12.0
