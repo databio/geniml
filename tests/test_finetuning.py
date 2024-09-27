@@ -6,13 +6,13 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
+from geniml.tokenization.main import AnnDataTokenizer
 from geniml.training import CellTypeFineTuneAdapter
 from geniml.training.utils import (
     FineTuningDataset,
     collate_finetuning_batch,
     generate_fine_tuning_dataset,
 )
-from geniml.tokenization.main import AnnDataTokenizer
 
 
 def test_generate_finetuning_dataset():

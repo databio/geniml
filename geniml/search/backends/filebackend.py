@@ -20,6 +20,7 @@ DEP_HNSWLIB = True
 #     )
 
 import numpy as np
+
 from geniml.search.const import (
     DEFAULT_DIM,
     DEFAULT_EF,
