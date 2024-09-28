@@ -231,6 +231,7 @@ class Region2VecExModel(ExModel):
         num_cpus: int = 1,
         seed: int = 42,
         save_checkpoint_path: str = None,
+        use_current_weights: bool = False,
         gensim_params: dict = {},
         load_from_checkpoint: str = None,
         callbacks: List[CallbackAny2Vec] = [],
@@ -245,6 +246,7 @@ class Region2VecExModel(ExModel):
         :param int num_cpus: Number of cpus to use for training.
         :param int seed: Seed to use for training.
         :param str save_checkpoint_path: Path to save the model checkpoints to.
+        :param bool use_current_weights: Whether to use the current weights of the model.
         :param dict gensim_params: Additional parameters to pass to the gensim model.
         :param str load_from_checkpoint: Path to a checkpoint to load from.
         :param List[CallbackAny2Vec] callbacks: List of callbacks to use during training.
@@ -265,6 +267,7 @@ class Region2VecExModel(ExModel):
             min_count=min_count,
             num_cpus=num_cpus,
             seed=seed,
+            init_from_torch_model=self._model if use_current_weights else None,
             save_checkpoint_path=save_checkpoint_path,
             gensim_params=gensim_params,
             load_from_checkpoint=load_from_checkpoint,

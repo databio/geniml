@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from gensim.models.callbacks import CallbackAny2Vec
 from gtars.utils import read_tokens_from_gtok
+from rich.progress import track
 from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
@@ -618,6 +619,7 @@ def train_region2vec_model(
     num_cpus: int = 1,
     seed: int = 42,
     save_checkpoint_path: str = None,
+    init_from_torch_model: Region2Vec = None,
     gensim_params: dict = {},
     load_from_checkpoint: str = None,
     callbacks: List[CallbackAny2Vec] = [],
@@ -633,6 +635,7 @@ def train_region2vec_model(
     :param int num_cpus: Number of cpus to use for training.
     :param int seed: Seed to use for training.
     :param str save_checkpoint_path: Path to save the model checkpoints to.
+    :param Region2Vec init_from_torch_model: A torch model to initialize the weights from.
     :param dict gensim_params: Additional parameters to pass to the gensim model.
     :param str load_from_checkpoint: Path to a checkpoint to load from.
     :param List[CallbackAny2Vec] callbacks: List of callbacks to use during training.
@@ -668,6 +671,27 @@ def train_region2vec_model(
     if load_from_checkpoint is not None:
         _LOGGER.info(f"Loading model from checkpoint: {load_from_checkpoint}")
         gensim_model = GensimWord2Vec.load(load_from_checkpoint)
+    elif init_from_torch_model is not None:
+        gensim_model = GensimWord2Vec(
+            vector_size=init_from_torch_model.embedding_dim,
+            window=window_size,
+            min_count=min_count,
+            workers=num_cpus,
+            seed=seed,
+            **gensim_params,
+        )
+        # transfer the weights over
+        vectors = []
+        for token_id in track(
+            range(init_from_torch_model.vocab_size),
+            description="Transferring weights",
+            total=init_from_torch_model.vocab_size,
+        ):
+            vectors.append(init_from_torch_model.projection.weight.data[token_id].numpy())
+
+        gensim_model.wv.add_vectors(
+            [str(token_id) for token_id in range(init_from_torch_model.vocab_size)], vectors
+        )
     else:
         _LOGGER.info("Creating new gensim model.")
         gensim_model = GensimWord2Vec(
