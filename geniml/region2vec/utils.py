@@ -742,3 +742,32 @@ class WandbLoggingCallback(CallbackAny2Vec):
             _LOGGER.error(f"Error logging to wandb: {e}")
         finally:
             self.epoch += 1
+
+
+class ClearMLCallback(CallbackAny2Vec):
+    def __init__(self):
+        self.epoch = 0
+
+    def on_epoch_end(self, model):
+        try:
+            from clearml import Task
+
+            task = Task.current_task()
+            if task is None:
+                _LOGGER.warning("ClearML task not found. Skipping logging.")
+                return
+            task_logger = task.get_logger()
+            if task_logger is None:
+                _LOGGER.warning("ClearML logger not found. Skipping logging.")
+                return
+
+            task_logger.report_scalar("epoch", self.epoch)
+            loss = model.get_latest_training_loss()
+            task_logger.report_scalar("loss", loss)
+
+        except ImportError:
+            _LOGGER.warning("ClearML not found. Skipping logging.")
+        except Exception as e:
+            _LOGGER.error(f"Error logging to ClearML: {e}")
+        finally:
+            self.epoch += 1
