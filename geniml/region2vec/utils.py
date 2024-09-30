@@ -761,9 +761,17 @@ class ClearMLCallback(CallbackAny2Vec):
                 _LOGGER.warning("ClearML logger not found. Skipping logging.")
                 return
 
-            task_logger.report_scalar("epoch", self.epoch)
+            task_logger.report_scalar(
+                title="epoch",
+                value=self.epoch,
+                iteration=self.epoch,
+            )
             loss = model.get_latest_training_loss()
-            task_logger.report_scalar("loss", loss)
+            task_logger.report_scalar(
+                title="loss",
+                value=loss,
+                iteration=self.epoch,
+            )
 
         except ImportError:
             _LOGGER.warning("ClearML not found. Skipping logging.")
