@@ -4,12 +4,13 @@ from typing import Dict, List, Union
 
 import numpy as np
 from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct, VectorParams
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from geniml.const import PKG_NAME
 from geniml.search.const import (
     DEFAULT_COLLECTION_NAME,
-    DEFAULT_QDRANT_CONFIG,
+    DEFAULT_DIM,
+    DEFAULT_QDRANT_DIST,
     DEFAULT_QDRANT_HOST,
     DEFAULT_QDRANT_PORT,
     DEFAULT_QUANTIZATION_CONFIG,
@@ -26,7 +27,8 @@ class QdrantBackend(EmSearchBackend):
 
     def __init__(
         self,
-        config: VectorParams = DEFAULT_QDRANT_CONFIG,
+        dim: int = DEFAULT_DIM,
+        dist: Distance = DEFAULT_QDRANT_DIST,
         collection: str = DEFAULT_COLLECTION_NAME,
         qdrant_host: str = DEFAULT_QDRANT_HOST,
         qdrant_port: int = DEFAULT_QDRANT_PORT,
@@ -45,7 +47,7 @@ class QdrantBackend(EmSearchBackend):
         """
         super().__init__()
         self.collection = collection
-        self.config = config
+        self.config = VectorParams(size=dim, distance=dist)
         self.url = os.environ.get("QDRANT_HOST", qdrant_host)
         self.port = os.environ.get("QDRANT_PORT", qdrant_port)
         self.qd_client = QdrantClient(
@@ -152,7 +154,9 @@ class QdrantBackend(EmSearchBackend):
         """
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 
-    def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
+    def retrieve_info(
+        self, ids: Union[List[int], int], with_vectors: bool = False
+    ) -> Union[
         Dict[str, Union[int, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, List[float], Dict[str, str]]]],
     ]:
@@ -160,7 +164,7 @@ class QdrantBackend(EmSearchBackend):
         With a given list of storage ids, return the information of these vectors
 
         :param ids: list of ids, or a single id
-        :param with_vec:  whether the vectors themselves will also be returned in the output
+        :param with_vectors:  whether the vectors themselves will also be returned in the output
         :return: if ids is one id, a dictionary similar to the output of search() will be returned, without "score";
         if ids is a list, a list of dictionaries will be returned
         """
@@ -172,7 +176,7 @@ class QdrantBackend(EmSearchBackend):
             collection_name=self.collection,
             ids=ids,
             with_payload=True,
-            with_vectors=with_vec,  # no need vectors
+            with_vectors=with_vectors,  # no need vectors
         )
         # retrieve() of qd client does not return result in the order of ids in the list
         # sort it for convenience
@@ -181,7 +185,7 @@ class QdrantBackend(EmSearchBackend):
         # get the information
         for result in sorted_retrievals:
             result_dict = {"id": result.id, "payload": result.payload}
-            if with_vec:
+            if with_vectors:
                 result_dict["vector"] = result.vector
             output_list.append(result_dict)
 
