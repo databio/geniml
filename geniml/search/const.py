@@ -1,12 +1,12 @@
 from qdrant_client.http import models
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import Distance
 
 DEFAULT_QDRANT_HOST = "localhost"
 DEFAULT_QDRANT_PORT = 6333
 
 DEFAULT_COLLECTION_NAME = "embeddings"
 
-DEFAULT_QDRANT_CONFIG = VectorParams(size=100, distance=Distance.COSINE)
+DEFAULT_QDRANT_DIST = Distance.COSINE
 
 DEFAULT_INDEX_PATH = "./current_index.bin"
 
