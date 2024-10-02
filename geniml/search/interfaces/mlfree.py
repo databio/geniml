@@ -47,5 +47,13 @@ class BiVectorSearchInterface(BEDSearchInterface):
             search_vec = self.query2vec.forward(query)
 
         return self.backend.search(
-            search_vec, limit, with_payload, with_vectors, offset, p, q, distance, rank
+            query=search_vec,
+            limit=limit,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+            offset=offset,
+            p=p,
+            q=q,
+            distance=distance,
+            rank=rank,
         )

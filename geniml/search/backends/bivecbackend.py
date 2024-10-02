@@ -47,18 +47,16 @@ class BiVectorBackend:
         :param with_payload: whether payload is included in the result
         :param with_vectors: whether the stored vector is included in the result
         :param offset: the offset of the search results
-        :param p: weights to the score of metadata search
-        :param q: weights to the score of BED search
+        :param p: weights to the score of metadata search, recommend 0 < p <= 1.0
+        :param q: weights to the score of BED search, recommend 0 < q <= 1.0
         :param distance: whether the score is distance or similarity
         :param rank: whether the result is ranked based on rank or score
-        :return:
-        :rtype:
+        :return: the search result(a list of dictionaries,
+            each dictionary include: storage id, vector payload (optional), vector (optional))
         """
 
         # the key for the score in result: distance or score (cosine similarity)
         self.score_key = "distance" if distance else "score"
-
-        #
 
         # metadata search
         metadata_results = self.metadata_backend.search(
@@ -66,12 +64,10 @@ class BiVectorBackend:
         )
 
         if rank:
-            # rank result based on maximum rank in results of metadata embedding and results of BED embedding
             return self._rank_search(metadata_results, limit, with_payload, with_vectors, offset)
         else:
-            # rank result based on weighted score from results of metadata embedding and results of BED embedding
             return self._score_search(
-                metadata_results, limit, with_payload, with_vectors, p, q, offset
+                metadata_results, limit, with_payload, with_vectors, offset, p, q
             )
 
     def _rank_search(
@@ -83,18 +79,16 @@ class BiVectorBackend:
         offset: int = 0,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
+        Search based on maximum rank in results of metadata embedding and results of BED embedding
 
         :param metadata_results: result of metadata search
         :param limit: see docstring of def search
         :param with_payload:
         :param with_vectors:
         :param offset:
-        :return:
+        :return: the search result ranked based on maximum rank
         """
-        # record max rank
         max_rank = []
-
-        # collect all retrieved BED results
         bed_results = []
 
         for i in range(len(metadata_results)):
@@ -137,18 +131,21 @@ class BiVectorBackend:
         limit: int,
         with_payload: bool = True,
         with_vectors: bool = True,
+        offset: int = 0,
         p: float = 1.0,
         q: float = 1.0,
-        offset: int = 0,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
+        Search based on weighted score from results of metadata embedding and results of BED embedding
 
         :param metadata_results: result of metadata search
         :param limit: see docstring of def search
         :param with_payload:
         :param with_vectors:
         :param offset:
-        :return:
+        :param p:
+        :param q:
+        :return: the search result ranked based on weighted similarity scores
         """
         overall_scores = []
         bed_results = []
@@ -199,8 +196,7 @@ class BiVectorBackend:
         :param results: retrieval result
         :param k: number of result to return
         :param rank: whether the scale is maximum rank or not
-        :return:
-        :rtype:
+        :return: the top k selected result after rank
         """
         paired_score_results = list(zip(scales, results))
 

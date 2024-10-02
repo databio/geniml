@@ -7,9 +7,8 @@ import numpy as np
 from huggingface_hub import hf_hub_download
 
 from ..backends import BiVectorBackend, HNSWBackend
+from ..const import TEXT_ENCODER_REPO
 from ..interfaces import BiVectorSearchInterface
-
-repo = "databio/bivec-search-demo"  # repo of huggingface dataset
 
 
 def load_json(json_path: str) -> Dict:
@@ -36,15 +35,17 @@ def load_vectors(npz_path, vec_key="vectors") -> np.ndarray:
     return data[vec_key]
 
 
-def hf_bivec_search(query, limit=5, p=1.0, q=1.0, rank=True):
+def hf_bivec_search(query, repo: str = TEXT_ENCODER_REPO, limit=5, p=1.0, q=1.0, rank=True):
     """
     Demo using data loaded onto huggingface dataset
 
-    :param query: see docstring of geniml.search.backend.BiVectorBackend
-    :param limit:
+    :param query: free form query terms
+    :param repo: the huggingface repository of text encoder model
+    :param limit:see docstring of geniml.search.backend.BiVectorBackend
     :param p:
     :param q:
     :param rank:
+    :return: the search result from demo dataset on huggingface
     """
 
     # download files from huggingface dataset
