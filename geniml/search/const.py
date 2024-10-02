@@ -38,3 +38,5 @@ DEFAULT_QUANTIZATION_CONFIG = models.ScalarQuantization(
 HF_INDEX = "index.bin"
 HF_PAYLOADS = "payloads.pkl"
 HF_METADATA = "metadata.json"
+
+TEXT_ENCODER_REPO = "databio/bivec-search-demo"
