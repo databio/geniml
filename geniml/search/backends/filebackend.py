@@ -146,7 +146,7 @@ class HNSWBackend(EmSearchBackend):
         with_vectors: bool = True,
         offset: int = 0,
     ) -> Union[
-        List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
+        List[Dict[str, Union[int, float, Dict[str, str], np.ndarray]]],
         List[List[Dict[str, Union[int, float, Dict[str, str], np.ndarray]]]],
     ]:
         """

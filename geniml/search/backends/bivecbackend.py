@@ -1,8 +1,12 @@
+import logging
 from typing import Dict, List, Union
 
 import numpy as np
 
+from ...const import PKG_NAME
 from .abstract import EmSearchBackend
+
+_LOGGER = logging.getLogger(PKG_NAME)
 
 
 class BiVectorBackend:
@@ -55,8 +59,6 @@ class BiVectorBackend:
         self.score_key = "distance" if distance else "score"
 
         #
-        self.p = p
-        self.q = q
 
         # metadata search
         metadata_results = self.metadata_backend.search(
@@ -68,7 +70,9 @@ class BiVectorBackend:
             return self._rank_search(metadata_results, limit, with_payload, with_vectors, offset)
         else:
             # rank result based on weighted score from results of metadata embedding and results of BED embedding
-            return self._score_search(metadata_results, limit, with_payload, with_vectors, offset)
+            return self._score_search(
+                metadata_results, limit, with_payload, with_vectors, p, q, offset
+            )
 
     def _rank_search(
         self,
@@ -98,13 +102,14 @@ class BiVectorBackend:
 
             # all bed files matching the retrieved metadata tag
             bed_ids = result["payload"][self.metadata_payload_matches]
-            matching_bed = self.bed_backend.retrieve_info(bed_ids, with_vectors=True)
+            matching_beds = self.bed_backend.retrieve_info(bed_ids, with_vectors=True)
 
             # use each single bed file as the query in the bed embedding backend
-            for bed in matching_bed:
+            for bed in matching_beds:
                 try:
                     bed_vec = bed["vector"]
                 except:
+                    _LOGGER.warning(f"Retrieved result missing vector: {bed}")
                     continue
 
                 # correct format
@@ -132,6 +137,8 @@ class BiVectorBackend:
         limit: int,
         with_payload: bool = True,
         with_vectors: bool = True,
+        p: float = 1.0,
+        q: float = 1.0,
         offset: int = 0,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
         """
@@ -174,7 +181,7 @@ class BiVectorBackend:
                         else result[self.score_key]
                     )
                     bed_results.append(retrieval)
-                    overall_scores.append(self.p * text_score + self.q * bed_score)
+                    overall_scores.append(p * text_score + q * bed_score)
 
         return self._top_k(overall_scores, bed_results, limit, False)
 
