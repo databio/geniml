@@ -2,8 +2,7 @@ import pytest
 import scanpy as sc
 
 from geniml.io.io import RegionSet
-from geniml.tokenization.main import TreeTokenizer
-from geniml.tokenization.main import AnnDataTokenizer
+from geniml.tokenization.main import AnnDataTokenizer, TreeTokenizer
 
 
 @pytest.fixture

@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from geniml.atacformer.main import Atacformer, AtacformerExModel
-from geniml.atacformer.utils import AtacformerMLMDataset, AtacformerMLMCollator
+from geniml.atacformer.utils import AtacformerMLMCollator, AtacformerMLMDataset
 from geniml.tokenization.main import AnnDataTokenizer
 from geniml.training.adapters import MLMAdapter
 

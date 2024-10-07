@@ -5,11 +5,10 @@ from typing import List, Tuple
 
 import scanpy as sc
 import torch
+from gtars.tokenizers import TreeTokenizer
 from rich.progress import track
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
-
-from genimtools.tokenizers import TreeTokenizer
 
 
 @contextlib.contextmanager

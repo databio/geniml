@@ -10,14 +10,17 @@ import s3fs
 import zarr
 from botocore.exceptions import ClientError
 from pybiocfilecache import BiocFileCache
+from pybiocfilecache._exceptions import RnameExistsError
+from contextlib import suppress
 from ubiquerg import is_url
-from zarr.errors import PathNotFoundError
 from zarr import Array
+from zarr.errors import PathNotFoundError
 
 from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet, RegionSet
 from ..io.utils import is_gzipped
 from .const import (
+    BED_TOKENS_PATTERN,
     BEDFILE_URL_PATTERN,
     BEDSET_URL_PATTERN,
     DEFAULT_BEDBASE_API,
@@ -30,7 +33,6 @@ from .const import (
     DEFAULT_CACHE_FOLDER,
     DEFAULT_ZARR_FOLDER,
     MODULE_NAME,
-    BED_TOKENS_PATTERN,
 )
 from .utils import BedCacheManager, get_abs_path
 
@@ -146,11 +148,12 @@ class BBClient(BedCacheManager):
         self.bedset_cache.add(bedset_id, fpath=file_path, action="asis")
         return bedset_id
 
-    def add_bed_to_cache(self, bedfile: Union[RegionSet, str]) -> str:
+    def add_bed_to_cache(self, bedfile: Union[RegionSet, str], force: bool = False) -> str:
         """
         Add a BED file to the cache
 
         :param bedfile: a RegionSet object or a path or url to the BED file
+        :param force: whether to overwrite the existing file in cache
         :return: the RegionSet identifier
         """
 
@@ -163,15 +166,14 @@ class BBClient(BedCacheManager):
 
         bedfile_id = bedfile.compute_bed_identifier()
         file_path = self._bedfile_path(bedfile_id)
-        if os.path.exists(file_path):
+        if os.path.exists(file_path) and not force:
             _LOGGER.info(f"{file_path} already exists in cache.")
         else:
             if bedfile.path is None or is_url(bedfile.path):
-                # write the regions to .bed.gz file
-                with gzip.open(file_path, "wt") as f:
-                    for region in bedfile:
-                        f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
-
+                compression_opts = dict(method="zip", archive_name=f"{bedfile_id}.bed")
+                bedfile.to_pandas().to_csv(
+                    file_path, index=False, compression=compression_opts, header=False, sep="\t"
+                )
             else:
                 # copy the BED file out of cache
                 if is_gzipped(bedfile.path):
@@ -181,7 +183,8 @@ class BBClient(BedCacheManager):
                     with open(bedfile.path, "rb") as f_in:
                         with gzip.open(file_path, "wb") as f_out:
                             shutil.copyfileobj(f_in, f_out)
-            self.bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
+            with suppress(RnameExistsError):
+                self.bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
         return bedfile_id
 
     def add_bed_tokens_to_cache(self, bed_id: str, universe_id: str) -> None:

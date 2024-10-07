@@ -4,7 +4,7 @@ from math import ceil
 from typing import List, Tuple
 
 import torch
-from genimtools.utils import read_tokens_from_gtok
+from gtars.utils import read_tokens_from_gtok
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
