@@ -5,7 +5,7 @@ import numpy as np
 
 from ...const import PKG_NAME
 from ...io import RegionSet
-from ...region2vec import Region2VecExModel
+from ...region2vec.main import Region2VecExModel
 from .abstract import Query2Vec
 
 _LOGGER = logging.getLogger(PKG_NAME)

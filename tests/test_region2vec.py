@@ -4,11 +4,10 @@ import numpy as np
 import pytest
 import torch
 
-
 from geniml.io.io import Region, RegionSet
-from geniml.tokenization.main import TreeTokenizer
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.region2vec.utils import Region2VecDataset
+from geniml.tokenization.main import TreeTokenizer
 
 
 @pytest.fixture

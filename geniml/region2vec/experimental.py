@@ -1,10 +1,15 @@
 import logging
 from typing import List, Tuple
 
-import torch
-import torch.nn as nn
-from rich.progress import track
-from torch.utils.data import Dataset
+try:
+    import torch
+    import torch.nn as nn
+    from rich.progress import track
+    from torch.utils.data import Dataset
+except ImportError:
+    raise ImportError(
+        "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
+    )
 
 from .const import DEFAULT_N_SHUFFLES, DEFAULT_NS_POWER, DEFAULT_WINDOW_SIZE, MODULE_NAME
 from .utils import shuffle_documents
