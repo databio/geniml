@@ -1,6 +1,7 @@
 import logging
 import os
 import subprocess
+import datetime
 
 from ..const import DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS, PKG_NAME
 
@@ -26,64 +27,41 @@ def main(
     :param output: Path to output folder
     """
     _LOGGER.info("Running training...")
+    _LOGGER.info("Start", datetime.datetime.now())
 
     # PLACE TRAINING CODE HERE
-
-    n_process = 8
-    label_prefix = "__label__"
-
     model = os.path.join(output, "starspace_trained_model")
     path_to_starsapce = os.path.join(path_to_starsapce, "starspace")
 
-    print(type(input))
+    star_command =  [
+                path_to_starsapce,
+                "train",
+                "-trainFile",
+                input,
+                "-model",
+                model,
+                "-trainMode",
+                "0",
+                "-dim",
+                dim,
+                "-epoch",
+                num_epochs,
+                "-negSearchLimit",
+                "5",
+                "-thread",
+                "20",
+                "-lr",
+                learning_rate,
+            ]
 
     if os.path.exists(model):
-        subprocess.Popen(
-            [
-                path_to_starsapce,
-                "train",
-                "-trainFile",
-                input,
-                "-model",
-                model,
-                "-initModel",
-                model,
-                "-trainMode",
-                "0",
-                "-dim",
-                dim,
-                "-epoch",
-                num_epochs,
-                "-negSearchLimit",
-                "5",
-                "-thread",
-                "20",
-                "-lr",
-                learning_rate,
-            ]
-        )
-    else:
-        subprocess.Popen(
-            [
-                path_to_starsapce,
-                "train",
-                "-trainFile",
-                input,
-                "-model",
-                model,
-                "-trainMode",
-                "0",
-                "-dim",
-                dim,
-                "-epoch",
-                num_epochs,
-                "-negSearchLimit",
-                "5",
-                "-thread",
-                "20",
-                "-lr",
-                learning_rate,
-            ]
-        )
+        star_command.extend(["-initModel", model])
 
-    print("Train bedembed done.")
+    # Start the subprocess
+    process = subprocess.Popen(star_command)
+
+    # Wait for the subprocess to complete
+    process.wait()
+
+    _LOGGER.info("Train bedembed done.")
+    _LOGGER.info("Start", datetime.datetime.now())
