@@ -178,12 +178,17 @@ class QdrantBackend(EmSearchBackend):
             with_payload=True,
             with_vectors=with_vectors,  # no need vectors
         )
-        # retrieve() of qd client does not return result in the order of ids in the list
-        # sort it for convenience
-        sorted_retrievals = sorted(retrievals, key=lambda x: ids.index(x.id))
 
-        # get the information
-        for result in sorted_retrievals:
+        retrieval_dict = {result.id: result for result in retrievals}
+
+        # retrieve() of qd client does not return result in the order of ids in the list
+        # get the retrieval result in output by result order
+        for id_ in ids:
+            try:
+                result = retrieval_dict[id_]
+            except:
+                _LOGGER.warning(f"Warning: no id stored in backend matches {id_}.")
+                continue
             result_dict = {"id": result.id, "payload": result.payload}
             if with_vectors:
                 result_dict["vector"] = result.vector
