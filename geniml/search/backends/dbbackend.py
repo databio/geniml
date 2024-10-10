@@ -182,7 +182,7 @@ class QdrantBackend(EmSearchBackend):
         retrieval_dict = {result.id: result for result in retrievals}
 
         # retrieve() of qd client does not return result in the order of ids in the list
-        # get the retrieval result in output by result order
+        # get the retrieval result in output by id order
         for id_ in ids:
             try:
                 result = retrieval_dict[id_]
