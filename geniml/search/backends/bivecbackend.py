@@ -164,6 +164,7 @@ class BiVectorBackend:
                 try:
                     bed_vec = bed["vector"]
                 except:
+                    _LOGGER.warning(f"Retrieved result missing vector: {bed}")
                     continue
                 if isinstance(bed_vec, list):
                     bed_vec = np.array(bed_vec)
