@@ -5,8 +5,8 @@ import pybedtools
 import datetime
 from tqdm import tqdm
 
-from helpers import meta_preprocessing, data_preparation
-from ..const import PKG_NAME
+from .helpers import meta_preprocessing, data_preparation
+from .const import PKG_NAME
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -28,7 +28,8 @@ def main(
     :param labels: Labels string (cell_type,target)
     """
     _LOGGER.info("Running preprocess...")
-    _LOGGER.info("Start", datetime.datetime.now())
+    _LOGGER.info(f"Start: {datetime.datetime.now()}")
+
 
     # PLACE CODE FOR RUNNING PREPROCESS HERE
 
@@ -39,9 +40,9 @@ def main(
         trained_documents = tqdm(
             p.starmap(
                 data_preparation, 
-                [(x, universe, "train") for x in file_list], 
+                [(x, universe, "train") for x in file_list]
+                ), 
                 total=len(file_list)
-                )
             )
         p.close()
         p.join()
@@ -56,5 +57,6 @@ def main(
     output_file.close()
 
     _LOGGER.info("Traning sample preprocess done.")
-    _LOGGER.info("End", datetime.datetime.now())
+    _LOGGER.info(f"End: {datetime.datetime.now()}")
+
 

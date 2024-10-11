@@ -6,8 +6,8 @@ import pandas as pd
 import pybedtools
 from sklearn.preprocessing import MinMaxScaler
 
-from helpers import meta_preprocessing, bed2vec, get_label_embedding, get_embedding_matrix, calculate_distance
-from ..const import CACHE_DIR, DEFAULT_THRESHOLD, PKG_NAME
+from .helpers import meta_preprocessing, bed2vec, get_label_embedding, get_embedding_matrix, calculate_distance
+from .const import CACHE_DIR, DEFAULT_THRESHOLD, PKG_NAME
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -40,7 +40,7 @@ def main(
     :param threshold: Threshold for filtering
     """
     _LOGGER.info("Running distances...")
-    _LOGGER.info("Start", datetime.datetime.now())
+    _LOGGER.info(f"Start: {datetime.datetime.now()}")
 
     # PLACE CODE FOR RUNNING DISTANCES HERE
     label_prefix = "__label__"
@@ -105,5 +105,6 @@ def main(
     df_similarity.to_csv(distance_file_path_rr, index=False)
 
     _LOGGER.info("Test sample distances prediction done.")
-    _LOGGER.info("End", datetime.datetime.now())
+    _LOGGER.info(f"End: {datetime.datetime.now()}")
+
 

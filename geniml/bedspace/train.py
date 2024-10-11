@@ -3,7 +3,7 @@ import os
 import subprocess
 import datetime
 
-from ..const import DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS, PKG_NAME
+from .const import DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS, PKG_NAME
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -27,7 +27,8 @@ def main(
     :param output: Path to output folder
     """
     _LOGGER.info("Running training...")
-    _LOGGER.info("Start", datetime.datetime.now())
+    _LOGGER.info(f"Start: {datetime.datetime.now()}")
+
 
     # PLACE TRAINING CODE HERE
     model = os.path.join(output, "starspace_trained_model")
@@ -64,4 +65,5 @@ def main(
     process.wait()
 
     _LOGGER.info("Train bedembed done.")
-    _LOGGER.info("Start", datetime.datetime.now())
+    _LOGGER.info(f"End: {datetime.datetime.now()}")
+

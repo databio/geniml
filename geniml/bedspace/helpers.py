@@ -22,6 +22,8 @@ def meta_preprocessing(meta_path, labels, input_path, chunksize=10000):
     Returns:
     - file_list (df): List of combined file paths and labels
     """
+    if isinstance(labels, str):
+        labels = labels.split(",")
 
     # Define the columns to use
     cols = ["file_name"]
