@@ -9,6 +9,28 @@ from .abstract import EmSearchBackend
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
+def batch_bed_vectors(matching_beds: List[Dict]) -> np.ndarray:
+    """
+    Stack the embedding vector of bed files related to a metadata tag together for batch search
+
+    :param matching_beds: result of BED retrieval from Qdrant Client by ids
+    """
+    bed_vectors = []
+    for bed in matching_beds:
+        try:
+            bed_vec = bed["vector"]
+            bed_vectors.append(bed_vec)
+        except KeyError:
+            _LOGGER.warning(f"Retrieved result missing vector: {bed}")
+            continue
+        except TypeError:
+            _LOGGER.warning(
+                f"Please check the data loading; retrieved result is not a dictionary: {bed}"
+            )
+            continue
+    return np.array(bed_vectors)
+
+
 class BiVectorBackend:
     """
     Search backend that connects the embeddings of metadata tags and bed files
@@ -102,29 +124,17 @@ class BiVectorBackend:
             matching_beds = self.bed_backend.retrieve_info(bed_ids, with_vectors=True)
 
             # use each single bed file as the query in the bed embedding backend
-            for bed in matching_beds:
-                try:
-                    bed_vec = bed["vector"]
-                except KeyError:
-                    _LOGGER.warning(f"Retrieved result missing vector: {bed}")
-                    continue
-                except TypeError:
-                    _LOGGER.warning(
-                        f"Please check the data loading; retrieved result is not a dictionary: {bed}"
-                    )
-                    continue
+            bed_vecs = batch_bed_vectors(matching_beds)
 
-                # correct format
-                if isinstance(bed_vec, list):
-                    bed_vec = np.array(bed_vec)
+            retrieved_batch = self.bed_backend.search(
+                bed_vecs,
+                limit=limit,
+                with_payload=with_payload,
+                with_vectors=with_vectors,
+                offset=offset,
+            )
 
-                retrieved_bed = self.bed_backend.search(
-                    np.array(bed_vec),
-                    limit=limit,
-                    with_payload=with_payload,
-                    with_vectors=with_vectors,
-                    offset=offset,
-                )
+            for retrieved_bed in retrieved_batch:
                 for j in range(len(retrieved_bed)):
                     retrieval = retrieved_bed[j]
                     bed_results.append(retrieval)
@@ -158,34 +168,27 @@ class BiVectorBackend:
         overall_scores = []
         bed_results = []
         for result in metadata_results:
+            # similarity score between query term and metadat tag
             text_score = (
                 1 - result[self.score_key]
                 if self.score_key == "distance"
                 else result[self.score_key]
             )
             bed_ids = result["payload"][self.metadata_payload_matches]
-            matching_bed = self.bed_backend.retrieve_info(bed_ids, with_vectors=True)
-            for bed in matching_bed:
-                try:
-                    bed_vec = bed["vector"]
-                except KeyError:
-                    _LOGGER.warning(f"Retrieved result missing vector: {bed}")
-                    continue
-                except TypeError:
-                    _LOGGER.warning(
-                        f"Please check the data loading; retrieved result is not a dictionary: {bed}"
-                    )
-                    continue
-                if isinstance(bed_vec, list):
-                    bed_vec = np.array(bed_vec)
-                retrieved_bed = self.bed_backend.search(
-                    np.array(bed_vec),
-                    limit=limit,
-                    with_payload=with_payload,
-                    with_vectors=with_vectors,
-                    offset=offset,
-                )
+            matching_beds = self.bed_backend.retrieve_info(bed_ids, with_vectors=True)
+            bed_vecs = batch_bed_vectors(matching_beds)
+
+            retrieved_batch = self.bed_backend.search(
+                bed_vecs,
+                limit=limit,
+                with_payload=with_payload,
+                with_vectors=with_vectors,
+                offset=offset,
+            )
+
+            for retrieved_bed in retrieved_batch:
                 for retrieval in retrieved_bed:
+                    # calculate weighted score
                     bed_score = (
                         1 - result[self.score_key]
                         if self.score_key == "distance"

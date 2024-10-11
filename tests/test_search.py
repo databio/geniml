@@ -1,4 +1,5 @@
 import os
+import pprint
 import random
 from typing import Dict, List
 
@@ -297,6 +298,20 @@ def cosine_similarity(vec1: np.array, vec2: np.array) -> float:
     reason="Only run when --qdrant is given",
 )
 def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, ids, uuids):
+    def search_results_test(search_results):
+        assert isinstance(search_results, list)
+        for result in search_results:
+            assert isinstance(result, dict)  # only target pairs
+            assert isinstance(result["id"], str)
+            assert isinstance(result["score"], float)
+
+            assert isinstance(result["vector"], list)
+            for i in result["vector"]:
+                assert isinstance(i, float)
+            assert isinstance(result["payload"], dict)
+            assert isinstance(result["payload"]["name"], str)
+            assert isinstance(result["payload"]["metadata"], dict)
+
     qd_search_backend = QdrantBackend(collection=bed_collection)
     # load data
     qd_search_backend.load(bed_embeddings, payloads=bed_payloads, ids=uuids)
@@ -311,18 +326,8 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
         with_vectors=True,
     )
 
-    assert isinstance(search_results, list)
-    for result in search_results:
-        assert isinstance(result, dict)  # only target pairs
-        assert isinstance(result["id"], str)
-        assert isinstance(result["score"], float)
+    search_results_test(search_results)
 
-        assert isinstance(result["vector"], list)
-        for i in result["vector"]:
-            assert isinstance(i, float)
-        assert isinstance(result["payload"], dict)
-        assert isinstance(result["payload"]["name"], str)
-        assert isinstance(result["payload"]["metadata"], dict)
     assert len(qd_search_backend) == len(filenames)
 
     # test information retrieval
@@ -338,6 +343,14 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
 
         assert retrieval_results[i]["vector"] == client_retrieval[0].vector
         assert retrieval_results[i]["payload"] == client_retrieval[0].payload
+
+    # test batch search
+    batch_query = np.random.random((6, 100))
+    batch_result = qd_search_backend.search(
+        batch_query, limit=3, with_payload=True, with_vectors=True
+    )
+    for batch in batch_result:
+        search_results_test(batch)
 
     qd_search_backend.qd_client.delete_collection(qd_search_backend.collection)
 

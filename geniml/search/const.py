@@ -14,6 +14,8 @@ DEFAULT_HNSW_SPACE = "cosine"
 
 DEFAULT_DIM = 100
 
+DEFAULT_TEXT_DIM = 384
+
 
 # the size of the dynamic list for the nearest neighbors
 # Higher ef leads to more accurate but slower search
