@@ -105,8 +105,13 @@ class BiVectorBackend:
             for bed in matching_beds:
                 try:
                     bed_vec = bed["vector"]
-                except:
+                except KeyError:
                     _LOGGER.warning(f"Retrieved result missing vector: {bed}")
+                    continue
+                except TypeError:
+                    _LOGGER.warning(
+                        f"Please check the data loading; retrieved result is not a dictionary: {bed}"
+                    )
                     continue
 
                 # correct format
@@ -163,8 +168,13 @@ class BiVectorBackend:
             for bed in matching_bed:
                 try:
                     bed_vec = bed["vector"]
-                except:
+                except KeyError:
                     _LOGGER.warning(f"Retrieved result missing vector: {bed}")
+                    continue
+                except TypeError:
+                    _LOGGER.warning(
+                        f"Please check the data loading; retrieved result is not a dictionary: {bed}"
+                    )
                     continue
                 if isinstance(bed_vec, list):
                     bed_vec = np.array(bed_vec)
@@ -223,7 +233,7 @@ class BiVectorBackend:
                 else:
                     try:
                         del result["score"]
-                    except:
+                    except KeyError:
                         del result["distance"]
 
                     result["max_rank"] = scale
