@@ -1,5 +1,4 @@
 import os
-import pprint
 import random
 from typing import Dict, List
 
@@ -362,7 +361,6 @@ def test_HNSWBackend_load(filenames, bed_embeddings, bed_payloads, bed_hnswb, id
     # load second batch
     bed_hnswb.load(embeddings_2, payloads=labels_2)
     assert len(bed_hnswb) == num_upload
-    # pytestconfig.cache.set('shared_backend', bed_hnswb)
 
 
 @pytest.mark.skipif(
