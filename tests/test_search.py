@@ -1,4 +1,5 @@
 import os
+import pprint
 import random
 from typing import Dict, List
 
@@ -38,7 +39,17 @@ def filenames(bed_folder):
     list of bed file names
     """
 
-    return ["ENCX3P", "ENCN4Z", "ENC7VQ", "ENCY6R", "ENCJ9K", "ENCD8T", "ENCQ1A", "ENCM2F"]
+    return [
+        "ENCX3P",
+        "ENCN4Z",
+        "ENC7VQ",
+        "ENCY6R",
+        "ENCJ9K",
+        "ENCD8T",
+        "ENCQ1A",
+        "ENCM2F",
+        "ENCKMR",
+    ]
 
 
 @pytest.fixture
@@ -56,6 +67,7 @@ def metadata():
         "ENCD8T": {"biosample": "K562", "target": "TBP", "organ": ["blood"]},
         "ENCQ1A": {"biosample": "K562", "target": "H3K27ac", "organ": ["blood"]},
         "ENCM2F": {"biosample": "K562", "target": "CTCF", "organ": ["blood"]},
+        "ENCKMR": {"biosample": "apple"},
     }
 
 
@@ -72,6 +84,7 @@ def annotations():
         "epithelium",
         "lung",
         "blood",
+        "apple",
     ]
 
 
@@ -88,7 +101,23 @@ def annotation_matches():
         "epithelium": [0, 2, 3],
         "lung": [3, 4],
         "blood": [5, 6, 7],
+        "apple": [8],
     }
+
+
+@pytest.fixture
+def uuids():
+    return [
+        "7bbab414-053d-4c06-9085-d3ca894dc8b8",
+        "8b3fa142-8866-4b4c-9df8-7734b4ef9f2a",
+        "478c9b96-3b4c-41c3-af56-68e8c39de0a3",
+        "971c58a5-c126-433b-887c-4184184cbce6",
+        "b28381f8-82ce-4b19-86c0-34a2d368e3b3",
+        "d6f1060e-6e14-4faf-8711-f25ed5c6618e",
+        "920ef6f6-f821-46f9-9d11-3516119feeec",
+        "6ec9d4a4-a481-43dc-81f3-098953c77b0a",
+        "ce5345d8-84a1-4c6c-9427-145a3f207805",
+    ]
 
 
 @pytest.fixture
@@ -151,12 +180,17 @@ def text_embeddings(annotations):
     return np.random.random((len(annotations), 384))
 
 
+# @pytest.fixture
+# def ids(filenames):
+#     """
+#     list of randomly sampled integer_ids
+#     """
+#     return random.sample(range(len(filenames)), 3)
+
+
 @pytest.fixture
-def ids(filenames):
-    """
-    list of randomly sampled integer_ids
-    """
-    return random.sample(range(len(filenames)), 3)
+def ids(uuids):
+    return random.sample(uuids, 3)
 
 
 # @pytest.fixture
@@ -262,10 +296,10 @@ def cosine_similarity(vec1: np.array, vec2: np.array) -> float:
     "not config.getoption('--qdrant')",
     reason="Only run when --qdrant is given",
 )
-def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, ids):
+def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, ids, uuids):
     qd_search_backend = QdrantBackend(collection=bed_collection)
     # load data
-    qd_search_backend.load(bed_embeddings, payloads=bed_payloads)
+    qd_search_backend.load(bed_embeddings, payloads=bed_payloads, ids=uuids)
     # test searching
     query_vec = np.random.random(
         100,
@@ -280,9 +314,8 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
     assert isinstance(search_results, list)
     for result in search_results:
         assert isinstance(result, dict)  # only target pairs
-        assert isinstance(result["id"], int)
+        assert isinstance(result["id"], str)
         assert isinstance(result["score"], float)
-        # print(f"score: {result['score']}; cos: {cosine_similarity(np.array(result['vector']), query_vec)}")
 
         assert isinstance(result["vector"], list)
         for i in result["vector"]:
@@ -294,7 +327,7 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
 
     # test information retrieval
     retrieval_results = qd_search_backend.retrieve_info(ids, True)
-
+    assert len(retrieval_results) == len(ids)
     assert isinstance(retrieval_results, list)
     for i in range(len(ids)):
         assert ids[i] == retrieval_results[i]["id"]
@@ -305,6 +338,7 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
 
         assert retrieval_results[i]["vector"] == client_retrieval[0].vector
         assert retrieval_results[i]["payload"] == client_retrieval[0].payload
+
     qd_search_backend.qd_client.delete_collection(qd_search_backend.collection)
 
 
