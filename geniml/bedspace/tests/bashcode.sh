@@ -8,7 +8,7 @@ label='Group'
 geniml bedspace preprocess -i $input -m $train_meta -u $universe -o $output -l $label
 
 # MODEL TRAINING
-path_starspace='/home/bx2ur/code/reninness_score/tools/Starspace/starspace'
+path_starspace='/home/bx2ur/code/reninness_score/tools/Starspace/'
 preprocessed_input='/home/bx2ur/code/reninness_score/test_outputs/gitk_univ_d10/train_input.txt'
 epochs=50
 dim=10 

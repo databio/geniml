@@ -13,9 +13,8 @@ _LOGGER = logging.getLogger(PKG_NAME)
 
 
 def main(
-    type: str, 
     input: str,
-    path_to_starsapce: str,
+    path_to_starspace: str,
     metadata_test: str,
     metadata_train: str,
     universe: str,

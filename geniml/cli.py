@@ -348,7 +348,7 @@ def main(test_args=None):
             _LOGGER.info("Training the StarSpace model")
             train(
                 path_to_starspace=args.path_to_starsapce,
-                input_file=args.input,
+                input=args.input,
                 num_epochs=args.num_epochs,
                 dim=args.dim,
                 learning_rate=args.learning_rate,
