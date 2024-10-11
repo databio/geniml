@@ -155,10 +155,10 @@ class QdrantBackend(EmSearchBackend):
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 
     def retrieve_info(
-        self, ids: Union[List[int], int], with_vectors: bool = False
+        self, ids: Union[List[int], int, List[str], str], with_vectors: bool = False
     ) -> Union[
-        Dict[str, Union[int, List[float], Dict[str, str]]],
-        List[Dict[str, Union[int, List[float], Dict[str, str]]]],
+        Dict[str, Union[int, str, List[float], Dict[str, str]]],
+        List[Dict[str, Union[int, str, List[float], Dict[str, str]]]],
     ]:
         """
         With a given list of storage ids, return the information of these vectors
@@ -171,6 +171,14 @@ class QdrantBackend(EmSearchBackend):
         if not isinstance(ids, list):
             # retrieve() only takes iterable input
             ids = [ids]
+
+        # add hyphen to uuid if missing
+        for i in range(len(ids)):
+            id_ = ids[i]
+            if isinstance(id_, str):
+                if not "-" in id_:
+                    ids[i] = f"{id_[:8]}-{id_[8:12]}-{id_[12:16]}-{id_[16:20]}-{id_[20:]}"
+
         output_list = []
         retrievals = self.qd_client.retrieve(
             collection_name=self.collection,

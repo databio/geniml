@@ -180,17 +180,18 @@ def text_embeddings(annotations):
     return np.random.random((len(annotations), 384))
 
 
-# @pytest.fixture
-# def ids(filenames):
-#     """
-#     list of randomly sampled integer_ids
-#     """
-#     return random.sample(range(len(filenames)), 3)
+@pytest.fixture
+def int_ids(filenames):
+    """
+    list of randomly sampled integer_ids
+    """
+    return random.sample(range(len(filenames)), 3)
 
 
 @pytest.fixture
 def ids(uuids):
-    return random.sample(uuids, 3)
+    ids_with_hyphen = random.sample(uuids, 3)
+    return [uuid.replace("-", "") for uuid in ids_with_hyphen]
 
 
 # @pytest.fixture
@@ -368,7 +369,7 @@ def test_HNSWBackend_load(filenames, bed_embeddings, bed_payloads, bed_hnswb, id
     DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
 )
 @pytest.mark.dependency(depends=["test_HNSWBackend_load"])
-def test_HNSWBackend_search(filenames, bed_hnswb, ids):
+def test_HNSWBackend_search(filenames, bed_hnswb, int_ids):
     def search_result_check(dict_list: List[Dict], backend: HNSWBackend, with_dist: bool = False):
         """
         repeated test of the output of search / retrieve_info function of HNSWBackend to check if the result matches the content in index
@@ -430,7 +431,7 @@ def test_HNSWBackend_search(filenames, bed_hnswb, ids):
         search_result_check(multiple_vecs_search[i], bed_hnswb, True)
 
     # test information retrieval / get items
-    retrieval_results = bed_hnswb.retrieve_info(ids, True)
+    retrieval_results = bed_hnswb.retrieve_info(int_ids, True)
     search_result_check(retrieval_results, bed_hnswb, False)
 
 
