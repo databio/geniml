@@ -63,6 +63,9 @@ class BiVectorBackend:
             query, limit=limit, with_payload=True, offset=offset
         )
 
+        if not isinstance(metadata_results, list):
+            metadata_results = [metadata_results]
+
         if rank:
             return self._rank_search(metadata_results, limit, with_payload, with_vectors, offset)
         else:
