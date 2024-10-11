@@ -190,11 +190,12 @@ class MLMAdapter(L.LightningModule):
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """
-        We use the AdamW optimizer with a learning rate of 1e-3.
+        We use the AdamW optimizer with a learning rate of 1e-6.
 
         See here: https://arxiv.org/abs/2302.01107
 
-        > By default, AdamW [62], a variant of Adam which decouples the L2 regularization and the weight decay, is the most widely used optimizer for Transformers.
+        > By default, AdamW [62], a variant of Adam which decouples the L2 regularization and the
+        weight decay, is the most widely used optimizer for Transformers.
         """
         init_lr = self.init_lr or 1e-6
         optimizer = torch.optim.AdamW(self.parameters(), lr=init_lr, weight_decay=0.01)
