@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, List, Union
+import math
 
 import numpy as np
 
@@ -82,7 +83,10 @@ class BiVectorBackend:
 
         # metadata search
         metadata_results = self.metadata_backend.search(
-            query, limit=limit, with_payload=True, offset=offset
+            query,
+            limit=int(math.log(limit) * 5) if limit > 10 else 10,
+            with_payload=True,
+            offset=offset,
         )
 
         if not isinstance(metadata_results, list):
@@ -125,10 +129,12 @@ class BiVectorBackend:
 
             # use each single bed file as the query in the bed embedding backend
             bed_vecs = batch_bed_vectors(matching_beds)
+            if len(bed_vecs) == 0:
+                continue
 
             retrieved_batch = self.bed_backend.search(
                 bed_vecs,
-                limit=limit,
+                limit=limit * 2,
                 with_payload=with_payload,
                 with_vectors=with_vectors,
                 offset=offset,
@@ -177,6 +183,9 @@ class BiVectorBackend:
             bed_ids = result["payload"][self.metadata_payload_matches]
             matching_beds = self.bed_backend.retrieve_info(bed_ids, with_vectors=True)
             bed_vecs = batch_bed_vectors(matching_beds)
+
+            if len(bed_vecs) == 0:
+                continue
 
             retrieved_batch = self.bed_backend.search(
                 bed_vecs,
