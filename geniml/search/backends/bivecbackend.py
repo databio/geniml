@@ -1,6 +1,6 @@
 import logging
-from typing import Dict, List, Union
 import math
+from typing import Dict, List, Union
 
 import numpy as np
 
@@ -134,7 +134,7 @@ class BiVectorBackend:
 
             retrieved_batch = self.bed_backend.search(
                 bed_vecs,
-                limit=limit * 2,
+                limit=limit * 2 if limit < 500 else 500,
                 with_payload=with_payload,
                 with_vectors=with_vectors,
                 offset=offset,
