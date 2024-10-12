@@ -1,6 +1,7 @@
 import gzip
 import os
 import shutil
+from contextlib import suppress
 from logging import getLogger
 from typing import List, NoReturn, Union
 
@@ -11,7 +12,6 @@ import zarr
 from botocore.exceptions import ClientError
 from pybiocfilecache import BiocFileCache
 from pybiocfilecache._exceptions import RnameExistsError
-from contextlib import suppress
 from ubiquerg import is_url
 from zarr import Array
 from zarr.errors import PathNotFoundError
