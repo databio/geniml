@@ -34,7 +34,7 @@ def build_argparser(parser: VersionInHelpParser = None):
     msg_by_cmd = {
         PREPROCESS_CMD: "Preprocess data for training",
         TRAIN_CMD: "Train the StarSpace model",
-        DISTANCES_CMD: "Compute distances between regionsets and labels",
+        DISTANCES_CMD: "Compute distances between region sets and labels",
         SEARCH_CMD: "Search for regionsets similar to a query",
     }
 

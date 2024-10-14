@@ -355,11 +355,11 @@ def main(test_args=None):
                 output=args.output
             )
 
-        elif args.subcommand == "distance":
-            from .bedspace.distance import main as distance
+        elif args.subcommand == "distances":
+            from .bedspace.distances import main as distances
             _LOGGER.info("Computing distances between regionsets and labels")
-            distance(
-                input_file=args.input,
+            distances(
+                input=args.input,
                 path_to_starspace=args.path_to_starsapce,
                 metadata_train=args.metadata_train,
                 metadata_test=args.metadata_test,

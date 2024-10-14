@@ -32,10 +32,10 @@ def main(
 
 
     # PLACE CODE FOR RUNNING PREPROCESS HERE
-
-    file_list = meta_preprocessing(metadata, labels, data_path)
     universe = pybedtools.BedTool(universe)
+    file_list = meta_preprocessing(metadata, labels, data_path, "train")
     trained_documents = []
+    #print(f"univ: { universe.count()}")
     with Pool(processes=8) as p:
         trained_documents = tqdm(
             p.starmap(

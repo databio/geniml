@@ -47,8 +47,8 @@ def main(
 
     ## load input files
     universe = pybedtools.BedTool(universe)
-    file_list_train = meta_preprocessing(pd.read_csv(metadata_train), labels, files)
-    file_list_test = meta_preprocessing(pd.read_csv(metadata_test), labels, files)
+    file_list_train = meta_preprocessing(metadata_train, labels, files, "train")
+    file_list_test = meta_preprocessing(metadata_test, labels, files, "test")
 
     ## calculate region set (sample) to label distance
     #  define file path 
@@ -62,7 +62,7 @@ def main(
     embedding_labels, labels_l = get_label_embedding(label_embed, label_prefix)
     # predict sample embedding 
     bed2vec(
-        file_list_test, universe, input, docs,doc_embed_query, path_to_starsapce
+        file_list_test, universe, input, docs,doc_embed_query, path_to_starspace
     )
     # create sample&label embedding matrix
     query_vectors = get_embedding_matrix(doc_embed_query)
@@ -91,7 +91,7 @@ def main(
     doc_embed_db = os.path.join(output, "{}_train_starspace_embed.txt".format(project_name))
     # predict training sample embedding
     bed2vec(
-        file_list_train, universe, input, docs_db,doc_embed_db, path_to_starsapce
+        file_list_train, universe, input, docs_db,doc_embed_db, path_to_starspace
     )
     # create sample&label embedding matrix
     db_vectors = get_embedding_matrix(doc_embed_db)

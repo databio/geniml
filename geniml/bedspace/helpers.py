@@ -9,7 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
 
-def meta_preprocessing(meta_path, labels, input_path, chunksize=10000):
+def meta_preprocessing(meta_path, labels, input_path, mode, chunksize=10000):
     """
     Process the metadata file in chunks, combining file paths with associated labels.
     
@@ -27,7 +27,8 @@ def meta_preprocessing(meta_path, labels, input_path, chunksize=10000):
 
     # Define the columns to use
     cols = ["file_name"]
-    cols.extend(labels)
+    if mode == "train":
+        cols.extend(labels)
 
     file_list = []
     
@@ -41,14 +42,14 @@ def meta_preprocessing(meta_path, labels, input_path, chunksize=10000):
     return file_list
 
 
-def data_preparation(path_file_label: str, univ, type: str):
+def data_preparation(path_file_label: str, univ: str, mode: str):
     """
     Convert input region set data (BED files) into a StarSpace acceptable format.
 
     Parameters:
     - path_file_label (str): path to the BED file.
-    - univ (pybedtools obj): a universal set to intersect the BED file with.
-    - type (str): either "train" or "test".
+    - univ(bedtool obj): universe to intersect the BED file with.
+    - mode (str): either "train" or "test".
 
     Returns:
     - (list): A list containing the file path and the formatted region set data (with or without labels).
@@ -60,7 +61,7 @@ def data_preparation(path_file_label: str, univ, type: str):
     labels = ""
 
     # Generate labels only for 'train' type
-    if type == "train":
+    if mode == "train":
         labels = " ".join(["__label__" + label for label in path_file_label[1:] if label != ""])
     
     # Check if the file exists before processing
@@ -70,7 +71,7 @@ def data_preparation(path_file_label: str, univ, type: str):
     try:
         # Read the BED file and intersect with the universal set
         df = pybedtools.BedTool(path_file)
-        file_regions = univ.intersect(df, wa=True)
+        file_regions = univ.intersect(df, wa=True, nonamecheck=True)
         file_regions.columns = ["chrom", "start", "end"]
         # Return empty string if no regions found
         if len(file_regions) == 0:
@@ -87,7 +88,7 @@ def data_preparation(path_file_label: str, univ, type: str):
         )
         # Build the final result based on whether it's 'train' or not
         regions_str = " ".join(list(file_regions["region"]))
-        if type == "train":
+        if mode == "train":
             return [path_file, regions_str + " " + labels]
         else: 
             return [path_file, regions_str]
@@ -123,13 +124,13 @@ def get_label_embedding(path_word_embedding, label_prefix):
     return label_vectors, labels
 
 
-def bed2vec(file_list, universe, model, docs, doc_embed, path_to_starsapce):
+def bed2vec(file_list, univ, model, docs, doc_embed, path_to_starsapce):
     """
     Predict sample (region set) embedding using StarSpace. Write output to a file.
     
     Parameters:
     - file_list (df): List of BED files to process.
-    - universe (pybedtools obj): Universal set for intersecting with regions.
+    - univ (bedtool obj): universe for intersecting with regions.
     - model (str): Path to the trained StarSpace model.
     - docs (str): Path to save the context documents for embedding.
     - doc_embed (str): Path to save the predicted document embeddings.
@@ -138,7 +139,7 @@ def bed2vec(file_list, universe, model, docs, doc_embed, path_to_starsapce):
 
     trained_documents = []
     with Pool(16) as p:
-        trained_documents = tqdm(p.starmap(data_preparation, [(x, universe, "test") for x in file_list]), total=len(file_list))
+        trained_documents = tqdm(p.starmap(data_preparation, [(x, univ, "test") for x in file_list]), total=len(file_list))
         p.close()
         p.join()
     print("Reading files done")
@@ -193,7 +194,7 @@ def get_embedding_matrix(path_embeded_document):
     return Xs
 
 
-def calculate_distance(X_files, X_labels, y_files, y_labels, type):
+def calculate_distance(X_files, X_labels, y_files, y_labels, mode):
     """
     Calculate the cosine distance matrix between two sets of file embeddings 
     and return a melted DataFrame with the distances and associated labels.
@@ -219,7 +220,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels, type):
     df_distance_matrix.columns = y_labels
     
     # Handling different types
-    if type == "rl":
+    if mode == "rl":
         df_distance_matrix["file_label"] = [y_files[i].split(",")[1] for i in range(len(y_files))]
         file_distance = pd.melt(
             df_distance_matrix,
@@ -227,7 +228,7 @@ def calculate_distance(X_files, X_labels, y_files, y_labels, type):
             var_name="search_term",
             value_name="score"
         )
-    elif type == "rr":
+    elif mode == "rr":
         df_distance_matrix["db_file"] = y_files
         file_distance = pd.melt(
             df_distance_matrix,

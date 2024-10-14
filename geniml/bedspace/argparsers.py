@@ -104,13 +104,13 @@ def build_distance_argparser(
 
     parser.add_argument(
         "--metadata-train",
-        dest="metadata train",
+        dest="metadata_train",
         help="Path to train metadata file",
     )
 
     parser.add_argument(
         "--metadata-test",
-        dest="metadata test",
+        dest="metadata_test",
         help="Path to test metadata file",
     )
 
@@ -123,8 +123,8 @@ def build_distance_argparser(
 
     parser.add_argument(
         "-p",
-        "--project",
-        dest="project name",
+        "--project-name",
+        dest="project_name",
         help="project name",
     )
 
