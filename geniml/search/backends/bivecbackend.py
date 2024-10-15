@@ -84,9 +84,9 @@ class BiVectorBackend:
         # metadata search
         metadata_results = self.metadata_backend.search(
             query,
-            limit=int(math.log(limit) * 5) if limit > 10 else 10,
+            limit=int(math.log(limit) * 5) if limit > 10 else 5,
             with_payload=True,
-            offset=offset,
+            offset=0,
         )
 
         if not isinstance(metadata_results, list):
@@ -134,10 +134,10 @@ class BiVectorBackend:
 
             retrieved_batch = self.bed_backend.search(
                 bed_vecs,
-                limit=limit * 2 if limit < 500 else 500,
+                limit=limit * 2 if limit < 100 else 100,
                 with_payload=with_payload,
                 with_vectors=with_vectors,
-                offset=offset,
+                offset=0,
             )
 
             for retrieved_bed in retrieved_batch:
@@ -147,7 +147,7 @@ class BiVectorBackend:
                     # collect maximum rank
                     max_rank.append(max(i, j))
 
-        return self._top_k(max_rank, bed_results, limit, True)
+        return self._top_k(max_rank, bed_results, limit, offset=offset, rank=True)
 
     def _score_search(
         self,
@@ -189,10 +189,10 @@ class BiVectorBackend:
 
             retrieved_batch = self.bed_backend.search(
                 bed_vecs,
-                limit=limit,
+                limit=limit * 2 if limit < 100 else 100,
                 with_payload=with_payload,
                 with_vectors=with_vectors,
-                offset=offset,
+                offset=0,
             )
 
             for retrieved_bed in retrieved_batch:
@@ -206,13 +206,14 @@ class BiVectorBackend:
                     bed_results.append(retrieval)
                     overall_scores.append(p * text_score + q * bed_score)
 
-        return self._top_k(overall_scores, bed_results, limit, False)
+        return self._top_k(overall_scores, bed_results, limit=limit, offset=offset, rank=False)
 
     def _top_k(
         self,
         scales: List[Union[int, float]],
         results: List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
-        k: int,
+        limit: int = 10,
+        offset: int = 0,
         rank: bool = True,
     ):
         """
@@ -220,7 +221,8 @@ class BiVectorBackend:
 
         :param scales: list of weighted scores or maximum rank
         :param results: retrieval result
-        :param k: number of result to return
+        :param limit: number of result to return
+        :param offset: the offset of the search results
         :param rank: whether the scale is maximum rank or not
         :return: the top k selected result after rank
         """
@@ -251,5 +253,5 @@ class BiVectorBackend:
                     result["max_rank"] = scale
                 unique_result[store_id] = result
 
-        top_k_results = list(unique_result.values())[:k]
+        top_k_results = list(unique_result.values())[offset : limit + offset]
         return top_k_results
