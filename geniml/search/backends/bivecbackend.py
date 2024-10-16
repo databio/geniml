@@ -149,7 +149,7 @@ class BiVectorBackend:
         # search request once
         retrieved_batch = self.bed_backend.search(
             bed_vecs,
-            limit=limit * 2 if limit < 100 else 100,
+            limit=limit,
             with_payload=with_payload,
             with_vectors=with_vectors,
             offset=0,
@@ -215,7 +215,7 @@ class BiVectorBackend:
 
         retrieved_batch = self.bed_backend.search(
             bed_vecs,
-            limit=limit * 2 if limit < 100 else 100,
+            limit=limit,
             with_payload=with_payload,
             with_vectors=with_vectors,
             offset=0,
