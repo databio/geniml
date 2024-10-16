@@ -500,6 +500,7 @@ def test_BiVectorBackend(
 
             if not rank:
                 assert isinstance(result["score"], float)
+                assert 0 <= result["score"] <= 1
                 assert result["score"] <= min_score
                 min_score = result["score"]
             else:
