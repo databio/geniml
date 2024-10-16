@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
@@ -10,17 +10,25 @@ from .abstract import EmSearchBackend
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
-def batch_bed_vectors(matching_beds: List[Dict]) -> np.ndarray:
+def batch_bed_vectors(
+    matching_beds: List[Dict], text_results: Union[None, List[int], List[float]] = None
+) -> Tuple[np.ndarray, List]:
     """
     Stack the embedding vector of bed files related to a metadata tag together for batch search
 
     :param matching_beds: result of BED retrieval from Qdrant Client by ids
+    :param text_results: keep track of rank or score from metadata embedding search that matches each query bed
     """
+
     bed_vectors = []
-    for bed in matching_beds:
+    valid_text_results = []
+    for idx, bed in enumerate(matching_beds):
         try:
             bed_vec = bed["vector"]
             bed_vectors.append(bed_vec)
+            # only keep metadata embedding score / rank of valid bed vectors
+            if text_results is not None:
+                valid_text_results.append(text_results[idx])
         except KeyError:
             _LOGGER.warning(f"Retrieved result missing vector: {bed}")
             continue
@@ -29,7 +37,7 @@ def batch_bed_vectors(matching_beds: List[Dict]) -> np.ndarray:
                 f"Please check the data loading; retrieved result is not a dictionary: {bed}"
             )
             continue
-    return np.array(bed_vectors)
+    return np.array(bed_vectors), valid_text_results
 
 
 class BiVectorBackend:
@@ -84,9 +92,9 @@ class BiVectorBackend:
         # metadata search
         metadata_results = self.metadata_backend.search(
             query,
-            limit=int(math.log(limit) * 5) if limit > 10 else 5,
+            limit=int(math.log(limit) * 5) if limit > 10 else 10,
             with_payload=True,
-            offset=0,
+            offset=offset,
         )
 
         if not isinstance(metadata_results, list):
@@ -117,37 +125,47 @@ class BiVectorBackend:
         :param offset:
         :return: the search result ranked based on maximum rank
         """
-        max_rank = []
-        bed_results = []
 
-        for i in range(len(metadata_results)):
-            result = metadata_results[i]
+        text_rank = []
+        query_beds = []
 
+        query_bed_ids = set()
+
+        for i, result in enumerate(metadata_results):
             # all bed files matching the retrieved metadata tag
             bed_ids = result["payload"][self.metadata_payload_matches]
-            matching_beds = self.bed_backend.retrieve_info(bed_ids, with_vectors=True)
 
-            # use each single bed file as the query in the bed embedding backend
-            bed_vecs = batch_bed_vectors(matching_beds)
-            if len(bed_vecs) == 0:
-                continue
+            unique_bed_ids = [id_ for id_ in bed_ids if id_ not in query_bed_ids]
+            query_bed_ids.update(unique_bed_ids)
+            matching_beds = self.bed_backend.retrieve_info(unique_bed_ids, with_vectors=True)
+            if not isinstance(matching_beds, list):
+                matching_beds = [matching_beds]
+            for retrieved in matching_beds:
+                text_rank.append(i)
+                query_beds.append(retrieved)
 
-            retrieved_batch = self.bed_backend.search(
-                bed_vecs,
-                limit=limit * 2 if limit < 100 else 100,
-                with_payload=with_payload,
-                with_vectors=with_vectors,
-                offset=0,
-            )
+        bed_vecs, matching_text_rank = batch_bed_vectors(query_beds, text_rank)
 
-            for retrieved_bed in retrieved_batch:
-                for j in range(len(retrieved_bed)):
-                    retrieval = retrieved_bed[j]
-                    bed_results.append(retrieval)
-                    # collect maximum rank
-                    max_rank.append(max(i, j))
+        # search request once
+        retrieved_batch = self.bed_backend.search(
+            bed_vecs,
+            limit=limit * 2 if limit < 500 else 500,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+            offset=offset,
+        )
 
-        return self._top_k(max_rank, bed_results, limit, offset=offset, rank=True)
+        bed_results = []
+        max_rank = []
+
+        for i, retrieved_beds in enumerate(retrieved_batch):
+            # j: rank for each bed vector query search
+            for j, retrieval in enumerate(retrieved_beds):
+                bed_results.append(retrieval)
+                # collect maximum rank
+                max_rank.append(max(matching_text_rank[i], j))
+
+        return self._top_k(max_rank, bed_results, limit, True)
 
     def _score_search(
         self,
@@ -171,8 +189,11 @@ class BiVectorBackend:
         :param q:
         :return: the search result ranked based on weighted similarity scores
         """
-        overall_scores = []
-        bed_results = []
+        text_scores = []
+        query_beds = []
+
+        query_bed_ids = set()
+
         for result in metadata_results:
             # similarity score between query term and metadat tag
             text_score = (
@@ -181,39 +202,47 @@ class BiVectorBackend:
                 else result[self.score_key]
             )
             bed_ids = result["payload"][self.metadata_payload_matches]
-            matching_beds = self.bed_backend.retrieve_info(bed_ids, with_vectors=True)
-            bed_vecs = batch_bed_vectors(matching_beds)
+            unique_bed_ids = [id_ for id_ in bed_ids if id_ not in query_bed_ids]
+            query_bed_ids.update(unique_bed_ids)
+            matching_beds = self.bed_backend.retrieve_info(unique_bed_ids, with_vectors=True)
+            if not isinstance(matching_beds, list):
+                matching_beds = [matching_beds]
+            for retrieved in matching_beds:
+                text_scores.append(text_score)
+                query_beds.append(retrieved)
 
-            if len(bed_vecs) == 0:
-                continue
+        bed_vecs, matching_text_scores = batch_bed_vectors(query_beds, text_scores)
 
-            retrieved_batch = self.bed_backend.search(
-                bed_vecs,
-                limit=limit * 2 if limit < 100 else 100,
-                with_payload=with_payload,
-                with_vectors=with_vectors,
-                offset=0,
-            )
+        retrieved_batch = self.bed_backend.search(
+            bed_vecs,
+            limit=limit * 2 if limit < 500 else 500,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+            offset=offset,
+        )
 
-            for retrieved_bed in retrieved_batch:
-                for retrieval in retrieved_bed:
-                    # calculate weighted score
-                    bed_score = (
-                        1 - result[self.score_key]
-                        if self.score_key == "distance"
-                        else result[self.score_key]
-                    )
-                    bed_results.append(retrieval)
-                    overall_scores.append(p * text_score + q * bed_score)
+        bed_results = []
+        overall_scores = []
 
-        return self._top_k(overall_scores, bed_results, limit=limit, offset=offset, rank=False)
+        for i, retrieved_beds in enumerate(retrieved_batch):
+            # j: rank for each bed vector query search
+            for retrieval in retrieved_beds:
+                # calculate weighted score
+                bed_score = (
+                    1 - retrieval[self.score_key]
+                    if self.score_key == "distance"
+                    else retrieval[self.score_key]
+                )
+                bed_results.append(retrieval)
+                overall_scores.append((p * matching_text_scores[i] + q * bed_score) / 2)
+
+        return self._top_k(overall_scores, bed_results, limit, False)
 
     def _top_k(
         self,
         scales: List[Union[int, float]],
         results: List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
-        limit: int = 10,
-        offset: int = 0,
+        k: int,
         rank: bool = True,
     ):
         """
@@ -221,8 +250,7 @@ class BiVectorBackend:
 
         :param scales: list of weighted scores or maximum rank
         :param results: retrieval result
-        :param limit: number of result to return
-        :param offset: the offset of the search results
+        :param k: number of result to return
         :param rank: whether the scale is maximum rank or not
         :return: the top k selected result after rank
         """
@@ -253,5 +281,5 @@ class BiVectorBackend:
                     result["max_rank"] = scale
                 unique_result[store_id] = result
 
-        top_k_results = list(unique_result.values())[offset : limit + offset]
+        top_k_results = list(unique_result.values())[:k]
         return top_k_results
