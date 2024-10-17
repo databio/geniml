@@ -97,7 +97,7 @@ class BiVectorBackend:
         """
 
         text_rank = []
-        query_beds = []
+        ids_to_retrieve = []
 
         query_bed_ids = set()
 
@@ -107,12 +107,14 @@ class BiVectorBackend:
 
             unique_bed_ids = [id_ for id_ in bed_ids if id_ not in query_bed_ids]
             query_bed_ids.update(unique_bed_ids)
-            matching_beds = self.bed_backend.retrieve_info(unique_bed_ids, with_vectors=True)
-            if isinstance(matching_beds, dict):
-                matching_beds = [matching_beds]
-            for retrieved in matching_beds:
+
+            for id_ in unique_bed_ids:
                 text_rank.append(i)
-                query_beds.append(retrieved)
+                ids_to_retrieve.append(id_)
+
+        query_beds = self.bed_backend.retrieve_info(ids_to_retrieve, with_vectors=True)
+        if isinstance(query_beds, dict):
+            query_beds = [query_beds]
 
         bed_vecs = [b["vector"] for b in query_beds]
 
@@ -160,26 +162,28 @@ class BiVectorBackend:
         :return: the search result ranked based on weighted similarity scores
         """
         text_scores = []
-        query_beds = []
+        ids_to_retrieve = []
 
         query_bed_ids = set()
-
-        for result in metadata_results:
-            # similarity score between query term and metadat tag
+        for i, result in enumerate(metadata_results):
+            # all bed files matching the retrieved metadata tag
             text_score = (
                 1 - result[self.score_key]
                 if self.score_key == "distance"
                 else result[self.score_key]
             )
             bed_ids = result["payload"][self.metadata_payload_matches]
+
             unique_bed_ids = [id_ for id_ in bed_ids if id_ not in query_bed_ids]
             query_bed_ids.update(unique_bed_ids)
-            matching_beds = self.bed_backend.retrieve_info(unique_bed_ids, with_vectors=True)
-            if isinstance(matching_beds, dict):
-                matching_beds = [matching_beds]
-            for retrieved in matching_beds:
+
+            for id_ in unique_bed_ids:
                 text_scores.append(text_score)
-                query_beds.append(retrieved)
+                ids_to_retrieve.append(id_)
+
+        query_beds = self.bed_backend.retrieve_info(ids_to_retrieve, with_vectors=True)
+        if isinstance(query_beds, dict):
+            query_beds = [query_beds]
 
         bed_vecs = [b["vector"] for b in query_beds]
 
