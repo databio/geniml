@@ -10,36 +10,6 @@ from .abstract import EmSearchBackend
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
-def batch_bed_vectors(
-    matching_beds: List[Dict], text_results: Union[None, List[int], List[float]] = None
-) -> Tuple[np.ndarray, List]:
-    """
-    Stack the embedding vector of bed files related to a metadata tag together for batch search
-
-    :param matching_beds: result of BED retrieval from Qdrant Client by ids
-    :param text_results: keep track of rank or score from metadata embedding search that matches each query bed
-    """
-
-    bed_vectors = []
-    valid_text_results = []
-    for idx, bed in enumerate(matching_beds):
-        try:
-            bed_vec = bed["vector"]
-            bed_vectors.append(bed_vec)
-            # only keep metadata embedding score / rank of valid bed vectors
-            if text_results is not None:
-                valid_text_results.append(text_results[idx])
-        except KeyError:
-            _LOGGER.warning(f"Retrieved result missing vector: {bed}")
-            continue
-        except TypeError:
-            _LOGGER.warning(
-                f"Please check the data loading; retrieved result is not a dictionary: {bed}"
-            )
-            continue
-    return np.array(bed_vectors), valid_text_results
-
-
 class BiVectorBackend:
     """
     Search backend that connects the embeddings of metadata tags and bed files
@@ -97,7 +67,7 @@ class BiVectorBackend:
             offset=0,
         )
 
-        if not isinstance(metadata_results, list):
+        if isinstance(metadata_results, dict):
             metadata_results = [metadata_results]
 
         if rank:
@@ -138,17 +108,17 @@ class BiVectorBackend:
             unique_bed_ids = [id_ for id_ in bed_ids if id_ not in query_bed_ids]
             query_bed_ids.update(unique_bed_ids)
             matching_beds = self.bed_backend.retrieve_info(unique_bed_ids, with_vectors=True)
-            if not isinstance(matching_beds, list):
+            if isinstance(matching_beds, dict):
                 matching_beds = [matching_beds]
             for retrieved in matching_beds:
                 text_rank.append(i)
                 query_beds.append(retrieved)
 
-        bed_vecs, matching_text_rank = batch_bed_vectors(query_beds, text_rank)
+        bed_vecs = [b["vector"] for b in query_beds]
 
         # search request once
         retrieved_batch = self.bed_backend.search(
-            bed_vecs,
+            np.array(bed_vecs),
             limit=limit,
             with_payload=with_payload,
             with_vectors=with_vectors,
@@ -163,7 +133,7 @@ class BiVectorBackend:
             for j, retrieval in enumerate(retrieved_beds):
                 bed_results.append(retrieval)
                 # collect maximum rank
-                max_rank.append(max(matching_text_rank[i], j))
+                max_rank.append(max(text_rank[i], j))
 
         return self._top_k(max_rank, bed_results, limit, offset=offset, rank=True)
 
@@ -205,16 +175,16 @@ class BiVectorBackend:
             unique_bed_ids = [id_ for id_ in bed_ids if id_ not in query_bed_ids]
             query_bed_ids.update(unique_bed_ids)
             matching_beds = self.bed_backend.retrieve_info(unique_bed_ids, with_vectors=True)
-            if not isinstance(matching_beds, list):
+            if isinstance(matching_beds, dict):
                 matching_beds = [matching_beds]
             for retrieved in matching_beds:
                 text_scores.append(text_score)
                 query_beds.append(retrieved)
 
-        bed_vecs, matching_text_scores = batch_bed_vectors(query_beds, text_scores)
+        bed_vecs = [b["vector"] for b in query_beds]
 
         retrieved_batch = self.bed_backend.search(
-            bed_vecs,
+            np.array(bed_vecs),
             limit=limit,
             with_payload=with_payload,
             with_vectors=with_vectors,
@@ -234,7 +204,7 @@ class BiVectorBackend:
                     else retrieval[self.score_key]
                 )
                 bed_results.append(retrieval)
-                overall_scores.append((p * matching_text_scores[i] + q * bed_score) / 2)
+                overall_scores.append((p * text_scores[i] + q * bed_score) / 2)
 
         return self._top_k(overall_scores, bed_results, limit=limit, offset=offset, rank=False)
 
