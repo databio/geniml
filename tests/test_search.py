@@ -492,6 +492,7 @@ def test_BiVectorBackend(
             query_vec, 2, with_payload=True, with_vectors=True, distance=dist, rank=rank
         )
         assert isinstance(search_results, list)
+        assert len(search_results) == 2
         min_score = 100.0
         max_rank = -1
         for result in search_results:
