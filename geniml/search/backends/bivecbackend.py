@@ -10,6 +10,30 @@ from .abstract import EmSearchBackend
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
+def batch_for_request(
+    ids: Union[List[str], List[int]], ranks_scores: List[float], batch_size: int = 100
+) -> List[Tuple[List, List]]:  # used ChatGPT
+    """
+
+    :param ids: collected ids of BED files matching retrieved metadata tags
+    :param ranks_scores: keep track of ranks or scores from metadata tag embedding vector search
+    :param batch_size: size of batch, > 100 may crash qdrant server
+    :return: batched BED ids and matching text-search scores/ranks
+    """
+    # Check if the lists are the same length
+    if len(ids) != len(ranks_scores):
+        raise ValueError("The lists must have the same length.")
+
+    # Create batches
+    batches = []
+    for i in range(0, len(ids), batch_size):
+        batch1 = ids[i : i + batch_size]
+        batch2 = ranks_scores[i : i + batch_size]
+        batches.append((batch1, batch2))
+
+    return batches
+
+
 class BiVectorBackend:
     """
     Search backend that connects the embeddings of metadata tags and bed files
@@ -111,31 +135,32 @@ class BiVectorBackend:
             for id_ in unique_bed_ids:
                 text_rank.append(i)
                 ids_to_retrieve.append(id_)
-
-        query_beds = self.bed_backend.retrieve_info(ids_to_retrieve, with_vectors=True)
-        if isinstance(query_beds, dict):
-            query_beds = [query_beds]
-
-        bed_vecs = [b["vector"] for b in query_beds]
-
-        # search request once
-        retrieved_batch = self.bed_backend.search(
-            np.array(bed_vecs),
-            limit=limit,
-            with_payload=with_payload,
-            with_vectors=with_vectors,
-            offset=0,
-        )
-
         bed_results = []
         max_rank = []
+        request_batches = batch_for_request(ids_to_retrieve, text_rank, 100)
 
-        for i, retrieved_beds in enumerate(retrieved_batch):
-            # j: rank for each bed vector query search
-            for j, retrieval in enumerate(retrieved_beds):
-                bed_results.append(retrieval)
-                # collect maximum rank
-                max_rank.append(max(text_rank[i], j))
+        for ids, ranks in request_batches:
+            query_beds = self.bed_backend.retrieve_info(ids, with_vectors=True)
+            if isinstance(query_beds, dict):
+                query_beds = [query_beds]
+
+            bed_vecs = [b["vector"] for b in query_beds]
+
+            # search request once
+            retrieved_batch = self.bed_backend.search(
+                np.array(bed_vecs),
+                limit=limit,
+                with_payload=with_payload,
+                with_vectors=with_vectors,
+                offset=0,
+            )
+
+            for i, retrieved_beds in enumerate(retrieved_batch):
+                # j: rank for each bed vector query search
+                for j, retrieval in enumerate(retrieved_beds):
+                    bed_results.append(retrieval)
+                    # collect maximum rank
+                    max_rank.append(max(ranks[i], j))
 
         return self._top_k(max_rank, bed_results, limit, offset=offset, rank=True)
 
@@ -181,34 +206,37 @@ class BiVectorBackend:
                 text_scores.append(text_score)
                 ids_to_retrieve.append(id_)
 
-        query_beds = self.bed_backend.retrieve_info(ids_to_retrieve, with_vectors=True)
-        if isinstance(query_beds, dict):
-            query_beds = [query_beds]
-
-        bed_vecs = [b["vector"] for b in query_beds]
-
-        retrieved_batch = self.bed_backend.search(
-            np.array(bed_vecs),
-            limit=limit,
-            with_payload=with_payload,
-            with_vectors=with_vectors,
-            offset=0,
-        )
-
         bed_results = []
         overall_scores = []
 
-        for i, retrieved_beds in enumerate(retrieved_batch):
-            # j: rank for each bed vector query search
-            for retrieval in retrieved_beds:
-                # calculate weighted score
-                bed_score = (
-                    1 - retrieval[self.score_key]
-                    if self.score_key == "distance"
-                    else retrieval[self.score_key]
-                )
-                bed_results.append(retrieval)
-                overall_scores.append((p * text_scores[i] + q * bed_score) / 2)
+        request_batches = batch_for_request(ids_to_retrieve, text_scores, 100)
+
+        for ids, scores in request_batches:
+            query_beds = self.bed_backend.retrieve_info(ids, with_vectors=True)
+            if isinstance(query_beds, dict):
+                query_beds = [query_beds]
+
+            bed_vecs = [b["vector"] for b in query_beds]
+
+            retrieved_batch = self.bed_backend.search(
+                np.array(bed_vecs),
+                limit=limit,
+                with_payload=with_payload,
+                with_vectors=with_vectors,
+                offset=0,
+            )
+
+            for i, retrieved_beds in enumerate(retrieved_batch):
+                # j: rank for each bed vector query search
+                for retrieval in retrieved_beds:
+                    # calculate weighted score
+                    bed_score = (
+                        1 - retrieval[self.score_key]
+                        if self.score_key == "distance"
+                        else retrieval[self.score_key]
+                    )
+                    bed_results.append(retrieval)
+                    overall_scores.append((p * scores[i] + q * bed_score) / 2)
 
         return self._top_k(overall_scores, bed_results, limit=limit, offset=offset, rank=False)
 
