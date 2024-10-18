@@ -1,11 +1,9 @@
 import os
-import pprint
 import random
 from typing import Dict, List
 
 import numpy as np
 import pytest
-
 from geniml.io import RegionSet
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search import BED2BEDSearchInterface, BED2Vec, Text2BEDSearchInterface, Text2Vec
@@ -350,6 +348,7 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
     batch_result = qd_search_backend.search(
         batch_query, limit=3, with_payload=True, with_vectors=True
     )
+    assert len(batch_result) == 6
     for batch in batch_result:
         search_results_test(batch)
 
@@ -475,7 +474,7 @@ def test_HNSWBackend_save(filenames, bed_hnswb, bed_embeddings, temp_bed_idx_pat
     "not config.getoption('--qdrant')",
     reason="Only run when --qdrant is given",
 )
-def test_QD_BiVectorBackend(
+def test_BiVectorBackend(
     bed_hnswb,
     metadata_hnswb,
     bed_collection,
@@ -493,6 +492,7 @@ def test_QD_BiVectorBackend(
             query_vec, 2, with_payload=True, with_vectors=True, distance=dist, rank=rank
         )
         assert isinstance(search_results, list)
+        assert len(search_results) == 2
         min_score = 100.0
         max_rank = -1
         for result in search_results:
@@ -501,6 +501,7 @@ def test_QD_BiVectorBackend(
 
             if not rank:
                 assert isinstance(result["score"], float)
+                assert 0 <= result["score"] <= 1
                 assert result["score"] <= min_score
                 min_score = result["score"]
             else:
