@@ -19,7 +19,7 @@ geniml bedspace train -s $path_starspace -i $preprocessed_input -n $epochs -d $d
 
 # DISTANCE CALCULATION 
 model='/home/bx2ur/code/reninness_score/test_outputs/gitk_univ_d10/starspace_trained_model'
-path_starspace='/home/bx2ur/code/reninness_score/tools/Starspace/starspace'
+path_starspace='/home/bx2ur/code/reninness_score/tools/Starspace/'
 train_meta='/home/bx2ur/code/reninness_score/tests/renin_singlecell_data_with_label.csv'
 test_meta='/home/bx2ur/code/reninness_score/tests/ctrl_6mo.csv'
 universe='/home/bx2ur/code/reninness_score/data/universe/universe.bed'
