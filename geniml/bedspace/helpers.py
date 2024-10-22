@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-import pybedtools
+from geniml.io import RegionSet
 from multiprocessing import Pool
 from subprocess import check_output
 from scipy.spatial import distance
@@ -42,13 +42,13 @@ def meta_preprocessing(meta_path, labels, input_path, mode, chunksize=10000):
     return file_list
 
 
-def data_preparation(path_file_label: str, univ: str, mode: str):
+def data_preparation(path_file_label: str, univ, mode: str):
     """
     Convert input region set data (BED files) into a StarSpace acceptable format.
 
     Parameters:
     - path_file_label (str): path to the BED file.
-    - univ(bedtool obj): universe to intersect the BED file with.
+    - univ(TreeTokenizer obj): universe to intersect the BED file with.
     - mode (str): either "train" or "test".
 
     Returns:
@@ -70,24 +70,15 @@ def data_preparation(path_file_label: str, univ: str, mode: str):
 
     try:
         # Read the BED file and intersect with the universal set
-        df = pybedtools.BedTool(path_file)
-        file_regions = univ.intersect(df, wa=True, nonamecheck=True)
-        file_regions.columns = ["chrom", "start", "end"]
-        # Return empty string if no regions found
-        if len(file_regions) == 0:
-            return [path_file, " "]
-        # Convert to DataFrame and remove duplicates
-        file_regions = file_regions.to_dataframe().drop_duplicates()
-        # Create the "region" column by combining chrom, start, and end
-        file_regions["region"] = (
-            file_regions["chrom"]
-            + "_"
-            + file_regions["start"].astype(str)
-            + "_"
-            + file_regions["end"].astype(str)
-        )
-        # Build the final result based on whether it's 'train' or not
-        regions_str = " ".join(list(file_regions["region"]))
+        rs = RegionSet(path_file)
+        tokens = univ(rs)
+        unk_id = univ.unknown_token_id()
+        tokens = [t for t in tokens if t.id != unk_id]
+        regions = [f"{token.chr}_{token.start}_{token.end}" for token in tokens]
+        # remove duplicates
+        regions = list(dict.fromkeys(regions))
+        regions_str = " ".join(regions)
+
         if mode == "train":
             return [path_file, regions_str + " " + labels]
         else: 
@@ -130,7 +121,7 @@ def bed2vec(file_list, univ, model, docs, doc_embed, path_to_starsapce):
     
     Parameters:
     - file_list (df): List of BED files to process.
-    - univ (bedtool obj): universe for intersecting with regions.
+    - univ (TreeTokenizer obj): universe for intersecting with regions.
     - model (str): Path to the trained StarSpace model.
     - docs (str): Path to save the context documents for embedding.
     - doc_embed (str): Path to save the predicted document embeddings.

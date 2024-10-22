@@ -1,7 +1,7 @@
 import logging
 from multiprocessing import Pool
 import pandas as pd
-import pybedtools
+from geniml.tokenization.main import TreeTokenizer
 import datetime
 from tqdm import tqdm
 
@@ -32,10 +32,9 @@ def main(
 
 
     # PLACE CODE FOR RUNNING PREPROCESS HERE
-    universe = pybedtools.BedTool(universe)
+    universe = TreeTokenizer(universe)
     file_list = meta_preprocessing(metadata, labels, data_path, "train")
     trained_documents = []
-    #print(f"univ: { universe.count()}")
     with Pool(processes=8) as p:
         trained_documents = tqdm(
             p.starmap(

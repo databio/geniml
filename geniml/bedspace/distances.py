@@ -3,7 +3,7 @@ import os
 import datetime
 import numpy as np
 import pandas as pd
-import pybedtools
+from geniml.tokenization.main import TreeTokenizer
 from sklearn.preprocessing import MinMaxScaler
 
 from .helpers import meta_preprocessing, bed2vec, get_label_embedding, get_embedding_matrix, calculate_distance
@@ -44,9 +44,11 @@ def main(
     # PLACE CODE FOR RUNNING DISTANCES HERE
     label_prefix = "__label__"
     temp_path = CACHE_DIR
+    if not os.path.exists(temp_path):
+        os.makedirs(temp_path)
 
     ## load input files
-    universe = pybedtools.BedTool(universe)
+    universe = TreeTokenizer(universe)
     file_list_train = meta_preprocessing(metadata_train, labels, files, "train")
     file_list_test = meta_preprocessing(metadata_test, labels, files, "test")
 
