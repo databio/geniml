@@ -71,9 +71,27 @@ class Region2VecExModel(ExModel):
             self._init_model(tokenizer, **kwargs)
 
         # set the device
-        self._target_device = torch.device(
-            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
-        )
+        self._set_device(device)
+
+    def _set_device(self, device: Union[str, None] = None):
+        # Detect and set the target device
+        if device is None:
+            # Get the first visible GPU assigned by SLURM or default to 0
+            gpu_id = os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0]
+            device = f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu"
+
+        # Set the target device
+        self._target_device = torch.device(device)
+        _LOGGER.info(f"Using device: {self._target_device}")
+
+        # Move model to the target device if it exists and GPU is available
+        if self._model is not None:
+            if "cuda" in device and not torch.cuda.is_available():
+                _LOGGER.warning("CUDA not available, defaulting to CPU.")
+                self._target_device = torch.device("cpu")
+
+            self._model = self._model.to(self._target_device)
+            _LOGGER.info(f"Model moved to {self._target_device}")
 
     def _init_tokenizer(self, tokenizer: Union[TreeTokenizer, str]):
         """
@@ -345,22 +363,22 @@ class Region2VecExModel(ExModel):
         # tokenize the regionm -- need to pass it as a list because the tokenizer expects a list
         tokens = [self.tokenizer([r]) for r in regions]
         token_tensors = [
-            torch.tensor(token_set.to_ids(), dtype=torch.long) for token_set in tokens
+            torch.tensor(token_set.to_ids(), dtype=torch.long).to(self._target_device) for token_set in tokens
         ]
 
         region_embeddings = []
-
-        for token_tensor in token_tensors:
-            if pooling == "mean":
-                region_embeddings.append(
-                    torch.mean(self._model.projection(token_tensor), axis=0).detach().numpy()
-                )
-            elif pooling == "max":
-                region_embeddings.append(
-                    torch.max(self._model.projection(token_tensor), axis=0).detach().numpy()
-                )
-            else:
-                # this should be unreachable
-                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+        with torch.no_grad():
+            for token_tensor in token_tensors:
+                if pooling == "mean":
+                    region_embeddings.append(
+                        torch.mean(self._model.projection(token_tensor), axis=0).detach().cpu().numpy()
+                    )
+                elif pooling == "max":
+                    region_embeddings.append(
+                        torch.max(self._model.projection(token_tensor), axis=0).detach().cpu().numpy()
+                    )
+                else:
+                    # this should be unreachable
+                    raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         return np.vstack(region_embeddings)
