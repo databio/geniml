@@ -215,6 +215,8 @@ class Region2VecExModel(ExModel):
         instance._load_local_model(model_file_path, universe_config_file_path, config_file_path)
         instance.trained = True
 
+        instance._set_device()
+
         return instance
 
     def _validate_data_for_training(
