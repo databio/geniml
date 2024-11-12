@@ -5,9 +5,9 @@ from typing import List, Union
 import numpy as np
 import torch
 from gensim.models.callbacks import CallbackAny2Vec
+from gtars.tokenizers import RegionSet as GRegionSet
 from huggingface_hub import hf_hub_download
 from rich.progress import track
-from gtars.tokenizers import RegionSet as GRegionSet
 
 from ..io import Region, RegionSet
 from ..models import ExModel
@@ -22,8 +22,8 @@ from .const import (
     MODULE_NAME,
     POOLING_METHOD_KEY,
     POOLING_TYPES,
-    UNIVERSE_FILE_NAME,
     UNIVERSE_CONFIG_FILE_NAME,
+    UNIVERSE_FILE_NAME,
 )
 from .models import Region2Vec
 from .utils import (
@@ -365,7 +365,8 @@ class Region2VecExModel(ExModel):
         # tokenize the regionm -- need to pass it as a list because the tokenizer expects a list
         tokens = [self.tokenizer([r]) for r in regions]
         token_tensors = [
-            torch.tensor(token_set.to_ids(), dtype=torch.long).to(self._target_device) for token_set in tokens
+            torch.tensor(token_set.to_ids(), dtype=torch.long).to(self._target_device)
+            for token_set in tokens
         ]
 
         region_embeddings = []
@@ -373,11 +374,21 @@ class Region2VecExModel(ExModel):
             for token_tensor in token_tensors:
                 if pooling == "mean":
                     region_embeddings.append(
-                        torch.mean(self._model.projection(token_tensor), axis=0).detach().cpu().numpy()
+                        torch.mean(
+                            self._model.projection(token_tensor.to(self._target_device)), axis=0
+                        )
+                        .detach()
+                        .cpu()
+                        .numpy()
                     )
                 elif pooling == "max":
                     region_embeddings.append(
-                        torch.max(self._model.projection(token_tensor), axis=0).detach().cpu().numpy()
+                        torch.max(
+                            self._model.projection(token_tensor.to(self._target_device)), axis=0
+                        )
+                        .detach()
+                        .cpu()
+                        .numpy()
                     )
                 else:
                     # this should be unreachable
