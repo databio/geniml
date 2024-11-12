@@ -370,29 +370,19 @@ class Region2VecExModel(ExModel):
             for token_set in tokens
         ]
 
-        # Print debug information for device checking
-        print(f"Target device: {self._target_device}")
-        print(f"Model device: {next(self._model.parameters()).device}")  # Print device of the model
-        print(f"Projection layer device: {self._model.projection.weight.device}")  # Device of embedding layer
-        print(f"Token tensor device: {token_tensors[0].device}")  # Device of the first token tensor
-
         region_embeddings = []
         with torch.no_grad():
             for token_tensor in token_tensors:
                 if pooling == "mean":
                     region_embeddings.append(
-                        torch.mean(
-                            self._model.projection(token_tensor.to(self._target_device)), axis=0
-                        )
+                        torch.mean(self._model.projection(token_tensor), axis=0)
                         .detach()
                         .cpu()
                         .numpy()
                     )
                 elif pooling == "max":
                     region_embeddings.append(
-                        torch.max(
-                            self._model.projection(token_tensor.to(self._target_device)), axis=0
-                        )
+                        torch.max(self._model.projection(token_tensor), axis=0)
                         .detach()
                         .cpu()
                         .numpy()
