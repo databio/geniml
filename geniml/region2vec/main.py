@@ -90,7 +90,7 @@ class Region2VecExModel(ExModel):
                 _LOGGER.warning("CUDA not available, defaulting to CPU.")
                 self._target_device = torch.device("cpu")
 
-            self._model = self._model.to(self._target_device)
+            self._model.to(self._target_device)
             _LOGGER.info(f"Model moved to {self._target_device}")
 
     def _init_tokenizer(self, tokenizer: Union[TreeTokenizer, str]):
@@ -364,10 +364,17 @@ class Region2VecExModel(ExModel):
 
         # tokenize the regionm -- need to pass it as a list because the tokenizer expects a list
         tokens = [self.tokenizer([r]) for r in regions]
+
         token_tensors = [
             torch.tensor(token_set.to_ids(), dtype=torch.long).to(self._target_device)
             for token_set in tokens
         ]
+
+        # Print debug information for device checking
+        print(f"Target device: {self._target_device}")
+        print(f"Model device: {next(self._model.parameters()).device}")  # Print device of the model
+        print(f"Projection layer device: {self._model.projection.weight.device}")  # Device of embedding layer
+        print(f"Token tensor device: {token_tensors[0].device}")  # Device of the first token tensor
 
         region_embeddings = []
         with torch.no_grad():
