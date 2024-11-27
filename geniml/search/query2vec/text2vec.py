@@ -2,8 +2,8 @@ import logging
 from typing import Union
 
 import numpy as np
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-
+# from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from fastembed import TextEmbedding
 from ...const import PKG_NAME
 from ...text2bednn import Vec2VecFNN
 from .abstract import Query2Vec
@@ -20,7 +20,7 @@ class Text2Vec(Query2Vec):
         :param v2v: a Vec2VecFNN (see geniml/text2bednn/text2bednn.py) or a model repository on Hugging Face
         """
         # Set model that embed natural language
-        self.text_embedder = HuggingFaceEmbeddings(model_name=hf_repo)
+        self.text_embedder = TextEmbedding(model_name=hf_repo)
         # Set model that maps natural language embeddings into the embedding space of region sets
         if isinstance(v2v, Vec2VecFNN):
             self.v2v = v2v
