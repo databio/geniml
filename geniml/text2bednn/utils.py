@@ -3,8 +3,14 @@ from typing import Dict, List, Set, Union
 
 import numpy as np
 import pandas as pd
-import torch
-from torch.utils.data import DataLoader, TensorDataset
+
+try:
+    import torch
+    from torch.utils.data import DataLoader, TensorDataset
+except ImportError:
+    raise ImportError(
+        "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
+    )
 
 from .const import (
     DEFAULT_BATCH_SIZE,

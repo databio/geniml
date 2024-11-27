@@ -14,7 +14,7 @@ _LOGGER = logging.getLogger(PKG_NAME)
 class Text2Vec(Query2Vec):
     """Map a query string into a vector into the embedding space of region sets"""
 
-    def __init__(self, hf_repo: str, v2v: Union[str, Vec2VecFNN]):
+    def __init__(self, hf_repo: str, v2v: Union[str, Vec2VecFNN, None]):
         """
         :param text_embedder: a model repository on Hugging Face
         :param v2v: a Vec2VecFNN (see geniml/text2bednn/text2bednn.py) or a model repository on Hugging Face
@@ -25,11 +25,10 @@ class Text2Vec(Query2Vec):
         if isinstance(v2v, Vec2VecFNN):
             self.v2v = v2v
         elif isinstance(v2v, str):
+            # for bivec search (ML free)
             self.v2v = Vec2VecFNN(v2v)
         else:
-            _LOGGER.error(
-                "TypeError: Please give a Vec2VecFNN or a model repository on Hugging Face"
-            )
+            self.v2v = None
 
     def forward(self, query: str) -> np.ndarray:
         """
@@ -41,5 +40,8 @@ class Text2Vec(Query2Vec):
         """
         # embed query string
         query_embedding = np.array(self.text_embedder.embed_query(query))
-        # map the query string embedding into the embedding space of region sets
-        return self.v2v.embedding_to_embedding(query_embedding)
+        if self.v2v is None:
+            return query_embedding
+        else:
+            # map the query string embedding into the embedding space of region sets
+            return self.v2v.encode(query_embedding)

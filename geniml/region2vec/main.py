@@ -3,6 +3,16 @@ from logging import getLogger
 from typing import List, Union
 
 import numpy as np
+
+try:
+    import torch
+except ImportError:
+    raise ImportError(
+        "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
+    )
+
+from gtars.tokenizers import Region as GRegion
+from gtars.tokenizers import RegionSet as GRegionSet
 import torch
 from gensim.models.callbacks import CallbackAny2Vec
 from huggingface_hub import hf_hub_download

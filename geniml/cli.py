@@ -114,11 +114,18 @@ def main(test_args=None):
         )
 
     if args.command == "bbclient":
-        if args.subcommand is not None:
+        if args.subcommand in [
+            "cache-bed",
+            "cache-tokens",
+            "cache-bedset",
+            "seek",
+            "inspect",
+            "rm",
+        ]:
             _LOGGER.info(f"Subcommand: {args.subcommand}")
             from .bbclient import BBClient
 
-            bbc = BBClient()
+            bbc = BBClient(cache_folder=args.cache_folder)
 
         else:
             # if no subcommand, print help format of bbclient subparser
@@ -141,11 +148,8 @@ def main(test_args=None):
         if args.subcommand == "cache-bed":
             # if input is a BED file path
             if os.path.exists(args.identifier[0]):
-                from .io import RegionSet
-
-                bedfile = RegionSet(args.identifier[0])
-                bbc.add_bed_to_cache(bedfile)
-                _LOGGER.info(f"BED file {bedfile.compute_bed_identifier()} has been cached")
+                identifier = bbc.add_bed_to_cache(args.identifier[0])
+                _LOGGER.info(f"BED file {identifier} has been cached")
             else:
                 bbc.load_bed(args.identifier[0])
 

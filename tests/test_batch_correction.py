@@ -2,7 +2,7 @@ import lightning as L
 import pytest
 from torch.utils.data import DataLoader
 
-from geniml.scembed import ScEmbed
+from geniml.scembed.main import ScEmbed
 from geniml.scembed.utils import BatchCorrectionDataset, BCBatchCollator
 from geniml.training.adapters import AdversarialBatchCorrectionAdapter
 

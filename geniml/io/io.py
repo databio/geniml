@@ -55,12 +55,12 @@ class RegionSet:
         :param regions: path, or url to bed file or list of Region objects
         :param backed: whether to load the bed file into memory or not [Default: False]
         """
-        # load from file
+        self._df: Union[pd.DataFrame, None] = None
+
         if isinstance(regions, str):
             self.backed = backed
             self.regions: List[Region] = []
             self.path = regions
-
             self.regions = None
             self.is_gzipped = False
 
@@ -90,6 +90,7 @@ class RegionSet:
                     df = self._read_gzipped_file(regions)
                 else:
                     df = self._read_file_pd(regions, sep="\t", header=None, engine="pyarrow")
+                self._df = df
 
                 _regions = []
                 df.apply(
@@ -110,6 +111,15 @@ class RegionSet:
             raise ValueError("regions must be a path to a bed file or a list of Region objects")
 
         self._identifier = None
+
+    def to_pandas(self) -> Union[pd.DataFrame, None]:
+        if self._df is None:
+            seqnames, starts, ends = zip(
+                *[(region.chr, region.start, region.end) for region in self]
+            )
+            return pd.DataFrame([seqnames, starts, ends])
+
+        return self._df
 
     def _read_gzipped_file(self, file_path: str) -> pd.DataFrame:
         """
@@ -140,12 +150,33 @@ class RegionSet:
                 if row_count > 0:
                     _LOGGER.info(f"Skipped {row_count} rows while standardization. File: '{args}'")
                 df = df.dropna(axis=1)
-                return df
+                for index, row in df.iterrows():
+                    if (
+                        isinstance(row[0], str)
+                        and isinstance(row[1], int)
+                        and isinstance(row[2], int)
+                    ):
+                        return df
+                    else:
+                        if isinstance(row[1], str):
+                            try:
+                                _ = int(row[1])
+                                df[1] = pd.to_numeric(df[1])
+                            except ValueError:
+                                row_count += 1
+                                break
+                        if isinstance(row[2], str):
+                            try:
+                                _ = int(row[2])
+                                df[2] = pd.to_numeric(df[2])
+                            except ValueError:
+                                row_count += 1
+                                break
+                        return df
             except (pd.errors.ParserError, pd.errors.EmptyDataError) as _:
                 if row_count <= max_rows:
                     row_count += 1
-            # if can't open file after 5 attempts try to open it with gzip
-        return self._read_gzipped_file(*args)
+        raise BEDFileReadError("Cannot read bed file.")
 
     def __len__(self):
         return self.length

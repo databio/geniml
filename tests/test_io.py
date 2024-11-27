@@ -1,9 +1,10 @@
 import os
 
 import genomicranges
+import pandas as pd
 import pytest
 
-from geniml.io.exceptions import GenimlBaseError
+from geniml.io.exceptions import BEDFileReadError, GenimlBaseError
 from geniml.io.io import SNP, Maf, Region, RegionSet
 
 DATA_TEST_FOLDER = os.path.join(
@@ -14,11 +15,15 @@ DATA_TEST_FOLDER = os.path.join(
 )
 DATA_TEST_FOLDER_BED = os.path.join(DATA_TEST_FOLDER, "bed")
 DATA_TEST_FOLDER_MAF = os.path.join(DATA_TEST_FOLDER, "maf")
+DATA_TEST_FOLDER_BED_BAD = os.path.join(DATA_TEST_FOLDER, "bed_bad")
 
 ALL_BEDFILE_PATH = [
     os.path.join(DATA_TEST_FOLDER_BED, x) for x in os.listdir(DATA_TEST_FOLDER_BED)
 ]
 ALL_MAF_PATH = [os.path.join(DATA_TEST_FOLDER_MAF, x) for x in os.listdir(DATA_TEST_FOLDER_MAF)]
+ALL_BADFILE_BAD_PATH = [
+    os.path.join(DATA_TEST_FOLDER_BED_BAD, x) for x in os.listdir(DATA_TEST_FOLDER_BED_BAD)
+]
 
 
 def test_make_region():
@@ -51,7 +56,7 @@ class TestRegionSet:
     @pytest.mark.parametrize(
         "url",
         [
-            "ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7666nnn/GSM7666464/suppl/GSM7666464_18134-282-06_S51_L003_peaks.narrowPeak.gz"
+            "https://github.com/databio/geniml/raw/master/tests/data/io_data/bed/s1_a.bed.gz",
         ],
     )
     def test_region_set_from_url(self, url):
@@ -70,11 +75,15 @@ class TestRegionSet:
             assert isinstance(region, Region)
             break
 
+    @pytest.mark.parametrize("path", ALL_BADFILE_BAD_PATH)
+    def test_broken_bed_from_path(self, path):
+        with pytest.raises(BEDFileReadError):
+            region_set = RegionSet(path)
+
     @pytest.mark.parametrize(
         "url",
-        [
-            "ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7666nnn/GSM7666464/suppl/GSM7666464_18134-282-06_S51_L003_peaks.narrowPeak.gz"
-        ],  # This is not the right way how to do it!
+        ["https://github.com/databio/geniml/raw/master/tests/data/io_data/bed/s1_a.bed.gz"],
+        # TODO: This is not the right way how to do it!
     )
     def test_region_set_from_url_cant_be_backed(self, url):
         with pytest.raises(GenimlBaseError):
@@ -104,6 +113,18 @@ class TestRegionSet:
         bedfile_id_3 = RegionSet(ALL_BEDFILE_PATH[2]).identifier
         assert len(bedfile_id_2) == 32
         assert bedfile_id_1 == bedfile_id_2 == bedfile_id_3
+
+    @pytest.mark.parametrize("url", ALL_BEDFILE_PATH)
+    def test_to_df(self, url):
+        region_set = RegionSet(url, backed=False)
+        pandas_df = region_set.to_pandas()
+        assert isinstance(pandas_df, pd.DataFrame)
+
+    @pytest.mark.parametrize("url", ALL_BEDFILE_PATH)
+    def test_to_df_backed(self, url):
+        region_set = RegionSet(url, backed=True)
+        pandas_df = region_set.to_pandas()
+        assert isinstance(pandas_df, pd.DataFrame)
 
 
 class TestMaff:

@@ -1,5 +1,10 @@
-import torch
-import torch.nn as nn
+try:
+    import torch
+    import torch.nn as nn
+except ImportError:
+    raise ImportError(
+        "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
+    )
 
 from .const import DEFAULT_EMBEDDING_DIM, POOLING_TYPES
 

@@ -1,18 +1,20 @@
 from qdrant_client.http import models
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import Distance
 
 DEFAULT_QDRANT_HOST = "localhost"
 DEFAULT_QDRANT_PORT = 6333
 
 DEFAULT_COLLECTION_NAME = "embeddings"
 
-DEFAULT_QDRANT_CONFIG = VectorParams(size=100, distance=Distance.COSINE)
+DEFAULT_QDRANT_DIST = Distance.COSINE
 
 DEFAULT_INDEX_PATH = "./current_index.bin"
 
 DEFAULT_HNSW_SPACE = "cosine"
 
 DEFAULT_DIM = 100
+
+DEFAULT_TEXT_DIM = 384
 
 
 # the size of the dynamic list for the nearest neighbors
@@ -38,3 +40,5 @@ DEFAULT_QUANTIZATION_CONFIG = models.ScalarQuantization(
 HF_INDEX = "index.bin"
 HF_PAYLOADS = "payloads.pkl"
 HF_METADATA = "metadata.json"
+
+TEXT_ENCODER_REPO = "databio/bivec-search-demo"
