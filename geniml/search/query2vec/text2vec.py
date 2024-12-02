@@ -2,8 +2,10 @@ import logging
 from typing import Union
 
 import numpy as np
+
 # from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from fastembed import TextEmbedding
+
 from ...const import PKG_NAME
 from ...text2bednn import Vec2VecFNN
 from .abstract import Query2Vec
@@ -39,7 +41,7 @@ class Text2Vec(Query2Vec):
         :return: the embedding vector of query
         """
         # embed query string
-        query_embedding = np.array(self.text_embedder.embed_query(query))
+        query_embedding = list(self.text_embedder.embed(query))[0]
         if self.v2v is None:
             return query_embedding
         else:
