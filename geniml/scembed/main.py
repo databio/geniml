@@ -302,7 +302,7 @@ class ScEmbed:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         # tokenize the region
-        tokens = self.tokenizer.tokenize(regions)
+        tokens = self.tokenizer(regions)
         tokens = [[t.id for t in sublist] for sublist in tokens]
 
         # get the vector
