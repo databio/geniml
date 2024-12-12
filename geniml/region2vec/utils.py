@@ -452,9 +452,8 @@ def export_region2vec_model(
 
 def load_local_region2vec_model(
     model_path: str,
-    vocab_path: str,
     config_path: str,
-) -> Tuple[Region2Vec, TreeTokenizer, dict]:
+) -> Tuple[Region2Vec, dict]:
     """
     Load a region2vec model from a local directory
 
@@ -462,8 +461,6 @@ def load_local_region2vec_model(
     :param str config_path: The path to the model config file
     :param str vocab_path: The path to the model vocabulary file
     """
-    # init the tokenizer - only one option for now
-    tokenizer = TreeTokenizer(vocab_path)
 
     # load the model state dict (weights)
     params = torch.load(model_path)
@@ -491,7 +488,7 @@ def load_local_region2vec_model(
 
     model.load_state_dict(params)
 
-    return model, tokenizer, config
+    return model, config
 
 
 class Region2VecDataset:
