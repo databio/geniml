@@ -7,12 +7,15 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
-from gtars.tokenizers import Region as GRegion
-from gtars.tokenizers import TreeTokenizer as GTreeTokenizer
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
 from geniml.io import Region, RegionSet
+from gtars.tokenizers import (
+    MetaTokenizer as GMetaTokenizer,
+    TreeTokenizer as GTreeTokenizer,
+    Region as GRegion,
+)
 from geniml.tokenization.split_file import split_file
 
 from .hard_tokenization_batch import main as hard_tokenization
@@ -145,6 +148,9 @@ class TreeTokenizer(Tokenizer):
     def sep_token_id(self) -> int:
         return self._tokenizer.sep_token_id
 
+    def export(self, path: str):
+        return self._tokenizer.export(path)
+
     def __len__(self):
         return len(self._tokenizer)
 
@@ -188,7 +194,7 @@ class AnnDataTokenizer(Tokenizer):
         universe_file_path = hf_hub_download(model_path, "universe.bed")
         return cls(universe_file_path, **kwargs)
 
-    def __init__(self, universe: str = None, verbose: bool = False):
+    def __init__(self, universe: str = None, verbose: bool = False, tokenizer_type: str = "tree"):
         """
         Create a new tokenizer.
 
@@ -197,8 +203,12 @@ class AnnDataTokenizer(Tokenizer):
         :param str universe: The universe to use for tokenization.
         """
         self.verbose = verbose
+        self._tokenizer: Union[GTreeTokenizer, GMetaTokenizer]
         if universe is not None:
-            self._tokenizer: GTreeTokenizer = GTreeTokenizer(universe)
+            if tokenizer_type == "meta":
+                self._tokenizer = GMetaTokenizer(universe)
+            else:
+                self._tokenizer = GTreeTokenizer(universe)
         else:
             self._tokenizer = None
 
@@ -287,7 +297,7 @@ class AnnDataTokenizer(Tokenizer):
 
         return tokenized
 
-    def encode(self, query: sc.AnnData) -> List[List[int]]:
+    def encode(self, query: Union[sc.AnnData, str]) -> List[List[int]]:
         """
         Tokenize an AnnData object to IDs.
 
@@ -378,10 +388,13 @@ class AnnDataTokenizer(Tokenizer):
     def sep_token_id(self) -> int:
         return self._tokenizer.sep_token_id
 
+    def export(self, path: str):
+        return self._tokenizer.export(path)
+
     def __len__(self):
         return len(self.universe.regions)
 
-    def __call__(self, query: sc.AnnData) -> List[List[Region]]:
+    def __call__(self, query: Union[sc.AnnData, str]) -> List[List[Region]]:
         if isinstance(query, sc.AnnData):
             result = self._tokenize_anndata(query)
             return result
