@@ -104,7 +104,10 @@ class Atacformer(nn.Module):
 
         # add positional encoding
         if self.positional_encoding_type == "sinusoidal":
-            x = x + self.positional_encoding[:, : x.size(1)]
+            if x.dim() == 3:  # batched input
+                x = x + self.positional_encoding[:, : x.size(1), :]
+            else:  # non-batched input
+                x = x + self.positional_encoding[:, : x.size(0), :].squeeze(0)
         elif self.positional_encoding_type == "learned":
             x = x + self.positional_encoding(x)
 
