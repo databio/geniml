@@ -282,6 +282,11 @@ class MLMAdapter(L.LightningModule):
         self.eval()
         torch.set_grad_enabled(True)
 
+        self.r2v_model.positional_encoding = self.r2v_model.positional_encoding.to(self.device)
+
+    def on_train_start(self):
+        self.r2v_model.positional_encoding = self.r2v_model.positional_encoding.to(self.device)
+
     def validation_step(
         self,
         batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
