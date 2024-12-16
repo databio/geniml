@@ -1,4 +1,5 @@
 import os
+import math
 from typing import Union
 
 import torch
@@ -34,6 +35,8 @@ class Atacformer(nn.Module):
         n_heads: int = 12,
         n_layers: int = 12,
         d_ff: int = 3072,
+        max_position_embeddings: int = 2048,
+        positional_encoding: str = "sinusoidal",
     ):
         """
         Atacformer is a transformer-based model for ATAC-seq data. It closely follows
@@ -51,6 +54,17 @@ class Atacformer(nn.Module):
         # embedding layer
         self.embedding = nn.Embedding(vocab_size, d_model)
 
+        # positional encoding
+        self.positional_encoding_type = positional_encoding
+        if positional_encoding == "sinusoidal":
+            self.positional_encoding = self._create_sinusoidal_positional_encoding(
+                max_position_embeddings, d_model
+            )
+        elif positional_encoding == "learned":
+            self.positional_encoding = nn.Embedding(max_position_embeddings, d_model)
+        else:
+            raise ValueError("Invalid positional encoding type. Choose 'sinusoidal' or 'learned'.")
+
         # transformer encoder
         self.encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
@@ -62,6 +76,22 @@ class Atacformer(nn.Module):
 
         # stack the encoder layers
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
+
+    @staticmethod
+    def _create_sinusoidal_positional_encoding(max_len, d_model):
+        """
+        Create a sinusoidal positional encoding matrix.
+        :param max_len: Maximum sequence length.
+        :param d_model: Embedding dimension.
+        :return: Tensor of shape (max_len, d_model)
+        """
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float32).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)  # Add batch dimension for broadcasting
+        return pe
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
