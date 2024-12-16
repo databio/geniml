@@ -186,6 +186,10 @@ class MLMAdapter(L.LightningModule):
         logits = self.linear(token_embeddings)
         return logits
 
+    def on_fit_start(self):
+        # move positional embeddings to the device
+        self.r2v_model.positional_encoding = self.r2v_model.positional_encoding.to(self.device)
+
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """
         We use the AdamW optimizer with a learning rate of 1e-6.
