@@ -11,7 +11,7 @@ from geniml.atacformer.training import MLMAdapter
 
 @pytest.fixture
 def universe_file():
-    return "tests/data/universe_mlm.bed"
+    return "/Users/nathanleroy/scratch/universe.merged.pruned.toml"
 
 
 @pytest.fixture
@@ -60,7 +60,7 @@ def test_atacformer_exmodel_init(universe_file: str):
     assert model._model.num_layers == 6
 
 
-@pytest.mark.skip("Too new to test")
+# @pytest.mark.skip("Too new to test")
 def test_train_atacformer_ex_model(universe_file: str, data: str):
     # make tokenizer and model
     tokenizer = AnnDataTokenizer(universe_file)
