@@ -175,11 +175,16 @@ class MLMAdapter(L.LightningModule):
         super().__init__(**kwargs)
         self.loss_fn = nn.CrossEntropyLoss()
         # linear layer acts as a classification layer for training
-        # but is not used during inference
+        # the model on the masked language modeling task
         self.linear = nn.Linear(model._model.d_model, model._model.vocab_size)
         self.r2v_model = model._model
         self.tokenizer = model.tokenizer
         self.init_lr = kwargs.get("init_lr", 1e-5)
+
+        # tie the weights of the linear layer with the token embeddings
+        # this is done primarily to reduce the number of parameters during training
+        # significantly
+        self.linear.weight = self.r2v_model.embedding.weight
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         token_embeddings = self.r2v_model(x, mask=mask)
