@@ -174,10 +174,11 @@ class MLMAdapter(L.LightningModule):
         """
         super().__init__(**kwargs)
         self.loss_fn = nn.CrossEntropyLoss()
+        self.r2v_model = model._model
         # linear layer acts as a classification layer for training
         # the model on the masked language modeling task
         self.linear = nn.Linear(model._model.d_model, model._model.vocab_size)
-        self.r2v_model = model._model
+
         self.tokenizer = model.tokenizer
         self.init_lr = kwargs.get("init_lr", 1e-5)
 
@@ -185,6 +186,11 @@ class MLMAdapter(L.LightningModule):
         # this is done primarily to reduce the number of parameters
         # during training significantly
         self.linear.weight = self.r2v_model.embedding.weight
+
+        # Verify vocab_size consistency
+        assert self.r2v_model.vocab_size == len(
+            self.tokenizer
+        ), f"Model vocab_size {self.r2v_model.vocab_size} does not match tokenizer vocab_size {len(self.tokenizer)}"
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         token_embeddings = self.r2v_model(x, mask=mask)
@@ -242,6 +248,14 @@ class MLMAdapter(L.LightningModule):
         # forward pass for the batch
         output = self.forward(masked_tokens, mask=attention_mask)
 
+        # assert masked_token_indexes range
+        assert (
+            masked_token_indexes.min() >= 0
+        ), f"masked_token_indexes.min()={masked_token_indexes.min()} is less than 0"
+        assert (
+            masked_token_indexes.max() < tokens.shape[1]
+        ), f"masked_token_indexes.max()={masked_token_indexes.max()} is greater than tokens.shape[1]={tokens.shape[1]}"
+
         # get predictions and targets
         # the predictions are the logits for the masked tokens
         # defined by the masked_token_indexes
@@ -251,6 +265,12 @@ class MLMAdapter(L.LightningModule):
         # reshape once more
         predictions = predictions.view(predictions.shape[0] * predictions.shape[1], -1)
         targets = targets.view(targets.shape[0] * targets.shape[1])
+
+        # assert the targets are within the vocab size
+        assert (
+            targets.max() < self.r2v_model.vocab_size
+        ), f"targets max {targets.max()} >= vocab_size {self.r2v_model.vocab_size}"
+        assert targets.min() >= 0, f"targets min {targets.min()} < 0"
 
         # compute the loss
         loss = self.loss_fn(predictions, targets)
