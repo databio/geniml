@@ -182,8 +182,8 @@ class MLMAdapter(L.LightningModule):
         self.init_lr = kwargs.get("init_lr", 1e-5)
 
         # tie the weights of the linear layer with the token embeddings
-        # this is done primarily to reduce the number of parameters during training
-        # significantly
+        # this is done primarily to reduce the number of parameters
+        # during training significantly
         self.linear.weight = self.r2v_model.embedding.weight
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
