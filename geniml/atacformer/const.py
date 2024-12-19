@@ -17,7 +17,7 @@ REPLACE_WITH_RANDOM_RATE = 0.1
 KEEP_RATE = 0.1
 
 CONFIG_FILE_NAME = "config.yaml"
-MODEL_FILE_NAME = "mode.safetensors"
+MODEL_FILE_NAME = "model.safetensors"
 UNIVERSE_FILE_NAME = "universe.bed"
 UNIVERSE_CONFIG_FILE_NAME = "universe.toml"
 
