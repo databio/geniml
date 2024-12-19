@@ -68,7 +68,9 @@ class Atacformer(nn.Module):
             raise ValueError("Invalid positional encoding type. Choose 'sinusoidal' or 'learned'.")
 
         # transformer encoder
-        self.encoder_layer = nn.TransformerEncoderLayer(
+        # note: self.encoder_layer results in unused parameters error in
+        # lightning DDP.
+        encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=n_heads,
             dim_feedforward=d_ff,
@@ -76,7 +78,7 @@ class Atacformer(nn.Module):
         )
 
         # stack the encoder layers
-        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
 
     @staticmethod
     def _create_sinusoidal_positional_encoding(max_len, d_model):
