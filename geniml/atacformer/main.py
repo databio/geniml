@@ -52,8 +52,10 @@ class Atacformer(nn.Module):
         self.n_layers = n_layers
         self.d_ff = d_ff
         self.vocab_size = vocab_size
+
         # embedding layer
         self.embedding = nn.Embedding(vocab_size, d_model)
+
         # positional encoding
         self.positional_encoding_type = positional_encoding
         if positional_encoding == "sinusoidal":
@@ -64,6 +66,7 @@ class Atacformer(nn.Module):
             self.positional_encoding = nn.Embedding(max_position_embeddings, d_model)
         else:
             raise ValueError("Invalid positional encoding type. Choose 'sinusoidal' or 'learned'.")
+
         # transformer encoder
         self.encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
@@ -71,6 +74,7 @@ class Atacformer(nn.Module):
             dim_feedforward=d_ff,
             batch_first=True,
         )
+
         # stack the encoder layers
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
 
@@ -82,12 +86,16 @@ class Atacformer(nn.Module):
         :param d_model: Embedding dimension.
         :return: Tensor of shape (max_len, d_model)
         """
+
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float32).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)  # Add batch dimension for broadcasting
+
+        pe = pe.unsqueeze(0)  # add batch dimension for broadcasting
+
         return pe
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
@@ -98,11 +106,13 @@ class Atacformer(nn.Module):
         """
         # get the embeddings
         x = self.embedding(x)
+
         # add positional encoding
         if self.positional_encoding_type == "sinusoidal":
             x = x + self.positional_encoding[:, : x.size(1), :]
         elif self.positional_encoding_type == "learned":
             x = x + self.positional_encoding(x)
+
         # pass through the transformer
         x = self.transformer_encoder(x, src_key_padding_mask=mask)
         return x
@@ -248,7 +258,7 @@ class AtacformerExModel(ExModel):
             max_position_embeddings=context_size,
         )
 
-        params = load_file(model_path, map_location=self.device or "cpu")
+        params = load_file(model_path, device=self.device or "cpu")
         model.load_state_dict(params)
 
         self._model = model
@@ -310,7 +320,7 @@ class AtacformerExModel(ExModel):
     def export(
         self,
         path: str,
-        checkpoint_file: str = MODEL_FILE_NAME,
+        _checkpoint_file: str = MODEL_FILE_NAME,
         _universe_config_file: str = UNIVERSE_CONFIG_FILE_NAME,
         config_file: str = CONFIG_FILE_NAME,
         **kwargs,
@@ -338,7 +348,7 @@ class AtacformerExModel(ExModel):
 
         # export the model weights
         tensors = self._model.state_dict()
-        save_torch_state_dict(tensors, os.path.join(path, checkpoint_file))
+        save_torch_state_dict(tensors, save_directory=path)
 
         d_model = self._model.d_model
         n_layers = self._model.n_layers
