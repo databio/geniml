@@ -6,7 +6,9 @@ import torch
 import torch.nn as nn
 import tomllib
 import scanpy as sc
-from huggingface_hub import hf_hub_download
+
+from huggingface_hub import hf_hub_download, save_torch_state_dict
+from safetensors.torch import load_file
 from yaml import safe_dump, safe_load
 
 from ..models.main import ExModel
@@ -50,10 +52,8 @@ class Atacformer(nn.Module):
         self.n_layers = n_layers
         self.d_ff = d_ff
         self.vocab_size = vocab_size
-
         # embedding layer
         self.embedding = nn.Embedding(vocab_size, d_model)
-
         # positional encoding
         self.positional_encoding_type = positional_encoding
         if positional_encoding == "sinusoidal":
@@ -64,16 +64,13 @@ class Atacformer(nn.Module):
             self.positional_encoding = nn.Embedding(max_position_embeddings, d_model)
         else:
             raise ValueError("Invalid positional encoding type. Choose 'sinusoidal' or 'learned'.")
-
         # transformer encoder
         self.encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=n_heads,
-            batch_first=True,
             dim_feedforward=d_ff,
-            norm_first=True,
+            batch_first=True,
         )
-
         # stack the encoder layers
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
 
@@ -101,16 +98,13 @@ class Atacformer(nn.Module):
         """
         # get the embeddings
         x = self.embedding(x)
-
         # add positional encoding
         if self.positional_encoding_type == "sinusoidal":
             x = x + self.positional_encoding[:, : x.size(1), :]
         elif self.positional_encoding_type == "learned":
             x = x + self.positional_encoding(x)
-
         # pass through the transformer
         x = self.transformer_encoder(x, src_key_padding_mask=mask)
-
         return x
 
 
@@ -144,6 +138,7 @@ class AtacformerExModel(ExModel):
         self._model: Atacformer = None
         self.pooling_method = pooling_method
         self.context_size = context_size
+        self.device = device
 
         if model_path is not None:
             self._init_from_huggingface(model_path)
@@ -151,14 +146,6 @@ class AtacformerExModel(ExModel):
 
         elif tokenizer is not None:
             self._init_model(tokenizer, **kwargs)
-
-        # set the device
-        self._target_device = torch.device(
-            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
-        )
-
-        if self._model is not None:
-            self._model = self._model.to(self._target_device)
 
     def _init_tokenizer(self, tokenizer: Union[AnnDataTokenizer, str]):
         """
@@ -208,6 +195,7 @@ class AtacformerExModel(ExModel):
 
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
+        :param str config_path: Path to the config file.
         """
 
         # check the type of the tokenizer
@@ -219,9 +207,6 @@ class AtacformerExModel(ExModel):
 
         # init the tokenizer - only one option for now
         self.tokenizer = AnnDataTokenizer(vocab_path, tokenizer_type=tokenizer_type)
-
-        # load the model state dict (weights)
-        params = torch.load(model_path)
 
         # get the model config (vocab size, embedding size)
         with open(config_path, "r") as f:
@@ -246,6 +231,12 @@ class AtacformerExModel(ExModel):
         if d_ff is None:
             raise KeyError(f"Could not find d_ff in config file. Expected key {D_FF_KEY}.")
 
+        context_size = config.get(CONTEXT_SIZE_KEY, None)
+        if context_size is None:
+            raise KeyError(
+                f"Could not find context_size in config file. Expected key {CONTEXT_SIZE_KEY}."
+            )
+
         vocab_size = config.get(VOCAB_SIZE_KEY) or len(self.tokenizer)
 
         model = Atacformer(
@@ -254,7 +245,10 @@ class AtacformerExModel(ExModel):
             n_heads=n_heads,
             n_layers=n_layers,
             d_ff=d_ff,
+            max_position_embeddings=context_size,
         )
+
+        params = load_file(model_path, map_location=self.device or "cpu")
         model.load_state_dict(params)
 
         self._model = model
@@ -343,7 +337,8 @@ class AtacformerExModel(ExModel):
             raise TypeError("model must be an nn.Module object.")
 
         # export the model weights
-        torch.save(self._model.state_dict(), os.path.join(path, checkpoint_file))
+        tensors = self._model.state_dict()
+        save_torch_state_dict(tensors, os.path.join(path, checkpoint_file))
 
         d_model = self._model.d_model
         n_layers = self._model.n_layers
