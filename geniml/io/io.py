@@ -89,7 +89,12 @@ class RegionSet:
                 if is_gzipped(regions):
                     df = self._read_gzipped_file(regions)
                 else:
-                    df = self._read_file_pd(regions, sep="\t", header=None, engine="pyarrow")
+                    df = self._read_file_pd(
+                        regions,
+                        sep="\t",
+                        header=None,
+                        engine="pyarrow",
+                    )
                 self._df = df
 
                 _regions = []
@@ -133,7 +138,7 @@ class RegionSet:
             sep="\t",
             compression="gzip",
             header=None,
-            engine="pyarrow",
+            # engine="pyarrow",
         )
 
     def _read_file_pd(self, *args, **kwargs) -> pd.DataFrame:
