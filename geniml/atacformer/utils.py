@@ -102,6 +102,9 @@ class AtacformerMLMDataset(Dataset):
                 torch.ones(tokens.shape[0]), self.context_size, replacement=False
             )
             tokens = tokens[indices]
+            # sort the tokens, lowest to highest,
+            # this represents sorting a bedfile by chrom & start position
+            tokens = torch.sort(tokens)[0]
 
         masked_tokens = tokens.clone()
         labels = torch.full_like(tokens, -100)  # Initialize labels with -100
