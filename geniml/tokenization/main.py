@@ -7,15 +7,13 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
+from gtars.tokenizers import MetaTokenizer as GMetaTokenizer
+from gtars.tokenizers import Region as GRegion
+from gtars.tokenizers import TreeTokenizer as GTreeTokenizer
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
 from geniml.io import Region, RegionSet
-from gtars.tokenizers import (
-    MetaTokenizer as GMetaTokenizer,
-    TreeTokenizer as GTreeTokenizer,
-    Region as GRegion,
-)
 from geniml.tokenization.split_file import split_file
 
 from .hard_tokenization_batch import main as hard_tokenization

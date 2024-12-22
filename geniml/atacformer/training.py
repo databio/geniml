@@ -3,9 +3,8 @@ from typing import Tuple
 import lightning as L
 import torch
 import torch.nn as nn
-
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 from ..atacformer.main import AtacformerExModel
 
