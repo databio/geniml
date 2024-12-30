@@ -11,7 +11,7 @@ import s3fs
 import zarr
 from botocore.exceptions import ClientError
 from pybiocfilecache import BiocFileCache
-from pybiocfilecache._exceptions import RnameExistsError
+from pybiocfilecache.exceptions import RnameExistsError
 from ubiquerg import is_url
 from zarr import Array
 from zarr.errors import PathNotFoundError
