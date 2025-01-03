@@ -171,7 +171,7 @@ class BBClient(BedCacheManager):
         else:
             if bedfile.path is None or is_url(bedfile.path):
                 bedfile.to_pandas().to_csv(
-                    file_path, index=False, compression="gzip", header=False, sep="\t"
+                    file_path, index=False, compression="gzip", header=False, sep="\t”
                 )
             else:
                 # copy the BED file out of cache

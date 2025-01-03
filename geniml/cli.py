@@ -331,6 +331,61 @@ def main(test_args=None):
                 pickle.dump(bin_embed, f)
             print(f"binary embeddings saved to {args.file_name}")
 
+    if args.command == "bedspace":
+        _LOGGER.info(f"Subcommand: {args.subcommand}")
+        if args.subcommand == "preprocess":
+            from .bedspace.preprocess import main as preprocess
+            _LOGGER.info("Preprocessing data for training")
+            preprocess(
+                data_path=args.input,
+                metadata=args.metadata,
+                universe=args.universe,
+                output=args.output,
+                labels=args.labels
+            )
+        elif args.subcommand == "train":
+            from .bedspace.train import main as train
+            _LOGGER.info("Training the StarSpace model")
+            train(
+                path_to_starspace=args.path_to_starsapce,
+                input=args.input,
+                num_epochs=args.num_epochs,
+                dim=args.dim,
+                learning_rate=args.learning_rate,
+                output=args.output
+            )
+
+        elif args.subcommand == "distances":
+            from .bedspace.distances import main as distances
+            _LOGGER.info("Computing distances between regionsets and labels")
+            distances(
+                input=args.input,
+                path_to_starspace=args.path_to_starsapce,
+                metadata_train=args.metadata_train,
+                metadata_test=args.metadata_test,
+                universe=args.universe,
+                project_name=args.project_name,
+                files=args.files,
+                labels=args.labels,
+                output=args.output,
+                threshold=args.threshold
+            )
+
+        elif args.subcommand == "search":
+            from .bedspace.search import main as search
+            _LOGGER.info("Searching for regionsets similar to a query")
+            search(
+                query=args.query,
+                search_type=args.type,
+                distances=args.distances,
+                num_results=args.num_results
+            )
+
+        else:
+            _LOGGER.error(f"Unknown subcommand: {args.subcommand}")
+            parser.print_help()
+            sys.exit(1)
+       
     return
 
 

@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from ..const import DEFAULT_NUM_SEARCH_RESULTS, PKG_NAME
+from .const import DEFAULT_NUM_SEARCH_RESULTS, PKG_NAME
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
