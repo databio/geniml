@@ -7,154 +7,163 @@ from torch.utils.data import DataLoader
 
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.tokenization.main import AnnDataTokenizer
-from geniml.training import CellTypeFineTuneAdapter
-from geniml.training.utils import (
-    FineTuningDataset,
-    collate_finetuning_batch,
-    generate_fine_tuning_dataset,
-)
 
-
-def test_generate_finetuning_dataset():
-    t = AnnDataTokenizer("tests/data/universe.bed")
-    adata = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
-
-    pos, neg, pos_labels, neg_labels = generate_fine_tuning_dataset(
-        adata, t, negative_ratio=1.0, sample_size=2
-    )
-
-    # total positive pairs should be equal to total negative pairs
-    # total positive pairs will be equal to sum([n*(n - 1) for n in adata.obs.groupby("cell_type").size()])
-    # total negative pairs only equals number of positive pairs when negative_ratio=1.0
-
-    assert len(pos) == len(neg)
-    assert len(pos) == len(pos_labels)
-    assert len(neg) == len(neg_labels)
-    # not sure why the below doesnt work right now
-    # assert len(pos) == sum([(n * (n - 1)) for n in adata.obs.groupby("cell_type").size()])
+# from geniml.training import CellTypeFineTuneAdapter
+# from geniml.training.utils import (
+#     FineTuningDataset,
+#     collate_finetuning_batch,
+#     generate_fine_tuning_dataset,
+# )
 
 
 @pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
-def test_init_celltype_adapter():
-    model = Region2VecExModel(
-        tokenizer="tests/data/universe.bed",
-    )
-    adapter = CellTypeFineTuneAdapter(model)
-    assert adapter is not None
-    assert isinstance(adapter.r2v_model, Region2Vec)
-    assert adapter.r2v_model.projection.num_embeddings == len(model.tokenizer)
+class TestFinetuining:
 
+    def test_generate_finetuning_dataset(
+        self,
+    ):
+        t = AnnDataTokenizer("tests/data/universe.bed")
+        adata = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
 
-@pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
-def test_train_with_adapter():
-    # make models
-    model = Region2VecExModel(
-        tokenizer="tests/data/universe.bed",
-    )
-    adapter = CellTypeFineTuneAdapter(model)
+        pos, neg, pos_labels, neg_labels = generate_fine_tuning_dataset(
+            adata, t, negative_ratio=1.0, sample_size=2
+        )
 
-    # load data
-    data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
-    pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
-        data, model.tokenizer, seed=42, negative_ratio=1.0, sample_size=1_000
-    )
+        # total positive pairs should be equal to total negative pairs
+        # total positive pairs will be equal to sum([n*(n - 1) for n in adata.obs.groupby("cell_type").size()])
+        # total negative pairs only equals number of positive pairs when negative_ratio=1.0
 
-    # combine the positive and negative pairs
-    pairs = pos_pairs + neg_pairs
-    labels = pos_labels + neg_labels
+        assert len(pos) == len(neg)
+        assert len(pos) == len(pos_labels)
+        assert len(neg) == len(neg_labels)
+        # not sure why the below doesnt work right now
+        # assert len(pos) == sum([(n * (n - 1)) for n in adata.obs.groupby("cell_type").size()])
 
-    # get the pad token id
-    pad_token_id = model.tokenizer.padding_token_id()
+    @pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
+    def test_init_celltype_adapter(
+        self,
+    ):
+        model = Region2VecExModel(
+            tokenizer="tests/data/universe.bed",
+        )
+        adapter = CellTypeFineTuneAdapter(model)
+        assert adapter is not None
+        assert isinstance(adapter.r2v_model, Region2Vec)
+        assert adapter.r2v_model.projection.num_embeddings == len(model.tokenizer)
 
-    train_pairs, test_pairs, Y_train, Y_test = train_test_split(
-        pairs,
-        labels,
-        train_size=0.8,
-        random_state=42,
-    )
+    @pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
+    def test_train_with_adapter(
+        self,
+    ):
+        # make models
+        model = Region2VecExModel(
+            tokenizer="tests/data/universe.bed",
+        )
+        adapter = CellTypeFineTuneAdapter(model)
 
-    batch_size = 32
+        # load data
+        data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
+        pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
+            data, model.tokenizer, seed=42, negative_ratio=1.0, sample_size=1_000
+        )
 
-    # create the datasets
-    train_dataloader = DataLoader(
-        FineTuningDataset(train_pairs, Y_train),
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
-        # num_workers=multiprocessing.cpu_count() - 2,
-    )
-    test_dataloader = DataLoader(
-        FineTuningDataset(test_pairs, Y_test),
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
-        # num_workers=multiprocessing.cpu_count() - 2,
-    )
+        # combine the positive and negative pairs
+        pairs = pos_pairs + neg_pairs
+        labels = pos_labels + neg_labels
 
-    trainer = L.Trainer(profiler="simple", min_epochs=3)
-    trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
+        # get the pad token id
+        pad_token_id = model.tokenizer.padding_token_id()
 
+        train_pairs, test_pairs, Y_train, Y_test = train_test_split(
+            pairs,
+            labels,
+            train_size=0.8,
+            random_state=42,
+        )
 
-@pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
-def test_train_export():
-    # make models
-    model = Region2VecExModel(
-        tokenizer="tests/data/universe.bed",
-    )
-    adapter = CellTypeFineTuneAdapter(model)
+        batch_size = 32
 
-    # load data
-    data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
-    pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
-        data, model.tokenizer, seed=42, negative_ratio=1.0, sample_size=1_000
-    )
+        # create the datasets
+        train_dataloader = DataLoader(
+            FineTuningDataset(train_pairs, Y_train),
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+            # num_workers=multiprocessing.cpu_count() - 2,
+        )
+        test_dataloader = DataLoader(
+            FineTuningDataset(test_pairs, Y_test),
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+            # num_workers=multiprocessing.cpu_count() - 2,
+        )
 
-    # combine the positive and negative pairs
-    pairs = pos_pairs + neg_pairs
-    labels = pos_labels + neg_labels
+        trainer = L.Trainer(profiler="simple", min_epochs=3)
+        trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
 
-    # get the pad token id
-    pad_token_id = model.tokenizer.padding_token_id()
+    @pytest.mark.skip("Too slow for CI/CD. Mostly a development tool anyways.")
+    def test_train_export(
+        self,
+    ):
+        # make models
+        model = Region2VecExModel(
+            tokenizer="tests/data/universe.bed",
+        )
+        adapter = CellTypeFineTuneAdapter(model)
 
-    train_pairs, test_pairs, Y_train, Y_test = train_test_split(
-        pairs,
-        labels,
-        train_size=0.8,
-        random_state=42,
-    )
+        # load data
+        data = sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
+        pos_pairs, neg_pairs, pos_labels, neg_labels = generate_fine_tuning_dataset(
+            data, model.tokenizer, seed=42, negative_ratio=1.0, sample_size=1_000
+        )
 
-    batch_size = 32
+        # combine the positive and negative pairs
+        pairs = pos_pairs + neg_pairs
+        labels = pos_labels + neg_labels
 
-    # create the datasets
-    train_dataloader = DataLoader(
-        FineTuningDataset(train_pairs, Y_train),
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
-        # num_workers=multiprocessing.cpu_count() - 2,
-    )
-    test_dataloader = DataLoader(
-        FineTuningDataset(test_pairs, Y_test),
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
-        # num_workers=multiprocessing.cpu_count() - 2,
-    )
+        # get the pad token id
+        pad_token_id = model.tokenizer.padding_token_id()
 
-    trainer = L.Trainer(min_epochs=3)
-    trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
+        train_pairs, test_pairs, Y_train, Y_test = train_test_split(
+            pairs,
+            labels,
+            train_size=0.8,
+            random_state=42,
+        )
 
-    # get the tensor dfor token 42
-    t_before = model._model.projection(torch.tensor([42]))
+        batch_size = 32
 
-    # export
-    model.export("tests/data/model-tests")
+        # create the datasets
+        train_dataloader = DataLoader(
+            FineTuningDataset(train_pairs, Y_train),
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+            # num_workers=multiprocessing.cpu_count() - 2,
+        )
+        test_dataloader = DataLoader(
+            FineTuningDataset(test_pairs, Y_test),
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=lambda x: collate_finetuning_batch(x, pad_token_id),
+            # num_workers=multiprocessing.cpu_count() - 2,
+        )
 
-    # load the model
-    model = Region2VecExModel.from_pretrained("tests/data/model-tests")
+        trainer = L.Trainer(min_epochs=3)
+        trainer.fit(adapter, train_dataloaders=train_dataloader, val_dataloaders=test_dataloader)
 
-    # get the tensor for token 42
-    t_after = model._model.projection(torch.tensor([42]))
+        # get the tensor dfor token 42
+        t_before = model._model.projection(torch.tensor([42]))
 
-    # make sure the tensors are close
-    assert torch.allclose(t_before, t_after)
+        # export
+        model.export("tests/data/model-tests")
+
+        # load the model
+        model = Region2VecExModel.from_pretrained("tests/data/model-tests")
+
+        # get the tensor for token 42
+        t_after = model._model.projection(torch.tensor([42]))
+
+        # make sure the tensors are close
+        assert torch.allclose(t_before, t_after)

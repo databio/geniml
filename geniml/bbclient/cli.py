@@ -106,7 +106,8 @@ def build_subparser(parser):
         "cache-tokens": "Cache tokens from local file or BEDbase",
         "cache-bedset": "Cache a BED set from local folder or BEDbase",
         "seek": "Seek the BED / BEDset path by giving identifier",
-        "inspect": "Inspect the contents of cache folder",
+        "inspect-bedfiles": "Inspect the contents of bedfile cache folder",
+        "inspect-bedsets": "Inspect the contents of bedset cache folder",
         "rm": "Remove the BED/BEDset from cache with given identifier",
     }
     subparsers = {}
@@ -116,6 +117,7 @@ def build_subparser(parser):
     subparsers["cache-tokens"] = build_subparser_cache_tokens(subparsers["cache-tokens"])
     subparsers["cache-bedset"] = build_subparser_cache_bedset(subparsers["cache-bedset"])
     subparsers["seek"] = build_subparser_seek(subparsers["seek"])
-    subparsers["inspect"] = build_subparser_inspect(subparsers["inspect"])
+    subparsers["inspect"] = build_subparser_inspect(subparsers["inspect-bedfiles"])
+    subparsers["inspect"] = build_subparser_inspect(subparsers["inspect-bedsets"])
     subparsers["rm"] = build_subparser_remove(subparsers["rm"])
     return parser
