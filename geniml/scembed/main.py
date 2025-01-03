@@ -131,11 +131,12 @@ class ScEmbed:
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
         """
-        _model, tokenizer, config = load_local_region2vec_model(
-            model_path, vocab_path, config_path
-        )
+        _model, config = load_local_region2vec_model(model_path, config_path)
+        tokenizer = AnnDataTokenizer(vocab_path, verbose=True)
+
         self._model = _model
         self.tokenizer = tokenizer
+
         if POOLING_METHOD_KEY in config:
             self.pooling_method = config[POOLING_METHOD_KEY]
 
