@@ -118,11 +118,11 @@ class HNSWBackend(EmSearchBackend):
         # increase max_elements to contain new loadings
         current_max = self.idx.get_max_elements()
 
-        if not ids:
+        if ids is None:
             new_max = current_max + vectors.shape[0]
             ids = np.arange(start=current_max, stop=new_max)
         else:
-            new_max = ids.amax()
+            new_max = ids.max() + 1
 
         # check if the number of embedding vectors and labels are same
         verify_load_inputs(vectors, ids, payloads)
@@ -146,7 +146,7 @@ class HNSWBackend(EmSearchBackend):
         with_vectors: bool = True,
         offset: int = 0,
     ) -> Union[
-        List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
+        List[Dict[str, Union[int, float, Dict[str, str], np.ndarray]]],
         List[List[Dict[str, Union[int, float, Dict[str, str], np.ndarray]]]],
     ]:
         """
@@ -199,14 +199,14 @@ class HNSWBackend(EmSearchBackend):
     def __len__(self) -> int:
         return self.idx.element_count
 
-    def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
+    def retrieve_info(self, ids: Union[List[int], int], with_vectors: bool = False) -> Union[
         Dict[str, Union[int, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, List[float], Dict[str, str]]]],
     ]:
         """
         With an id or a list of storage ids, return the information of these vectors
         :param ids: storage id, or a list of ids
-        :param with_vec: whether the stored vector is included in the result
+        :param with_vectors: whether the stored vector is included in the result
         :return:
         """
         if not isinstance(ids, list):
@@ -217,7 +217,7 @@ class HNSWBackend(EmSearchBackend):
             output_dict = {"id": id_, "payload": self.payloads[id_]}
             output_list.append(output_dict)
 
-        if with_vec:
+        if with_vectors:
             vecs = self.idx.get_items(ids, return_type="numpy")
             for i in range(len(vecs)):
                 output_list[i]["vector"] = vecs[i]

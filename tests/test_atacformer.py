@@ -12,6 +12,7 @@ from geniml.atacformer.utils import (
     AtacformerCellTypeFineTuningDataset,
     AtacformerCellTypeFineTuningCollator,
 )
+from geniml.atacformer.utils import AtacformerMLMCollator, AtacformerMLMDataset
 from geniml.tokenization.main import AnnDataTokenizer
 from geniml.training.adapters import MLMAdapter, CellTypeFineTuneAdapter
 

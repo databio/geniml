@@ -27,7 +27,8 @@ from ..region2vec.utils import (
     load_local_scembed_model,
     train_region2vec_model,
 )
-from ..tokenization import AnnDataTokenizer, Tokenizer
+from ..tokenization.main import AnnDataTokenizer, Tokenizer
+from .const import MODULE_NAME
 
 _GENSIM_LOGGER = getLogger("gensim")
 

@@ -1,6 +1,7 @@
 import gzip
 import os
 import shutil
+from contextlib import suppress
 from logging import getLogger
 from typing import List, NoReturn, Union
 
@@ -11,7 +12,6 @@ import zarr
 from botocore.exceptions import ClientError
 from pybiocfilecache import BiocFileCache
 from pybiocfilecache._exceptions import RnameExistsError
-from contextlib import suppress
 from ubiquerg import is_url
 from zarr import Array
 from zarr.errors import PathNotFoundError
@@ -170,9 +170,8 @@ class BBClient(BedCacheManager):
             _LOGGER.info(f"{file_path} already exists in cache.")
         else:
             if bedfile.path is None or is_url(bedfile.path):
-                compression_opts = dict(method="zip", archive_name=f"{bedfile_id}.bed")
                 bedfile.to_pandas().to_csv(
-                    file_path, index=False, compression=compression_opts, header=False, sep="\t"
+                    file_path, index=False, compression="gzip", header=False, sep="\t”
                 )
             else:
                 # copy the BED file out of cache

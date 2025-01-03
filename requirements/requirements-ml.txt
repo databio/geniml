@@ -7,6 +7,8 @@ hnswlib >= 0.8.0
 paramiko >= 3.0.0
 pyBigWig >= 0.3.23
 scanpy >= 1.10.3
-torch >= 2.4.1
+torch >= 2.3.0
 lightning >=  2.4.0
 langchain-huggingface==0.0.2
+hmmlearn >=0.3.2
+scipy >= 1.13.1

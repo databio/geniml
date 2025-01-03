@@ -4,12 +4,14 @@ from typing import Dict, List, Union
 
 import numpy as np
 from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct, VectorParams
+from qdrant_client.http.models import SearchRequest
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from geniml.const import PKG_NAME
 from geniml.search.const import (
     DEFAULT_COLLECTION_NAME,
-    DEFAULT_QDRANT_CONFIG,
+    DEFAULT_DIM,
+    DEFAULT_QDRANT_DIST,
     DEFAULT_QDRANT_HOST,
     DEFAULT_QDRANT_PORT,
     DEFAULT_QUANTIZATION_CONFIG,
@@ -21,12 +23,68 @@ from .abstract import EmSearchBackend
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
+def queries_to_requests(
+    queries: np.ndarray,
+    limit: int,
+    with_payload: bool = True,
+    with_vectors: bool = True,
+    offset: int = 0,
+) -> List[SearchRequest]:
+    """
+    Prepare all search requests for each query vector in a batch
+
+    :param queries: see docstring of QdrantBackend.batch_search
+    :param limit:
+    :param with_payload:
+    :param with_vectors:
+    :param offset:
+    """
+    requests = []
+    for query in queries:
+        if query.ndim > 1:
+            # that each request is from one single query vector
+            requests.extend(queries_to_requests(query, limit, with_payload, with_vectors, offset))
+        else:
+            requests.append(
+                SearchRequest(
+                    vector=query,
+                    limit=limit,
+                    with_vector=with_vectors,
+                    with_payload=with_payload,
+                    offset=offset,
+                )
+            )
+    return requests
+
+
+def results_processing(search_results, with_payload: bool, with_vectors: bool) -> List[Dict]:
+    """
+    Process the search result into unified format: list of dictionaries
+
+    :param search_results: result of qdrant client similarity search
+    :type search_results: search result of qdrant client
+    :param with_payload: see docstring of QdrantBackend.search
+    :param with_vectors:
+    """
+    output_list = []
+    for result in search_results:
+        # build each dictionary
+        result_dict = {"id": result.id, "score": result.score}
+        if with_payload:
+            result_dict["payload"] = result.payload
+        if with_vectors:
+            result_dict["vector"] = result.vector
+        output_list.append(result_dict)
+    return output_list
+
+
 class QdrantBackend(EmSearchBackend):
     """A search backend that uses a qdrant server to store and search embeddings"""
 
     def __init__(
         self,
-        config: VectorParams = DEFAULT_QDRANT_CONFIG,
+        dim: int = DEFAULT_DIM,
+        dist: Distance = DEFAULT_QDRANT_DIST,
         collection: str = DEFAULT_COLLECTION_NAME,
         qdrant_host: str = DEFAULT_QDRANT_HOST,
         qdrant_port: int = DEFAULT_QDRANT_PORT,
@@ -45,7 +103,7 @@ class QdrantBackend(EmSearchBackend):
         """
         super().__init__()
         self.collection = collection
-        self.config = config
+        self.config = VectorParams(size=dim, distance=dist)
         self.url = os.environ.get("QDRANT_HOST", qdrant_host)
         self.port = os.environ.get("QDRANT_PORT", qdrant_port)
         self.qd_client = QdrantClient(
@@ -105,7 +163,10 @@ class QdrantBackend(EmSearchBackend):
         with_payload: bool = True,
         with_vectors: bool = True,
         offset: int = 0,
-    ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
+    ) -> Union[
+        List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
+        List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
+    ]:
         """
          with a given query vector, get k nearest neighbors from vectors in the collection
 
@@ -124,6 +185,8 @@ class QdrantBackend(EmSearchBackend):
             "vector": [<the vector>]
         }
         """
+        if query.ndim > 1:
+            return self.batch_search(query, limit, with_payload, with_vectors, offset)
         # KNN search in qdrant client
         search_results = self.qd_client.search(
             collection_name=self.collection,
@@ -135,15 +198,38 @@ class QdrantBackend(EmSearchBackend):
         )
 
         # add the results in to the output list
+        return results_processing(search_results, with_payload, with_vectors)
+
+    def batch_search(
+        self,
+        queries: np.ndarray,
+        limit: int,
+        with_payload: bool = True,
+        with_vectors: bool = True,
+        offset: int = 0,
+    ) -> List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]]:
+        """
+
+        :param queries: multiple search vectors, np.ndarray with shape of (n, dim)
+        :param limit: see docstring of def search
+        :type limit:
+        :param with_payload:
+        :param with_vectors:
+        :param offset:
+        :return: results of all search requests with each vector in queries
+        """
         output_list = []
-        for result in search_results:
-            # build each dictionary
-            result_dict = {"id": result.id, "score": result.score}
-            if with_payload:
-                result_dict["payload"] = result.payload
-            if with_vectors:
-                result_dict["vector"] = result.vector
-            output_list.append(result_dict)
+        # build all search requests
+        requests = queries_to_requests(queries, limit, with_payload, with_vectors, offset)
+
+        search_results = self.qd_client.search_batch(
+            collection_name=self.collection, requests=requests
+        )
+
+        # add the results in to the output list
+        for batch in search_results:
+            batch_list = results_processing(batch, with_payload, with_vectors)
+            output_list.append(batch_list)
         return output_list
 
     def __len__(self) -> int:
@@ -152,36 +238,51 @@ class QdrantBackend(EmSearchBackend):
         """
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 
-    def retrieve_info(self, ids: Union[List[int], int], with_vec: bool = False) -> Union[
-        Dict[str, Union[int, List[float], Dict[str, str]]],
-        List[Dict[str, Union[int, List[float], Dict[str, str]]]],
+    def retrieve_info(
+        self, ids: Union[List[int], int, List[str], str], with_vectors: bool = False
+    ) -> Union[
+        Dict[str, Union[int, str, List[float], Dict[str, str]]],
+        List[Dict[str, Union[int, str, List[float], Dict[str, str]]]],
     ]:
         """
         With a given list of storage ids, return the information of these vectors
 
         :param ids: list of ids, or a single id
-        :param with_vec:  whether the vectors themselves will also be returned in the output
+        :param with_vectors:  whether the vectors themselves will also be returned in the output
         :return: if ids is one id, a dictionary similar to the output of search() will be returned, without "score";
         if ids is a list, a list of dictionaries will be returned
         """
         if not isinstance(ids, list):
             # retrieve() only takes iterable input
             ids = [ids]
+
+        # add hyphen to uuid if missing
+        for i in range(len(ids)):
+            id_ = ids[i]
+            if isinstance(id_, str):
+                if not "-" in id_:
+                    ids[i] = f"{id_[:8]}-{id_[8:12]}-{id_[12:16]}-{id_[16:20]}-{id_[20:]}"
+
         output_list = []
         retrievals = self.qd_client.retrieve(
             collection_name=self.collection,
             ids=ids,
             with_payload=True,
-            with_vectors=with_vec,  # no need vectors
+            with_vectors=with_vectors,  # no need vectors
         )
-        # retrieve() of qd client does not return result in the order of ids in the list
-        # sort it for convenience
-        sorted_retrievals = sorted(retrievals, key=lambda x: ids.index(x.id))
 
-        # get the information
-        for result in sorted_retrievals:
+        retrieval_dict = {result.id: result for result in retrievals}
+
+        # retrieve() of qd client does not return result in the order of ids in the list
+        # get the retrieval result in output by id order
+        for id_ in ids:
+            try:
+                result = retrieval_dict[id_]
+            except:
+                _LOGGER.warning(f"Warning: no id stored in backend matches {id_}.")
+                continue
             result_dict = {"id": result.id, "payload": result.payload}
-            if with_vec:
+            if with_vectors:
                 result_dict["vector"] = result.vector
             output_list.append(result_dict)
 

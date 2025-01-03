@@ -70,7 +70,6 @@ class CellTypeFineTuneAdapter(L.LightningModule):
 
         :return: The loss
         """
-        # move the batch to the device
         cell1, cell2, target, attn1, attn2 = batch
 
         # forward pass for the batch

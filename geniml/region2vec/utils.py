@@ -15,6 +15,14 @@ import torch
 from gensim.models.callbacks import CallbackAny2Vec
 from gtars.utils import read_tokens_from_gtok
 from rich.progress import track
+
+try:
+    import torch
+except ImportError:
+    raise ImportError(
+        "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
+    )
+from gtars.utils import read_tokens_from_gtok
 from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
