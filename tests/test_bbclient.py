@@ -120,14 +120,14 @@ class TestBBClientCaching:
     def test_bioc_cache_bedfile(self, bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
         bedfile_id = bbclient.add_bed_to_cache(bedfile_path)
-        assert bbclient.bedfile_cache.get(bedfile_id).fpath == bbclient.seek(bedfile_id)
+        assert bbclient._bedfile_cache.get(bedfile_id).fpath == bbclient.seek(bedfile_id)
 
     def test_bioc_cache_bedset(self, tmp_path, local_bedfile_list):
         bbclient = BBClient(cache_folder=tmp_path)
         bedset = BedSet(local_bedfile_list)
         bedset_id = bbclient.add_bedset_to_cache(bedset)
         path_in_cache = bbclient.seek(bedset_id)
-        assert bbclient.bedset_cache.get(bedset_id).fpath == path_in_cache
+        assert bbclient._bedset_cache.get(bedset_id).fpath == path_in_cache
 
 
 class TestBBClientTokens:

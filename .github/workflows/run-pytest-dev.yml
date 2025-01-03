@@ -28,11 +28,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'  # caching can speed up the workflow by reusing the installed dependencies
 
+      - name: Install uv
+        run: pip install uv
+
       - name: Install test dependencies
-        run: if [ -f requirements/requirements-test.txt ]; then pip install -r requirements/requirements-test.txt; fi
+        run: if [ -f requirements/requirements-test.txt ]; then uv pip install -r requirements/requirements-test.txt --system; fi
 
       - name: Install package
-        run: python -m pip install .[ml]
+        run: uv pip install .[ml] --system
 
       - name: Run pytest tests
         run: pytest tests -x -vv --remote-data

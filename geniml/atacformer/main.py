@@ -1,10 +1,10 @@
 import os
+import sys
 from typing import Union
 
+import scanpy as sc
 import torch
 import torch.nn as nn
-import tomllib
-import scanpy as sc
 from huggingface_hub import hf_hub_download
 from yaml import safe_dump, safe_load
 
@@ -12,6 +12,8 @@ from ..models.main import ExModel
 from ..tokenization.main import AnnDataTokenizer
 from .const import (
     CONFIG_FILE_NAME,
+    CONTEXT_SIZE_KEY,
+    D_FF_KEY,
     D_MODEL_KEY,
     MODEL_FILE_NAME,
     N_HEADS_KEY,
@@ -21,9 +23,12 @@ from .const import (
     UNIVERSE_CONFIG_FILE_NAME,
     UNIVERSE_FILE_NAME,
     VOCAB_SIZE_KEY,
-    CONTEXT_SIZE_KEY,
-    D_FF_KEY,
 )
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 class Atacformer(nn.Module):
