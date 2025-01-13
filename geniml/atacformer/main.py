@@ -110,10 +110,11 @@ class Atacformer(nn.Module):
         x = self.embedding(x)
 
         # add positional encoding
-        if self.positional_encoding_type == "sinusoidal":
-            x = x + self.positional_encoding[:, : x.size(1), :]
-        elif self.positional_encoding_type == "learned":
-            x = x + self.positional_encoding(x)
+        # skip for now ...
+        # if self.positional_encoding_type == "sinusoidal":
+        #     x = x + self.positional_encoding[:, : x.size(1), :]
+        # elif self.positional_encoding_type == "learned":
+        #     x = x + self.positional_encoding(x)
 
         # pass through the transformer
         x = self.transformer_encoder(x, src_key_padding_mask=mask)
