@@ -3,7 +3,7 @@ import os
 import shutil
 from contextlib import suppress
 from logging import getLogger
-from typing import List, NoReturn, Union
+from typing import Dict, List, NoReturn, Union
 
 import boto3
 import requests
@@ -11,7 +11,7 @@ import s3fs
 import zarr
 from botocore.exceptions import ClientError
 from pybiocfilecache import BiocFileCache
-from pybiocfilecache._exceptions import RnameExistsError
+from pybiocfilecache.exceptions import RnameExistsError
 from ubiquerg import is_url
 from zarr import Array
 from zarr.errors import PathNotFoundError
@@ -55,8 +55,8 @@ class BBClient(BedCacheManager):
         cache_folder = get_abs_path(cache_folder)
         super().__init__(cache_folder)
 
-        self.bedfile_cache = BiocFileCache(os.path.join(cache_folder, DEFAULT_BEDFILE_SUBFOLDER))
-        self.bedset_cache = BiocFileCache(os.path.join(cache_folder, DEFAULT_BEDSET_SUBFOLDER))
+        self._bedfile_cache = BiocFileCache(os.path.join(cache_folder, DEFAULT_BEDFILE_SUBFOLDER))
+        self._bedset_cache = BiocFileCache(os.path.join(cache_folder, DEFAULT_BEDSET_SUBFOLDER))
 
         self.zarr_cache = zarr.group(
             store=os.path.join(cache_folder, DEFAULT_ZARR_FOLDER), overwrite=False
@@ -122,7 +122,7 @@ class BBClient(BedCacheManager):
             with open(file_path, "wb") as f:
                 f.write(bed_data)
 
-            self.bedfile_cache.add(bed_id, fpath=file_path, action="asis")
+            self._bedfile_cache.add(bed_id, fpath=file_path, action="asis")
 
             _LOGGER.info(f"BED file {bed_id} was downloaded and cached successfully")
 
@@ -145,7 +145,7 @@ class BBClient(BedCacheManager):
                 for bedfile in bedset:
                     bedfile_id = self.add_bed_to_cache(bedfile)
                     file.write(bedfile_id + "\n")
-        self.bedset_cache.add(bedset_id, fpath=file_path, action="asis")
+        self._bedset_cache.add(bedset_id, fpath=file_path, action="asis")
         return bedset_id
 
     def add_bed_to_cache(self, bedfile: Union[RegionSet, str], force: bool = False) -> str:
@@ -183,7 +183,7 @@ class BBClient(BedCacheManager):
                         with gzip.open(file_path, "wb") as f_out:
                             shutil.copyfileobj(f_in, f_out)
             with suppress(RnameExistsError):
-                self.bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
+                self._bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
         return bedfile_id
 
     def add_bed_tokens_to_cache(self, bed_id: str, universe_id: str) -> None:
@@ -395,9 +395,41 @@ class BBClient(BedCacheManager):
             for bedfile_id in extracted_data:
                 self.remove_bedfile_from_cache(bedfile_id)
 
-        self.bedset_cache.remove(bedset_id)
+        self._bedset_cache.remove(bedset_id)
         # commented due to bioc file cache removal:
         # self._remove(file_path)
+
+    def list_beds(self) -> Dict[str, str]:
+        """
+        List all BED files in cache
+
+        :return: the list of identifiers of BED files
+        """
+
+        resources = self._bedfile_cache.list_resources()
+
+        results = {}
+        for resource in resources:
+            results[resource.rname] = resource.fpath
+
+        results = dict(sorted(results.items()))
+        return results
+
+    def list_bedsets(self) -> Dict[str, str]:
+        """
+        List all BED sets in cache
+
+        :return: the list of identifiers of BED sets
+        """
+
+        resources = self._bedset_cache.list_resources()
+
+        results = {}
+        for resource in resources:
+            results[resource.rname] = resource.fpath
+
+        results = dict(sorted(results.items()))
+        return results
 
     def _download_bed_file_from_bb(self, bedfile: str) -> bytes:
         """
@@ -474,7 +506,7 @@ class BBClient(BedCacheManager):
         # commented due to bioc chacing removal method
         # file_path = self.seek(bedfile_id)
         # self._remove(file_path)
-        self.bedfile_cache.remove(bedfile_id)
+        self._bedfile_cache.remove(bedfile_id)
 
     @staticmethod
     def _remove(file_path: str) -> None:

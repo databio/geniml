@@ -198,3 +198,4 @@ qdrant_storage/
 local_cache
 
 lightning_logs
+data/

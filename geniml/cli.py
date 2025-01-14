@@ -18,6 +18,74 @@ from .tokenization.cli import build_subparser as tokenization_subparser
 from .universe.cli import build_mode_parser as universe_subparser
 
 
+def print_inspect_beds(bb_cache_folder) -> None:
+    """
+    Print the bed files in the cache folder.
+
+    :param bb_cache_folder: Cache folder path
+    """
+    from rich.console import Console
+    from rich.table import Table
+
+    from .bbclient import BBClient
+
+    _LOGGER.info(f"Bedfiles directory:")
+    bbc = BBClient(cache_folder=bb_cache_folder)
+    result = bbc.list_beds()
+
+    console = Console()
+
+    # Create a Table
+    table = Table(title="Cached Bedfiles")
+
+    # Add columns
+    table.add_column("ID", justify="center", style="cyan", no_wrap=True)
+    table.add_column("Path", style="magenta")
+
+    # Add rows from the dictionary
+    for id, path in result.items():
+        table.add_row(str(id), path)
+
+    # Print the table
+    console.print(table)
+
+    console.print(f"Number of bed files: {len(result)}")
+
+
+def print_inspect_bedsets(bb_cache_folder) -> None:
+    """
+    Print the bed sets in the cache folder.
+
+    :param bb_cache_folder: Cache folder path
+    """
+    from rich.console import Console
+    from rich.table import Table
+
+    from .bbclient import BBClient
+
+    _LOGGER.info(f"Bedsets directory:")
+    bbc = BBClient(cache_folder=bb_cache_folder)
+    result = bbc.list_bedsets()
+
+    console = Console()
+
+    # Create a Table
+    table = Table(title="Cached Bedsets")
+
+    # Add columns
+    table.add_column("ID", justify="center", style="cyan", no_wrap=True)
+    table.add_column("Path", style="magenta")
+
+    # Add rows from the dictionary
+    for id, path in result.items():
+        table.add_row(str(id), path)
+
+    # Print the table
+    console.print(table)
+
+    console.print(f"Number of bed sets: {len(result)}")
+
+
 def build_argparser():
     """
     Builds argument parser.
@@ -119,7 +187,8 @@ def main(test_args=None):
             "cache-tokens",
             "cache-bedset",
             "seek",
-            "inspect",
+            "inspect-bedfiles",
+            "inspect-bedsets",
             "rm",
         ]:
             _LOGGER.info(f"Subcommand: {args.subcommand}")
@@ -177,12 +246,11 @@ def main(test_args=None):
             _LOGGER.addHandler(handler)
             _LOGGER.info(bbc.seek(args.identifier[0]))
 
-        if args.subcommand == "inspect":
-            _LOGGER.info(f"Bedfiles directory:")
-            os.system(f"tree {bbc.bedfile_cache}")
+        if args.subcommand == "inspect-bedfiles":
+            print_inspect_beds(args.cache_folder)
 
-            _LOGGER.info(f"Bedsets directory:")
-            os.system(f"tree {bbc.bedset_cache}")
+        if args.subcommand == "inspect-bedsets":
+            print_inspect_bedsets(args.cache_folder)
 
         if args.subcommand == "rm":
             file_path = bbc.seek(args.identifier[0])

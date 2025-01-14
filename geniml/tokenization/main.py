@@ -7,6 +7,7 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
+from gtars.tokenizers import MetaTokenizer as GMetaTokenizer
 from gtars.tokenizers import Region as GRegion
 from gtars.tokenizers import TreeTokenizer as GTreeTokenizer
 from huggingface_hub import hf_hub_download

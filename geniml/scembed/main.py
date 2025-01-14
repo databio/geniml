@@ -132,11 +132,12 @@ class ScEmbed:
         :param str universe_config_file_path: Path to the tokenizer config file.
         :param str config_path: Path to the config file.
         """
-        _model, tokenizer, config = load_local_scembed_model(
-            model_path, universe_config_file_path, config_path
-        )
+        _model, config = load_local_region2vec_model(model_path, config_path)
+        tokenizer = AnnDataTokenizer(vocab_path, verbose=True)
+
         self._model = _model
         self.tokenizer = tokenizer
+
         if POOLING_METHOD_KEY in config:
             self.pooling_method = config[POOLING_METHOD_KEY]
 

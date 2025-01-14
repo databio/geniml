@@ -1,14 +1,12 @@
-from typing import Tuple, Union
+from typing import Tuple
 
 import lightning as L
 import torch
 import torch.nn as nn
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 from ..atacformer.main import AtacformerExModel
-from ..region2vec import Region2VecExModel
-from ..scembed import ScEmbed
 
 
 class CellTypeFineTuneAdapter(L.LightningModule):
@@ -18,7 +16,7 @@ class CellTypeFineTuneAdapter(L.LightningModule):
 
     def __init__(
         self,
-        model: Union[Region2VecExModel, ScEmbed, AtacformerExModel],
+        model: AtacformerExModel,
         num_classes: int,
         init_lr: float = 1e-5,
         adamw_weight_decay: float = 0.01,
