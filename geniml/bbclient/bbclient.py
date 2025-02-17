@@ -16,8 +16,9 @@ from ubiquerg import is_url
 from zarr import Array
 from zarr.errors import PathNotFoundError
 
+from pyregionset.pyregionset import GRegionSet
 from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
-from ..io.io import BedSet, RegionSet
+from ..io.io import BedSet
 from ..io.utils import is_gzipped
 from .const import (
     BED_TOKENS_PATTERN,
@@ -105,7 +106,7 @@ class BBClient(BedCacheManager):
 
         return extracted_data
 
-    def load_bed(self, bed_id: str) -> RegionSet:
+    def load_bed(self, bed_id: str) -> GRegionSet:
         """
         Loads a BED file from cache, or downloads and caches it if it doesn't exist
 
@@ -126,7 +127,8 @@ class BBClient(BedCacheManager):
 
             _LOGGER.info(f"BED file {bed_id} was downloaded and cached successfully")
 
-        return RegionSet(regions=file_path)
+        # return RegionSet(regions=file_path)
+        return GRegionSet(file_path)
 
     def add_bedset_to_cache(self, bedset: BedSet) -> str:
         """
@@ -148,7 +150,7 @@ class BBClient(BedCacheManager):
         self._bedset_cache.add(bedset_id, fpath=file_path, action="asis")
         return bedset_id
 
-    def add_bed_to_cache(self, bedfile: Union[RegionSet, str], force: bool = False) -> str:
+    def add_bed_to_cache(self, bedfile: Union[GRegionSet, str], force: bool = False) -> str:
         """
         Add a BED file to the cache
 
@@ -158,30 +160,31 @@ class BBClient(BedCacheManager):
         """
 
         if isinstance(bedfile, str):
-            bedfile = RegionSet(bedfile)
-        elif not isinstance(bedfile, RegionSet):
+            bedfile = GRegionSet(bedfile)
+        elif not isinstance(bedfile, GRegionSet):
             raise TypeError(
                 f"Input must be a RegionSet or a path to a BED file, not {type(bedfile)}"
             )
 
-        bedfile_id = bedfile.compute_bed_identifier()
+        bedfile_id = bedfile.identifier
         file_path = self._bedfile_path(bedfile_id)
         if os.path.exists(file_path) and not force:
             _LOGGER.info(f"{file_path} already exists in cache.")
         else:
-            if bedfile.path is None or is_url(bedfile.path):
-                bedfile.to_pandas().to_csv(
-                    file_path, index=False, compression="gzip", header=False, sep="\t"
-                )
-            else:
-                # copy the BED file out of cache
-                if is_gzipped(bedfile.path):
-                    shutil.copyfile(bedfile.path, file_path)
-                else:
-                    # https://docs.python.org/3/library/gzip.html
-                    with open(bedfile.path, "rb") as f_in:
-                        with gzip.open(file_path, "wb") as f_out:
-                            shutil.copyfileobj(f_in, f_out)
+            # if bedfile.path is None or is_url(bedfile.path):
+            #     bedfile.to_pandas().to_csv(
+            #         file_path, index=False, compression="gzip", header=False, sep="\t"
+            #     )
+            # else:
+            #     # copy the BED file out of cache
+            #     if is_gzipped(bedfile.path):
+            #         shutil.copyfile(bedfile.path, file_path)
+            #     else:
+            #         # https://docs.python.org/3/library/gzip.html
+            #         with open(bedfile.path, "rb") as f_in:
+            #             with gzip.open(file_path, "wb") as f_out:
+            #                 shutil.copyfileobj(f_in, f_out)
+            bedfile.to_bed_gz(file_path)
             with suppress(RnameExistsError):
                 self._bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
         return bedfile_id

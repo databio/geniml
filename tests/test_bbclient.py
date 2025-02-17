@@ -7,6 +7,7 @@ import pytest
 from geniml.bbclient import BBClient
 from geniml.exceptions import TokenizedFileNotFoundInCacheError
 from geniml.io import BedSet, RegionSet
+from pyregionset.pyregionset import GRegionSet
 
 DATA_TEST_FOLDER = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -74,10 +75,10 @@ class TestBBClientCaching:
     @pytest.mark.parametrize("bedfile_path", ALL_BEDFILE_PATH)
     def test_bed_caching_from_region_set(self, tmp_path, bedfile_path):
         bbclient = BBClient(cache_folder=tmp_path)
-        bedfile = RegionSet(bedfile_path)
+        bedfile = GRegionSet(bedfile_path)
         bbclient.add_bed_to_cache(bedfile)
         path_in_cache = bbclient.seek(bedfile.identifier)
-        assert bedfile.compute_bed_identifier() == os.path.split(path_in_cache)[1].split(".")[0]
+        assert bedfile.identifier == os.path.split(path_in_cache)[1].split(".")[0]
 
     def test_bedset_caching(self, tmp_path, local_bedfile_list):
         bbclient = BBClient(cache_folder=tmp_path)
@@ -89,7 +90,7 @@ class TestBBClientCaching:
     def test_bed_not_in_cache_error(self, tmp_path, local_bedfile_path):
         bbclient = BBClient(cache_folder=tmp_path)
         # skip caching
-        bedfile = RegionSet(local_bedfile_path)
+        bedfile = GRegionSet(local_bedfile_path)
         with pytest.raises(FileNotFoundError):
             bbclient.seek(bedfile.identifier)
 
