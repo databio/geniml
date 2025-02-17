@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from iranges import IRanges
 from ubiquerg import is_url
+from pybigtools import BigBedWrite, pybigtools
+from pyregionset.pyregionset import GRegionSet
 
 from .const import (
     MAF_CENTER_COL_NAME,
@@ -323,11 +325,11 @@ class BedSet:
             else:
                 self.region_sets = []
                 for r in region_sets:
-                    self.region_sets.append(RegionSet(r))
+                    self.region_sets.append(GRegionSet(r))
 
         elif file_path is not None:
             if os.path.isfile(file_path):
-                self.region_sets = [RegionSet(r) for r in read_bedset_file(file_path)]
+                self.region_sets = [GRegionSet(r) for r in read_bedset_file(file_path)]
             else:
                 raise FileNotFoundError(f"The specified file '{file_path}' does not exist.")
         else:
@@ -386,7 +388,7 @@ class BedSet:
         elif self._bedset_identifier is None:
             bedfile_ids = []
             for bedfile in self.region_sets:
-                bedfile_ids.append(bedfile.compute_bed_identifier())
+                bedfile_ids.append(bedfile.identifier)
             self._bedset_identifier = compute_md5sum_bedset(bedfile_ids)
 
             return self._bedset_identifier
