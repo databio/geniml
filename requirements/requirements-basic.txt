@@ -8,7 +8,7 @@ genomicranges >= 0.4.1
 
 gtars >= 0.1.1
 pybiocfilecache == 0.6.1
-zarr >= 2.17.2
+zarr >= 2.17.2, < 3.0.0
 pyyaml >= 6.0.1 # for s3fs because of the errors
 s3fs >= 2024.3.1
 pyarrow >= 17.0.0
