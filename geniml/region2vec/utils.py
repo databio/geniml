@@ -436,7 +436,11 @@ def export_region2vec_model(
     # export the vocabulary
     with open(os.path.join(path, universe_file), "a") as f:
         for region in tokenizer.universe.regions:
-            f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
+            # avoid writing special tokens into the exported universe
+            # otherwise when tokenizer is init from the exported universe
+            # id of special tokens can be disrupted
+            if not (region.start == 0 and region.end == 0):
+                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
 
     # export the config (vocab size, embedding size)
     config = {
@@ -451,15 +455,14 @@ def export_region2vec_model(
 
 
 def load_local_region2vec_model(
-    model_path: str,
-    config_path: str,
+    model_path: str, config_path: str, **kwargs
 ) -> Tuple[Region2Vec, dict]:
     """
     Load a region2vec model from a local directory
 
     :param str model_path: The path to the model checkpoint file
     :param str config_path: The path to the model config file
-    :param str vocab_path: The path to the model vocabulary file
+    :param kwargs: include id of padding token
     """
 
     # load the model state dict (weights)
@@ -484,6 +487,7 @@ def load_local_region2vec_model(
     model = Region2Vec(
         config[VOCAB_SIZE_KEY],
         embedding_dim=embedding_dim,
+        padding_idx=kwargs.get("padding_idx", None),
     )
 
     model.load_state_dict(params)
