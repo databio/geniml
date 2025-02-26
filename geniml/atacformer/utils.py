@@ -13,34 +13,35 @@ from .const import KEEP_RATE, MASK_RATE, REPLACE_WITH_MASK_RATE, REPLACE_WITH_RA
 
 class AtacformerMLMCollator:
     """
-    Collator for the MLM dataset. This will pad the tokens, masked_tokens, and mask_ids
+    Collator for the MLM dataset. This will pad the tokens, masked_tokens, and labels.
     """
 
-    def __init__(self, padding_token: int):
+    def __init__(self, padding_token: int, ignore_index: int = -100):
         self.padding_token = padding_token
+        self.ignore_index = ignore_index
 
     def __call__(
         self, batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Collate function for the MLM dataset. This should take a batch of
-        (tokens, masked_tokens, mask_ids) and return a tuple of (tokens, masked_tokens, mask_ids) that are padded
+        Collate function for the MLM dataset. Pads tokens, masked_tokens, and labels.
 
-        :param list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] batch: Batch of (tokens, masked_tokens, mask_ids)
-        :param int padding_token: Token to use for padding
+        :param batch: List of tuples (tokens, masked_tokens, labels)
+        :return: Tuple of (tokens, masked_tokens, labels, attention_mask)
         """
-        tokens, masked_tokens, mask_ids = zip(*batch)
+        tokens, masked_tokens, labels = zip(*batch)
 
-        # pad the tokens
+        # Pad the sequences
         tokens = pad_sequence(tokens, batch_first=True, padding_value=self.padding_token)
         masked_tokens = pad_sequence(
             masked_tokens, batch_first=True, padding_value=self.padding_token
         )
-        mask_ids = pad_sequence(mask_ids, batch_first=True, padding_value=self.padding_token)
+        labels = pad_sequence(labels, batch_first=True, padding_value=self.ignore_index)
 
+        # Create attention mask
         attention_mask = (tokens != self.padding_token).float()
 
-        return tokens, masked_tokens, mask_ids, attention_mask
+        return tokens, masked_tokens, labels, attention_mask
 
 
 class AtacformerMLMDataset(Dataset):
@@ -85,17 +86,17 @@ class AtacformerMLMDataset(Dataset):
     def __len__(self):
         return len(self.files)
 
-    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        This should return a tuple of (tokens, masked_tokens, mask_ids).
+        Returns:
+            tokens: Original token IDs
+            masked_tokens: Token IDs with some tokens masked/replaced
+            labels: Original token IDs for masked positions and -100 for others
         """
-        # load the data into memory
-        tokens = torch.tensor(read_tokens_from_gtok(self.files[idx]))
+        # Load the data into memory
+        tokens = torch.tensor(read_tokens_from_gtok(self.files[idx]), dtype=torch.long)
 
-        # reduce the tokens to the context size
-        # randomly sample self.context_size tokens from the tokens
-        # but dont just slice it.... actually just
-        # pick self.context_points without replacement
+        # Reduce the tokens to the context size
         if tokens.shape[0] > self.context_size:
             indices = torch.multinomial(
                 torch.ones(tokens.shape[0]), self.context_size, replacement=False
@@ -103,45 +104,41 @@ class AtacformerMLMDataset(Dataset):
             tokens = tokens[indices]
 
         masked_tokens = tokens.clone()
+        labels = torch.full_like(tokens, -100)  # Initialize labels with -100
 
-        # select the tokens to mask
-        #   -- each token has an **equal probability** of being masked ( i.e. torch.ones(tokens.shape[0]))
-        #   -- we sample a certain percentage of tokens to mask (in BERT this is 15%) ( i.e. ceil(tokens.shape[0] * self.mask_rate) )
-        #   -- a token can't be masked more than once (replacement=False)
-        mask_ids = torch.multinomial(
-            torch.ones(tokens.shape[0]), ceil(tokens.shape[0] * self.mask_rate), replacement=False
-        )
+        # Determine the number of tokens to mask
+        num_mask = ceil(tokens.shape[0] * self.mask_rate)
+        if num_mask == 0:
+            return tokens, masked_tokens, labels  # No masking needed
 
-        # perform the actual masking. there are three possible outcomes:
-        #   1. mask the token
-        #   2. replace the token with a random token
-        #   3. keep the token the same as it was
-        # each outcome has a different probability of happening (`REPLACE_WITH_MASK_RATE`, `REPLACE_WITH_RANDOM_RATE`, `KEEP_RATE` represented in `self.probs`)
-        #   therefore, we need a decision made for each token selected to be masked. this means we set num_samples = mask_ids.shape[0] (total number of
-        #   tokens selected to mask). we need to sample with replacement (replacement=True) because the same outcome can occur multiple times. e.g. multiple
-        #   tokens can be replaced with the mask token.
-        random_vals = torch.multinomial(self.probs, mask_ids.shape[0], replacement=True)
+        # select unique positions to mask
+        mask_ids = torch.multinomial(torch.ones(tokens.shape[0]), num_mask, replacement=False)
 
-        # now actually mask the tokens. recall that we defined the distribution as:
-        #   `[REPLACE_WITH_MASK_RATE, REPLACE_WITH_RANDOM_RATE, KEEP_RATE]`
-        #   so if the random value is:
-        #   - 0, we *mask the token*,
-        #   - 1, we *replace it with a random token*
-        #   - 2, we *keep it the same*
+        # assign labels for the masked positions
+        labels[mask_ids] = tokens[mask_ids]
+
+        # decide how to mask the selected positions
+        random_vals = torch.multinomial(self.probs, num_mask, replacement=True)
+
+        # indices where [MASK] will be used
+        # this is where random_vals == 0
         mask_token_indices = mask_ids[random_vals == 0]
+
+        # indices where a random token will replace
+        # the original token, this is where random_vals == 1
         replace_random_indices = mask_ids[random_vals == 1]
-        # why is there no need to do anything for random_vals == 2? because we're keeping the token the same...
+
+        # indices where the original token is kept (no action needed)
+        # this is where random_vals == 2
+        # pass
 
         # perform the masking
         masked_tokens[mask_token_indices] = self.mask_token_id
         masked_tokens[replace_random_indices] = torch.randint(
-            self.vocab_size, (replace_random_indices.shape[0],)
+            low=0, high=self.vocab_size, size=(replace_random_indices.shape[0],), dtype=torch.long
         )
 
-        # when training we need to pass the masked tokens to the model
-        # but we also need to know which tokens were masked so we can calculate the loss
-        # and we need to know what those tokens were replaced with so we can calculate the loss
-        return tokens, masked_tokens, mask_ids
+        return tokens, masked_tokens, labels
 
     def __str__(self):
         return f"AtacformerMLMDataset({len(self)} files)"
