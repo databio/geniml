@@ -192,9 +192,14 @@ class MLMAdapter(L.LightningModule):
             self.tokenizer
         ), f"Model vocab_size {self.r2v_model.vocab_size} does not match tokenizer vocab_size {len(self.tokenizer)}"
 
+        self.masked_token_id = self.tokenizer.mask_token_id()
+        self.passing_token_id = self.tokenizer.padding_token_id()
+
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         token_embeddings = self.r2v_model(x, mask=mask)
-        logits = self.linear(token_embeddings)
+        masked_positions = (x == self.masked_token_id).nonzero(as_tuple=True)
+        masked_embeddings = token_embeddings[masked_positions[0], masked_positions[1]]=
+        logits = self.linear(masked_embeddings)
         return logits
 
     def on_fit_start(self):
