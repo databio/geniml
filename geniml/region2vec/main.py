@@ -3,6 +3,7 @@ from logging import getLogger
 from typing import List, Union
 
 import numpy as np
+from torch.nn.utils.rnn import pad_sequence
 
 try:
     import torch
@@ -106,9 +107,11 @@ class Region2VecExModel(ExModel):
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         self._init_tokenizer(tokenizer)
+        padding_idx = self.tokenizer.padding_token_id()
         self._model = Region2Vec(
             len(self.tokenizer),
             embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_DIM),
+            padding_idx=padding_idx,
         )
 
     @property
@@ -140,8 +143,13 @@ class Region2VecExModel(ExModel):
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
         """
-        _model, config = load_local_region2vec_model(model_path, config_path)
         tokenizer = TreeTokenizer(vocab_path)
+        # read id of padding token from tokenizer
+        padding_idx = tokenizer.padding_token_id()
+
+        _model, config = load_local_region2vec_model(
+            model_path, config_path, padding_idx=padding_idx
+        )
 
         self._model = _model
         self.tokenizer = tokenizer
@@ -332,25 +340,37 @@ class Region2VecExModel(ExModel):
         if pooling not in ["mean", "max"]:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
-        # tokenize the regionm -- need to pass it as a list because the tokenizer expects a list
+        # tokenize the regions -- need to pass it as a list because the tokenizer expects a list
         tokens = [self.tokenizer([r]) for r in regions]
-        token_tensors = [
-            torch.tensor(token_set.to_ids(), dtype=torch.long) for token_set in tokens
-        ]
 
-        region_embeddings = []
+        # get token ids
+        token_ids = [token_set.to_ids() for token_set in tokens]
 
-        for token_tensor in token_tensors:
-            if pooling == "mean":
-                region_embeddings.append(
-                    torch.mean(self._model.projection(token_tensor), axis=0).detach().numpy()
-                )
-            elif pooling == "max":
-                region_embeddings.append(
-                    torch.max(self._model.projection(token_tensor), axis=0).detach().numpy()
-                )
-            else:
-                # this should be unreachable
-                raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+        # some raw regions can overlap with more than 1 token in the universe
+        # so token tensor should be shape of (region set size, maximum overlapping tokens)
+        # for regions overlapping with only 1 token, pad with padding token for torch tensor conversion
+        pad_id = self._model.padding_idx
+        token_tensors = pad_sequence(
+            [torch.tensor(t, dtype=torch.long) for t in token_ids],
+            batch_first=True,
+            padding_value=pad_id,
+        )
 
-        return np.vstack(region_embeddings)
+        region_embeddings = self._model.projection(token_tensors)
+
+        # non-padding tokens
+        mask = token_tensors != self._model.projection.padding_idx
+        mask_expanded = mask.unsqueeze(-1)
+        if pooling == "mean":
+            masked_embeddings = region_embeddings * mask_expanded
+            sum_embeddings = masked_embeddings.sum(dim=1)
+            num_valid_tokens = mask.sum(dim=1, keepdim=True).clamp(min=1)
+            output_embeddings = sum_embeddings / num_valid_tokens
+        elif pooling == "max":
+            region_embeddings.masked_fill_(~mask_expanded, float("-inf"))  # In-place
+            output_embeddings = region_embeddings.max(dim=1).values
+        else:
+            # this should be unreachable
+            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+
+        return output_embeddings.detach().numpy()
