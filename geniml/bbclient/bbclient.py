@@ -16,7 +16,7 @@ from ubiquerg import is_url
 from zarr import Array
 from zarr.errors import PathNotFoundError
 
-from pyregionset.pyregionset import GRegionSet
+from gtars.models import RegionSet as GRegionSet
 from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet
 from ..io.utils import is_gzipped

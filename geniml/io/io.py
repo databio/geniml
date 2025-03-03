@@ -9,8 +9,7 @@ import numpy as np
 import pandas as pd
 from iranges import IRanges
 from ubiquerg import is_url
-from pybigtools import BigBedWrite, pybigtools
-from pyregionset.pyregionset import GRegionSet
+from gtars.models import RegionSet as GRegionSet
 
 from .const import (
     MAF_CENTER_COL_NAME,
