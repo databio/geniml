@@ -264,7 +264,7 @@ class RegionSet:
         else:
             if not self.backed:
                 # concate column values
-                chrs = ",".join([region.chr for region in self.regions])
+                chrs = ",".join([str(region.chr) for region in self.regions])
                 starts = ",".join([str(region.start) for region in self.regions])
                 ends = ",".join([str(region.end) for region in self.regions])
 

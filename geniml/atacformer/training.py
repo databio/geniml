@@ -197,7 +197,7 @@ class MLMAdapter(L.LightningModule):
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         token_embeddings = self.r2v_model(x, mask=mask)
         masked_positions = (x == self.masked_token_id).nonzero(as_tuple=True)
-        masked_embeddings = token_embeddings[masked_positions[0], masked_positions[1]]=
+        masked_embeddings = token_embeddings[masked_positions[0], masked_positions[1]]
         logits = self.linear(masked_embeddings)
         return logits
 
