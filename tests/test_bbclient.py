@@ -6,8 +6,8 @@ import pytest
 
 from geniml.bbclient import BBClient
 from geniml.exceptions import TokenizedFileNotFoundInCacheError
-from geniml.io import BedSet, RegionSet
-from pyregionset.pyregionset import GRegionSet
+from geniml.io import BedSet
+from gtars.models import RegionSet as GRegionSet
 
 DATA_TEST_FOLDER = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
