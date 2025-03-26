@@ -7,9 +7,9 @@ from typing import List, Union
 
 import numpy as np
 import scanpy as sc
-from gtars.tokenizers import MetaTokenizer as GMetaTokenizer
-from gtars.tokenizers import Region as GRegion
-from gtars.tokenizers import TreeTokenizer as GTreeTokenizer
+# from gtars.tokenizers import MetaTokenizer as GMetaTokenizer
+from gtars.models import Region as GRegion
+# from gtars.tokenizers import TreeTokenizer as GTreeTokenizer
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
@@ -54,7 +54,7 @@ class TreeTokenizer(Tokenizer):
         universe_file_path = hf_hub_download(model_path, "universe.bed")
         return cls(universe_file_path, **kwargs)
 
-    def __init__(self, universe: str) -> GTreeTokenizer:
+    def __init__(self, universe: str):
         """
         Create a new tokenizer.
 
