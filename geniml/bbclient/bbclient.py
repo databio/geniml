@@ -1,6 +1,4 @@
-import gzip
 import os
-import shutil
 from contextlib import suppress
 from logging import getLogger
 from typing import Dict, List, NoReturn, Union
@@ -12,14 +10,12 @@ import zarr
 from botocore.exceptions import ClientError
 from pybiocfilecache import BiocFileCache
 from pybiocfilecache.exceptions import RnameExistsError
-from ubiquerg import is_url
 from zarr import Array
 from zarr.errors import PathNotFoundError
 
-from gtars.models import RegionSet as GRegionSet
+from gtars.models import RegionSet
 from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet
-from ..io.utils import is_gzipped
 from .const import (
     BED_TOKENS_PATTERN,
     BEDFILE_URL_PATTERN,
@@ -106,7 +102,7 @@ class BBClient(BedCacheManager):
 
         return extracted_data
 
-    def load_bed(self, bed_id: str) -> GRegionSet:
+    def load_bed(self, bed_id: str) -> RegionSet:
         """
         Loads a BED file from cache, or downloads and caches it if it doesn't exist
 
@@ -128,7 +124,7 @@ class BBClient(BedCacheManager):
             _LOGGER.info(f"BED file {bed_id} was downloaded and cached successfully")
 
         # return RegionSet(regions=file_path)
-        return GRegionSet(file_path)
+        return RegionSet(file_path)
 
     def add_bedset_to_cache(self, bedset: BedSet) -> str:
         """
@@ -150,7 +146,7 @@ class BBClient(BedCacheManager):
         self._bedset_cache.add(bedset_id, fpath=file_path, action="asis")
         return bedset_id
 
-    def add_bed_to_cache(self, bedfile: Union[GRegionSet, str], force: bool = False) -> str:
+    def add_bed_to_cache(self, bedfile: Union[RegionSet, str], force: bool = False) -> RegionSet:
         """
         Add a BED file to the cache
 
@@ -160,8 +156,8 @@ class BBClient(BedCacheManager):
         """
 
         if isinstance(bedfile, str):
-            bedfile = GRegionSet(bedfile)
-        elif not isinstance(bedfile, GRegionSet):
+            bedfile = RegionSet(bedfile)
+        elif not isinstance(bedfile, RegionSet):
             raise TypeError(
                 f"Input must be a RegionSet or a path to a BED file, not {type(bedfile)}"
             )
@@ -187,7 +183,7 @@ class BBClient(BedCacheManager):
             bedfile.to_bed_gz(file_path)
             with suppress(RnameExistsError):
                 self._bedfile_cache.add(bedfile_id, fpath=file_path, action="asis")
-        return bedfile_id
+        return bedfile
 
     def add_bed_tokens_to_cache(self, bed_id: str, universe_id: str) -> None:
         """
