@@ -172,18 +172,38 @@ class MLMAdapter(L.LightningModule):
         :param kwargs: Additional arguments to pass to the LightningModule constructor.
         """
         super().__init__(**kwargs)
-        self.loss_fn = nn.CrossEntropyLoss()
-        # linear layer acts as a classification layer for training
-        # but is not used during inference
-        self.linear = nn.Linear(model._model.d_model, model._model.vocab_size)
+        self.loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
         self.r2v_model = model._model
+        # linear layer acts as a classification layer for training
+        # the model on the masked language modeling task
+        self.linear = nn.Linear(model._model.d_model, model._model.vocab_size)
+
         self.tokenizer = model.tokenizer
         self.init_lr = kwargs.get("init_lr", 1e-5)
 
+        # tie the weights of the linear layer with the token embeddings
+        # this is done primarily to reduce the number of parameters
+        # during training significantly
+        self.linear.weight = self.r2v_model.embedding.weight
+
+        # Verify vocab_size consistency
+        assert self.r2v_model.vocab_size == len(
+            self.tokenizer
+        ), f"Model vocab_size {self.r2v_model.vocab_size} does not match tokenizer vocab_size {len(self.tokenizer)}"
+
+        self.masked_token_id = self.tokenizer.mask_token_id()
+        self.passing_token_id = self.tokenizer.padding_token_id()
+
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         token_embeddings = self.r2v_model(x, mask=mask)
-        logits = self.linear(token_embeddings)
+        masked_positions = (x == self.masked_token_id).nonzero(as_tuple=True)
+        masked_embeddings = token_embeddings[masked_positions[0], masked_positions[1]]
+        logits = self.linear(masked_embeddings)
         return logits
+
+    def on_fit_start(self):
+        # move positional embeddings to the device
+        self.r2v_model.positional_encoding = self.r2v_model.positional_encoding.to(self.device)
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """
@@ -215,55 +235,65 @@ class MLMAdapter(L.LightningModule):
         # return optimizer
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
-    def compute_loss(
-        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
-    ):
+    def compute_loss(self, logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """
         Compute the loss for the batch.
 
-        :param batch: The batch
-        :param batch_idx: The batch index
-
-        :return: The loss
+        :param logits: Logits from the model of shape (batch_size, seq_length, vocab_size).
+        :param labels: Labels tensor of shape (batch_size, seq_length).
+        :return: Computed loss.
         """
-        # move the batch to the device
-        tokens, masked_tokens, masked_token_indexes, attention_mask = batch
+        # Reshape logits and labels for loss computation
+        logits = logits.view(-1, self.r2v_model.vocab_size)
+        labels = labels.view(-1)
 
-        # forward pass for the batch
-        output = self.forward(masked_tokens, mask=attention_mask)
-
-        # get predictions and targets
-        # the predictions are the logits for the masked tokens
-        # defined by the masked_token_indexes
-        predictions = output.view(-1, self.r2v_model.vocab_size)[masked_token_indexes]
-        targets = tokens.view(-1)[masked_token_indexes]
-
-        # reshape once more
-        predictions = predictions.view(predictions.shape[0] * predictions.shape[1], -1)
-        targets = targets.view(targets.shape[0] * targets.shape[1])
-
-        # compute the loss
-        loss = self.loss_fn(predictions, targets)
-
+        loss = self.loss_fn(logits, labels)
         return loss
 
     def training_step(
-        self,
-        batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
-        batch_idx: int,
-    ):
+        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
         """
         Perform a training step.
 
-        The batch is a tuple of (tokens, masked_tokens, mask_ids). This step performs
-        masked language modeling as described in the original BERT paper (https://arxiv.org/abs/1810.04805).
-
-        :param batch: The batch
-        :param batch_idx: The batch index
-
+        :param batch: The batch containing (tokens, masked_tokens, labels, attention_mask).
+        :param batch_idx: The batch index.
+        :return: The computed loss.
         """
-        loss = self.compute_loss(batch, batch_idx)
-        self.log("train_loss", loss)
+        _, masked_tokens, labels, attention_mask = batch
+
+        # Forward pass
+        logits = self.forward(masked_tokens, mask=attention_mask)
+
+        # Compute loss
+        loss = self.compute_loss(logits, labels)
+
+        # Log loss
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
+        return loss
+
+    def validation_step(
+        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
+        """
+        Perform a validation step.
+
+        :param batch: The batch containing (tokens, masked_tokens, labels, attention_mask).
+        :param batch_idx: The batch index.
+        :return: The computed loss.
+        """
+        _, masked_tokens, labels, attention_mask = batch
+
+        # Forward pass
+        logits = self.forward(masked_tokens, mask=attention_mask)
+
+        # Compute loss
+        loss = self.compute_loss(logits, labels)
+
+        # Log validation loss
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
         return loss
 
     # this breaks everything -- and I have NO idea why...
@@ -277,21 +307,7 @@ class MLMAdapter(L.LightningModule):
         self.eval()
         torch.set_grad_enabled(True)
 
-    def validation_step(
-        self,
-        batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
-        batch_idx: int,
-    ):
-        """
-        Perform a training step.
+        self.r2v_model.positional_encoding = self.r2v_model.positional_encoding.to(self.device)
 
-        The batch is a tuple of (tokens, masked_tokens, mask_ids). This step performs
-        masked language modeling as described in the original BERT paper (https://arxiv.org/abs/1810.04805).
-
-        :param batch: The batch
-        :param batch_idx: The batch index
-
-        """
-        loss = self.compute_loss(batch, batch_idx)
-        self.log("val_loss", loss)
-        return loss
+    def on_train_start(self):
+        self.r2v_model.positional_encoding = self.r2v_model.positional_encoding.to(self.device)
