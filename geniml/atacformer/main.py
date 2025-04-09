@@ -7,7 +7,7 @@ import scanpy as sc
 import torch
 import torch.nn as nn
 
-from huggingface_hub import hf_hub_download, save_torch_state_dict
+from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 from yaml import safe_dump, safe_load
 
