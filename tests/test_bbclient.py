@@ -102,7 +102,7 @@ class TestBBClientCaching:
 
     def test_remove_bed_from_cache(self, tmp_path, local_bedfile_path):
         bbclient = BBClient(cache_folder=tmp_path)
-        bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path)
+        bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path).identifier
         assert bbclient.seek(bedfile_id)
         bbclient.remove_bedfile_from_cache(bedfile_id)
         with pytest.raises(FileNotFoundError):
@@ -120,7 +120,7 @@ class TestBBClientCaching:
     @pytest.mark.parametrize("bedfile_path", ALL_BEDFILE_PATH)
     def test_bioc_cache_bedfile(self, bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
-        bedfile_id = bbclient.add_bed_to_cache(bedfile_path)
+        bedfile_id = bbclient.add_bed_to_cache(bedfile_path).identifier
         assert bbclient._bedfile_cache.get(bedfile_id).fpath == bbclient.seek(bedfile_id)
 
     def test_bioc_cache_bedset(self, tmp_path, local_bedfile_list):
@@ -147,7 +147,7 @@ class TestBBClientTokens:
 class TestS3Caching:
     def test_upload_s3(self, mocker, local_bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
-        bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path)
+        bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path).identifier
         upload_mock = mocker.patch(
             "boto3.s3.inject.upload_file",
         )

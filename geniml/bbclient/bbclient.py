@@ -141,7 +141,7 @@ class BBClient(BedCacheManager):
         else:
             with open(file_path, "w") as file:
                 for bedfile in bedset:
-                    bedfile_id = self.add_bed_to_cache(bedfile)
+                    bedfile_id = self.add_bed_to_cache(bedfile).identifier
                     file.write(bedfile_id + "\n")
         self._bedset_cache.add(bedset_id, fpath=file_path, action="asis")
         return bedset_id
