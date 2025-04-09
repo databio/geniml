@@ -6,7 +6,7 @@ botocore >= 1.34.54
 boto3 >=  1.34.54
 genomicranges >= 0.4.1
 
-gtars >= 0.1.1
+gtars >= 0.2.5
 pybiocfilecache == 0.6.1
 zarr >= 2.17.2, < 3.0.0
 pyyaml >= 6.0.1 # for s3fs because of the errors
