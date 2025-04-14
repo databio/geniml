@@ -18,13 +18,13 @@ except ImportError:
         "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
     )
 from gtars.utils import read_tokens_from_gtok
+from gtars.tokenizers import Tokenizer
 from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
     from gensim.models import Word2Vec as GensimWord2Vec
 
 from ..const import GTOK_EXT
-from ..tokenization.main import Tokenizer, TreeTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
