@@ -1,10 +1,9 @@
-import os
 import time
-from typing import List
 
 import numpy as np
 import scanpy as sc
-from rich.progress import track
+from tqdm import tqdm
+from gtars.tokenizers import Tokenizer
 
 from ..io import Region
 
@@ -52,50 +51,40 @@ def time_str(t: float) -> str:
     return f"{t:.2f}s"
 
 
-def anndata_to_regionsets(adata: sc.AnnData) -> List[List[Region]]:
+def tokenize_anndata(adata: sc.AnnData, tokenizer: Tokenizer):
     """
-    Converts an AnnData object to a list of lists of regions. This
-    is done by taking each cell and creating a list of all regions
-    that have a value greater than 0.
+    Tokenize an AnnData object. This is more involved, so it gets its own function.
 
-    This function is already pretty optimized. To speed this up
-    further we'd have to parallelize it or reach for a lower-level
-    language.
-
-    *Note: this method requires that the sc.AnnData object have
-    chr, start, and end in `.var` attributes*
+    Args:
+        adata (sc.AnnData): The AnnData object to tokenize.
+        tokenizer (Tokenizer): The tokenizer to use.
     """
-    if not isinstance(adata, sc.AnnData):
-        raise ValueError("The input must be a scanpy AnnData object.")
+    # extract regions from AnnData
+    # its weird because of how numpy handle Intervals, the parent class of Region,
+    # see here:
+    # https://stackoverflow.com/a/43722306/13175187
+    adata_features = [
+        Region(chr, int(start), int(end))
+        for chr, start, end in tqdm(
+            zip(adata.var["chr"], adata.var["start"], adata.var["end"]),
+            total=adata.var.shape[0],
+            desc="Extracting regions from AnnData",
+        )
+    ]
+    features = np.ndarray(len(adata_features), dtype=object)
+    for i, region in enumerate(adata_features):
+        features[i] = region
+    del adata_features
 
-    if not all(
-        [
-            "chr" in adata.var.columns,
-            "start" in adata.var.columns,
-            "end" in adata.var.columns,
-        ]
+    # tokenize
+    tokenized = []
+    for row in tqdm(
+        range(adata.shape[0]),
+        total=adata.shape[0],
+        desc="Tokenizing",
     ):
-        raise ValueError(
-            "The AnnData object must have chr, start, and end in the `.var` attribute."
-        )
+        _, non_zeros = adata.X[row].nonzero()
+        regions = features[non_zeros]
+        tokenized.append(tokenizer(regions))
 
-    # Extract the arrays for chr, start, and end
-    chr_values = adata.var["chr"].values
-    start_values = adata.var["start"].values
-    end_values = adata.var["end"].values
-
-    # Perform the comparison using numpy operations
-    positive_values = adata.X > 0
-
-    if not isinstance(positive_values, np.ndarray):
-        positive_values = positive_values.toarray()
-
-    regions = []
-    for i in track(range(adata.shape[0]), total=adata.shape[0], description="Tokenizing"):
-        regions.append(
-            [
-                Region(chr_values[j], start_values[j], end_values[j])
-                for j in np.where(positive_values[i])[0]
-            ]
-        )
-    return regions
+    return tokenized
