@@ -457,7 +457,7 @@ def load_local_region2vec_model(
     """
 
     # load the model state dict (weights)
-    params = torch.load(model_path)
+    params = torch.load(model_path, weights_only=True)
 
     # get the model config (vocab size, embedding size)
     with open(config_path, "r") as f:
