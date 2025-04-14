@@ -433,15 +433,6 @@ def export_region2vec_model(
     # export the model weights
     torch.save(model.state_dict(), os.path.join(path, checkpoint_file))
 
-    # export the vocabulary
-    with open(os.path.join(path, universe_file), "a") as f:
-        for region in tokenizer.universe.regions:
-            # avoid writing special tokens into the exported universe
-            # otherwise when tokenizer is init from the exported universe
-            # id of special tokens can be disrupted
-            if not (region.start == 0 and region.end == 0):
-                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
-
     # export the config (vocab size, embedding size)
     config = {
         VOCAB_SIZE_KEY: len(tokenizer),
