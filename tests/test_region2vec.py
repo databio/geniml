@@ -6,7 +6,7 @@ import torch
 from geniml.io.io import Region, RegionSet
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.region2vec.utils import Region2VecDataset
-from geniml.tokenization.main import TreeTokenizer
+from gtars.tokenizers import Tokenizer
 
 DATA_FOLDER_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data"
@@ -66,15 +66,8 @@ def test_r2v_pytorch_tokenizer_is_file_on_disk(universe_file: str):
     )  # 2378 + 7 special tokens (unk, pad, mask, sep, cls, eos, bos)
 
 
-@pytest.mark.skip(reason="Downloading the model takes too long.")
-def test_r2v_pytorch_tokenizer_is_on_hf():
-    model = Region2VecExModel(tokenizer="databio/r2v-ChIP-atlas-hg38-v2")
-    assert model is not None
-    assert len(model.tokenizer) == 1_698_713
-
-
 def test_r2v_pytorch_exmodel_train(universe_file: str):
-    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=Tokenizer(universe_file))
     assert model is not None
 
     dataset = Region2VecDataset(
@@ -86,7 +79,7 @@ def test_r2v_pytorch_exmodel_train(universe_file: str):
 
 
 def test_r2v_pytorch_encode(universe_file: str):
-    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=Tokenizer(universe_file))
     assert model is not None
 
     r = Region("chr1", 63403166, 63403785)
@@ -103,7 +96,7 @@ def test_r2v_pytorch_encode(universe_file: str):
 
 
 def test_save_load_pytorch_exmodel(universe_file: str):
-    model = Region2VecExModel(tokenizer=TreeTokenizer(universe_file))
+    model = Region2VecExModel(tokenizer=Tokenizer(universe_file))
     assert model is not None
 
     dataset = Region2VecDataset(
@@ -117,7 +110,6 @@ def test_save_load_pytorch_exmodel(universe_file: str):
         # save the model
         model.export(os.path.join(DATA_FOLDER_PATH, "test_model/"))
         assert os.path.exists(os.path.join(DATA_FOLDER_PATH, "test_model/checkpoint.pt"))
-        assert os.path.exists(os.path.join(DATA_FOLDER_PATH, "test_model/universe.bed"))
 
         # load in
         model_loaded = Region2VecExModel.from_pretrained(
@@ -131,7 +123,6 @@ def test_save_load_pytorch_exmodel(universe_file: str):
     finally:
         try:
             os.remove(os.path.join(DATA_FOLDER_PATH, "test_model/checkpoint.pt"))
-            os.remove(os.path.join(DATA_FOLDER_PATH, "test_model/universe.bed"))
             os.remove(os.path.join(DATA_FOLDER_PATH, "test_model/config.yaml"))
             os.rmdir(os.path.join(DATA_FOLDER_PATH, "test_model/"))
         except Exception as e:

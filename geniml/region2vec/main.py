@@ -106,7 +106,7 @@ class Region2VecExModel(ExModel):
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         self._init_tokenizer(tokenizer)
-        padding_idx = self.tokenizer.padding_token_id
+        padding_idx = self.tokenizer.pad_token_id
         self._model = Region2Vec(
             len(self.tokenizer),
             embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_DIM),
@@ -145,7 +145,7 @@ class Region2VecExModel(ExModel):
         tokenizer = Tokenizer(vocab_path)
 
         # read id of padding token from tokenizer
-        padding_idx = tokenizer.padding_token_id
+        padding_idx = tokenizer.pad_token_id
 
         _model, config = load_local_region2vec_model(
             model_path, config_path, padding_idx=padding_idx
@@ -344,7 +344,7 @@ class Region2VecExModel(ExModel):
         tokens = [self.tokenizer([r]) for r in regions]
 
         # get token ids
-        token_ids = [token_set.to_ids() for token_set in tokens]
+        token_ids = [token_set["input_ids"] for token_set in tokens]
 
         # some raw regions can overlap with more than 1 token in the universe
         # so token tensor should be shape of (region set size, maximum overlapping tokens)
