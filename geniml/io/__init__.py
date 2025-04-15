@@ -1,2 +1,3 @@
-from .io import *
-from .io import BedSet, RegionSet
+from .io import BedSet, RegionSet, Region
+
+__all__ = ["Region", "BedSet", "RegionSet"]

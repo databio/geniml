@@ -52,6 +52,8 @@ def test_make_SNP():
     assert s.strand == "+"
 
 
+# TODO: remove this when we remove the deprecated code
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 class TestRegionSet:
     @pytest.mark.parametrize(
         "url",
