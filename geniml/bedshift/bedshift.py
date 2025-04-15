@@ -1,4 +1,4 @@
-""" Perturb regions in bedfiles """
+"""Perturb regions in bedfiles"""
 
 import logging
 import math

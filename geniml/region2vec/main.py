@@ -12,6 +12,7 @@ except ImportError:
         "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
     )
 
+from gtars.tokenizers import Tokenizer
 from gtars.models import Region as GRegion
 from gtars.models import RegionSet as GRegionSet
 from huggingface_hub import hf_hub_download
@@ -19,7 +20,6 @@ from rich.progress import track
 
 from ..io import Region, RegionSet
 from ..models import ExModel
-from ..tokenization.main import Tokenizer, TreeTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -27,7 +27,6 @@ from .const import (
     DEFAULT_MIN_COUNT,
     DEFAULT_WINDOW_SIZE,
     MODEL_FILE_NAME,
-    MODULE_NAME,
     POOLING_METHOD_KEY,
     POOLING_TYPES,
     UNIVERSE_FILE_NAME,
@@ -41,7 +40,6 @@ from .utils import (
 )
 
 _GENSIM_LOGGER = getLogger("gensim")
-_LOGGER = getLogger(MODULE_NAME)
 
 # demote gensim logger to warning
 _GENSIM_LOGGER.setLevel("WARNING")
@@ -51,7 +49,7 @@ class Region2VecExModel(ExModel):
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: TreeTokenizer = None,
+        tokenizer: Tokenizer = None,
         device: str = None,
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
@@ -65,7 +63,7 @@ class Region2VecExModel(ExModel):
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: TreeTokenizer
+        self.tokenizer: Tokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
         self.pooling_method = pooling_method
@@ -82,7 +80,7 @@ class Region2VecExModel(ExModel):
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_tokenizer(self, tokenizer: Union[TreeTokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[Tokenizer, str]):
         """
         Initialize the tokenizer.
 
@@ -90,15 +88,15 @@ class Region2VecExModel(ExModel):
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
-                self.tokenizer = TreeTokenizer(tokenizer)
+                self.tokenizer = Tokenizer(tokenizer)
             else:
-                self.tokenizer = TreeTokenizer.from_pretrained(
-                    tokenizer
-                )  # download from huggingface (or at least try to)
-        elif isinstance(tokenizer, TreeTokenizer):
+                raise ValueError(
+                    f"tokenizer path {tokenizer} does not exist. Please provide a valid path."
+                )
+        elif isinstance(tokenizer, Tokenizer):
             self.tokenizer = tokenizer
         else:
-            raise TypeError("tokenizer must be a path to a bed file or an TreeTokenizer object.")
+            raise TypeError("tokenizer must be a path to a bed file or an Tokenizer object.")
 
     def _init_model(self, tokenizer, **kwargs):
         """
@@ -107,7 +105,7 @@ class Region2VecExModel(ExModel):
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         self._init_tokenizer(tokenizer)
-        padding_idx = self.tokenizer.padding_token_id()
+        padding_idx = self.tokenizer.pad_token_id
         self._model = Region2Vec(
             len(self.tokenizer),
             embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_DIM),
@@ -143,9 +141,10 @@ class Region2VecExModel(ExModel):
         :param str model_path: Path to the model checkpoint.
         :param str vocab_path: Path to the vocabulary file.
         """
-        tokenizer = TreeTokenizer(vocab_path)
+        tokenizer = Tokenizer(vocab_path)
+
         # read id of padding token from tokenizer
-        padding_idx = tokenizer.padding_token_id()
+        padding_idx = tokenizer.pad_token_id
 
         _model, config = load_local_region2vec_model(
             model_path, config_path, padding_idx=padding_idx
@@ -344,7 +343,7 @@ class Region2VecExModel(ExModel):
         tokens = [self.tokenizer([r]) for r in regions]
 
         # get token ids
-        token_ids = [token_set.to_ids() for token_set in tokens]
+        token_ids = [token_set["input_ids"] for token_set in tokens]
 
         # some raw regions can overlap with more than 1 token in the universe
         # so token tensor should be shape of (region set size, maximum overlapping tokens)

@@ -7,6 +7,7 @@ import scanpy as sc
 import torch
 from huggingface_hub import hf_hub_download
 from rich.progress import track
+from gtars.tokenizers import Tokenizer
 
 from ..region2vec.const import (
     CONFIG_FILE_NAME,
@@ -26,7 +27,7 @@ from ..region2vec.utils import (
     load_local_region2vec_model,
     train_region2vec_model,
 )
-from ..tokenization.main import AnnDataTokenizer, Tokenizer
+from ..tokenization.utils import tokenize_anndata
 from .const import MODULE_NAME
 
 _GENSIM_LOGGER = getLogger("gensim")
@@ -40,7 +41,7 @@ class ScEmbed:
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: AnnDataTokenizer = None,
+        tokenizer: Tokenizer = None,
         device: str = None,
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
@@ -54,7 +55,7 @@ class ScEmbed:
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: AnnDataTokenizer
+        self.tokenizer: Tokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
         self.pooling_method: POOLING_TYPES = pooling_method
@@ -71,7 +72,7 @@ class ScEmbed:
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_tokenizer(self, tokenizer: Union[AnnDataTokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[Tokenizer, str]):
         """
         Initialize the tokenizer.
 
@@ -79,15 +80,13 @@ class ScEmbed:
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
-                self.tokenizer = AnnDataTokenizer(tokenizer)
+                self.tokenizer = Tokenizer(tokenizer)
             else:
-                self.tokenizer = AnnDataTokenizer.from_pretrained(
-                    tokenizer
-                )  # download from huggingface (or at least try to)
-        elif isinstance(tokenizer, AnnDataTokenizer):
+                raise FileNotFoundError(f"Tokenizer file {tokenizer} not found.")
+        elif isinstance(tokenizer, Tokenizer):
             self.tokenizer = tokenizer
         else:
-            raise TypeError("tokenizer must be of type AnnDataTokenizer or str.")
+            raise TypeError("tokenizer must be of type Tokenizer or str.")
 
     def _init_model(self, tokenizer, **kwargs):
         """
@@ -132,7 +131,7 @@ class ScEmbed:
         :param str vocab_path: Path to the vocabulary file.
         """
         _model, config = load_local_region2vec_model(model_path, config_path)
-        tokenizer = AnnDataTokenizer(vocab_path, verbose=True)
+        tokenizer = Tokenizer(vocab_path)
 
         self._model = _model
         self.tokenizer = tokenizer
@@ -303,8 +302,8 @@ class ScEmbed:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         # tokenize the region
-        tokens = self.tokenizer(regions)
-        tokens = [[t.id for t in sublist] for sublist in tokens]
+        tokens = tokenize_anndata(regions, self.tokenizer)
+        tokens = [[t["input_ids"] for t in sublist] for sublist in tokens]
 
         # get the vector
         embeddings = []

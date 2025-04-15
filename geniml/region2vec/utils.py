@@ -18,13 +18,13 @@ except ImportError:
         "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
     )
 from gtars.utils import read_tokens_from_gtok
+from gtars.tokenizers import Tokenizer
 from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
     from gensim.models import Word2Vec as GensimWord2Vec
 
 from ..const import GTOK_EXT
-from ..tokenization.main import Tokenizer, TreeTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -433,15 +433,6 @@ def export_region2vec_model(
     # export the model weights
     torch.save(model.state_dict(), os.path.join(path, checkpoint_file))
 
-    # export the vocabulary
-    with open(os.path.join(path, universe_file), "a") as f:
-        for region in tokenizer.universe.regions:
-            # avoid writing special tokens into the exported universe
-            # otherwise when tokenizer is init from the exported universe
-            # id of special tokens can be disrupted
-            if not (region.start == 0 and region.end == 0):
-                f.write(f"{region.chr}\t{region.start}\t{region.end}\n")
-
     # export the config (vocab size, embedding size)
     config = {
         VOCAB_SIZE_KEY: len(tokenizer),
@@ -466,7 +457,7 @@ def load_local_region2vec_model(
     """
 
     # load the model state dict (weights)
-    params = torch.load(model_path)
+    params = torch.load(model_path, weights_only=True)
 
     # get the model config (vocab size, embedding size)
     with open(config_path, "r") as f:
