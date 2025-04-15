@@ -1,5 +1,7 @@
 import gzip
 import logging
+import warnings
+from typing_extensions import deprecated
 import os
 from hashlib import md5
 from typing import List, NoReturn, Union
@@ -28,6 +30,9 @@ from .utils import compute_md5sum_bedset, extract_maf_col_positions, is_gzipped,
 _LOGGER = logging.getLogger("bbclient")
 
 
+@deprecated(
+    "This class is deprecated and will be removed in future versions. Use Region class from Gtars"
+)
 class Region:
     def __init__(self, chr: str, start: int, stop: int):
         """
@@ -37,6 +42,10 @@ class Region:
         :param int start: start position
         :param int stop: stop position
         """
+        warnings.warn(
+            "Region is deprecated and will be removed in future versions.", DeprecationWarning
+        )
+
         self.chr = chr
         self.start = start
         self.end = stop
@@ -45,6 +54,7 @@ class Region:
         return f"Region({self.chr}, {self.start}, {self.end})"
 
 
+@deprecated("This class is deprecated and will be removed in future versions.")
 class RegionSet:
     def __init__(self, regions: Union[str, List[Region]], backed: bool = False):
         """
@@ -56,6 +66,11 @@ class RegionSet:
         :param regions: path, or url to bed file or list of Region objects
         :param backed: whether to load the bed file into memory or not [Default: False]
         """
+        warnings.warn(
+            "RegionSet is deprecated and will be removed in future versions. Use RegionSet class from Gtars",
+            DeprecationWarning,
+        )
+
         self._df: Union[pd.DataFrame, None] = None
 
         if isinstance(regions, str):
