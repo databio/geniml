@@ -316,7 +316,7 @@ class Region2VecExModel(ExModel):
         self,
         regions: Union[str, Region, Sequence[Region], RegionSet, GRegionSet],
         pooling: POOLING_TYPES = None,
-        batch_size: Optional[int] = 4096,  # <-- new arg
+        batch_size: Optional[int] = 64,  # <-- new arg
     ) -> np.ndarray:
         """
         Vectorise one or many regions.
