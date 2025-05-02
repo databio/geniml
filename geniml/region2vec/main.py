@@ -1,6 +1,6 @@
 import os
 from logging import getLogger
-from typing import List, Union
+from typing import List, Union, Sequence, Optional
 
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
@@ -314,62 +314,62 @@ class Region2VecExModel(ExModel):
 
     def encode(
         self,
-        regions: Union[str, Region, List[Region], RegionSet, GRegionSet],
+        regions: Union[str, Region, Sequence[Region], RegionSet, GRegionSet],
         pooling: POOLING_TYPES = None,
+        batch_size: Optional[int] = 64,  # <-- new arg
     ) -> np.ndarray:
         """
-        Get the vector for a region.
+        Vectorise one or many regions.
 
-        :param regions: Region to get the vector for.
-        :param pooling: Pooling type to use.
-
-        :return np.ndarray: Vector for the region.
+        :param regions: Region(s) to encode.
+        :param pooling: "mean" or "max" token-pooling.
+        :param batch_size: How many regions to pad/encode at once
+                           (None or 0 ➜ process all in one go).
         """
-        # allow for overriding the pooling method
+        # ---------- input normalisation ----------
         pooling = pooling or self.pooling_method
 
-        # data validation
         if isinstance(regions, Region):
             regions = [regions]
-        if isinstance(regions, str):
+        elif isinstance(regions, str):
             regions = RegionSet(regions)
-        if not isinstance(regions[0], Region) and not isinstance(regions[0], GRegion):
-            raise TypeError("regions must be a list of Region objects.")
 
-        if pooling not in ["mean", "max"]:
+        if not isinstance(regions[0], (Region, GRegion)):
+            raise TypeError("regions must be a list of Region or GRegion objects.")
+        if pooling not in {"mean", "max"}:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
-        # tokenize the regions -- need to pass it as a list because the tokenizer expects a list
-        tokens = [self.tokenizer([r]) for r in regions]
+        # tokenize
+        token_sets = [self.tokenizer([r]) for r in regions]
+        token_ids = [ts["input_ids"] for ts in token_sets]
 
-        # get token ids
-        token_ids = [token_set["input_ids"] for token_set in tokens]
-
-        # some raw regions can overlap with more than 1 token in the universe
-        # so token tensor should be shape of (region set size, maximum overlapping tokens)
-        # for regions overlapping with only 1 token, pad with padding token for torch tensor conversion
+        # ---------- batched padding / projection ----------
         pad_id = self._model.padding_idx
-        token_tensors = pad_sequence(
-            [torch.tensor(t, dtype=torch.long) for t in token_ids],
-            batch_first=True,
-            padding_value=pad_id,
-        )
+        outputs = []
 
-        region_embeddings = self._model.projection(token_tensors)
+        n = len(token_ids)
+        bs = n if not batch_size or batch_size <= 0 else batch_size
+        for start in range(0, n, bs):
+            chunk = token_ids[start : start + bs]
 
-        # non-padding tokens
-        mask = token_tensors != self._model.projection.padding_idx
-        mask_expanded = mask.unsqueeze(-1)
-        if pooling == "mean":
-            masked_embeddings = region_embeddings * mask_expanded
-            sum_embeddings = masked_embeddings.sum(dim=1)
-            num_valid_tokens = mask.sum(dim=1, keepdim=True).clamp(min=1)
-            output_embeddings = sum_embeddings / num_valid_tokens
-        elif pooling == "max":
-            region_embeddings.masked_fill_(~mask_expanded, float("-inf"))  # In-place
-            output_embeddings = region_embeddings.max(dim=1).values
-        else:
-            # this should be unreachable
-            raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+            tensors = pad_sequence(
+                [torch.tensor(t, dtype=torch.long) for t in chunk],
+                batch_first=True,
+                padding_value=pad_id,
+            )
 
-        return output_embeddings.detach().numpy()
+            reg_emb = self._model.projection(tensors)  # (B, T, D)
+            mask = tensors.ne(self._model.projection.padding_idx).unsqueeze(-1)
+
+            if pooling == "mean":
+                masked = reg_emb * mask
+                summed = masked.sum(dim=1)
+                counts = mask.sum(dim=1).clamp(min=1)
+                chunk_out = summed / counts
+            else:  # pooling == "max"
+                reg_emb.masked_fill_(~mask, float("-inf"))
+                chunk_out = reg_emb.max(dim=1).values
+
+            outputs.append(chunk_out.detach())
+
+        return torch.cat(outputs, dim=0).cpu().numpy()
