@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 from gensim.models import Word2Vec
 
-from ..region2vec import Region2VecExModel
+from ..region2vec.main import Region2VecExModel
 
 
 def genome_distance(u: Tuple[int, int], v: Tuple[int, int]) -> float:
@@ -151,49 +151,47 @@ def load_base_embeddings(path: str) -> Tuple[np.ndarray, List[str]]:
 
 
 def load_genomic_embeddings(
-    model_path: str, embed_type: str = "region2vec"
+    model_path: str, embed_type: str = "exmodel"
 ) -> Tuple[np.ndarray, List[str]]:
     """Loads genomic region embeddings based on the type.
 
     Args:
         model_path (str): The path to a saved model, or a huggingface repo of a model.
         embed_type (str, optional): The model type. Defaults to "region2vec".
-            Can be "region2vec", "base", or "huggingface".
+            Can be "region2vec", "base", or "exmodel".
 
     Returns:
         tuple[np.ndarray, list[str]]: Embedding vectors and the corresponding
             region list.
     """
-    if os.path.exists(model_path):
-        # try to load local
-        if embed_type == "region2vec":
-            model = Word2Vec.load(model_path)
-            regions_r2v = model.wv.index_to_key
-            embed_rep = model.wv.vectors
-            return embed_rep, regions_r2v
-        elif embed_type == "base":
-            embed_rep, regions_r2v = load_base_embeddings(model_path)
-            return embed_rep, regions_r2v
-
-    else:
-        # try to load from huggingface
-        exmodel = Region2VecExModel(model_path)
+    if embed_type == "exmodel":
+        # load from local model path/huggingface
+        if os.path.exists(model_path):
+            exmodel = Region2VecExModel.from_pretrained(model_path)
+        else:
+            exmodel = Region2VecExModel(model_path)
         embed_rep = exmodel.model.projection.weight.data.numpy()
-        regions_r2v = [region2vocab_modify(r) for r in exmodel.tokenizer.universe.regions]
+        id_token = {
+            token_id: region
+            for region, token_id in exmodel.tokenizer.get_vocab().items()
+            if region not in set(exmodel.tokenizer.special_tokens_map.values())
+        }
+
+        regions_r2v = [id_token[k] for k in sorted(id_token)]
         # remove embeddings representing unknown token and padding token
         return embed_rep[:-2], regions_r2v
 
+    elif embed_type == "region2vec":
+        model = Word2Vec.load(model_path)
+        regions_r2v = model.wv.index_to_key
+        embed_rep = model.wv.vectors
+        return embed_rep, regions_r2v
+    elif embed_type == "base":
+        embed_rep, regions_r2v = load_base_embeddings(model_path)
+        return embed_rep, regions_r2v
 
-def region2vocab_modify(region) -> str:
-    """Convert a builtins.Region object to a string in the format of chr:start-end.
-
-    Args:
-        region (builtins.Region): A region stored in tokenizer
-
-    Returns:
-        str: region string in standardized format chr:start-end.
-    """
-    return f"{region.chr}:{region.start}-{region.end}"
+    else:
+        raise ValueError("Please choose a valid embedding type: region2vec, base, or exmodel.")
 
 
 def sort_key(x: str) -> Tuple[int, int]:
