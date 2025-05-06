@@ -171,15 +171,17 @@ def load_genomic_embeddings(
         else:
             exmodel = Region2VecExModel(model_path)
         embed_rep = exmodel.model.projection.weight.data.numpy()
+
+        # get nonspecial tokens
         id_token = {
             token_id: region
             for region, token_id in exmodel.tokenizer.get_vocab().items()
             if region not in set(exmodel.tokenizer.special_tokens_map.values())
         }
-
+        # sort ids to match the order of the embedding matrix
         regions_r2v = [id_token[k] for k in sorted(id_token)]
-        # remove embeddings representing unknown token and padding token
-        return embed_rep[:-2], regions_r2v
+        # remove embeddings representing special tokens
+        return embed_rep[: -(len(exmodel.tokenizer.special_tokens_map))], regions_r2v
 
     elif embed_type == "region2vec":
         model = Word2Vec.load(model_path)
