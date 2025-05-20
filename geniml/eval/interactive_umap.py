@@ -93,7 +93,7 @@ def update_figure(col, selected_vals):
             x=plot_data["UMAP1"],
             y=plot_data["UMAP2"],
             mode="markers",
-            marker=dict(size=4, opacity=0.4, color="gray"),
+            marker=dict(size=2, opacity=0.4, color="gray"),
             text=plot_data.index,
             hovertemplate="%{text}<extra></extra>",
             name="Data"
@@ -115,7 +115,7 @@ def update_figure(col, selected_vals):
                 x=sub["UMAP1"],
                 y=sub["UMAP2"],
                 mode="markers",
-                marker=dict(size=4, opacity=0.2, color=label2color[val]),
+                marker=dict(size=2, opacity=0.4, color=label2color[val]),
                 text=sub.index,
                 customdata=sub[anno_df.columns],
                 hovertemplate="<b>%{text}</b><br>" + "<br>".join(
@@ -136,7 +136,7 @@ def update_figure(col, selected_vals):
         x=others["UMAP1"],
         y=others["UMAP2"],
         mode="markers",
-        marker=dict(size=4, opacity=0.2, color="lightgray"),
+        marker=dict(size=2, opacity=0.2, color="lightgray"),
         text=others.index,
         customdata=others[anno_df.columns],
         hovertemplate="<b>%{text}</b><br>" + "<br>".join(
@@ -152,7 +152,7 @@ def update_figure(col, selected_vals):
             x=sub["UMAP1"],
             y=sub["UMAP2"],
             mode="markers",
-            marker=dict(size=8, opacity=0.9, color=label2color[val]),
+            marker=dict(size=4, opacity=0.4, color=label2color[val]),
             text=sub.index,
             customdata=sub[anno_df.columns],
             hovertemplate="<b>%{text}</b><br>" + "<br>".join(
