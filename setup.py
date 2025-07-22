@@ -48,6 +48,9 @@ setup(
     name=PACKAGE_NAME,
     packages=[
         PACKAGE_NAME,
+        "geniml.atacformer",
+        "geniml.craft",
+        "geniml.geneformer",
         "geniml.assess",
         "geniml.bedspace",
         "geniml.bedshift",
