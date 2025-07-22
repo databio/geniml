@@ -19,13 +19,15 @@ from .configuration_atacformer import AtacformerConfig
 from .modeling_utils import freeze_except_last_n
 from .functional import revgrad
 
+logger = logging.get_logger(__name__)
+
 # try to import cut cross entropy
 try:
     from cut_cross_entropy.linear_cross_entropy import LinearCrossEntropy
 
     _CCE_AVAILABLE = True
 except ImportError:
-    logging.warning_once(
+    logger.warning(
         "Cut cross entropy not found, please install it with `pip install cut-cross-entropy`."
     )
     _CCE_AVAILABLE = False
