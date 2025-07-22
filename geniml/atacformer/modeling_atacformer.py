@@ -8,7 +8,12 @@ from tqdm import tqdm
 
 from transformers import PreTrainedModel
 from transformers.utils import logging
-from transformers.modeling_outputs import MaskedLMOutput, TokenClassifierOutput, BaseModelOutput, SequenceClassifierOutput
+from transformers.modeling_outputs import (
+    MaskedLMOutput,
+    TokenClassifierOutput,
+    BaseModelOutput,
+    SequenceClassifierOutput,
+)
 
 from .configuration_atacformer import AtacformerConfig
 from .modeling_utils import freeze_except_last_n
@@ -20,10 +25,11 @@ try:
 
     _CCE_AVAILABLE = True
 except ImportError:
-    logging.warning(
+    logging.warning_once(
         "Cut cross entropy not found, please install it with `pip install cut-cross-entropy`."
     )
     _CCE_AVAILABLE = False
+
 
 class AtacformerPreTrainedModel(PreTrainedModel):
     """
@@ -31,7 +37,7 @@ class AtacformerPreTrainedModel(PreTrainedModel):
     models.
     """
 
-    config_class = AtacformerConfig 
+    config_class = AtacformerConfig
     base_model_prefix = "atacformer"
     supports_gradient_checkpointing = True
     _supports_sdpa = True
@@ -51,7 +57,8 @@ class AtacformerPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
-    
+
+
 class AtacformerEmbeddings(nn.Module):
     """
     Simple embedding layer that includes learnable token and position embeddings.
@@ -64,9 +71,11 @@ class AtacformerEmbeddings(nn.Module):
         """
         super().__init__()
         self.config = config
-        self.token_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
+        self.token_embeddings = nn.Embedding(
+            config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id
+        )
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-    
+
     def forward(self, input_ids: torch.LongTensor) -> torch.Tensor:
         bsz, seq_len = input_ids.size()
 
@@ -79,6 +88,7 @@ class AtacformerEmbeddings(nn.Module):
         if self.config.use_pos_embeddings:
             x = x + pos_emb
         return x
+
 
 class AtacformerModel(AtacformerPreTrainedModel):
     """
@@ -101,21 +111,21 @@ class AtacformerModel(AtacformerPreTrainedModel):
             ),
             num_layers=config.num_hidden_layers,
         )
-    
+
         self.init_weights()
-    
+
     def get_input_embeddings(self):
         return self.embeddings.token_embeddings
-    
+
     def set_input_embeddings(self, value):
         self.embeddings.token_embeddings = value
-    
+
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[torch.Tensor] = None, 
+        attention_mask: Optional[torch.Tensor] = None,
         return_dict: Optional[bool] = None,
-        **kwargs: Optional[dict]
+        **kwargs: Optional[dict],
     ) -> torch.Tensor:
         """
         Forward pass of the model.
@@ -134,11 +144,11 @@ class AtacformerModel(AtacformerPreTrainedModel):
         """
         if input_ids is None:
             raise ValueError("You have to specify input_ids")
-        
+
         # prepare attention mask
         if attention_mask is None:
             attention_mask = torch.ones(input_ids.shape, dtype=torch.bool, device=input_ids.device)
-        
+
         # get embeddings
         embeddings = self.embeddings(input_ids)
 
@@ -146,7 +156,8 @@ class AtacformerModel(AtacformerPreTrainedModel):
         outputs = self.encoder(embeddings, src_key_padding_mask=~attention_mask)
 
         return outputs
-    
+
+
 class EncodeTokenizedCellsMixin:
     """
     Provides a default `encode_tokenized_cells` by delegating to `self.atacformer(...)`.
@@ -154,6 +165,7 @@ class EncodeTokenizedCellsMixin:
     that takes (input_ids, attention_mask, return_dict=False).
     Token pooling (mean) can be disabled to return per-token embeddings.
     """
+
     def encode_tokenized_cells(
         self,
         input_ids: List[List[int]],
@@ -171,32 +183,42 @@ class EncodeTokenizedCellsMixin:
                 Whether to mean-pool the token embeddings (True) or return per-token embeddings (False).
         """
         if not hasattr(self, "atacformer"):
-            raise AttributeError("This class must have an 'atacformer' attribute with a forward method.")
-        if not hasattr(self.config, "pad_token_id") or not hasattr(self.config, "max_position_embeddings"):
-            raise AttributeError("This class must have 'pad_token_id' and 'max_position_embeddings' in its config.")
+            raise AttributeError(
+                "This class must have an 'atacformer' attribute with a forward method."
+            )
+        if not hasattr(self.config, "pad_token_id") or not hasattr(
+            self.config, "max_position_embeddings"
+        ):
+            raise AttributeError(
+                "This class must have 'pad_token_id' and 'max_position_embeddings' in its config."
+            )
 
         pad_id = self.config.pad_token_id
         max_ctx = self.config.max_position_embeddings
 
         device = next(self.parameters()).device
         all_embs = []
-        
+
         with torch.no_grad():
             for start in tqdm(range(0, len(input_ids), batch_size), desc="Encoding batches"):
                 torch.cuda.empty_cache()
                 batch_seqs = input_ids[start : start + batch_size]
                 toks = [
                     torch.tensor(
-                        np.random.choice(s, size=max_ctx, replace=len(s) < max_ctx)
-                        if len(s) > max_ctx
-                        else s,
+                        (
+                            np.random.choice(s, size=max_ctx, replace=len(s) < max_ctx)
+                            if len(s) > max_ctx
+                            else s
+                        ),
                         dtype=torch.long,
                         device=device,
                     )
                     for s in batch_seqs
                 ]
-                padded = nn.utils.rnn.pad_sequence(toks, batch_first=True, padding_value=pad_id).to(device)
-                mask = (padded != pad_id)
+                padded = nn.utils.rnn.pad_sequence(
+                    toks, batch_first=True, padding_value=pad_id
+                ).to(device)
+                mask = padded != pad_id
                 last_h = self.atacformer(input_ids=padded, attention_mask=mask)
                 if pool_tokens:
                     masked = last_h * mask.unsqueeze(-1)
@@ -208,9 +230,10 @@ class EncodeTokenizedCellsMixin:
                 all_embs.append(batch_emb)
         return torch.cat(all_embs, dim=0)
 
+
 class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
-    
+
     """
     atacformerModel for masked language modeling.
     """
@@ -219,7 +242,7 @@ class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel
         super().__init__(config)
         self.atacformer = AtacformerModel(config)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
-        
+
         # use cut cross entropy if available
         if _CCE_AVAILABLE:
             self.loss_fct = LinearCrossEntropy()
@@ -233,7 +256,7 @@ class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel
 
     def get_input_embeddings(self):
         return self.atacformer.get_input_embeddings()
-    
+
     def get_output_embeddings(self):
         return self.lm_head
 
@@ -261,29 +284,31 @@ class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel
         """
         if input_ids is None:
             raise ValueError("You have to specify input_ids")
-        
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # ensure attention mask is bool
         if attention_mask is None:
             attention_mask = torch.ones(input_ids.shape, dtype=torch.bool, device=input_ids.device)
         else:
-            attention_mask = attention_mask.bool()        
+            attention_mask = attention_mask.bool()
 
         # get embeddings
         # shape (batch_size, sequence_length, hidden_size)
-        outputs = self.atacformer(input_ids, attention_mask=attention_mask, return_dict=return_dict)
+        outputs = self.atacformer(
+            input_ids, attention_mask=attention_mask, return_dict=return_dict
+        )
 
         # compute loss if labels are provided
         loss = None
         if labels is not None:
-            required_dtype = (
-                self.get_output_embeddings().weight.dtype
-            )  # should be torch.bfloat16
+            required_dtype = self.get_output_embeddings().weight.dtype  # should be torch.bfloat16
             if outputs.dtype != required_dtype:
                 # logger.warning_once(f"casting hidden states from {outputs.dtype} to {required_dtype} before cce loss.") # Optional logging
                 outputs = outputs.to(required_dtype)
-            assert _CCE_AVAILABLE, "Cut cross entropy is not available. Please install it with `pip install cut-cross-entropy`."
+            assert (
+                _CCE_AVAILABLE
+            ), "Cut cross entropy is not available. Please install it with `pip install cut-cross-entropy`."
 
             loss = self.loss_fct(
                 e=outputs,
@@ -295,7 +320,7 @@ class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel
         if not return_dict:
             if loss is not None:
                 return (loss, None) + (outputs,)
-        
+
         return MaskedLMOutput(loss=loss, logits=None, hidden_states=outputs, attentions=None)
 
 
@@ -305,22 +330,24 @@ class AtacformerDiscriminatorHead(nn.Module):
     Hidden size is usually the same as the backbone’s, but you
     can pass a smaller `disc_hidden_size` in the config if you like.
     """
+
     def __init__(self, config: AtacformerConfig):
         super().__init__()
-        hidden_sz   = getattr(config, "discriminator_hidden_size", config.hidden_size)
-        self.dense  = nn.Linear(config.hidden_size, hidden_sz)
-        self.act    = nn.GELU()
-        self.norm   = nn.LayerNorm(hidden_sz, eps=config.norm_eps)
+        hidden_sz = getattr(config, "discriminator_hidden_size", config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, hidden_sz)
+        self.act = nn.GELU()
+        self.norm = nn.LayerNorm(hidden_sz, eps=config.norm_eps)
         self.classifier = nn.Linear(hidden_sz, 1)
 
     def forward(self, sequence_output: torch.Tensor) -> torch.Tensor:
         x = self.dense(sequence_output)
         x = self.act(x)
         x = self.norm(x)
-        logits = self.classifier(x).squeeze(-1)       # (B, L)
+        logits = self.classifier(x).squeeze(-1)  # (B, L)
         return logits
 
-class AtacformerForReplacedTokenDetection(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel):    
+
+class AtacformerForReplacedTokenDetection(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel):
     """
     Atacformer model for replaced token detection. This model uses the ELECTRA
     framework to train a discriminator (this model) to detect replaced tokens.
@@ -362,14 +389,14 @@ class AtacformerForReplacedTokenDetection(EncodeTokenizedCellsMixin, AtacformerP
         """
         if input_ids is None:
             raise ValueError("You have to specify input_ids")
-        
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # ensure attention mask is bool
         if attention_mask is None:
             attention_mask = torch.ones(input_ids.shape, dtype=torch.bool, device=input_ids.device)
         else:
-            attention_mask = attention_mask.bool()        
+            attention_mask = attention_mask.bool()
 
         # get embeddings
         # shape (batch_size, sequence_length, hidden_size)
@@ -385,19 +412,16 @@ class AtacformerForReplacedTokenDetection(EncodeTokenizedCellsMixin, AtacformerP
             # labels: 1=replaced, 0=original, -100=ignore (special tokens)
             active = labels != -100
             if active.any():
-                loss = F.binary_cross_entropy_with_logits(
-                    logits[active], labels.float()[active]
-                )
+                loss = F.binary_cross_entropy_with_logits(logits[active], labels.float()[active])
 
         if not return_dict:
             return (loss, logits) if loss is not None else (logits,)
 
-        return TokenClassifierOutput(   # simple HF container
-            loss=loss,
-            logits=logits,
-            hidden_states=backbone_out
+        return TokenClassifierOutput(  # simple HF container
+            loss=loss, logits=logits, hidden_states=backbone_out
         )
-    
+
+
 class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel):
     """
     Atacformer model for cell clustering. It follows a similar learning framework
@@ -414,8 +438,10 @@ class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTraine
 
     def get_input_embeddings(self):
         return self.atacformer.get_input_embeddings()
-    
-    def _mean_pooling(self, embeddings: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+
+    def _mean_pooling(
+        self, embeddings: torch.Tensor, attention_mask: torch.Tensor
+    ) -> torch.Tensor:
         """
         Mean pooling for the embeddings.
 
@@ -432,7 +458,7 @@ class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTraine
         sum_embeddings = torch.sum(embeddings * attention_mask, 1)
         sum_mask = torch.clamp(attention_mask.sum(1), min=1e-9)
         return sum_embeddings / sum_mask
-    
+
     def forward(
         self,
         input_ids_anchor: torch.LongTensor,
@@ -443,7 +469,7 @@ class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTraine
         attention_mask_negative: Optional[torch.Tensor] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutput]:
-        
+
         if attention_mask_anchor is None:
             attention_mask_anchor = torch.ones_like(input_ids_anchor, dtype=torch.bool)
         if attention_mask_positive is None:
@@ -453,16 +479,22 @@ class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTraine
 
         # encode and pool
         emb_anchor = self._mean_pooling(
-            self.atacformer(input_ids_anchor, attention_mask=attention_mask_anchor, return_dict=False),
-            attention_mask_anchor
+            self.atacformer(
+                input_ids_anchor, attention_mask=attention_mask_anchor, return_dict=False
+            ),
+            attention_mask_anchor,
         )
         emb_positive = self._mean_pooling(
-            self.atacformer(input_ids_positive, attention_mask=attention_mask_positive, return_dict=False),
-            attention_mask_positive
+            self.atacformer(
+                input_ids_positive, attention_mask=attention_mask_positive, return_dict=False
+            ),
+            attention_mask_positive,
         )
         emb_negative = self._mean_pooling(
-            self.atacformer(input_ids_negative, attention_mask=attention_mask_negative, return_dict=False),
-            attention_mask_negative
+            self.atacformer(
+                input_ids_negative, attention_mask=attention_mask_negative, return_dict=False
+            ),
+            attention_mask_negative,
         )
 
         # Triplet margin loss
@@ -478,17 +510,19 @@ class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTraine
             attentions=None,
         )
 
+
 class AtacformerPairwiseInteractionHead(nn.Module):
     """
     Pairwise interaction head that will build pairwise interaction]
     scores for embeddings output by AtacformerModel. (self-interaction)
     """
+
     def __init__(self, config: AtacformerConfig):
         super().__init__()
         self.mlp = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
             nn.ReLU(),
-            nn.Linear(config.hidden_size, 1)
+            nn.Linear(config.hidden_size, 1),
         )
 
     def forward(self, embeddings: torch.Tensor) -> torch.Tensor:
@@ -507,13 +541,14 @@ class AtacformerPairwiseInteractionHead(nn.Module):
         emb1 = embeddings.unsqueeze(2).expand(B, n, n, d)
         emb2 = embeddings.unsqueeze(1).expand(B, n, n, d)
 
-        pairwise_features = torch.cat([
-            emb1, emb2, emb1 * emb2, torch.abs(emb1 - emb2)
-        ], dim=-1)  # shape: (B, n, n, 4*d)
+        pairwise_features = torch.cat(
+            [emb1, emb2, emb1 * emb2, torch.abs(emb1 - emb2)], dim=-1
+        )  # shape: (B, n, n, 4*d)
 
         scores = self.mlp(pairwise_features).squeeze(-1)  # shape: (B, n, n)
         return scores
-    
+
+
 class AtacformerForPairwiseInteraction(AtacformerPreTrainedModel):
     """
     Atacformer model for pairwise interaction prediction. It follows a similar learning framework
@@ -529,7 +564,7 @@ class AtacformerForPairwiseInteraction(AtacformerPreTrainedModel):
 
     def get_input_embeddings(self):
         return self.atacformer.get_input_embeddings()
-    
+
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -554,14 +589,14 @@ class AtacformerForPairwiseInteraction(AtacformerPreTrainedModel):
         """
         if input_ids is None:
             raise ValueError("You have to specify input_ids")
-        
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # ensure attention mask is bool
         if attention_mask is None:
             attention_mask = torch.ones(input_ids.shape, dtype=torch.bool, device=input_ids.device)
         else:
-            attention_mask = attention_mask.bool()        
+            attention_mask = attention_mask.bool()
 
         # get embeddings
         # shape (batch_size, sequence_length, hidden_size)
@@ -582,6 +617,7 @@ class AtacformerForPairwiseInteraction(AtacformerPreTrainedModel):
             attentions=None,
         )
 
+
 class GRL(nn.Module):
     def __init__(self, alpha: float = 1.0):
         super().__init__()
@@ -590,7 +626,10 @@ class GRL(nn.Module):
     def forward(self, x):
         return revgrad(x, self.alpha)
 
-class AtacformerForUnsupervisedBatchCorrection(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel):
+
+class AtacformerForUnsupervisedBatchCorrection(
+    EncodeTokenizedCellsMixin, AtacformerPreTrainedModel
+):
     """
     Atacformer model for batch correction. It follows a similar learning framework
     to the one used in domain adaptation, where the model is trained to correct
@@ -604,7 +643,7 @@ class AtacformerForUnsupervisedBatchCorrection(EncodeTokenizedCellsMixin, Atacfo
         self.grl = GRL(alpha=config.grl_alpha)  # gradient reversal layer
         self.batch_prediction_head = nn.Linear(config.hidden_size, config.num_batches)
 
-        self.lambda_adversarial = config.lambda_adv # weight for adversarial loss
+        self.lambda_adversarial = config.lambda_adv  # weight for adversarial loss
 
         self.post_init()
         freeze_except_last_n(self.atacformer, config.bc_unfreeze_last_n_layers)
@@ -612,7 +651,9 @@ class AtacformerForUnsupervisedBatchCorrection(EncodeTokenizedCellsMixin, Atacfo
     def get_input_embeddings(self):
         return self.atacformer.get_input_embeddings()
 
-    def _mean_pooling(self, embeddings: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+    def _mean_pooling(
+        self, embeddings: torch.Tensor, attention_mask: torch.Tensor
+    ) -> torch.Tensor:
         """
         Mean pooling for the embeddings.
 
@@ -673,9 +714,7 @@ class AtacformerForUnsupervisedBatchCorrection(EncodeTokenizedCellsMixin, Atacfo
             attention_mask=attention_mask,
         )
 
-        cell_embeddings = self._mean_pooling(
-            backbone_out, attention_mask
-        )
+        cell_embeddings = self._mean_pooling(backbone_out, attention_mask)
 
         # 1) MLM-ELECTRA loss
         logits_mlm = self.discriminator(backbone_out)  # (B, L)
@@ -687,7 +726,7 @@ class AtacformerForUnsupervisedBatchCorrection(EncodeTokenizedCellsMixin, Atacfo
                 loss_mlm = F.binary_cross_entropy_with_logits(
                     logits_mlm[active], labels.float()[active]
                 )
-        
+
         # 2) Adversarial loss for batch prediction
         logits_adv = self.batch_prediction_head(self.grl(cell_embeddings))  # (B, num_batches)
         loss_adv = None
@@ -711,7 +750,7 @@ class AtacformerForUnsupervisedBatchCorrection(EncodeTokenizedCellsMixin, Atacfo
 
         if not return_dict:
             return (loss, logits_mlm, logits_adv, cell_embeddings)
-        
+
         return SequenceClassifierOutput(
             loss=loss,
             logits=logits_mlm,
