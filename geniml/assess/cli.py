@@ -56,7 +56,7 @@ def build_subparser(parser):
         action="store_true",
     )
     parser.add_argument("--folder-out", help="folder to which save the statistic", type=str)
-    parser.add_argument("--pref", help="statistic file prefix", type=str)
+    parser.add_argument("--pref", help="statistic file prefix", type=str, required=True)
 
     parser.add_argument(
         "--save-each",
