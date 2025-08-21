@@ -199,7 +199,9 @@ class HNSWBackend(EmSearchBackend):
     def __len__(self) -> int:
         return self.idx.element_count
 
-    def retrieve_info(self, ids: Union[List[int], int], with_vectors: bool = False) -> Union[
+    def retrieve_info(
+        self, ids: Union[List[int], int], with_vectors: bool = False
+    ) -> Union[
         Dict[str, Union[int, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, List[float], Dict[str, str]]]],
     ]:

@@ -20,6 +20,7 @@ from transformers.integrations.integration_utils import is_wandb_available
 
 from .data_processing import TrainingTokenizer
 
+
 def get_git_hash() -> str:
     """
     Get the current git hash of the repository.
@@ -28,6 +29,7 @@ def get_git_hash() -> str:
         return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
     except Exception:
         raise RuntimeError("Could not get git hash. Make sure you are in a git repository.")
+
 
 def tokenize_anndata(adata: sc.AnnData, tokenizer: Tokenizer):
     """
@@ -66,13 +68,18 @@ def tokenize_anndata(adata: sc.AnnData, tokenizer: Tokenizer):
         tokenized.append(tokenizer(regions))
     return tokenized
 
+
 class WandbMixin:
     def __init__(self, *args, **kwargs):
         if not is_wandb_available():
-            raise RuntimeError("WandbCallback requires wandb to be installed. Run `pip install wandb`.")
+            raise RuntimeError(
+                "WandbCallback requires wandb to be installed. Run `pip install wandb`."
+            )
         import wandb
+
         self.wandb = wandb
         super().__init__(*args, **kwargs)
+
 
 class DataCollatorForReplacedTokenDetection(WandbMixin, DataCollatorForLanguageModeling):
     """
@@ -100,8 +107,8 @@ class DataCollatorForReplacedTokenDetection(WandbMixin, DataCollatorForLanguageM
             tokenizer=tokenizer,
             mlm=True,
             mlm_probability=mlm_probability,
-            mask_replace_prob=0.0,           # we’ll never emit [MASK]
-            random_replace_prob=1.0,         # always replace
+            mask_replace_prob=0.0,  # we’ll never emit [MASK]
+            random_replace_prob=1.0,  # always replace
             seed=seed,
         )
 
@@ -118,7 +125,6 @@ class DataCollatorForReplacedTokenDetection(WandbMixin, DataCollatorForLanguageM
     ) -> tuple[torch.Tensor, torch.Tensor]:
         import torch
 
-        
         original = inputs.clone()
 
         # 1 pick positions to corrupt
@@ -145,19 +151,20 @@ class DataCollatorForReplacedTokenDetection(WandbMixin, DataCollatorForLanguageM
 
         # 3 discriminator labels: 1 ≙ token was replaced, 0 ≙ original
         labels = (inputs != original).long()
-        labels[special_tokens_mask] = -100      # ignore loss on special / pad
+        labels[special_tokens_mask] = -100  # ignore loss on special / pad
 
         return inputs, labels
+
 
 class DataCollatorForTripletLoss:
     """
     A simple data collator for triplet loss to fine-tune Atacformer for cell-type clustering
     """
+
     def __init__(self, tokenizer: TrainingTokenizer, max_position_embeddings: int = None):
         self.tokenizer = tokenizer
         self.pad_token_id = tokenizer.pad_token_id
         self.max_position_embeddings = max_position_embeddings
-
 
     def _truncate(self, seq: List[int]) -> List[int]:
         if self.max_position_embeddings is not None and len(seq) > self.max_position_embeddings:
@@ -168,19 +175,31 @@ class DataCollatorForTripletLoss:
 
     def __call__(self, features: List[Dict]) -> Dict[str, torch.Tensor]:
         # Unpack triplets and truncate if needed
-        anchors = [torch.tensor(self._truncate(f["input_ids_anchor"]), dtype=torch.long) for f in features]
-        positives = [torch.tensor(self._truncate(f["input_ids_positive"]), dtype=torch.long) for f in features]
-        negatives = [torch.tensor(self._truncate(f["input_ids_negative"]), dtype=torch.long) for f in features]
+        anchors = [
+            torch.tensor(self._truncate(f["input_ids_anchor"]), dtype=torch.long) for f in features
+        ]
+        positives = [
+            torch.tensor(self._truncate(f["input_ids_positive"]), dtype=torch.long)
+            for f in features
+        ]
+        negatives = [
+            torch.tensor(self._truncate(f["input_ids_negative"]), dtype=torch.long)
+            for f in features
+        ]
 
         # Pad all
         input_ids_anchor = pad_sequence(anchors, batch_first=True, padding_value=self.pad_token_id)
-        input_ids_positive = pad_sequence(positives, batch_first=True, padding_value=self.pad_token_id)
-        input_ids_negative = pad_sequence(negatives, batch_first=True, padding_value=self.pad_token_id)
+        input_ids_positive = pad_sequence(
+            positives, batch_first=True, padding_value=self.pad_token_id
+        )
+        input_ids_negative = pad_sequence(
+            negatives, batch_first=True, padding_value=self.pad_token_id
+        )
 
         # Create attention masks
-        attention_mask_anchor = (input_ids_anchor != self.pad_token_id)
-        attention_mask_positive = (input_ids_positive != self.pad_token_id)
-        attention_mask_negative = (input_ids_negative != self.pad_token_id)
+        attention_mask_anchor = input_ids_anchor != self.pad_token_id
+        attention_mask_positive = input_ids_positive != self.pad_token_id
+        attention_mask_negative = input_ids_negative != self.pad_token_id
 
         return {
             "input_ids_anchor": input_ids_anchor,
@@ -191,12 +210,18 @@ class DataCollatorForTripletLoss:
             "attention_mask_negative": attention_mask_negative,
         }
 
+
 class DataCollatorForUnsupervisedBatchCorrection(DataCollatorForReplacedTokenDetection):
-    def __init__(self, tokenizer: TrainingTokenizer, max_position_embeddings: int = None, mlm_probability: float = 0.15, seed: int | None = None):
+    def __init__(
+        self,
+        tokenizer: TrainingTokenizer,
+        max_position_embeddings: int = None,
+        mlm_probability: float = 0.15,
+        seed: int | None = None,
+    ):
         # call parent __init__ to properly initialize the ELECTRA token replacement
         super().__init__(tokenizer=tokenizer, mlm_probability=mlm_probability, seed=seed)
         self.max_position_embeddings = max_position_embeddings
-
 
     def _truncate(self, seq: List[int]) -> List[int]:
         if self.max_position_embeddings is not None and len(seq) > self.max_position_embeddings:
@@ -207,7 +232,9 @@ class DataCollatorForUnsupervisedBatchCorrection(DataCollatorForReplacedTokenDet
 
     def __call__(self, features: List[Dict]) -> Dict[str, torch.Tensor]:
         # unpack
-        input_ids = [torch.tensor(self._truncate(f["input_ids"]), dtype=torch.long) for f in features]
+        input_ids = [
+            torch.tensor(self._truncate(f["input_ids"]), dtype=torch.long) for f in features
+        ]
         batch_labels = torch.tensor([f["batch_id"] for f in features], dtype=torch.long)
 
         pad_token_id = self.tokenizer.pad_token_id
@@ -215,11 +242,11 @@ class DataCollatorForUnsupervisedBatchCorrection(DataCollatorForReplacedTokenDet
         # run the masking
         input_ids, labels = super().torch_mask_tokens(
             inputs=pad_sequence(input_ids, batch_first=True, padding_value=pad_token_id),
-            special_tokens_mask=None
+            special_tokens_mask=None,
         )
 
         # create attention mask
-        attention_mask = (input_ids != pad_token_id)
+        attention_mask = input_ids != pad_token_id
 
         return {
             "input_ids": input_ids,
@@ -233,6 +260,7 @@ class ModelParameterChangeCallback(WandbMixin, TrainerCallback):
     """
     A callback to log the changes in model parameters after training.
     """
+
     def __init__(self, initial_params: dict[str, torch.Tensor]):
         super().__init__()
 
@@ -241,25 +269,23 @@ class ModelParameterChangeCallback(WandbMixin, TrainerCallback):
     def _compute_param_changes(self, model: torch.nn.Module):
         """
         Compute the changes in model parameters after training.
-        
+
         Args:
             model (torch.nn.Module): The model to check.
         """
         updates = defaultdict(float)
-        counts  = defaultdict(int)
-        
+        counts = defaultdict(int)
+
         for (name, p) in model.named_parameters():
             delta = (p.detach().cpu() - self.initial_params[name]).norm().item()
-            module = name.rsplit('.', 1)[0]   # e.g. 'encoder.layer1'
+            module = name.rsplit(".", 1)[0]  # e.g. 'encoder.layer1'
             updates[module] += delta
-            counts[module]  += 1
-
+            counts[module] += 1
 
         for m in updates:
             updates[m] = math.sqrt(updates[m] / counts[m])
-        
+
         return updates
-        
 
     def on_log(self, args, state, control, **kwargs):
         """
@@ -269,7 +295,7 @@ class ModelParameterChangeCallback(WandbMixin, TrainerCallback):
         step = state.global_step
         if model is not None:
             updates = self._compute_param_changes(model)
-            table = self.wandb.Table(columns=["module","delta","step"])
+            table = self.wandb.Table(columns=["module", "delta", "step"])
 
             if self.wandb.run is not None:
                 for module, delta in updates.items():
@@ -280,21 +306,36 @@ class ModelParameterChangeCallback(WandbMixin, TrainerCallback):
                 for module, delta in updates.items():
                     print(f"{module}: {delta:.4f}")
         else:
-            raise ValueError("Model is not available in the callback. Please check the Trainer configuration.")
+            raise ValueError(
+                "Model is not available in the callback. Please check the Trainer configuration."
+            )
+
 
 class AdjustedRandIndexCallback(WandbMixin, TrainerCallback):
     """
     A callback to log the adjusted Rand index (ARI) during training.
     """
-    def __init__(self, input_ids: List[List[int]], cell_type_labels: List[int], pad_token_id: int, batch_size: int = 128, log_every_n_steps: int = 500):
+
+    def __init__(
+        self,
+        input_ids: List[List[int]],
+        cell_type_labels: List[int],
+        pad_token_id: int,
+        batch_size: int = 128,
+        log_every_n_steps: int = 500,
+    ):
         super().__init__()
         try:
             from sklearn.metrics import adjusted_rand_score
             from sklearn.cluster import KMeans
         except ImportError:
-            raise ImportError("scikit-learn is required for AdjustedRandIndexCallback. Please install it with `pip install scikit-learn`.")
-        
-        assert len(input_ids) == len(cell_type_labels), "Input IDs and cell type labels must have the same length."
+            raise ImportError(
+                "scikit-learn is required for AdjustedRandIndexCallback. Please install it with `pip install scikit-learn`."
+            )
+
+        assert len(input_ids) == len(
+            cell_type_labels
+        ), "Input IDs and cell type labels must have the same length."
 
         self.initial_labels = cell_type_labels
         self.num_classes = len(set(cell_type_labels))
@@ -313,19 +354,20 @@ class AdjustedRandIndexCallback(WandbMixin, TrainerCallback):
         model = kwargs.get("model")
         step = state.global_step
 
-        assert model is not None, "Model is not available in the callback. Please check the Trainer configuration."
+        assert (
+            model is not None
+        ), "Model is not available in the callback. Please check the Trainer configuration."
 
         if model is None:
-            raise ValueError("Model is not available in the callback. Please check the Trainer configuration.")
+            raise ValueError(
+                "Model is not available in the callback. Please check the Trainer configuration."
+            )
 
         if step % self.log_every_n_steps != 0:
             # only compute ARI every n steps regardless of other logging
             return
 
-        cell_embeddings = model.encode_tokenized_cells(
-            self.input_ids,
-            batch_size=self.batch_size
-        )  
+        cell_embeddings = model.encode_tokenized_cells(self.input_ids, batch_size=self.batch_size)
 
         # detach, move to cpu, and convert to numpy
         cell_embeddings = cell_embeddings.detach().cpu().to(torch.float32).numpy()
@@ -342,24 +384,32 @@ class AdjustedRandIndexCallback(WandbMixin, TrainerCallback):
         else:
             print(f"Adjusted Rand Index at step {step}: {ari:.4f}")
 
+
 def _get_decaying_cosine_with_hard_restarts_schedule_with_warmup_lr_lambda(
     current_step: int, *, num_warmup_steps: int, num_training_steps: int, num_cycles: int
 ):
     if current_step < num_warmup_steps:
         return float(current_step) / float(max(1, num_warmup_steps))
-    progress = float(current_step - num_warmup_steps) / float(max(1, num_training_steps - num_warmup_steps))
+    progress = float(current_step - num_warmup_steps) / float(
+        max(1, num_training_steps - num_warmup_steps)
+    )
     amp = (num_training_steps + num_warmup_steps - current_step) / (2 * num_training_steps)
     if progress >= 1.0:
         return 0.0
     return max(0.0, amp * (1.0 + math.cos(math.pi * ((float(num_cycles) * progress) % 1.0))))
 
+
 def get_decaying_cosine_with_hard_restarts_schedule_with_warmup(
-    optimizer: Optimizer, num_warmup_steps: int, num_training_steps: int, num_cycles: int = 1, last_epoch: int = -1
+    optimizer: Optimizer,
+    num_warmup_steps: int,
+    num_training_steps: int,
+    num_cycles: int = 1,
+    last_epoch: int = -1,
 ):
     """
     Very similar to huggingfaces built-in cosine with restarts, however the amplitude slowly decreases so that
     the "kick ups" are less aggressive.
-    
+
     Create a schedule with a learning rate that decreases following the values of the cosine function between the
     initial lr set in the optimizer to 0, with several hard restarts, after a warmup period during which it increases
     linearly between 0 and the initial lr set in the optimizer.
@@ -388,14 +438,23 @@ def get_decaying_cosine_with_hard_restarts_schedule_with_warmup(
     )
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
-def _get_linear_schedule_with_floor_with_warmup_lr_lambda(current_step: int, *, num_warmup_steps: int, num_training_steps: int):
+
+def _get_linear_schedule_with_floor_with_warmup_lr_lambda(
+    current_step: int, *, num_warmup_steps: int, num_training_steps: int
+):
     if current_step < num_warmup_steps:
         return float(current_step) / float(max(1, num_warmup_steps))
-    lam = max(0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps)))
+    lam = max(
+        0.0,
+        float(num_training_steps - current_step)
+        / float(max(1, num_training_steps - num_warmup_steps)),
+    )
     return max(lam, 0.5)
 
 
-def get_linear_schedule_with_floor_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
+def get_linear_schedule_with_floor_with_warmup(
+    optimizer, num_warmup_steps, num_training_steps, last_epoch=-1
+):
     """
     Create a schedule with a learning rate that decreases linearly from the initial lr set in the optimizer, down to a floor value,
     after a warmup period during which it increases linearly from 0 to the initial lr set in the optimizer.

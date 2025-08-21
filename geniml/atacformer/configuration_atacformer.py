@@ -115,4 +115,5 @@ class AtacformerConfig(PretrainedConfig):
         self.grl_alpha = grl_alpha
         self.bc_unfreeze_last_n_layers = bc_unfreeze_last_n_layers
 
+
 __all__ = ["AtacformerConfig"]

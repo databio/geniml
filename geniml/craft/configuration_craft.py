@@ -3,11 +3,13 @@ from transformers import PretrainedConfig
 from atacformer.configuration_atacformer import AtacformerConfig
 from geneformer.configuration_geneformer import GeneformerConfig
 
+
 class CraftConfig(PretrainedConfig):
     """
     Configuration for the CRAFT model, a contrastive RNA-ATAC transformer that attempts
     to learn leverage Geneformer and Atacformer to learn a joint representation of RNA and ATAC data.
     """
+
     def __init__(
         self,
         geneformer_config: GeneformerConfig = None,
