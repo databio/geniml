@@ -171,6 +171,7 @@ class EncodeTokenizedCellsMixin:
         batch_size: int = 16,
         pool_tokens: bool = True,
         max_tokens_per_cell: int = None,
+        return_pt: bool = False,
     ) -> torch.Tensor:
         """
         Loops internally over input_ids to produce a [N, D] matrix (if pooled) or [N, L, D] tensor (if not).
@@ -184,6 +185,8 @@ class EncodeTokenizedCellsMixin:
             max_tokens_per_cell (int, *optional*, defaults to None):
                 The maximum number of tokens to consider per cell. You can use this to override the models
                 built in max_position_embeddings value (or context size).
+            return_pt (bool, *optional*, defaults to False):
+                Whether to return the result as a pytorch tensor.
         """
         if not hasattr(self, "atacformer"):
             raise AttributeError(
@@ -231,7 +234,13 @@ class EncodeTokenizedCellsMixin:
                 else:
                     batch_emb = last_h
                 all_embs.append(batch_emb)
-        return torch.cat(all_embs, dim=0)
+
+        t = torch.cat(all_embs, dim=0)
+
+        if return_pt:
+            return t
+
+        return t.detach().cpu().to(torch.float16).numpy()
 
 
 class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel):
