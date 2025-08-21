@@ -276,7 +276,7 @@ class ModelParameterChangeCallback(WandbMixin, TrainerCallback):
         updates = defaultdict(float)
         counts = defaultdict(int)
 
-        for (name, p) in model.named_parameters():
+        for name, p in model.named_parameters():
             delta = (p.detach().cpu() - self.initial_params[name]).norm().item()
             module = name.rsplit(".", 1)[0]  # e.g. 'encoder.layer1'
             updates[module] += delta

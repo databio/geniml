@@ -41,9 +41,11 @@ class CraftOutput(ModelOutput):
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k]
-            if k not in ["geneformer_output", "atacformer_output"]
-            else getattr(self, k).to_tuple()
+            (
+                self[k]
+                if k not in ["geneformer_output", "atacformer_output"]
+                else getattr(self, k).to_tuple()
+            )
             for k in self.keys()
         )
 

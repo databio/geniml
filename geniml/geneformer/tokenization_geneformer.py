@@ -18,7 +18,7 @@ Geneformer tokenizer.
     >>> from geneformer import TranscriptomeTokenizer
     >>> tk = TranscriptomeTokenizer({"cell_type": "cell_type", "organ_major": "organ"}, nproc=4)
     >>> tk.tokenize_data("data_directory", "output_directory", "output_prefix")
-    
+
 **Description:**
 
 | Input data is a directory with .loom or .h5ad files containing raw counts from single cell RNAseq data, including all genes detected in the transcriptome without feature selection. The input file type is specified by the argument file_format in the tokenize_data function.
@@ -33,7 +33,7 @@ Geneformer tokenizer.
 
 | If one's data is in other formats besides .loom or .h5ad, one can use the relevant tools (such as Anndata tools) to convert the file to a .loom or .h5ad format prior to running the transcriptome tokenizer.
 
-| OF NOTE: Take care that the correct token dictionary and gene median file is used for the correct model. 
+| OF NOTE: Take care that the correct token dictionary and gene median file is used for the correct model.
 
 | OF NOTE: For 95M model series, special_token should be True and model_input_size should be 4096. For 30M model series, special_token should be False and model_input_size should be 2048.
 
