@@ -25,12 +25,9 @@ logger = logging.get_logger(__name__)
 try:
     from cut_cross_entropy.linear_cross_entropy import LinearCrossEntropy
 
-    _CCE_AVAILABLE = True
+    CCE_AVAILABLE = True
 except ImportError:
-    logger.warning(
-        "Cut cross entropy not found, please install it with `pip install cut-cross-entropy`."
-    )
-    _CCE_AVAILABLE = False
+    CCE_AVAILABLE = False
 
 
 class AtacformerPreTrainedModel(PreTrainedModel):
@@ -246,9 +243,12 @@ class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # use cut cross entropy if available
-        if _CCE_AVAILABLE:
+        if CCE_AVAILABLE:
             self.loss_fct = LinearCrossEntropy()
         else:
+            logger.warning(
+                "Cut cross entropy not found, please install it with `pip install cut-cross-entropy`."
+            )
             self.loss_fct = nn.CrossEntropyLoss(
                 ignore_index=-100,
                 reduction="mean",
@@ -308,9 +308,6 @@ class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel
             if outputs.dtype != required_dtype:
                 # logger.warning_once(f"casting hidden states from {outputs.dtype} to {required_dtype} before cce loss.") # Optional logging
                 outputs = outputs.to(required_dtype)
-            assert (
-                _CCE_AVAILABLE
-            ), "Cut cross entropy is not available. Please install it with `pip install cut-cross-entropy`."
 
             loss = self.loss_fct(
                 e=outputs,
