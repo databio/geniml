@@ -420,46 +420,36 @@ def load_local_region2vec_model(
 class Region2VecDataset:
     def __init__(
         self,
-        data: Union[str, List[str]],
+        path: str,
         shuffle: bool = True,
         convert_to_str: bool = False,
     ):
         """
         Initialize a Region2VecDataset.
+
+        The regions are stored in a parquet file, with one document (cell, BED file, etc) per row.
+
+        :param str path: Path to the parquet file containing the tokens.
+        :param bool shuffle: Whether to shuffle the tokens in each document.
+        :param bool convert_to_str: Whether to convert the tokens to strings.
         """
-        self.data = data
+        self.table = pq.read_table(path)
+        self.data = self.table["tokens"].to_pylist()
         self.shuffle = shuffle
         self.convert_to_str = convert_to_str
-
-        if isinstance(data, str):
-            self.data = glob.glob(os.path.join(data, f"*.{GTOK_EXT}"))
-        elif isinstance(data, list) and isinstance(data[0], str):
-            self.data = data
-        else:
-            raise ValueError(f"Unknown data type: {type(data)}. Expected str or List[str].")
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        # load the data
-        tokens = read_tokens_from_gtok(self.data[idx])
-
-        # shuffle the data if necessary
+        tokens = self.data[idx]
         if self.shuffle:
             random.shuffle(tokens)
-
-        # return the tokens
-        return tokens
+        return [str(t) for t in tokens] if self.convert_to_str else tokens
 
     def __iter__(self):
-        if len(self) == 0:
-            return
-        for idx in range(len(self)):
-            tokens = self[idx]
-            if self.convert_to_str:
-                tokens = [str(token) for token in tokens]
-            yield tokens
+        for i in range(len(self)):
+            yield self[i]
 
     def __repr__(self):
         return f"Region2VecDataset(data={self.data}, shuffle={self.shuffle})"
