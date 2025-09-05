@@ -6,10 +6,13 @@ import select
 import shutil
 import sys
 import time
+
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 try:
     import torch
@@ -17,6 +20,7 @@ except ImportError:
     raise ImportError(
         "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
     )
+
 from gtars.utils import read_tokens_from_gtok
 from gtars.tokenizers import Tokenizer
 from yaml import safe_dump, safe_load
@@ -44,79 +48,6 @@ from .const import (
 from .models import Region2Vec
 
 _LOGGER = logging.getLogger(MODULE_NAME)
-
-
-def prRed(skk: str) -> None:
-    """Prints the input string skk in the red font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[91m{skk}\033[00m")
-
-
-def prGreen(skk: str) -> None:
-    """Prints the input string skk in the green font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[92m{skk}\033[00m")
-
-
-def prYellow(skk: str) -> None:
-    """Prints the input string skk in the yellow font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[93m{skk}\033[00m")
-
-
-def prLightPurple(skk: str) -> None:
-    """Prints the input string skk in the light purple font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[94m{skk}\033[00m")
-
-
-def prPurple(skk: str) -> None:
-    """Prints the input string skk in the purple font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[95m{skk}\033[00m")
-
-
-def prCyan(skk: str) -> None:
-    """Prints the input string skk in the cyan font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[96m{skk}\033[00m")
-
-
-def prLightGray(skk: str) -> None:
-    """Prints the input string skk in the gray font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[97m{skk}\033[00m")
-
-
-def prBlack(skk: str) -> None:
-    """Prints the input string skk in the black font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[98m{skk}\033[00m")
-
 
 _log_path = None
 
@@ -495,16 +426,6 @@ class Region2VecDataset:
     ):
         """
         Initialize a Region2VecDataset.
-
-        The Region2VecDataset is a special dataset that takes advantage of `.gtok` files. These are
-        optimized files that contain the tokenized representation of a region set in binary format.
-        This allows for much faster loading of the data, and is the recommended way to load data
-        for training.
-
-        :param Union[str, List[RegionSet]] data: The data to use for the dataset. This is either a path to a directory container region set files, or a list of region sets.
-        :param Tokenizer tokenizer: The tokenizer to use for the dataset.
-        :param bool shuffle: Whether or not to shuffle the data before yielding it.
-        :param bool convert_to_str: Whether or not to convert the tokens to strings before yielding them.
         """
         self.data = data
         self.shuffle = shuffle
