@@ -54,7 +54,6 @@ def time_str(t: float) -> str:
 def tokenize_anndata(adata: sc.AnnData, tokenizer: Tokenizer):
     """
     Tokenize an AnnData object. This is more involved, so it gets its own function.
-
     Args:
         adata (sc.AnnData): The AnnData object to tokenize.
         tokenizer (Tokenizer): The tokenizer to use.
@@ -75,6 +74,7 @@ def tokenize_anndata(adata: sc.AnnData, tokenizer: Tokenizer):
     features = np.ndarray(len(adata_features), dtype=object)
     for i, region in enumerate(adata_features):
         features[i] = region
+
     del adata_features
 
     # tokenize
