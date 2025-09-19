@@ -2,8 +2,8 @@ logmuse >=0.2.8
 ubiquerg >= 0.6.3
 peppy >= 0.40.7
 requests >= 2.31.0
-botocore >= 1.34.54
-boto3 >=  1.34.54
+botocore == 1.40.18
+boto3 == 1.40.18
 genomicranges >= 0.4.1
 
 gtars >= 0.2.5
