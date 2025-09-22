@@ -9,7 +9,7 @@ def prep_data(folder, file, tmp_file):
     """File sort and merge"""
     fin = os.path.join(folder, file)
     stdin_1 = None
-    if ".gz" in file:
+    if file.endswith(".gz"):
         command0 = f"zcat {fin}"
         fin = ""
         p0 = Popen(shlex.split(command0), stdout=PIPE)
