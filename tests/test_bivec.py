@@ -1,9 +1,11 @@
 from time import time
+import pytest
 
 from geniml.search.backends import BiVectorBackend, QdrantBackend
 from geniml.search.interfaces import BiVectorSearchInterface
 
 
+@pytest.mark.skip(reason="No backend access")
 def test_bivec():
     # backend for text embeddings and bed embeddings
     text_backend = QdrantBackend(
