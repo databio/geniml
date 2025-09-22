@@ -1,8 +1,9 @@
 import os
 from logging import getLogger
-from typing import List, Union
+from typing import List, Union, Sequence, Optional
 
 import numpy as np
+from torch.nn.utils.rnn import pad_sequence
 
 try:
     import torch
@@ -11,17 +12,14 @@ except ImportError:
         "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
     )
 
-from gtars.tokenizers import Region as GRegion
-from gtars.tokenizers import RegionSet as GRegionSet
-import torch
-from gensim.models.callbacks import CallbackAny2Vec
-from gtars.tokenizers import RegionSet as GRegionSet
+from gtars.tokenizers import Tokenizer
+from gtars.models import Region as GRegion
+from gtars.models import RegionSet as GRegionSet
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 
 from ..io import Region, RegionSet
 from ..models import ExModel
-from ..tokenization.main import Tokenizer, TreeTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -29,10 +27,8 @@ from .const import (
     DEFAULT_MIN_COUNT,
     DEFAULT_WINDOW_SIZE,
     MODEL_FILE_NAME,
-    MODULE_NAME,
     POOLING_METHOD_KEY,
     POOLING_TYPES,
-    UNIVERSE_CONFIG_FILE_NAME,
     UNIVERSE_FILE_NAME,
 )
 from .models import Region2Vec
@@ -44,7 +40,6 @@ from .utils import (
 )
 
 _GENSIM_LOGGER = getLogger("gensim")
-_LOGGER = getLogger(MODULE_NAME)
 
 # demote gensim logger to warning
 _GENSIM_LOGGER.setLevel("WARNING")
@@ -54,7 +49,7 @@ class Region2VecExModel(ExModel):
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: TreeTokenizer = None,
+        tokenizer: Tokenizer = None,
         device: str = None,
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
@@ -68,7 +63,7 @@ class Region2VecExModel(ExModel):
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: TreeTokenizer
+        self.tokenizer: Tokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
         self.pooling_method = pooling_method
@@ -81,29 +76,11 @@ class Region2VecExModel(ExModel):
             self._init_model(tokenizer, **kwargs)
 
         # set the device
-        self._set_device(device)
+        self._target_device = torch.device(
+            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        )
 
-    def _set_device(self, device: Union[str, None] = None):
-        # Detect and set the target device
-        if device is None:
-            # Get the first visible GPU assigned by SLURM or default to 0
-            gpu_id = os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0]
-            device = f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu"
-
-        # Set the target device
-        self._target_device = torch.device(device)
-        _LOGGER.info(f"Using device: {self._target_device}")
-
-        # Move model to the target device if it exists and GPU is available
-        if self._model is not None:
-            if "cuda" in device and not torch.cuda.is_available():
-                _LOGGER.warning("CUDA not available, defaulting to CPU.")
-                self._target_device = torch.device("cpu")
-
-            self._model.to(self._target_device)
-            _LOGGER.info(f"Model moved to {self._target_device}")
-
-    def _init_tokenizer(self, tokenizer: Union[TreeTokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[Tokenizer, str]):
         """
         Initialize the tokenizer.
 
@@ -111,15 +88,15 @@ class Region2VecExModel(ExModel):
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
-                self.tokenizer = TreeTokenizer(tokenizer)
+                self.tokenizer = Tokenizer(tokenizer)
             else:
-                self.tokenizer = TreeTokenizer.from_pretrained(
-                    tokenizer
-                )  # download from huggingface (or at least try to)
-        elif isinstance(tokenizer, TreeTokenizer):
+                raise ValueError(
+                    f"tokenizer path {tokenizer} does not exist. Please provide a valid path."
+                )
+        elif isinstance(tokenizer, Tokenizer):
             self.tokenizer = tokenizer
         else:
-            raise TypeError("tokenizer must be a path to a bed file or an TreeTokenizer object.")
+            raise TypeError("tokenizer must be a path to a bed file or an Tokenizer object.")
 
     def _init_model(self, tokenizer, **kwargs):
         """
@@ -128,9 +105,11 @@ class Region2VecExModel(ExModel):
         :param kwargs: Additional keyword arguments to pass to the model.
         """
         self._init_tokenizer(tokenizer)
+        padding_idx = self.tokenizer.pad_token_id
         self._model = Region2Vec(
             len(self.tokenizer),
             embedding_dim=kwargs.get("embedding_dim", DEFAULT_EMBEDDING_DIM),
+            padding_idx=padding_idx,
         )
 
     @property
@@ -155,16 +134,21 @@ class Region2VecExModel(ExModel):
         if not self.trained:
             self._init_model(**kwargs)
 
-    def _load_local_model(self, model_path: str, universe_config_path: str, config_path: str):
+    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
         Load the model from a checkpoint.
 
         :param str model_path: Path to the model checkpoint.
-        :param str universe_config_path: Path to the vocabulary file.
-        :param str config_path: Path to the config file.
+        :param str vocab_path: Path to the vocabulary file.
         """
-        _model, config = load_local_region2vec_model(model_path, config_path)
-        tokenizer = TreeTokenizer(vocab_path)
+        tokenizer = Tokenizer(vocab_path)
+
+        # read id of padding token from tokenizer
+        padding_idx = tokenizer.pad_token_id
+
+        _model, config = load_local_region2vec_model(
+            model_path, config_path, padding_idx=padding_idx
+        )
 
         self._model = _model
         self.tokenizer = tokenizer
@@ -176,6 +160,9 @@ class Region2VecExModel(ExModel):
     def _init_from_huggingface(
         self,
         model_path: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
         """
@@ -186,26 +173,21 @@ class Region2VecExModel(ExModel):
         :param str model_path: Path to the pre-trained model on huggingface.
         :param str model_file_name: Name of the model file.
         :param str universe_file_name: Name of the universe file.
-        :param str universe_config_file_name: Name of the universe config file.
-        :param str config_file_name: Name of the config file.
         :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
-        model_file_name: str = MODEL_FILE_NAME
-        universe_file_name: str = UNIVERSE_FILE_NAME
-        universe_config_file_name: str = UNIVERSE_CONFIG_FILE_NAME
-        config_file_name: str = CONFIG_FILE_NAME
-
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
-        _universe_file_path = hf_hub_download(model_path, universe_file_name, **kwargs)
-        universe_config_path = hf_hub_download(model_path, universe_config_file_name, **kwargs)
+        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
         config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
-        self._load_local_model(model_file_path, universe_config_path, config_path)
+        self._load_local_model(model_file_path, universe_path, config_path)
 
     @classmethod
     def from_pretrained(
         cls,
         path_to_files: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
     ) -> "Region2VecExModel":
         """
         Load the model from a set of files that were exported using the export function.
@@ -214,19 +196,13 @@ class Region2VecExModel(ExModel):
         :param str model_file_name: Name of the model file.
         :param str universe_file_name: Name of the universe file.
         """
-        model_file_name: str = MODEL_FILE_NAME
-        universe_config_file_name: str = UNIVERSE_FILE_NAME
-        config_file_name: str = CONFIG_FILE_NAME
-
         model_file_path = os.path.join(path_to_files, model_file_name)
-        universe_config_file_path = os.path.join(path_to_files, universe_config_file_name)
+        universe_file_path = os.path.join(path_to_files, universe_file_name)
         config_file_path = os.path.join(path_to_files, config_file_name)
 
         instance = cls()
-        instance._load_local_model(model_file_path, universe_config_file_path, config_file_path)
+        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
         instance.trained = True
-
-        instance._set_device()
 
         return instance
 
@@ -262,10 +238,8 @@ class Region2VecExModel(ExModel):
         num_cpus: int = 1,
         seed: int = 42,
         save_checkpoint_path: str = None,
-        use_current_weights: bool = False,
         gensim_params: dict = {},
         load_from_checkpoint: str = None,
-        callbacks: List[CallbackAny2Vec] = [],
     ) -> bool:
         """
         Train the model.
@@ -277,10 +251,8 @@ class Region2VecExModel(ExModel):
         :param int num_cpus: Number of cpus to use for training.
         :param int seed: Seed to use for training.
         :param str save_checkpoint_path: Path to save the model checkpoints to.
-        :param bool use_current_weights: Whether to use the current weights of the model.
         :param dict gensim_params: Additional parameters to pass to the gensim model.
         :param str load_from_checkpoint: Path to a checkpoint to load from.
-        :param List[CallbackAny2Vec] callbacks: List of callbacks to use during training.
 
         :return np.ndarray: Loss values for each epoch.
         """
@@ -298,11 +270,9 @@ class Region2VecExModel(ExModel):
             min_count=min_count,
             num_cpus=num_cpus,
             seed=seed,
-            init_from_torch_model=self._model if use_current_weights else None,
             save_checkpoint_path=save_checkpoint_path,
             gensim_params=gensim_params,
             load_from_checkpoint=load_from_checkpoint,
-            callbacks=callbacks,
         )
 
         # once done training, set the weights of the pytorch model in self._model
@@ -344,62 +314,62 @@ class Region2VecExModel(ExModel):
 
     def encode(
         self,
-        regions: Union[str, Region, List[Region], RegionSet, GRegionSet],
+        regions: Union[str, Region, Sequence[Region], RegionSet, GRegionSet],
         pooling: POOLING_TYPES = None,
+        batch_size: Optional[int] = 64,  # <-- new arg
     ) -> np.ndarray:
         """
-        Get the vector for a region.
+        Vectorise one or many regions.
 
-        :param regions: Region to get the vector for.
-        :param pooling: Pooling type to use.
-
-        :return np.ndarray: Vector for the region.
+        :param regions: Region(s) to encode.
+        :param pooling: "mean" or "max" token-pooling.
+        :param batch_size: How many regions to pad/encode at once
+                           (None or 0 ➜ process all in one go).
         """
-        # allow for overriding the pooling method
+        # ---------- input normalisation ----------
         pooling = pooling or self.pooling_method
 
-        # data validation
         if isinstance(regions, Region):
             regions = [regions]
-        if isinstance(regions, str):
+        elif isinstance(regions, str):
             regions = RegionSet(regions)
-        if isinstance(regions, RegionSet):
-            pass
-        if isinstance(regions, GRegionSet):
-            pass
-        if not isinstance(regions[0], Region):
-            raise TypeError("regions must be a list of Region objects.")
 
-        if pooling not in ["mean", "max"]:
+        if not isinstance(regions[0], (Region, GRegion)):
+            raise TypeError("regions must be a list of Region or GRegion objects.")
+        if pooling not in {"mean", "max"}:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
-        # tokenize the regionm -- need to pass it as a list because the tokenizer expects a list
-        tokens = [self.tokenizer([r]) for r in regions]
+        # tokenize
+        token_sets = [self.tokenizer([r]) for r in regions]
+        token_ids = [ts["input_ids"] for ts in token_sets]
 
-        token_tensors = [
-            torch.tensor(token_set.to_ids(), dtype=torch.long).to(self._target_device)
-            for token_set in tokens
-        ]
+        # ---------- batched padding / projection ----------
+        pad_id = self._model.padding_idx
+        outputs = []
 
-        region_embeddings = []
-        with torch.no_grad():
-            for token_tensor in token_tensors:
-                if pooling == "mean":
-                    region_embeddings.append(
-                        torch.mean(self._model.projection(token_tensor), axis=0)
-                        .detach()
-                        .cpu()
-                        .numpy()
-                    )
-                elif pooling == "max":
-                    region_embeddings.append(
-                        torch.max(self._model.projection(token_tensor), axis=0)
-                        .detach()
-                        .cpu()
-                        .numpy()
-                    )
-                else:
-                    # this should be unreachable
-                    raise ValueError(f"pooling must be one of {POOLING_TYPES}")
+        n = len(token_ids)
+        bs = n if not batch_size or batch_size <= 0 else batch_size
+        for start in range(0, n, bs):
+            chunk = token_ids[start : start + bs]
 
-        return np.vstack(region_embeddings)
+            tensors = pad_sequence(
+                [torch.tensor(t, dtype=torch.long) for t in chunk],
+                batch_first=True,
+                padding_value=pad_id,
+            )
+
+            reg_emb = self._model.projection(tensors)  # (B, T, D)
+            mask = tensors.ne(self._model.projection.padding_idx).unsqueeze(-1)
+
+            if pooling == "mean":
+                masked = reg_emb * mask
+                summed = masked.sum(dim=1)
+                counts = mask.sum(dim=1).clamp(min=1)
+                chunk_out = summed / counts
+            else:  # pooling == "max"
+                reg_emb.masked_fill_(~mask, float("-inf"))
+                chunk_out = reg_emb.max(dim=1).values
+
+            outputs.append(chunk_out.detach())
+
+        return torch.cat(outputs, dim=0).cpu().numpy()

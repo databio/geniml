@@ -1,5 +1,7 @@
 import gzip
 import logging
+import warnings
+from typing_extensions import deprecated
 import os
 from hashlib import md5
 from typing import List, NoReturn, Union
@@ -9,6 +11,7 @@ import numpy as np
 import pandas as pd
 from iranges import IRanges
 from ubiquerg import is_url
+from gtars.models import RegionSet as GRegionSet
 
 from .const import (
     MAF_CENTER_COL_NAME,
@@ -27,6 +30,9 @@ from .utils import compute_md5sum_bedset, extract_maf_col_positions, is_gzipped,
 _LOGGER = logging.getLogger("bbclient")
 
 
+@deprecated(
+    "This class is deprecated and will be removed in future versions. Use Region class from Gtars"
+)
 class Region:
     def __init__(self, chr: str, start: int, stop: int):
         """
@@ -36,6 +42,10 @@ class Region:
         :param int start: start position
         :param int stop: stop position
         """
+        warnings.warn(
+            "Region is deprecated and will be removed in future versions.", DeprecationWarning
+        )
+
         self.chr = chr
         self.start = start
         self.end = stop
@@ -44,6 +54,7 @@ class Region:
         return f"Region({self.chr}, {self.start}, {self.end})"
 
 
+@deprecated("This class is deprecated and will be removed in future versions.")
 class RegionSet:
     def __init__(self, regions: Union[str, List[Region]], backed: bool = False):
         """
@@ -55,6 +66,11 @@ class RegionSet:
         :param regions: path, or url to bed file or list of Region objects
         :param backed: whether to load the bed file into memory or not [Default: False]
         """
+        warnings.warn(
+            "RegionSet is deprecated and will be removed in future versions. Use RegionSet class from Gtars",
+            DeprecationWarning,
+        )
+
         self._df: Union[pd.DataFrame, None] = None
 
         if isinstance(regions, str):
@@ -264,7 +280,7 @@ class RegionSet:
         else:
             if not self.backed:
                 # concate column values
-                chrs = ",".join([region.chr for region in self.regions])
+                chrs = ",".join([str(region.chr) for region in self.regions])
                 starts = ",".join([str(region.start) for region in self.regions])
                 ends = ",".join([str(region.end) for region in self.regions])
 
@@ -323,11 +339,11 @@ class BedSet:
             else:
                 self.region_sets = []
                 for r in region_sets:
-                    self.region_sets.append(RegionSet(r))
+                    self.region_sets.append(GRegionSet(r))
 
         elif file_path is not None:
             if os.path.isfile(file_path):
-                self.region_sets = [RegionSet(r) for r in read_bedset_file(file_path)]
+                self.region_sets = [GRegionSet(r) for r in read_bedset_file(file_path)]
             else:
                 raise FileNotFoundError(f"The specified file '{file_path}' does not exist.")
         else:
@@ -386,7 +402,7 @@ class BedSet:
         elif self._bedset_identifier is None:
             bedfile_ids = []
             for bedfile in self.region_sets:
-                bedfile_ids.append(bedfile.compute_bed_identifier())
+                bedfile_ids.append(bedfile.identifier)
             self._bedset_identifier = compute_md5sum_bedset(bedfile_ids)
 
             return self._bedset_identifier

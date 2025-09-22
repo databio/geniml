@@ -6,15 +6,10 @@ import select
 import shutil
 import sys
 import time
-import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
-import torch
-from gensim.models.callbacks import CallbackAny2Vec
-from gtars.utils import read_tokens_from_gtok
-from rich.progress import track
 
 try:
     import torch
@@ -23,14 +18,13 @@ except ImportError:
         "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
     )
 from gtars.utils import read_tokens_from_gtok
+from gtars.tokenizers import Tokenizer
 from yaml import safe_dump, safe_load
 
 if TYPE_CHECKING:
     from gensim.models import Word2Vec as GensimWord2Vec
 
-
 from ..const import GTOK_EXT
-from ..tokenization.main import Tokenizer, TreeTokenizer, AnnDataTokenizer
 from .const import (
     CONFIG_FILE_NAME,
     DEFAULT_EMBEDDING_DIM,
@@ -44,6 +38,7 @@ from .const import (
     LR_TYPES,
     MODEL_FILE_NAME,
     MODULE_NAME,
+    UNIVERSE_FILE_NAME,
     VOCAB_SIZE_KEY,
 )
 from .models import Region2Vec
@@ -416,6 +411,7 @@ def export_region2vec_model(
     tokenizer: Tokenizer,
     path: str,
     checkpoint_file: str = MODEL_FILE_NAME,
+    universe_file: str = UNIVERSE_FILE_NAME,
     config_file: str = CONFIG_FILE_NAME,
     **kwargs: Dict[str, any],
 ):
@@ -450,19 +446,18 @@ def export_region2vec_model(
 
 
 def load_local_region2vec_model(
-    model_path: str,
-    config_path: str,
+    model_path: str, config_path: str, **kwargs
 ) -> Tuple[Region2Vec, dict]:
     """
     Load a region2vec model from a local directory
 
     :param str model_path: The path to the model checkpoint file
     :param str config_path: The path to the model config file
-    :param str vocab_path: The path to the model vocabulary file
+    :param kwargs: include id of padding token
     """
 
     # load the model state dict (weights)
-    params = torch.load(model_path)
+    params = torch.load(model_path, weights_only=True)
 
     # get the model config (vocab size, embedding size)
     with open(config_path, "r") as f:
@@ -483,6 +478,7 @@ def load_local_region2vec_model(
     model = Region2Vec(
         config[VOCAB_SIZE_KEY],
         embedding_dim=embedding_dim,
+        padding_idx=kwargs.get("padding_idx", None),
     )
 
     model.load_state_dict(params)
@@ -496,7 +492,6 @@ class Region2VecDataset:
         data: Union[str, List[str]],
         shuffle: bool = True,
         convert_to_str: bool = False,
-        subsample: float = None,
     ):
         """
         Initialize a Region2VecDataset.
@@ -510,25 +505,17 @@ class Region2VecDataset:
         :param Tokenizer tokenizer: The tokenizer to use for the dataset.
         :param bool shuffle: Whether or not to shuffle the data before yielding it.
         :param bool convert_to_str: Whether or not to convert the tokens to strings before yielding them.
-        :param float subsample: The fraction of the data to subsample. If None, no subsampling is done.
         """
         self.data = data
         self.shuffle = shuffle
         self.convert_to_str = convert_to_str
 
         if isinstance(data, str):
-            self.data = glob.glob(os.path.join(data, f"**/*.{GTOK_EXT}"))
+            self.data = glob.glob(os.path.join(data, f"*.{GTOK_EXT}"))
         elif isinstance(data, list) and isinstance(data[0], str):
             self.data = data
         else:
             raise ValueError(f"Unknown data type: {type(data)}. Expected str or List[str].")
-
-        # subsample the data if necessary
-        if subsample is not None:
-            if subsample < 0 or subsample > 1:
-                raise ValueError(f"Subsample must be between 0 and 1. Got {subsample}.")
-            n = int(len(self) * subsample)
-            self.data = random.sample(self.data, n)
 
     def __len__(self):
         return len(self.data)
@@ -566,10 +553,8 @@ def train_region2vec_model(
     num_cpus: int = 1,
     seed: int = 42,
     save_checkpoint_path: str = None,
-    init_from_torch_model: Region2Vec = None,
     gensim_params: dict = {},
     load_from_checkpoint: str = None,
-    callbacks: List[CallbackAny2Vec] = [],
 ) -> "GensimWord2Vec":
     """
     Train a gensim Word2Vewc model on the given dataset.
@@ -582,10 +567,8 @@ def train_region2vec_model(
     :param int num_cpus: Number of cpus to use for training.
     :param int seed: Seed to use for training.
     :param str save_checkpoint_path: Path to save the model checkpoints to.
-    :param Region2Vec init_from_torch_model: A torch model to initialize the weights from.
     :param dict gensim_params: Additional parameters to pass to the gensim model.
     :param str load_from_checkpoint: Path to a checkpoint to load from.
-    :param List[CallbackAny2Vec] callbacks: List of callbacks to use during training.
 
     :return GensimWord2Vec: The gensim model that was trained.
     """
@@ -618,27 +601,6 @@ def train_region2vec_model(
     if load_from_checkpoint is not None:
         _LOGGER.info(f"Loading model from checkpoint: {load_from_checkpoint}")
         gensim_model = GensimWord2Vec.load(load_from_checkpoint)
-    elif init_from_torch_model is not None:
-        gensim_model = GensimWord2Vec(
-            vector_size=init_from_torch_model.embedding_dim,
-            window=window_size,
-            min_count=min_count,
-            workers=num_cpus,
-            seed=seed,
-            **gensim_params,
-        )
-        # transfer the weights over
-        vectors = []
-        for token_id in track(
-            range(init_from_torch_model.vocab_size),
-            description="Transferring weights",
-            total=init_from_torch_model.vocab_size,
-        ):
-            vectors.append(init_from_torch_model.projection.weight.data[token_id].numpy())
-
-        gensim_model.wv.add_vectors(
-            [str(token_id) for token_id in range(init_from_torch_model.vocab_size)], vectors
-        )
     else:
         _LOGGER.info("Creating new gensim model.")
         gensim_model = GensimWord2Vec(
@@ -652,77 +614,14 @@ def train_region2vec_model(
         _LOGGER.info("Building vocabulary.")
         gensim_model.build_vocab(dataset)
 
-    # add the training callback
-    callbacks.append(TrainingCallback())
-
     _LOGGER.info("Training model.")
     gensim_model.train(
         dataset,
         epochs=epochs,  # train for 1 epoch at a time, shuffle data each time
         compute_loss=True,
         total_words=gensim_model.corpus_total_words,
-        callbacks=callbacks,
+        callbacks=[TrainingCallback()],
     )
 
     _LOGGER.info("Training complete. Moving weights to pytorch model.")
     return gensim_model
-
-
-class WandbLoggingCallback(CallbackAny2Vec):
-    def __init__(self):
-        self.epoch = 0
-
-    def on_epoch_end(self, model):
-        try:
-            import wandb
-
-            if wandb.run is None:
-                _LOGGER.warning("Wandb run not found. Skipping logging.")
-                return
-
-            wandb.log({"epoch": self.epoch})
-            loss = model.get_latest_training_loss()
-            wandb.log({"loss": loss})
-        except ImportError:
-            _LOGGER.warning("Wandb not found. Skipping logging.")
-        except Exception as e:
-            _LOGGER.error(f"Error logging to wandb: {e}")
-        finally:
-            self.epoch += 1
-
-
-class ClearMLCallback(CallbackAny2Vec):
-    def __init__(self):
-        self.epoch = 0
-
-    def on_epoch_end(self, model):
-        try:
-            from clearml import Task
-
-            task = Task.current_task()
-            if task is None:
-                _LOGGER.warning("ClearML task not found. Skipping logging.")
-                return
-            task_logger = task.get_logger()
-            if task_logger is None:
-                _LOGGER.warning("ClearML logger not found. Skipping logging.")
-                return
-
-            task_logger.report_scalar(
-                title="epoch",
-                value=self.epoch,
-                iteration=self.epoch,
-            )
-            loss = model.get_latest_training_loss()
-            task_logger.report_scalar(
-                title="loss",
-                value=loss,
-                iteration=self.epoch,
-            )
-
-        except ImportError:
-            _LOGGER.warning("ClearML not found. Skipping logging.")
-        except Exception as e:
-            _LOGGER.error(f"Error logging to ClearML: {e}")
-        finally:
-            self.epoch += 1

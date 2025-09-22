@@ -1,5 +1,4 @@
 import os
-import tomllib
 from logging import getLogger
 from typing import Union
 
@@ -8,6 +7,7 @@ import scanpy as sc
 import torch
 from huggingface_hub import hf_hub_download
 from rich.progress import track
+from gtars.tokenizers import Tokenizer
 
 from ..region2vec.const import (
     CONFIG_FILE_NAME,
@@ -18,19 +18,20 @@ from ..region2vec.const import (
     MODEL_FILE_NAME,
     POOLING_METHOD_KEY,
     POOLING_TYPES,
-    UNIVERSE_CONFIG_FILE_NAME,
+    UNIVERSE_FILE_NAME,
 )
 from ..region2vec.main import Region2Vec
 from ..region2vec.utils import (
     Region2VecDataset,
     export_region2vec_model,
-    load_local_scembed_model,
+    load_local_region2vec_model,
     train_region2vec_model,
 )
-from ..tokenization.main import AnnDataTokenizer, Tokenizer
+from ..tokenization.utils import tokenize_anndata
 from .const import MODULE_NAME
 
 _GENSIM_LOGGER = getLogger("gensim")
+_LOGGER = getLogger(MODULE_NAME)
 
 # demote gensim logger to warning
 _GENSIM_LOGGER.setLevel("WARNING")
@@ -40,7 +41,7 @@ class ScEmbed:
     def __init__(
         self,
         model_path: str = None,
-        tokenizer: AnnDataTokenizer = None,
+        tokenizer: Tokenizer = None,
         device: str = None,
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
@@ -54,7 +55,7 @@ class ScEmbed:
         """
         super().__init__()
         self.model_path: str = model_path
-        self.tokenizer: AnnDataTokenizer
+        self.tokenizer: Tokenizer
         self.trained: bool = False
         self._model: Region2Vec = None
         self.pooling_method: POOLING_TYPES = pooling_method
@@ -71,7 +72,7 @@ class ScEmbed:
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_tokenizer(self, tokenizer: Union[AnnDataTokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[Tokenizer, str]):
         """
         Initialize the tokenizer.
 
@@ -79,15 +80,13 @@ class ScEmbed:
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
-                self.tokenizer = AnnDataTokenizer(tokenizer)
+                self.tokenizer = Tokenizer(tokenizer)
             else:
-                self.tokenizer = AnnDataTokenizer.from_pretrained(
-                    tokenizer
-                )  # download from huggingface (or at least try to)
-        elif isinstance(tokenizer, AnnDataTokenizer):
+                raise FileNotFoundError(f"Tokenizer file {tokenizer} not found.")
+        elif isinstance(tokenizer, Tokenizer):
             self.tokenizer = tokenizer
         else:
-            raise TypeError("tokenizer must be of type AnnDataTokenizer or str.")
+            raise TypeError("tokenizer must be of type Tokenizer or str.")
 
     def _init_model(self, tokenizer, **kwargs):
         """
@@ -124,16 +123,15 @@ class ScEmbed:
         if not self.trained:
             self._init_model(**kwargs)
 
-    def _load_local_model(self, model_path: str, universe_config_file_path: str, config_path: str):
+    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
         """
         Load the model from a checkpoint.
 
         :param str model_path: Path to the model checkpoint.
-        :param str universe_config_file_path: Path to the tokenizer config file.
-        :param str config_path: Path to the config file.
+        :param str vocab_path: Path to the vocabulary file.
         """
         _model, config = load_local_region2vec_model(model_path, config_path)
-        tokenizer = AnnDataTokenizer(vocab_path, verbose=True)
+        tokenizer = Tokenizer(vocab_path)
 
         self._model = _model
         self.tokenizer = tokenizer
@@ -144,6 +142,9 @@ class ScEmbed:
     def _init_from_huggingface(
         self,
         model_path: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
         """
@@ -156,32 +157,19 @@ class ScEmbed:
         :param str universe_file_name: Name of the universe file.
         :param kwargs: Additional keyword arguments to pass to the hf download function.
         """
-        model_file_name: str = MODEL_FILE_NAME
-        universe_config_file_name: str = UNIVERSE_CONFIG_FILE_NAME
-        config_file_name: str = CONFIG_FILE_NAME
-
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
-        universe_config_file_path = hf_hub_download(
-            model_path, universe_config_file_name, **kwargs
-        )
+        universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
         config_path = hf_hub_download(model_path, config_file_name, **kwargs)
 
-        # get subdir/folder of the universe_config_file_path
-        tokenizer_cfg_folder = os.path.dirname(universe_config_file_path).split("/")[-1]
-
-        # read in tokenizer cfg to see what else needs to be downloaded
-        with open(universe_config_file_path, "rb") as f:
-            tokenizer_cfg = tomllib.load(f)
-
-        for universe in tokenizer_cfg["universes"]:
-            hf_hub_download(model_path, universe, subfolder=tokenizer_cfg_folder, **kwargs)
-
-        self._load_local_model(model_file_path, universe_config_file_path, config_path)
+        self._load_local_model(model_file_path, universe_path, config_path)
 
     @classmethod
     def from_pretrained(
         cls,
         path_to_files: str,
+        model_file_name: str = MODEL_FILE_NAME,
+        universe_file_name: str = UNIVERSE_FILE_NAME,
+        config_file_name: str = CONFIG_FILE_NAME,
     ) -> "ScEmbed":
         """
         Load the model from a set of files that were exported using the export function.
@@ -193,16 +181,12 @@ class ScEmbed:
 
         :return: The loaded model.
         """
-        model_file_name: str = MODEL_FILE_NAME
-        universe_config_file_name: str = UNIVERSE_CONFIG_FILE_NAME
-        config_file_name: str = CONFIG_FILE_NAME
-
         model_file_path = os.path.join(path_to_files, model_file_name)
-        universe_config_file_name = os.path.join(path_to_files, universe_config_file_name)
+        universe_file_path = os.path.join(path_to_files, universe_file_name)
         config_file_path = os.path.join(path_to_files, config_file_name)
 
         instance = cls()
-        instance._load_local_model(model_file_path, universe_config_file_name, config_file_path)
+        instance._load_local_model(model_file_path, universe_file_path, config_file_path)
         instance.trained = True
 
         return instance
@@ -271,6 +255,7 @@ class ScEmbed:
         self,
         path: str,
         checkpoint_file: str = MODEL_FILE_NAME,
+        universe_file: str = UNIVERSE_FILE_NAME,
         config_file: str = CONFIG_FILE_NAME,
     ):
         """
@@ -289,6 +274,7 @@ class ScEmbed:
             self.tokenizer,
             path,
             checkpoint_file=checkpoint_file,
+            universe_file=universe_file,
             config_file=config_file,
         )
 
@@ -316,14 +302,12 @@ class ScEmbed:
             raise ValueError(f"pooling must be one of {POOLING_TYPES}")
 
         # tokenize the region
-        tokens = self.tokenizer(regions)
-        tokens_as_ids = [t.to_ids() for t in tokens]
+        tokens = tokenize_anndata(regions, self.tokenizer)
+        tokens = [[t["input_ids"] for t in sublist] for sublist in tokens]
 
         # get the vector
         embeddings = []
-        for token_set in track(
-            tokens_as_ids, total=len(tokens_as_ids), description="Getting embeddings"
-        ):
+        for token_set in track(tokens, total=len(tokens), description="Getting embeddings"):
             region_embeddings = self._model.projection(torch.tensor(token_set))
             if pooling == "mean":
                 region_embeddings = torch.mean(region_embeddings, axis=0).detach().numpy()
