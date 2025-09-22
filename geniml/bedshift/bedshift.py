@@ -9,7 +9,6 @@ import sys
 import logmuse
 import numpy as np
 import pandas as pd
-from gtars.ailist import AIList, Interval
 
 from geniml.bedshift import BedshiftYAMLHandler, arguments
 from geniml.bedshift._version import __version__
