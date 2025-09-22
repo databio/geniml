@@ -11,13 +11,7 @@ from .const import PKG_NAME
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
-def main(
-    data_path: str,
-    metadata: str,
-    universe: str,
-    output: str,
-    labels: str
-):
+def main(data_path: str, metadata: str, universe: str, output: str, labels: str):
     """
     Main function for the preprocess pipeline
 
@@ -30,19 +24,15 @@ def main(
     _LOGGER.info("Running preprocess...")
     _LOGGER.info(f"Start: {datetime.datetime.now()}")
 
-
     # PLACE CODE FOR RUNNING PREPROCESS HERE
     universe = TreeTokenizer(universe)
     file_list = meta_preprocessing(metadata, labels, data_path, "train")
     trained_documents = []
     with Pool(processes=8) as p:
         trained_documents = tqdm(
-            p.starmap(
-                data_preparation, 
-                [(x, universe, "train") for x in file_list]
-                ), 
-                total=len(file_list)
-            )
+            p.starmap(data_preparation, [(x, universe, "train") for x in file_list]),
+            total=len(file_list),
+        )
         p.close()
         p.join()
 
@@ -57,5 +47,3 @@ def main(
 
     _LOGGER.info("Traning sample preprocess done.")
     _LOGGER.info(f"End: {datetime.datetime.now()}")
-
-

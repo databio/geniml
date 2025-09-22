@@ -52,7 +52,7 @@ def build_argparser(parser: VersionInHelpParser = None):
     return parser
 
 
-#def main(args):
+# def main(args):
 #    """MAIN"""
 #    print("Inside main function")
 #    parser = logmuse.add_logging_options(build_argparser())
@@ -79,4 +79,3 @@ def build_argparser(parser: VersionInHelpParser = None):
 #    else:
 #        _LOGGER.error("Unknown command: {}".format(args.command))
 #        sys.exit(1)
-

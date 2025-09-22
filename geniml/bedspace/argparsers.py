@@ -87,7 +87,7 @@ def build_train_argparser(parser: VersionInHelpParser) -> VersionInHelpParser:
 
 def build_distance_argparser(
     parser: VersionInHelpParser,
-) -> VersionInHelpParser:       
+) -> VersionInHelpParser:
     parser.add_argument(
         "-i",
         "--input",
@@ -184,4 +184,3 @@ def build_search_argparser(parser: VersionInHelpParser) -> VersionInHelpParser:
         default=10,
         help="Number of results to return",
     )
-

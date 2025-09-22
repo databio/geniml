@@ -29,31 +29,30 @@ def main(
     _LOGGER.info("Running training...")
     _LOGGER.info(f"Start: {datetime.datetime.now()}")
 
-
     # PLACE TRAINING CODE HERE
     model = os.path.join(output, "starspace_trained_model")
     path_to_starspace = os.path.join(path_to_starspace, "starspace")
 
-    star_command =  [
-                path_to_starspace,
-                "train",
-                "-trainFile",
-                input,
-                "-model",
-                model,
-                "-trainMode",
-                "0",
-                "-dim",
-                dim,
-                "-epoch",
-                num_epochs,
-                "-negSearchLimit",
-                "5",
-                "-thread",
-                "20",
-                "-lr",
-                learning_rate,
-            ]
+    star_command = [
+        path_to_starspace,
+        "train",
+        "-trainFile",
+        input,
+        "-model",
+        model,
+        "-trainMode",
+        "0",
+        "-dim",
+        dim,
+        "-epoch",
+        num_epochs,
+        "-negSearchLimit",
+        "5",
+        "-thread",
+        "20",
+        "-lr",
+        learning_rate,
+    ]
 
     if os.path.exists(model):
         star_command.extend(["-initModel", model])
@@ -66,4 +65,3 @@ def main(
 
     _LOGGER.info("Train bedembed done.")
     _LOGGER.info(f"End: {datetime.datetime.now()}")
-

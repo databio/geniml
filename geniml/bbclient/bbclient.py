@@ -273,7 +273,9 @@ class BBClient(BedCacheManager):
             f"Tokenized BED file {bed_id} tokenized using {universe_id} was cached successfully"
         )
 
-    @deprecated("This method is deprecated, and will be removed from this class. To upload to S3, use boto3 or s3fs directly.")
+    @deprecated(
+        "This method is deprecated, and will be removed from this class. To upload to S3, use boto3 or s3fs directly."
+    )
     def add_bed_to_s3(
         self,
         identifier: str,
@@ -299,8 +301,9 @@ class BBClient(BedCacheManager):
         try:
             import boto3
         except ImportError:
-            raise ImportError("boto3, and botocore is required for this function. Please install it manually via pip.")
-
+            raise ImportError(
+                "boto3, and botocore is required for this function. Please install it manually via pip."
+            )
 
         s3_client = boto3.client(
             "s3",
@@ -319,7 +322,8 @@ class BBClient(BedCacheManager):
         return s3_bed_path
 
     @deprecated(
-        "This method is deprecated, and will be removed from this class. To upload to S3, use boto3 or s3fs directly.")
+        "This method is deprecated, and will be removed from this class. To upload to S3, use boto3 or s3fs directly."
+    )
     def get_bed_from_s3(
         self,
         identifier: str,
@@ -347,8 +351,9 @@ class BBClient(BedCacheManager):
             import boto3
             from botocore.exceptions import ClientError
         except ImportError:
-            raise ImportError("boto3, and botocore is required for this function. Please install it manually via pip.")
-
+            raise ImportError(
+                "boto3, and botocore is required for this function. Please install it manually via pip."
+            )
 
         s3_bed_path = os.path.join(
             identifier[0], identifier[1], f"{identifier}{DEFAULT_BEDFILE_EXT}"

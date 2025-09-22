@@ -16,6 +16,7 @@ from .configuration_craft import CraftConfig
 
 logger = logging.get_logger(__name__)
 
+
 @dataclass
 class CraftOutput(ModelOutput):
     """
@@ -40,9 +41,14 @@ class CraftOutput(ModelOutput):
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k] if k not in ["geneformer_output", "atacformer_output"] else getattr(self, k).to_tuple()
+            (
+                self[k]
+                if k not in ["geneformer_output", "atacformer_output"]
+                else getattr(self, k).to_tuple()
+            )
             for k in self.keys()
         )
+
 
 @dataclass
 class CraftGeneActivityOutput(ModelOutput):
@@ -53,13 +59,16 @@ class CraftGeneActivityOutput(ModelOutput):
         gene_activity_predictions (torch.FloatTensor of shape (batch_size, n_genes)):
             Predicted gene activity scores for each gene in the batch.
     """
+
     loss: Optional[torch.FloatTensor] = None
     gene_activity_predictions: Optional[torch.FloatTensor] = None
+
 
 class CraftModel(PreTrainedModel):
     """
     CRAFT Model with a masked language modeling head.
     """
+
     config_class = CraftConfig
     base_model_prefix = "craft"
 
@@ -76,13 +85,19 @@ class CraftModel(PreTrainedModel):
         self.atac_embed_dim = self.atacformer_config.hidden_size
         self.gene_embed_dim = self.geneformer_config.hidden_size
 
-        self.gene_projection = torch.nn.Linear(self.gene_embed_dim, self.projection_dim, bias=False)
-        self.atac_projection = torch.nn.Linear(self.atac_embed_dim, self.projection_dim, bias=False)
+        self.gene_projection = torch.nn.Linear(
+            self.gene_embed_dim, self.projection_dim, bias=False
+        )
+        self.atac_projection = torch.nn.Linear(
+            self.atac_embed_dim, self.projection_dim, bias=False
+        )
         self.logit_scale = torch.nn.Parameter(torch.tensor(self.config.logit_scale_init_value))
 
         self.post_init()
-    
-    def _pool_embeddings(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+
+    def _pool_embeddings(
+        self, hidden_states: torch.Tensor, attention_mask: torch.Tensor
+    ) -> torch.Tensor:
         """
         Pool the embeddings using the attention mask and mean pooling.
 
@@ -92,7 +107,7 @@ class CraftModel(PreTrainedModel):
         """
         attention_mask = attention_mask.unsqueeze(-1)
         sum_embeddings = (hidden_states * attention_mask).sum(1)
-        sum_mask       = attention_mask.sum(1).clamp(min=1e-9)
+        sum_mask = attention_mask.sum(1).clamp(min=1e-9)
         return sum_embeddings / sum_mask
 
     def forward(
@@ -124,11 +139,10 @@ class CraftModel(PreTrainedModel):
             attention_mask=gene_attention_mask,
             token_type_ids=gene_token_type_ids,
             output_hidden_states=True,
-            return_dict=True
+            return_dict=True,
         )
-        gene_hidden_states = gene_outputs.last_hidden_state # last layer hidden states
+        gene_hidden_states = gene_outputs.last_hidden_state  # last layer hidden states
         gene_pooled_output = self._pool_embeddings(gene_hidden_states, gene_attention_mask)
-        
 
         # atac encoding
         atac_outputs = self.atac_encoder(
@@ -150,9 +164,9 @@ class CraftModel(PreTrainedModel):
 
         n = gene_input_ids.shape[0]
         labels = torch.arange(n, device=cos_sims.device, dtype=torch.long)
-        loss_i = F.cross_entropy(cos_sims, labels)          # image→text
-        loss_t = F.cross_entropy(cos_sims.T, labels)        # text→image
-        loss   = (loss_i + loss_t) / 2
+        loss_i = F.cross_entropy(cos_sims, labels)  # image→text
+        loss_t = F.cross_entropy(cos_sims.T, labels)  # text→image
+        loss = (loss_i + loss_t) / 2
 
         if not return_dict:
             return (loss, cos_sims, cos_sims.T, gene_outputs, atac_outputs)
@@ -164,7 +178,8 @@ class CraftModel(PreTrainedModel):
             geneformer_output=gene_outputs,
             atacformer_output=atac_outputs,
         )
-    
+
+
 class CraftForContrastiveLearning(PreTrainedModel):
     """
     CRAFT model for contrastive learning between gene and ATAC embeddings. While this
@@ -199,7 +214,7 @@ class CraftForContrastiveLearning(PreTrainedModel):
             gene_token_type_ids (torch.Tensor): Token type IDs for the gene encoder.
             atac_input_ids (torch.Tensor): Input IDs for the ATAC encoder.
             atac_attention_mask (torch.Tensor): Attention mask for the ATAC encoder.
-        
+
         Returns:
             CraftOutput: The output of the CRAFT model containing loss and logits.
         """
@@ -209,9 +224,10 @@ class CraftForContrastiveLearning(PreTrainedModel):
             gene_token_type_ids=gene_token_type_ids,
             atac_input_ids=atac_input_ids,
             atac_attention_mask=atac_attention_mask,
-            return_dict=True
+            return_dict=True,
         )
-    
+
+
 class GeneActivityPredictionHead(nn.Module):
     """
     A head for computing gene activity scores from the shared latent space
@@ -220,6 +236,7 @@ class GeneActivityPredictionHead(nn.Module):
     Mostly used for scATAC-seq data, where we want to predict gene activity
     scores from the ATAC-seq embeddings.
     """
+
     def __init__(self, config: CraftConfig):
         super().__init__()
         self.projection_dim = config.projection_dim
@@ -227,7 +244,7 @@ class GeneActivityPredictionHead(nn.Module):
         self.gene_activity_head = nn.Sequential(
             nn.Linear(self.projection_dim, self.projection_dim, bias=False),
             nn.ReLU(),
-            nn.Linear(self.projection_dim, self.n_genes, bias=False)
+            nn.Linear(self.projection_dim, self.n_genes, bias=False),
         )
 
     def forward(self, latent_embeddings: torch.Tensor) -> torch.Tensor:
@@ -242,6 +259,7 @@ class GeneActivityPredictionHead(nn.Module):
         """
         return self.gene_activity_head(latent_embeddings)
 
+
 class CraftForGeneActivityPrediction(PreTrainedModel):
     """
     CRAFT model for gene activity prediction.
@@ -255,11 +273,12 @@ class CraftForGeneActivityPrediction(PreTrainedModel):
         self.craft = CraftModel(config)
         self.gene_activity_head = GeneActivityPredictionHead(config)
 
-    def forward(self,
+    def forward(
+        self,
         atac_input_ids: torch.Tensor,
         atac_attention_mask: torch.Tensor,
         gene_activity: Optional[torch.Tensor] = None,
-        return_dict: bool = True
+        return_dict: bool = True,
     ) -> Union[Tuple[torch.Tensor | None, Any], CraftGeneActivityOutput]:
         """
         Forward pass through the model.
@@ -272,13 +291,11 @@ class CraftForGeneActivityPrediction(PreTrainedModel):
             torch.Tensor: The predicted gene activity scores.
         """
         atac_latent_embeddings = self.craft.atac_encoder(
-            input_ids=atac_input_ids,
-            attention_mask=atac_attention_mask
+            input_ids=atac_input_ids, attention_mask=atac_attention_mask
         )
         # pool the ATAC embeddings to get cell-level representations
         atac_latent_embeddings = self.craft._pool_embeddings(
-            atac_latent_embeddings,
-            atac_attention_mask
+            atac_latent_embeddings, atac_attention_mask
         )
         # project the ATAC embeddings to the shared latent space
         atac_latent_embeddings = self.craft.atac_projection(atac_latent_embeddings)
@@ -292,11 +309,10 @@ class CraftForGeneActivityPrediction(PreTrainedModel):
         loss = None
         if gene_activity is not None:
             loss = F.mse_loss(gene_activity_predictions, gene_activity)
-        
-        if not return_dict:    
+
+        if not return_dict:
             return (loss, gene_activity_predictions)
 
         return CraftGeneActivityOutput(
-            loss=loss,
-            gene_activity_predictions=gene_activity_predictions
+            loss=loss, gene_activity_predictions=gene_activity_predictions
         )
