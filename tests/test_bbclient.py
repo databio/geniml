@@ -145,6 +145,7 @@ class TestBBClientTokens:
 
 
 class TestS3Caching:
+    @pytest.mark.skip(reason="Deprecated code. To upload bed files to S3, use boto3 directly.")
     def test_upload_s3(self, mocker, local_bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
         bedfile_id = bbclient.add_bed_to_cache(local_bedfile_path).identifier
@@ -154,6 +155,7 @@ class TestS3Caching:
         bbclient.add_bed_to_s3(bedfile_id, s3_path="test_test")
         assert upload_mock.called
 
+    @pytest.mark.skip(reason="Deprecated code. To download bed files to S3, use boto3 directly.")
     def test_download_s3(self, mocker, local_bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
         download_mock = mocker.patch(
@@ -162,6 +164,7 @@ class TestS3Caching:
         bbclient.get_bed_from_s3("test_id", s3_path="test_test")
         assert download_mock.called
 
+    @pytest.mark.skip(reason="Deprecated code. To download bed files to S3, use boto3 directly.")
     def test_download_s3_404(self, mocker, local_bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
         download_mock = mocker.patch(

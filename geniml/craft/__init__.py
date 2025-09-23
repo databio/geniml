@@ -10,7 +10,7 @@ __all__ = [
     "CraftForContrastiveLearning",
     "CraftForGeneActivityPrediction",
     "DataCollatorForCraft",
-    "DataCollatorForCraftGeneActivityPrediction"
+    "DataCollatorForCraftGeneActivityPrediction",
 ]
 __version__ = VERSION
 __author__ = "Nathan LeRoy"

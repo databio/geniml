@@ -18,7 +18,7 @@ Geneformer tokenizer.
     >>> from geneformer import TranscriptomeTokenizer
     >>> tk = TranscriptomeTokenizer({"cell_type": "cell_type", "organ_major": "organ"}, nproc=4)
     >>> tk.tokenize_data("data_directory", "output_directory", "output_prefix")
-    
+
 **Description:**
 
 | Input data is a directory with .loom or .h5ad files containing raw counts from single cell RNAseq data, including all genes detected in the transcriptome without feature selection. The input file type is specified by the argument file_format in the tokenize_data function.
@@ -33,7 +33,7 @@ Geneformer tokenizer.
 
 | If one's data is in other formats besides .loom or .h5ad, one can use the relevant tools (such as Anndata tools) to convert the file to a .loom or .h5ad format prior to running the transcriptome tokenizer.
 
-| OF NOTE: Take care that the correct token dictionary and gene median file is used for the correct model. 
+| OF NOTE: Take care that the correct token dictionary and gene median file is used for the correct model.
 
 | OF NOTE: For 95M model series, special_token should be True and model_input_size should be 4096. For 30M model series, special_token should be False and model_input_size should be 2048.
 
@@ -61,6 +61,7 @@ warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")  # noqa
 import loompy as lp  # noqa
 
 logger = logging.getLogger(__name__)
+
 
 def rank_genes(gene_vector, gene_tokens):
     """
@@ -103,44 +104,44 @@ def sum_ensembl_ids(
             assert (
                 "ensembl_id_collapsed" not in data.ra.keys()
             ), "'ensembl_id_collapsed' column already exists in data.ra.keys()"
-            
-            assert (
-                "n_counts" in data.ca.keys()
-            ), "'n_counts' column missing from data.ca.keys()"
+
+            assert "n_counts" in data.ca.keys(), "'n_counts' column missing from data.ca.keys()"
 
             if custom_attr_name_dict is not None:
                 for label in custom_attr_name_dict:
-                    assert label in data.ca.keys(), f"Attribute `{label}` not present in dataset features"
+                    assert (
+                        label in data.ca.keys()
+                    ), f"Attribute `{label}` not present in dataset features"
 
             # Get the ensembl ids that exist in data
             ensembl_ids = data.ra.ensembl_id
             # Check for duplicate Ensembl IDs if collapse_gene_ids is False.
             # Comparing to gene_token_dict here, would not perform any mapping steps
             if not collapse_gene_ids:
-                ensembl_id_check = [
-                    gene for gene in ensembl_ids if gene in gene_token_dict.keys()
-                ]
+                ensembl_id_check = [gene for gene in ensembl_ids if gene in gene_token_dict.keys()]
                 if len(ensembl_id_check) == len(set(ensembl_id_check)):
                     return data_directory
                 else:
                     raise ValueError("Error: data Ensembl IDs non-unique.")
-    
+
             # Get the genes that exist in the mapping dictionary and the value of those genes
             genes_in_map_dict = [gene for gene in ensembl_ids if gene in gene_mapping_dict.keys()]
             vals_from_map_dict = [gene_mapping_dict.get(gene) for gene in genes_in_map_dict]
 
             # if the genes in the mapping dict and the value of those genes are of the same length,
             # simply return the mapped values
-            if(len(set(genes_in_map_dict)) == len(set(vals_from_map_dict))):
-                mapped_vals = [gene_mapping_dict.get(gene.upper()) for gene in data.ra["ensembl_id"]]
+            if len(set(genes_in_map_dict)) == len(set(vals_from_map_dict)):
+                mapped_vals = [
+                    gene_mapping_dict.get(gene.upper()) for gene in data.ra["ensembl_id"]
+                ]
                 data.ra["ensembl_id_collapsed"] = mapped_vals
                 return data_directory
             # Genes need to be collapsed
             else:
-                dedup_filename = data_directory.with_name(
-                    data_directory.stem + "__dedup.loom"
-                )
-                mapped_vals = [gene_mapping_dict.get(gene.upper()) for gene in data.ra["ensembl_id"]]
+                dedup_filename = data_directory.with_name(data_directory.stem + "__dedup.loom")
+                mapped_vals = [
+                    gene_mapping_dict.get(gene.upper()) for gene in data.ra["ensembl_id"]
+                ]
                 data.ra["ensembl_id_collapsed"] = mapped_vals
                 dup_genes = [
                     idx
@@ -149,14 +150,10 @@ def sum_ensembl_ids(
                 ]
                 num_chunks = int(np.ceil(data.shape[1] / chunk_size))
                 first_chunk = True
-                for _, _, view in tqdm(
-                    data.scan(axis=1, batch_size=chunk_size), total=num_chunks
-                ):
+                for _, _, view in tqdm(data.scan(axis=1, batch_size=chunk_size), total=num_chunks):
 
                     def process_chunk(view, duplic_genes):
-                        data_count_view = pd.DataFrame(
-                            view, index=data.ra["ensembl_id_collapsed"]
-                        )
+                        data_count_view = pd.DataFrame(view, index=data.ra["ensembl_id_collapsed"])
                         unique_data_df = data_count_view.loc[
                             ~data_count_view.index.isin(duplic_genes)
                         ]
@@ -167,16 +164,10 @@ def sum_ensembl_ids(
                         ]
                         summed_data = dup_data_df.groupby(dup_data_df.index).sum()
                         if not summed_data.index.is_unique:
-                            raise ValueError(
-                                "Error: Ensembl IDs in summed data frame non-unique."
-                            )
-                        data_count_view = pd.concat(
-                            [unique_data_df, summed_data], axis=0
-                        )
+                            raise ValueError("Error: Ensembl IDs in summed data frame non-unique.")
+                        data_count_view = pd.concat([unique_data_df, summed_data], axis=0)
                         if not data_count_view.index.is_unique:
-                            raise ValueError(
-                                "Error: Ensembl IDs in final data frame non-unique."
-                            )
+                            raise ValueError("Error: Ensembl IDs in final data frame non-unique.")
                         return data_count_view
 
                     processed_chunk = process_chunk(view[:, :], dup_genes)
@@ -208,30 +199,23 @@ def sum_ensembl_ids(
 
         data = sc.read_h5ad(str(data_directory))
 
-        assert (
-            "ensembl_id" in data.var.columns
-        ), "'ensembl_id' column missing from data.var"
+        assert "ensembl_id" in data.var.columns, "'ensembl_id' column missing from data.var"
 
         assert (
             "ensembl_id_collapsed" not in data.var.columns
         ), "'ensembl_id_collapsed' column already exists in data.var"
-        assert (
-            "n_counts" in data.obs.columns
-        ), "'n_counts' column missing from data.obs"
+        assert "n_counts" in data.obs.columns, "'n_counts' column missing from data.obs"
 
         if custom_attr_name_dict is not None:
             for label in custom_attr_name_dict:
                 assert label in data.obs.columns, f"Attribute `{label}` not present in data.obs"
-
 
         # Get the ensembl ids that exist in data
         ensembl_ids = data.var.ensembl_id
         # Check for duplicate Ensembl IDs if collapse_gene_ids is False.
         # Comparing to gene_token_dict here, would not perform any mapping steps
         if not collapse_gene_ids:
-            ensembl_id_check = [
-                gene for gene in ensembl_ids if gene in gene_token_dict.keys()
-            ]
+            ensembl_id_check = [gene for gene in ensembl_ids if gene in gene_token_dict.keys()]
             if len(ensembl_id_check) == len(set(ensembl_id_check)):
                 return data_directory
             else:
@@ -243,17 +227,19 @@ def sum_ensembl_ids(
 
         # if the genes in the mapping dict and the value of those genes are of the same length,
         # simply return the mapped values
-        if(len(set(genes_in_map_dict)) == len(set(vals_from_map_dict))):
-            data.var["ensembl_id_collapsed"] = data.var.ensembl_id.str.upper().map(gene_mapping_dict)
+        if len(set(genes_in_map_dict)) == len(set(vals_from_map_dict)):
+            data.var["ensembl_id_collapsed"] = data.var.ensembl_id.str.upper().map(
+                gene_mapping_dict
+            )
             return data
         # Genes need to be collapsed
         else:
-            data.var["ensembl_id_collapsed"] = data.var.ensembl_id.str.upper().map(gene_mapping_dict)
+            data.var["ensembl_id_collapsed"] = data.var.ensembl_id.str.upper().map(
+                gene_mapping_dict
+            )
             data.var_names = data.var["ensembl_id_collapsed"]
             data = data[:, ~data.var.index.isna()]
-            dup_genes = [
-                idx for idx, count in Counter(data.var_names).items() if count > 1
-            ]
+            dup_genes = [idx for idx, count in Counter(data.var_names).items() if count > 1]
 
             num_chunks = int(np.ceil(data.shape[0] / chunk_size))
 
@@ -304,9 +290,9 @@ class TranscriptomeTokenizer:
     ):
         """
         Initialize tokenizer.
-        
+
         **Parameters:**
-        
+
         custom_attr_name_dict : None, dict
             | Dictionary of custom attributes to be added to the dataset.
             | Keys are the names of the attributes in the loom file.
@@ -406,9 +392,9 @@ class TranscriptomeTokenizer:
     ):
         """
         Tokenize .loom files in data_directory and save as tokenized .dataset in output_directory.
-        
+
         **Parameters:**
-        
+
         data_directory : Path
             | Path to directory containing loom files or anndata files
         output_directory : Path
@@ -421,9 +407,7 @@ class TranscriptomeTokenizer:
             | Whether to use generator or dict for tokenization.
 
         """
-        tokenized_cells, cell_metadata = self.tokenize_files(
-            Path(data_directory), file_format
-        )
+        tokenized_cells, cell_metadata = self.tokenize_files(Path(data_directory), file_format)
         tokenized_dataset = self.create_dataset(
             tokenized_cells,
             cell_metadata,
@@ -433,22 +417,16 @@ class TranscriptomeTokenizer:
         output_path = (Path(output_directory) / output_prefix).with_suffix(".dataset")
         tokenized_dataset.save_to_disk(str(output_path))
 
-    def tokenize_files(
-        self, data_directory, file_format: Literal["loom", "h5ad"] = "loom"
-    ):
+    def tokenize_files(self, data_directory, file_format: Literal["loom", "h5ad"] = "loom"):
         tokenized_cells = []
         if self.custom_attr_name_dict is not None:
             cell_attr = [attr_key for attr_key in self.custom_attr_name_dict.keys()]
-            cell_metadata = {
-                attr_key: [] for attr_key in self.custom_attr_name_dict.values()
-            }
+            cell_metadata = {attr_key: [] for attr_key in self.custom_attr_name_dict.values()}
 
         # loops through directories to tokenize .loom files
         file_found = 0
         # loops through directories to tokenize .loom or .h5ad files
-        tokenize_file_fn = (
-            self.tokenize_loom if file_format == "loom" else self.tokenize_anndata
-        )
+        tokenize_file_fn = self.tokenize_loom if file_format == "loom" else self.tokenize_anndata
         for file_path in data_directory.glob(f"*.{file_format}"):
             file_found = 1
             print(f"Tokenizing {file_path}")
@@ -456,16 +434,12 @@ class TranscriptomeTokenizer:
             tokenized_cells += file_tokenized_cells
             if self.custom_attr_name_dict is not None:
                 for k in cell_attr:
-                    cell_metadata[self.custom_attr_name_dict[k]] += file_cell_metadata[
-                        k
-                    ]
+                    cell_metadata[self.custom_attr_name_dict[k]] += file_cell_metadata[k]
             else:
                 cell_metadata = None
 
         if file_found == 0:
-            logger.error(
-                f"No .{file_format} files found in directory {data_directory}."
-            )
+            logger.error(f"No .{file_format} files found in directory {data_directory}.")
             raise
         return tokenized_cells, cell_metadata
 
@@ -475,29 +449,22 @@ class TranscriptomeTokenizer:
             self.collapse_gene_ids,
             self.gene_mapping_dict,
             self.gene_token_dict,
-            self.custom_attr_name_dict, 
+            self.custom_attr_name_dict,
             file_format="h5ad",
             chunk_size=self.chunk_size,
         )
 
         if self.custom_attr_name_dict is not None:
-            file_cell_metadata = {
-                attr_key: [] for attr_key in self.custom_attr_name_dict.keys()
-            }
+            file_cell_metadata = {attr_key: [] for attr_key in self.custom_attr_name_dict.keys()}
 
         coding_miRNA_loc = np.where(
             [self.genelist_dict.get(i, False) for i in adata.var["ensembl_id_collapsed"]]
         )[0]
         norm_factor_vector = np.array(
-            [
-                self.gene_median_dict[i]
-                for i in adata.var["ensembl_id_collapsed"][coding_miRNA_loc]
-            ]
+            [self.gene_median_dict[i] for i in adata.var["ensembl_id_collapsed"][coding_miRNA_loc]]
         )
         coding_miRNA_ids = adata.var["ensembl_id_collapsed"][coding_miRNA_loc]
-        coding_miRNA_tokens = np.array(
-            [self.gene_token_dict[i] for i in coding_miRNA_ids]
-        )
+        coding_miRNA_tokens = np.array([self.gene_token_dict[i] for i in coding_miRNA_ids])
 
         try:
             _ = adata.obs["filter_pass"]
@@ -541,9 +508,7 @@ class TranscriptomeTokenizer:
 
     def tokenize_loom(self, loom_file_path, target_sum=10_000):
         if self.custom_attr_name_dict is not None:
-            file_cell_metadata = {
-                attr_key: [] for attr_key in self.custom_attr_name_dict.keys()
-            }
+            file_cell_metadata = {attr_key: [] for attr_key in self.custom_attr_name_dict.keys()}
         loom_file_path_original = loom_file_path
 
         dedup_filename = loom_file_path.with_name(loom_file_path.stem + "__dedup.loom")
@@ -569,9 +534,7 @@ class TranscriptomeTokenizer:
                 ]
             )
             coding_miRNA_ids = data.ra["ensembl_id_collapsed"][coding_miRNA_loc]
-            coding_miRNA_tokens = np.array(
-                [self.gene_token_dict[i] for i in coding_miRNA_ids]
-            )
+            coding_miRNA_tokens = np.array([self.gene_token_dict[i] for i in coding_miRNA_ids])
 
             # define coordinates of cells passing filters for inclusion (e.g. QC)
             try:
@@ -600,10 +563,7 @@ class TranscriptomeTokenizer:
                 # normalize by total counts per cell and multiply by 10,000 to allocate bits to precision
                 # and normalize by gene normalization factors
                 subview_norm_array = (
-                    subview[:, :]
-                    / subview.ca.n_counts
-                    * target_sum
-                    / norm_factor_vector[:, None]
+                    subview[:, :] / subview.ca.n_counts * target_sum / norm_factor_vector[:, None]
                 )
                 # tokenize subview gene vectors
                 tokenized_cells += [
@@ -624,7 +584,6 @@ class TranscriptomeTokenizer:
         with lp.connect(str(loom_file_path_original)) as data:
             if "ensembl_id_collapsed" in data.ra.keys():
                 del data.ra["ensembl_id_collapsed"]
-
 
         return tokenized_cells, file_cell_metadata
 
@@ -678,7 +637,5 @@ class TranscriptomeTokenizer:
 
             return example
 
-        output_dataset_truncated = output_dataset.map(
-            format_cell_features, num_proc=self.nproc
-        )
+        output_dataset_truncated = output_dataset.map(format_cell_features, num_proc=self.nproc)
         return output_dataset_truncated

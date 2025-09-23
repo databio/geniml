@@ -2,12 +2,11 @@ import os
 from contextlib import suppress
 from logging import getLogger
 from typing import Dict, List, NoReturn, Union
-
-import boto3
+from typing_extensions import deprecated
 import requests
 import s3fs
 import zarr
-from botocore.exceptions import ClientError
+
 from pybiocfilecache import BiocFileCache
 from pybiocfilecache.exceptions import RnameExistsError
 from zarr import Array
@@ -274,6 +273,9 @@ class BBClient(BedCacheManager):
             f"Tokenized BED file {bed_id} tokenized using {universe_id} was cached successfully"
         )
 
+    @deprecated(
+        "This method is deprecated, and will be removed from this class. To upload to S3, use boto3 or s3fs directly."
+    )
     def add_bed_to_s3(
         self,
         identifier: str,
@@ -295,6 +297,14 @@ class BBClient(BedCacheManager):
 
         :return: full path on S3
         """
+
+        try:
+            import boto3
+        except ImportError:
+            raise ImportError(
+                "boto3, and botocore is required for this function. Please install it manually via pip."
+            )
+
         s3_client = boto3.client(
             "s3",
             endpoint_url=endpoint_url,
@@ -311,6 +321,9 @@ class BBClient(BedCacheManager):
         _LOGGER.info(f"Project was uploaded successfully to s3://{bucket}/{s3_bed_path}")
         return s3_bed_path
 
+    @deprecated(
+        "This method is deprecated, and will be removed from this class. To upload to S3, use boto3 or s3fs directly."
+    )
     def get_bed_from_s3(
         self,
         identifier: str,
@@ -333,6 +346,15 @@ class BBClient(BedCacheManager):
         :return: bed file id
         :raise FileNotFoundError: if the identifier does not exist in cache
         """
+
+        try:
+            import boto3
+            from botocore.exceptions import ClientError
+        except ImportError:
+            raise ImportError(
+                "boto3, and botocore is required for this function. Please install it manually via pip."
+            )
+
         s3_bed_path = os.path.join(
             identifier[0], identifier[1], f"{identifier}{DEFAULT_BEDFILE_EXT}"
         )

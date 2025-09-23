@@ -5,6 +5,7 @@ class GeneformerConfig(BertConfig):
     """
     Configuration for Geneformer model, a BERT-like transformer for gene tokens.
     """
+
     model_type = "geneformer"
 
     def __init__(
@@ -21,8 +22,8 @@ class GeneformerConfig(BertConfig):
         layer_norm_eps: float = 1e-12,
         max_position_embeddings: int = 4096,
         pad_token_id: int = 0,
-        classifier_dropout: float = None,        
-        **kwargs
+        classifier_dropout: float = None,
+        **kwargs,
     ):
         super().__init__(
             vocab_size=vocab_size,
@@ -38,5 +39,5 @@ class GeneformerConfig(BertConfig):
             max_position_embeddings=max_position_embeddings,
             pad_token_id=pad_token_id,
             classifier_dropout=classifier_dropout,
-            **kwargs
+            **kwargs,
         )

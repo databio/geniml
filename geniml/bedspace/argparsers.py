@@ -96,10 +96,22 @@ def build_distance_argparser(
     )
 
     parser.add_argument(
-        "-m",
-        "--metadata",
-        dest="metadata",
-        help="Path to metadata file",
+        "-s",
+        "--path-to-starsapce",
+        dest="path_to_starsapce",
+        help="Path to starspace folder (must be prebuilt)",
+    )
+
+    parser.add_argument(
+        "--metadata-train",
+        dest="metadata_train",
+        help="Path to train metadata file",
+    )
+
+    parser.add_argument(
+        "--metadata-test",
+        dest="metadata_test",
+        help="Path to test metadata file",
     )
 
     parser.add_argument(
@@ -107,6 +119,13 @@ def build_distance_argparser(
         "--universe",
         dest="universe",
         help="Path to universe file",
+    )
+
+    parser.add_argument(
+        "-p",
+        "--project-name",
+        dest="project_name",
+        help="project name",
     )
 
     parser.add_argument(
