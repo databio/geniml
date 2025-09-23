@@ -1,7 +1,7 @@
 import logging
 from multiprocessing import Pool
 import pandas as pd
-from geniml.tokenization.main import TreeTokenizer
+from gtars.tokenizers import Tokenizer
 import datetime
 from tqdm import tqdm
 
@@ -25,7 +25,7 @@ def main(data_path: str, metadata: str, universe: str, output: str, labels: str)
     _LOGGER.info(f"Start: {datetime.datetime.now()}")
 
     # PLACE CODE FOR RUNNING PREPROCESS HERE
-    universe = TreeTokenizer(universe)
+    universe = Tokenizer(universe)
     file_list = meta_preprocessing(metadata, labels, data_path, "train")
     trained_documents = []
     with Pool(processes=8) as p:

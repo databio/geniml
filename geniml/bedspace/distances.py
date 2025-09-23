@@ -2,8 +2,8 @@ import logging
 import os
 import datetime
 import numpy as np
-import pandas as pd
-from geniml.tokenization.main import TreeTokenizer
+
+from gtars.tokenizers import Tokenizer
 from sklearn.preprocessing import MinMaxScaler
 
 from .helpers import (
@@ -54,7 +54,7 @@ def main(
         os.makedirs(temp_path)
 
     ## load input files
-    universe = TreeTokenizer(universe)
+    universe = Tokenizer(universe)
     file_list_train = meta_preprocessing(metadata_train, labels, files, "train")
     file_list_test = meta_preprocessing(metadata_test, labels, files, "test")
 
