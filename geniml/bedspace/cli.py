@@ -50,32 +50,3 @@ def build_argparser(parser: VersionInHelpParser = None):
     subparsers[SEARCH_CMD] = search_subparser(subparsers[SEARCH_CMD])
 
     return parser
-
-
-# def main(args):
-#    """MAIN"""
-#    print("Inside main function")
-#    parser = logmuse.add_logging_options(build_argparser())
-#    args, _ = parser.parse_known_args()
-#    print(f"Parsed arguments: {args}")
-#    _LOGGER = logmuse.logger_via_cli(args, make_root=True)
-#    print("Logger initialized")
-#    _LOGGER.debug(f"versions: bedspace {__version__}")
-#    _LOGGER.debug(f"Args: {args}")
-
-#    if args.subcommand == PREPROCESS_CMD:
-#        print("Here")
-#        _LOGGER.info("Preprocessing data for training")
-
-#    elif args.subcommand == TRAIN_CMD:
-#        _LOGGER.info("Training the StarSpace model")
-
-#    elif args.subcommand == DISTANCES_CMD:
-#        _LOGGER.info("Computing distances between regionsets and labels")
-
-#    elif args.subcommand == SEARCH_CMD:
-#        _LOGGER.info("Searching for regionsets similar to a query")
-
-#    else:
-#        _LOGGER.error("Unknown command: {}".format(args.command))
-#        sys.exit(1)
