@@ -53,6 +53,7 @@ def test_make_SNP():
 
 
 # TODO: remove this when we remove the deprecated code
+@pytest.mark.skip("This is deprecated code, RegionSet is not used anymore")
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
 class TestRegionSet:
     @pytest.mark.parametrize(
