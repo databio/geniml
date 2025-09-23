@@ -164,6 +164,7 @@ class TestS3Caching:
         bbclient.get_bed_from_s3("test_id", s3_path="test_test")
         assert download_mock.called
 
+    @pytest.mark.skip(reason="Deprecated code. To download bed files to S3, use boto3 directly.")
     def test_download_s3_404(self, mocker, local_bedfile_path, tmp_path):
         bbclient = BBClient(cache_folder=tmp_path)
         download_mock = mocker.patch(
