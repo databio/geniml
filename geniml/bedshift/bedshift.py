@@ -10,8 +10,10 @@ import logmuse
 import numpy as np
 import pandas as pd
 
-from geniml.bedshift import BedshiftYAMLHandler, arguments
-from geniml.bedshift._version import __version__
+# from geniml.bedshift import BedshiftYAMLHandler, arguments
+from .arguments import build_argparser, param_msg
+from .yaml_handler import BedshiftYAMLHandler
+from ._version import __version__
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -498,7 +500,7 @@ class Bedshift(object):
         if seed:
             self.set_seed(seed)
         if yaml:
-            return BedshiftYAMLHandler.BedshiftYAMLHandler(self, yaml).handle_yaml()
+            return BedshiftYAMLHandler(self, yaml).handle_yaml()
         n = 0
         if shiftrate > 0:
             if shiftfile:
@@ -565,7 +567,7 @@ class Bedshift(object):
 def main():
     """Primary workflow"""
 
-    parser = logmuse.add_logging_options(arguments.build_argparser())
+    parser = logmuse.add_logging_options(build_argparser())
     args, remaining_args = parser.parse_known_args()
     global _LOGGER
     _LOGGER = logmuse.logger_via_cli(args)
@@ -592,7 +594,7 @@ def main():
             _LOGGER.error(msg)
             raise ModuleNotFoundError(msg)
 
-    msg = arguments.param_msg
+    msg = param_msg
 
     if args.repeat < 1:
         msg = "Repeats must be greater than 0"

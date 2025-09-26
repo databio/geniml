@@ -155,7 +155,7 @@ class TestBedshiftYAMLHandler:
             os.path.join(SCRIPT_PATH, "test.bed"),
             chrom_sizes=os.path.join(SCRIPT_PATH, "hg38.chrom.sizes"),
         )
-        yamled = BedshiftYAMLHandler.BedshiftYAMLHandler(
+        yamled = BedshiftYAMLHandler(
             bedshifter=bedshifter,
             yaml_fp=os.path.join(SCRIPT_PATH, "bedshift_analysis.yaml"),
         ).handle_yaml()
