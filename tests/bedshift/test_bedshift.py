@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from geniml.bedshift import BedshiftYAMLHandler, bedshift
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -76,25 +75,27 @@ class TestBedshift:
         assert len(bs.bed) == 720
         bs.reset_bed()
 
-    @pytest.mark.skip("Not implemented yet")
+    # @pytest.mark.skip("Not implemented yet")
     def test_drop_from_file(self, bs):
+        # dropped = bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0.25)
+        # assert dropped == 250
         dropped = bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0.25)
-        self.assertEqual(dropped, 250)
+        assert dropped == 250
         bs.reset_bed()
 
-    @pytest.mark.skip("Not implemented yet")
+    # @pytest.mark.skip("Not implemented yet")
     def test_drop_from_file_high_rate(self, bs):
         dropped = bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 1)
-        assert dropped == 100
+        assert dropped == 1000
         bs.reset_bed()
 
-    @pytest.mark.skip("Not implemented yet")
+    # @pytest.mark.skip("Not implemented yet")
     def test_drop_from_file_zero_rate(self, bs):
         dropped = bs.drop_from_file(os.path.join(SCRIPT_PATH, "test.bed"), 0)
         assert dropped == 0
         bs.reset_bed()
 
-    @pytest.mark.skip("Not implemented yet")
+    # @pytest.mark.skip("Not implemented yet")
     def test_all_perturbations1(self, bs):
         perturbed = bs.all_perturbations(
             addrate=0.5,
@@ -110,7 +111,7 @@ class TestBedshift:
         assert len(bs.bed) == pytest.approx(9744, 2)
         bs.reset_bed()
 
-    @pytest.mark.skip("Not implemented yet")
+    # @pytest.mark.skip("Not implemented yet")
     def test_all_perturbations2(self, bs):
         perturbed = bs.all_perturbations(
             addrate=0.3,
@@ -149,7 +150,7 @@ class TestBedshift:
 
 
 class TestBedshiftYAMLHandler:
-    @pytest.mark.skip("Not implemented yet")
+    # @pytest.mark.skip("Not implemented yet")
     def test_handle_yaml(self):
         bedshifter = bedshift.Bedshift(
             os.path.join(SCRIPT_PATH, "test.bed"),

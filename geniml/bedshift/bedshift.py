@@ -6,14 +6,14 @@ import os
 import random
 import sys
 
+import genomicranges as gr
 import logmuse
 import numpy as np
 import pandas as pd
 
-# from geniml.bedshift import BedshiftYAMLHandler, arguments
+from ._version import __version__
 from .arguments import build_argparser, param_msg
 from .yaml_handler import BedshiftYAMLHandler
-from ._version import __version__
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -385,7 +385,7 @@ class Bedshift(object):
         drop_bed = self.read_bed(fp, delimiter=delimiter)
 
         intersect_regions = self._find_overlap(drop_bed)
-        original_colnames = self.bed.columns
+        # original_colnames = self.bed.columns
         intersect_regions.columns = [str(col) for col in intersect_regions.columns]
         self.bed.columns = [str(col) for col in self.bed.columns]
         indices_of_overlap_regions = self.bed.reset_index().merge(intersect_regions)["index"]
@@ -439,23 +439,22 @@ class Bedshift(object):
             comparison_bed = self.read_bed(fp)
         else:
             raise Exception("unsupported input type: {}".format(type(reference)))
-        reference_bed.columns = ["Chromosome", "Start", "End", "modifications"]
-        comparison_bed.columns = ["Chromosome", "Start", "End", "modifications"]
-        # TODO, switch this overlap calculation to use genomicranges
-        raise NotImplementedError(
-            "This relies on pyranges, which was removed with the switch to geniml."
-        )
+        reference_bed.columns = ["seqnames", "starts", "ends", "modifications"]
+        comparison_bed.columns = ["seqnames", "starts", "ends", "modifications"]
 
-        # USE AILIST HERE:
-        reference_pr = pr.PyRanges(reference_bed)
-        comparison_pr = pr.PyRanges(comparison_bed)
-        intersection = reference_pr.overlap(comparison_pr, how="first").as_df()
+        reference_gr = gr.GenomicRanges.from_pandas(reference_bed)
+        comparison_gr = gr.GenomicRanges.from_pandas(comparison_bed)
+        intersection_gr = reference_gr.subset_by_overlaps(comparison_gr)
+        intersection = intersection_gr.to_pandas()
+
         if len(intersection) == 0:
             raise Exception(
                 "no intersection found between {} and {}".format(reference_bed, comparison_bed)
             )
-        intersection = intersection.drop(["modifications"], axis=1)
+
+        intersection = intersection[["seqnames", "starts", "ends"]]
         intersection.columns = [0, 1, 2]
+
         return intersection
 
     def all_perturbations(
@@ -538,6 +537,9 @@ class Bedshift(object):
         Read a BED file into pandas dataframe
 
         :param str bedfile_path: The path to the BED file
+        :param str delimiter: The delimiter used in the BED file
+
+        :return pd.DataFrame: The BED file as a pandas DataFrame
         """
         try:
             df = pd.read_csv(
