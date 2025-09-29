@@ -6,10 +6,14 @@ import select
 import shutil
 import sys
 import time
+
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
+
 
 try:
     import torch
@@ -17,6 +21,7 @@ except ImportError:
     raise ImportError(
         "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
     )
+
 from gtars.utils import read_tokens_from_gtok
 from gtars.tokenizers import Tokenizer
 from yaml import safe_dump, safe_load
@@ -44,78 +49,6 @@ from .const import (
 from .models import Region2Vec
 
 _LOGGER = logging.getLogger(MODULE_NAME)
-
-
-def prRed(skk: str) -> None:
-    """Prints the input string skk in the red font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[91m{skk}\033[00m")
-
-
-def prGreen(skk: str) -> None:
-    """Prints the input string skk in the green font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[92m{skk}\033[00m")
-
-
-def prYellow(skk: str) -> None:
-    """Prints the input string skk in the yellow font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[93m{skk}\033[00m")
-
-
-def prLightPurple(skk: str) -> None:
-    """Prints the input string skk in the light purple font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[94m{skk}\033[00m")
-
-
-def prPurple(skk: str) -> None:
-    """Prints the input string skk in the purple font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[95m{skk}\033[00m")
-
-
-def prCyan(skk: str) -> None:
-    """Prints the input string skk in the cyan font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[96m{skk}\033[00m")
-
-
-def prLightGray(skk: str) -> None:
-    """Prints the input string skk in the gray font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[97m{skk}\033[00m")
-
-
-def prBlack(skk: str) -> None:
-    """Prints the input string skk in the black font.
-
-    Args:
-        skk (str): The string to print.
-    """
-    print(f"\033[98m{skk}\033[00m")
 
 
 _log_path = None
