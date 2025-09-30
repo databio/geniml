@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pytest
-
 from geniml.search.backends import HNSWBackend
 from geniml.text2bednn.text2bednn import Vec2VecFNN
 from geniml.text2bednn.utils import metadata_dict_from_csv

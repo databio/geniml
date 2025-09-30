@@ -4,12 +4,11 @@ import sys
 
 import pytest
 import scanpy as sc
-from gtars.utils import write_tokens_to_gtok
-from tqdm import tqdm
-
 from geniml.region2vec.utils import Region2VecDataset
 from geniml.scembed.main import ScEmbed
 from gtars.tokenizers import Tokenizer
+from gtars.utils import write_tokens_to_gtok
+from tqdm import tqdm
 
 # add parent directory to path
 sys.path.append("../")

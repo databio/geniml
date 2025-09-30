@@ -78,7 +78,8 @@ class BedshiftYAMLHandler(object):
 
             ##### add_from_file with no delimiter provided #####
             elif set(["add_from_file", "file", "rate"]) == set(list(operation.keys())):
-                fp = operation["file"]
+                # fp = operation["file"]
+                fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     add_rate = operation["rate"]
                     num_added = self.bedshifter.add_from_file(fp, add_rate)
@@ -91,7 +92,7 @@ class BedshiftYAMLHandler(object):
             elif set(["add_from_file", "file", "rate", "delimiter"]) == set(
                 list(operation.keys())
             ):
-                fp = operation["file"]
+                fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     add_rate = operation["rate"]
                     delimiter = operation["delimiter"]
@@ -109,7 +110,7 @@ class BedshiftYAMLHandler(object):
 
             ##### drop_from_file with no delimiter provided #####
             elif set(["drop_from_file", "file", "rate"]) == set(list(operation.keys())):
-                fp = operation["file"]
+                fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     drop_rate = operation["rate"]
                     num_dropped = self.bedshifter.drop_from_file(fp, drop_rate)
@@ -122,7 +123,7 @@ class BedshiftYAMLHandler(object):
             elif set(["drop_from_file", "file", "rate", "delimiter"]) == set(
                 list(operation.keys())
             ):
-                fp = operation["file"]
+                fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     drop_rate = operation["rate"]
                     delimiter = operation["delimiter"]
@@ -144,7 +145,7 @@ class BedshiftYAMLHandler(object):
             elif set(["shift_from_file", "file", "rate", "mean", "stdev"]) == set(
                 list(operation.keys())
             ):
-                fp = operation["file"]
+                fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     rate = operation["rate"]
                     mean = operation["mean"]
@@ -159,7 +160,7 @@ class BedshiftYAMLHandler(object):
             elif set(["shift_from_file", "file", "rate", "mean", "stdev", "delimiter"]) == set(
                 list(operation.keys())
             ):
-                fp = operation["file"]
+                fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     rate = operation["rate"]
                     mean = operation["mean"]

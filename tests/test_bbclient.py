@@ -3,7 +3,6 @@ import os
 import botocore
 import genomicranges
 import pytest
-
 from geniml.bbclient import BBClient
 from geniml.exceptions import TokenizedFileNotFoundInCacheError
 from geniml.io import BedSet
@@ -20,8 +19,8 @@ ALL_BEDFILE_PATH = [os.path.join(DATA_TEST_FOLDER, x) for x in os.listdir(DATA_T
 
 
 @pytest.fixture
-def cache_path():
-    return "./data/geniml_bb_cache"
+def cache_path(tmp_path_factory):
+    return tmp_path_factory.mktemp("geniml_bb_cache")
 
 
 @pytest.fixture

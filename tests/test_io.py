@@ -3,7 +3,6 @@ import os
 import genomicranges
 import pandas as pd
 import pytest
-
 from geniml.io.exceptions import BEDFileReadError, GenimlBaseError
 from geniml.io.io import SNP, Maf, Region, RegionSet
 
