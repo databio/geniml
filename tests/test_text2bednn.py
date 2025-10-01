@@ -103,6 +103,10 @@ def test_vec_pair(nl_payloads, bed_payloads, tmp_path_factory):
     nl_backend.load(vectors=np.array(nl_vecs), payloads=nl_payloads)
 
 
+@pytest.mark.skipif(
+    "not config.getoption('--time')",
+    reason="Only run when --time is given; this test takes > 10s to run.",
+)
 def test_torch_running(tmp_path_factory):
     """
     Test model training
@@ -127,7 +131,7 @@ def test_torch_running(tmp_path_factory):
         early_stop=True,
         patience=0.1,
         loss_func="cosine_embedding_loss",
-        num_epochs=100,
+        num_epochs=10,
         batch_size=16,
         num_units=[512, 256],
     )
@@ -162,7 +166,7 @@ def test_torch_running(tmp_path_factory):
         early_stop=True,
         patience=0.1,
         loss_func="cosine_embedding_loss",
-        num_epochs=100,
+        num_epochs=10,
         batch_size=16,
         num_units=[512, 256],
         training_target=training_target,

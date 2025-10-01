@@ -9,6 +9,7 @@ from ubiquerg import VersionInHelpParser
 from ._version import __version__
 from .assess.cli import build_subparser as assess_subparser
 from .bbclient.cli import build_subparser as bbclient_subparser
+from .bedshift.cli import build_argparser as bedshift_subparser
 from .bedspace.cli import build_argparser as bedspace_subparser
 from .eval.cli import build_subparser as eval_subparser
 from .likelihood.cli import build_subparser as likelihood_subparser
@@ -114,6 +115,7 @@ def build_argparser():
         "region2vec": "Train a region2vec model",
         "scembed": "Embed single-cell data as region vectors",
         "tokenize": "Tokenize BED files",
+        "bedshift": "Tool for randomly perturbing BED file regions",
     }
 
     sp = parser.add_subparsers(dest="command")
@@ -131,6 +133,7 @@ def build_argparser():
     subparsers["region2vec"] = region2vec_subparser(subparsers["region2vec"])
     subparsers["scembed"] = scembed_subparser(subparsers["scembed"])
     subparsers["tokenize"] = tokenization_subparser(subparsers["tokenize"])
+    subparsers["bedshift"] = bedshift_subparser(subparsers["bedshift"])
 
     return parser
 
@@ -457,6 +460,117 @@ def main(test_args=None):
             _LOGGER.error(f"Unknown subcommand: {args.subcommand}")
             parser.print_help()
             sys.exit(1)
+
+    if args.command == "bedshift":
+        import math
+
+        from .bedshift import Bedshift
+        from .bedshift.const import param_msg
+
+        _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
+        if not args.bedfile:
+            parser.print_help()
+            msg = "No BED file given"
+            _LOGGER.error(msg)
+
+        if args.chrom_lengths:
+            pass
+        elif args.genome:
+            try:
+                import refgenconf
+
+                rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
+                args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
+            except ModuleNotFoundError:
+                msg = "You must have package refgenconf installed to use a refgenie genome"
+                _LOGGER.error(msg)
+                raise ModuleNotFoundError(msg)
+
+        msg = param_msg
+
+        if args.repeat < 1:
+            msg = "Repeats must be greater than 0"
+            _LOGGER.error(msg)
+            raise ValueError(msg)
+
+        if args.outputfile:
+            outfile_base = args.outputfile
+        else:
+            outfile_base = "bedshifted_{}".format(os.path.basename(args.bedfile))
+
+        _LOGGER.info(
+            msg.format(
+                bedfile=args.bedfile,
+                chromsizes=args.chrom_lengths,
+                droprate=args.droprate,
+                dropfile=args.dropfile,
+                addrate=args.addrate,
+                addmean=args.addmean,
+                addstdev=args.addstdev,
+                addfile=args.addfile,
+                valid_regions=args.valid_regions,
+                shiftrate=args.shiftrate,
+                shiftmean=args.shiftmean,
+                shiftstdev=args.shiftstdev,
+                shiftfile=args.shiftfile,
+                cutrate=args.cutrate,
+                mergerate=args.mergerate,
+                outputfile=outfile_base,
+                repeat=args.repeat,
+                yaml_config=args.yaml_config,
+                seed=args.seed,
+            )
+        )
+
+        bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
+        _LOGGER.info(f"Generating {args.repeat} repetitions...")
+
+        pct_reports = [int(x * args.repeat / 100) for x in [5, 25, 50, 75, 100]]
+
+        for i in range(args.repeat):
+            n = bedshifter.all_perturbations(
+                args.addrate,
+                args.addmean,
+                args.addstdev,
+                args.addfile,
+                args.valid_regions,
+                args.shiftrate,
+                args.shiftmean,
+                args.shiftstdev,
+                args.shiftfile,
+                args.cutrate,
+                args.mergerate,
+                args.droprate,
+                args.dropfile,
+                args.yaml_config,
+                args.seed,
+            )
+            if args.repeat == 1:
+                bedshifter.to_bed(outfile_base)
+                _LOGGER.info(
+                    "REGION COUNT | original: {}\tnew: {}\tchanged: {}\t\noutput file: {}".format(
+                        bedshifter.original_num_regions,
+                        bedshifter.bed.shape[0],
+                        str(n),
+                        outfile_base,
+                    )
+                )
+            else:
+                basename, ext = os.path.splitext(os.path.basename(outfile_base))
+                dirname = os.path.dirname(outfile_base)
+                digits = int(math.log10(args.repeat)) + 1
+
+                rep = str(i + 1).zfill(digits)
+                modified_outfile_path = os.path.join(dirname, f"{basename}_rep{rep}{ext}")
+                bedshifter.to_bed(modified_outfile_path)
+
+                pct_finished = int((100 * (i + 1)) / args.repeat)
+                if i + 1 in pct_reports:
+                    _LOGGER.info(
+                        f"Rep {i + 1}. Finished: {pct_finished}%. Output file: {modified_outfile_path}"
+                    )
+
+            bedshifter.reset_bed()
 
     return
 

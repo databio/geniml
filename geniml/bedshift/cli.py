@@ -1,17 +1,10 @@
-import argparse
+from ubiquerg import VersionInHelpParser
 
-from geniml.bedshift._version import __version__
-
-
-class _VersionInHelpParser(argparse.ArgumentParser):
-    def format_help(self):
-        """Add version information to help text."""
-        return (
-            "version: {}\n".format(__version__) + super(_VersionInHelpParser, self).format_help()
-        )
+from ._version import __version__
+from .const import PKG_NAME
 
 
-def build_argparser():
+def build_argparser(parser: VersionInHelpParser = None) -> VersionInHelpParser:
     """
     Builds argument parser.
 
@@ -21,7 +14,12 @@ def build_argparser():
     banner = "%(prog)s - randomize BED files"
     additional_description = "\n..."
 
-    parser = _VersionInHelpParser(description=banner, epilog=additional_description)
+    if parser is None:
+        parser = VersionInHelpParser(
+            prog=PKG_NAME,
+            description=banner,
+            epilog=additional_description,
+        )
 
     parser.add_argument(
         "-V",
@@ -115,27 +113,3 @@ def build_argparser():
     )
 
     return parser
-
-
-param_msg = """Params:
-  chrom.sizes file: {chromsizes}
-  shift:
-    shift rate: {shiftrate}
-    shift mean distance: {shiftmean}
-    shift stdev: {shiftstdev}
-    shift regions from file: {shiftfile}
-  add:
-    rate: {addrate}
-    add mean length: {addmean}
-    add stdev: {addstdev}
-    add regions from file: {addfile}
-    valid regions: {valid_regions}
-  cut rate: {cutrate}
-  drop rate: {droprate}
-    drop regions from file: {dropfile}
-  merge rate: {mergerate}
-  outputfile: {outputfile}
-  repeat: {repeat}
-  yaml_config: {yaml_config}
-  seed: {seed}
-"""

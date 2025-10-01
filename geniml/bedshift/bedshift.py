@@ -1,18 +1,12 @@
 """Perturb regions in bedfiles"""
 
 import logging
-import math
-import os
 import random
-import sys
 
 import genomicranges as gr
-import logmuse
 import numpy as np
 import pandas as pd
 
-from ._version import __version__
-from .arguments import build_argparser, param_msg
 from .yaml_handler import BedshiftYAMLHandler
 
 _LOGGER = logging.getLogger(__name__)
@@ -564,128 +558,3 @@ class Bedshift(object):
 
         df[3] = "-"  # column indicating which modifications were made
         return df
-
-
-def main():
-    """Primary workflow"""
-
-    parser = logmuse.add_logging_options(build_argparser())
-    args, remaining_args = parser.parse_known_args()
-    global _LOGGER
-    _LOGGER = logmuse.logger_via_cli(args)
-
-    _LOGGER.info("Welcome to bedshift version {}".format(__version__))
-    _LOGGER.info("Shifting file: '{}'".format(args.bedfile))
-
-    if not args.bedfile:
-        parser.print_help()
-        msg = "No BED file given"
-        _LOGGER.error(msg)
-        raise MissingArgumentError(msg)
-
-    if args.chrom_lengths:
-        pass
-    elif args.genome:
-        try:
-            import refgenconf
-
-            rgc = refgenconf.RefGenConf(refgenconf.select_genome_config())
-            args.chrom_lengths = rgc.seek(args.genome, "fasta", None, "chrom_sizes")
-        except ModuleNotFoundError:
-            msg = "You must have package refgenconf installed to use a refgenie genome"
-            _LOGGER.error(msg)
-            raise ModuleNotFoundError(msg)
-
-    msg = param_msg
-
-    if args.repeat < 1:
-        msg = "Repeats must be greater than 0"
-        _LOGGER.error(msg)
-        raise ValueError(msg)
-
-    if args.outputfile:
-        outfile_base = args.outputfile
-    else:
-        outfile_base = "bedshifted_{}".format(os.path.basename(args.bedfile))
-
-    _LOGGER.info(
-        msg.format(
-            bedfile=args.bedfile,
-            chromsizes=args.chrom_lengths,
-            droprate=args.droprate,
-            dropfile=args.dropfile,
-            addrate=args.addrate,
-            addmean=args.addmean,
-            addstdev=args.addstdev,
-            addfile=args.addfile,
-            valid_regions=args.valid_regions,
-            shiftrate=args.shiftrate,
-            shiftmean=args.shiftmean,
-            shiftstdev=args.shiftstdev,
-            shiftfile=args.shiftfile,
-            cutrate=args.cutrate,
-            mergerate=args.mergerate,
-            outputfile=outfile_base,
-            repeat=args.repeat,
-            yaml_config=args.yaml_config,
-            seed=args.seed,
-        )
-    )
-
-    bedshifter = Bedshift(args.bedfile, args.chrom_lengths)
-    _LOGGER.info(f"Generating {args.repeat} repetitions...")
-
-    pct_reports = [int(x * args.repeat / 100) for x in [5, 25, 50, 75, 100]]
-
-    for i in range(args.repeat):
-        n = bedshifter.all_perturbations(
-            args.addrate,
-            args.addmean,
-            args.addstdev,
-            args.addfile,
-            args.valid_regions,
-            args.shiftrate,
-            args.shiftmean,
-            args.shiftstdev,
-            args.shiftfile,
-            args.cutrate,
-            args.mergerate,
-            args.droprate,
-            args.dropfile,
-            args.yaml_config,
-            args.seed,
-        )
-        if args.repeat == 1:
-            bedshifter.to_bed(outfile_base)
-            _LOGGER.info(
-                "REGION COUNT | original: {}\tnew: {}\tchanged: {}\t\noutput file: {}".format(
-                    bedshifter.original_num_regions,
-                    bedshifter.bed.shape[0],
-                    str(n),
-                    outfile_base,
-                )
-            )
-        else:
-            basename, ext = os.path.splitext(os.path.basename(outfile_base))
-            dirname = os.path.dirname(outfile_base)
-            digits = int(math.log10(args.repeat)) + 1
-
-            rep = str(i + 1).zfill(digits)
-            modified_outfile_path = os.path.join(dirname, f"{basename}_rep{rep}{ext}")
-            bedshifter.to_bed(modified_outfile_path)
-
-            pct_finished = int((100 * (i + 1)) / args.repeat)
-            if i + 1 in pct_reports:
-                _LOGGER.info(
-                    f"Rep {i+1}. Finished: {pct_finished}%. Output file: {modified_outfile_path}"
-                )
-
-        bedshifter.reset_bed()
-
-
-if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        _LOGGER.error("Program canceled by user!")
-        sys.exit(1)
