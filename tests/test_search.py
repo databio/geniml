@@ -4,7 +4,6 @@ from typing import Dict, List
 
 import numpy as np
 import pytest
-
 from geniml.io import RegionSet
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search import BED2BEDSearchInterface, BED2Vec, Text2BEDSearchInterface, Text2Vec
