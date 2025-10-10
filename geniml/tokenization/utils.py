@@ -4,8 +4,7 @@ import numpy as np
 import scanpy as sc
 from tqdm import tqdm
 from gtars.tokenizers import Tokenizer
-
-from ..io import Region
+from gtars.models import Region
 
 
 class Timer:
@@ -54,7 +53,6 @@ def time_str(t: float) -> str:
 def tokenize_anndata(adata: sc.AnnData, tokenizer: Tokenizer):
     """
     Tokenize an AnnData object. This is more involved, so it gets its own function.
-
     Args:
         adata (sc.AnnData): The AnnData object to tokenize.
         tokenizer (Tokenizer): The tokenizer to use.
@@ -71,19 +69,22 @@ def tokenize_anndata(adata: sc.AnnData, tokenizer: Tokenizer):
             desc="Extracting regions from AnnData",
         )
     ]
+
     features = np.ndarray(len(adata_features), dtype=object)
     for i, region in enumerate(adata_features):
         features[i] = region
+
     del adata_features
 
     # tokenize
     tokenized = []
+    x = adata.X
     for row in tqdm(
         range(adata.shape[0]),
         total=adata.shape[0],
         desc="Tokenizing",
     ):
-        _, non_zeros = adata.X[row].nonzero()
+        _, non_zeros = x[row].nonzero()
         regions = features[non_zeros]
         tokenized.append(tokenizer(regions))
 
