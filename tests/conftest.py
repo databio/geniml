@@ -30,4 +30,11 @@ def pytest_addoption(parser):
         default=False,
         help="Run tests that needs importing models form huggingface",
     )
+
+    parser.addoption(
+        "--time",
+        action="store_true",
+        default=False,
+        help="Run tests takes longer time to run (like > 10s)",
+    )
     # add an --all option to set other option as True

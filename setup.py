@@ -87,8 +87,7 @@ setup(
     license="BSD2",
     entry_points={
         "console_scripts": [
-            "geniml = geniml.cli:main",
-            "bedshift = geniml.bedshift.bedshift:main",
+            "geniml = geniml.cli:main"
         ],
     },
     keywords="bioinformatics, sequencing, ngs",

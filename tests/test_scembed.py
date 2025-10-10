@@ -4,12 +4,13 @@ import sys
 
 import pytest
 import scanpy as sc
-from gtars.utils import write_tokens_to_gtok
-from tqdm import tqdm
-
 from geniml.region2vec.utils import Region2VecDataset
 from geniml.scembed.main import ScEmbed
 from gtars.tokenizers import Tokenizer
+from gtars.utils import write_tokens_to_gtok
+from tqdm import tqdm
+
+DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 # add parent directory to path
 sys.path.append("../")
@@ -21,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 
 @pytest.fixture
 def universe_file():
-    return "tests/data/universe.bed"
+    return os.path.join(DATA_FOLDER_PATH, "universe.bed")
 
 
 @pytest.fixture
@@ -31,12 +32,12 @@ def hf_model():
 
 @pytest.fixture
 def pbmc_data():
-    return sc.read_h5ad("tests/data/pbmc_hg38.h5ad")
+    return sc.read_h5ad(os.path.join(DATA_FOLDER_PATH, "pbmc_hg38.h5ad"))
 
 
 @pytest.fixture
 def pbmc_data_backed():
-    return sc.read_h5ad("tests/data/pbmc_hg38.h5ad", backed="r")
+    return sc.read_h5ad(os.path.join(DATA_FOLDER_PATH, "pbmc_hg38.h5ad"), backed="r")
 
 
 def test_model_creation():
