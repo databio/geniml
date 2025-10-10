@@ -86,9 +86,7 @@ setup(
     ],
     license="BSD2",
     entry_points={
-        "console_scripts": [
-            "geniml = geniml.cli:main"
-        ],
+        "console_scripts": ["geniml = geniml.cli:main"],
     },
     keywords="bioinformatics, sequencing, ngs",
     package_data={"geniml": [os.path.join("geniml", "*")]},
