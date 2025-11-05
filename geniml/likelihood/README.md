@@ -8,19 +8,15 @@
 
 
 ```
-geniml lh build_model --model_folder tests/consesnus/lh_model \
-              --file_list tests/consesnus/file_list.txt \
-              --coverage_folder tests/consesnus/coverage/
+geniml lh --model-file tests/consesnus/lh_model.tar \
+          --coverage-folder tests/consesnus/coverage/ \
+          --file-no 4
 ```
 
-```
- geniml lh universe_hard --coverage_file tests/consesnus/coverage/all_core.bw  \
-                       --fout tests/consesnus/universe/ML_hard.bed
+Note: The `lh` command builds a likelihood model. To build universes using the model, use:
 
 ```
-
-```
-geniml lh universe_flexible --model_folder test/data/lh_model \
-                          --output_file test/results/universe/ML_flexible.bed
-
+geniml build-universe ml --model-file tests/consesnus/lh_model.tar \
+                         --coverage-folder tests/consesnus/coverage/ \
+                         --output-file tests/consesnus/universe/ML.bed
 ```
