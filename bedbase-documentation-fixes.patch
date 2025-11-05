@@ -1,0 +1,93 @@
+diff --git a/docs/geniml/tutorials/bedspace.md b/docs/geniml/tutorials/bedspace.md
+index de58daf..307ca6a 100644
+--- a/docs/geniml/tutorials/bedspace.md
++++ b/docs/geniml/tutorials/bedspace.md
+@@ -101,7 +101,7 @@ Example usage for each type are given below:
+ #### `r2l`
+ ```console
+ geniml bedspace search \
+-    -t lr2
++    -t r2l \
+     -d <path to distances> \
+     -n <number of results to return> \
+     path/to/regions.bed
+@@ -110,7 +110,7 @@ geniml bedspace search \
+ #### `l2r`
+ ```console
+ geniml bedspace search \
+-    -t rl2
++    -t l2r \
+     -d <path to distances> \
+     -n <number of results to return> \
+     K562
+diff --git a/docs/geniml/tutorials/create-consensus-peaks.md b/docs/geniml/tutorials/create-consensus-peaks.md
+index 1d9cbb2..897e4e3 100644
+--- a/docs/geniml/tutorials/create-consensus-peaks.md
++++ b/docs/geniml/tutorials/create-consensus-peaks.md
+@@ -1,7 +1,11 @@
+ # How to build a new universe?
+ 
+ ## Data preprocessing
+-In this tutorial, you will use CLI of geniml package to build different types of universes from example files, which can be downloaded from XXX. In there you will find a compressed folder:
++In this tutorial, you will use CLI of geniml package to build different types of universes from example files.
++
++> **Note:** Example data files for this tutorial will be provided. Check the [geniml repository](https://github.com/databio/geniml) or [contact the maintainers](../../support.md) for access to the example dataset.
++
++The example data includes a compressed folder with the following structure:
+ 
+ ```
+ consensus:
+@@ -40,8 +44,8 @@ geniml build-universe cc --coverage-folder coverage/ \
+ 
+ ```  
+ 
+-Depending on the task the universe can be smooth by setting `--merge` 
+-flag with the distance beloved witch peaks should be merged together and 
++Depending on the task the universe can be smooth by setting `--merge`
++flag with the distance below which peaks should be merged together and
+ `--filter-size` with minimum size of peak that should be part of the universe. Instead of using maximum likelihood cutoff one can also defined cutoff with `--cutoff` flag. If it is set to 1 the result is union universe, and when to number of analyzed files it will produce intersection universe.
+ 
+ ## Coverage cutoff flexible universe
+@@ -57,11 +61,13 @@ geniml build-universe ccf --coverage-folder coverage/ \
+ In the previous examples both CC anf CCF universes used simple likelihood model to calculate the cutoff. However, we also developed more complex likelihood model that takes into account the positions of starts and ends of the regions in the collection. This LH model can build based on coverage files and number of analyzed files:
+ 
+ ```
+-geniml lh build_model --model-file model.tar \
+-                      --coverage-folder coverage/ \
+-                      --file-no `wc -l file_list.txt`
++geniml lh --model-file model.tar \
++          --coverage-folder coverage/ \
++          --file-no 4
+ ```
+ 
++Note: Replace `4` with the actual number of files in your collection (e.g., by counting lines in `file_list.txt`).
++
+ The resulting tar archiver contains LH model. This model can be used as a scoring function that assigns to each position probability of it being a start, core or end of a region. It can be both used for universe assessment and universe building. Combination of LH model and optimization algorithm for building flexible universes results in maximum likelihood universe (ML):
+ 
+ ```
+diff --git a/docs/geniml/tutorials/pre-tokenization.md b/docs/geniml/tutorials/pre-tokenization.md
+index 6051c29..5753f4d 100644
+--- a/docs/geniml/tutorials/pre-tokenization.md
++++ b/docs/geniml/tutorials/pre-tokenization.md
+@@ -10,7 +10,7 @@ Before we train a model, we must do what is called *pre-tokenization*. Pre-token
+ Pretokenizing data is easy. You can use the built-in tokenizers and utilities in `geniml` to do this. Here is an example of how to pretokenize a bed file:
+ 
+ ```python
+-from genimtools.utils import write_tokens_to_gtok
++from gtars.utils import write_tokens_to_gtok
+ from geniml.tokenization import TreeTokenizer
+ 
+ # instantiate a tokenizer
+diff --git a/docs/geniml/tutorials/train-scembed-model.md b/docs/geniml/tutorials/train-scembed-model.md
+index c2776b7..31c4325 100644
+--- a/docs/geniml/tutorials/train-scembed-model.md
++++ b/docs/geniml/tutorials/train-scembed-model.md
+@@ -22,8 +22,6 @@ from geniml.scembed.main import ScEmbed
+ ## Data preparation
+ `scembed` requires that the input data is in the [AnnData](https://anndata.readthedocs.io/en/latest/) format. Moreover, the `.var` attribute of this object must have `chr`, `start`, and `end` values. The reason is two fold: 1) we can track which vectors belong to which genmomic regions, and 2) region vectors are now reusable. We need three files: 1) The `barcodes.txt` file, 2) the `peaks.bed` file, and 3) the `matrix.mtx` file. These will be used to create the `AnnData` object. To begin, download the data from the 10x Genomics website:
+ 
+-# TODO: This needs to be the filtered_peak_bc_matrix, not the raw_peak_bc_matrix
+-
+ ```bash
+ wget https://cf.10xgenomics.com/samples/cell-atac/2.1.0/10k_pbmc_ATACv2_nextgem_Chromium_Controller/10k_pbmc_ATACv2_nextgem_Chromium_Controller_filtered_peak_bc_matrix.tar.gz
+ tar -xzf 10k_pbmc_ATACv2_nextgem_Chromium_Controller_filtered_peak_bc_matrix.tar.gz

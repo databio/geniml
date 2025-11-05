@@ -132,6 +132,16 @@ This means:
 1. ✅ `geniml/likelihood/README.md` - Fixed CLI commands
 2. ✅ `DOCUMENTATION_BUGS_FOUND.md` - Created detailed bug report
 3. ✅ `EVALUATION_SUMMARY.md` - This file
+4. ✅ `BEDBASE_FIXES_TO_APPLY.md` - Instructions for applying bedbase fixes
+5. ✅ `bedbase-documentation-fixes.patch` - Git patch file for bedbase
+
+### bedbase Repository (fixes prepared, not committed)
+1. 🔧 `docs/geniml/tutorials/bedspace.md` - Fixed search type flags
+2. 🔧 `docs/geniml/tutorials/pre-tokenization.md` - Fixed import statement
+3. 🔧 `docs/geniml/tutorials/create-consensus-peaks.md` - Fixed CLI command, typo, and added note
+4. 🔧 `docs/geniml/tutorials/train-scembed-model.md` - Removed outdated TODO
+
+Note: Bedbase fixes have been prepared but need to be applied to the bedbase repository separately.
 
 ---
 
