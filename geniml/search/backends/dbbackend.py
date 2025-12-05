@@ -4,7 +4,7 @@ from typing import Dict, List, Union
 
 import numpy as np
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import SearchRequest
+from qdrant_client.http.models import QueryRequest
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from geniml.const import PKG_NAME
@@ -29,7 +29,7 @@ def queries_to_requests(
     with_payload: bool = True,
     with_vectors: bool = True,
     offset: int = 0,
-) -> List[SearchRequest]:
+) -> List[QueryRequest]:
     """
     Prepare all search requests for each query vector in a batch
 
@@ -39,6 +39,7 @@ def queries_to_requests(
     :param with_vectors:
     :param offset:
     """
+
     requests = []
     for query in queries:
         if query.ndim > 1:
@@ -46,8 +47,8 @@ def queries_to_requests(
             requests.extend(queries_to_requests(query, limit, with_payload, with_vectors, offset))
         else:
             requests.append(
-                SearchRequest(
-                    vector=query,
+                QueryRequest(
+                    query=query,
                     limit=limit,
                     with_vector=with_vectors,
                     with_payload=with_payload,
@@ -67,7 +68,7 @@ def results_processing(search_results, with_payload: bool, with_vectors: bool) -
     :param with_vectors:
     """
     output_list = []
-    for result in search_results:
+    for result in search_results.points:
         # build each dictionary
         result_dict = {"id": result.id, "score": result.score}
         if with_payload:
@@ -95,7 +96,6 @@ class QdrantBackend(EmSearchBackend):
         (Ubuntu Linux terminal)
         sudo docker run -p 6333:6333     -v $(pwd)/qdrant_storage:/qdrant/storage     qdrant/qdrant
 
-        :param config: the vector parameter
         :param collection: name of collection
         :param qdrant_host: host of qdrant server
         :param qdrant_port: port of qdrant server
@@ -120,11 +120,12 @@ class QdrantBackend(EmSearchBackend):
             )
         except Exception:  # qdrant_client.http.exceptions.UnexpectedResponse
             _LOGGER.info(f"Collection {self.collection} does not exist, creating it.")
-            self.qd_client.recreate_collection(
-                collection_name=self.collection,
-                vectors_config=self.config,
-                quantization_config=DEFAULT_QUANTIZATION_CONFIG,
-            )
+            if not self.qd_client.collection_exists(collection_name=self.collection):
+                self.qd_client.create_collection(
+                    collection_name=self.collection,
+                    vectors_config=self.config,
+                    quantization_config=DEFAULT_QUANTIZATION_CONFIG,
+                )
 
     def load(
         self,
@@ -188,9 +189,9 @@ class QdrantBackend(EmSearchBackend):
         if query.ndim > 1:
             return self.batch_search(query, limit, with_payload, with_vectors, offset)
         # KNN search in qdrant client
-        search_results = self.qd_client.search(
+        search_results = self.qd_client.query_points(
             collection_name=self.collection,
-            query_vector=query,
+            query=query,
             limit=limit,
             with_payload=with_payload,
             with_vectors=with_vectors,
@@ -222,7 +223,7 @@ class QdrantBackend(EmSearchBackend):
         # build all search requests
         requests = queries_to_requests(queries, limit, with_payload, with_vectors, offset)
 
-        search_results = self.qd_client.search_batch(
+        search_results = self.qd_client.query_batch_points(
             collection_name=self.collection, requests=requests
         )
 

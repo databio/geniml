@@ -50,7 +50,9 @@ def test_model_training(universe_file: str, pbmc_data: sc.AnnData):
     logging.getLogger("gensim").setLevel(logging.ERROR)
     model = ScEmbed(tokenizer=Tokenizer(universe_file))  # set to 1 for testing
 
-    dataset = Region2VecDataset(os.path.join(DATA_FOLDER_PATH, "gtok_sample"), convert_to_str=True)
+    dataset = Region2VecDataset(
+        "tests/data/gtok_sample/tokens.parquet.sample", convert_to_str=True
+    )
     model.train(dataset, epochs=3, min_count=1)
 
     # keep only columns with values > 0

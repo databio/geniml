@@ -77,18 +77,16 @@ setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: BSD License",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
     license="BSD2",
     entry_points={
-        "console_scripts": [
-            "geniml = geniml.cli:main"
-        ],
+        "console_scripts": ["geniml = geniml.cli:main"],
     },
     keywords="bioinformatics, sequencing, ngs",
     package_data={"geniml": [os.path.join("geniml", "*")]},

@@ -29,7 +29,7 @@ def test_init_region2vec():
 
 
 def test_make_region2vec_dataset():
-    path_to_data = os.path.join(DATA_FOLDER_PATH, "gtok_sample/")
+    path_to_data = os.path.join(DATA_FOLDER_PATH, "gtok_sample/tokens.parquet.sample")
     dataset = Region2VecDataset(path_to_data)
 
     first = next(iter(dataset))
@@ -73,7 +73,7 @@ def test_r2v_pytorch_exmodel_train(universe_file: str):
     assert model is not None
 
     dataset = Region2VecDataset(
-        os.path.join(DATA_FOLDER_PATH, "gtok_sample/"), convert_to_str=True
+        os.path.join(DATA_FOLDER_PATH, "gtok_sample/tokens.parquet.sample"), convert_to_str=True
     )
 
     loss = model.train(dataset, epochs=10, min_count=1)

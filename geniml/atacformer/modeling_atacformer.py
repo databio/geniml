@@ -173,6 +173,7 @@ class EncodeTokenizedCellsMixin:
         input_ids: List[List[int]],
         batch_size: int = 16,
         pool_tokens: bool = True,
+        max_tokens_per_cell: Optional[int] = None,
     ) -> torch.Tensor:
         """
         Loops internally over input_ids to produce a [N, D] matrix (if pooled) or [N, L, D] tensor (if not).
@@ -183,6 +184,14 @@ class EncodeTokenizedCellsMixin:
                 The batch size to use for encoding.
             pool_tokens (bool, *optional*, defaults to True):
                 Whether to mean-pool the token embeddings (True) or return per-token embeddings (False).
+            max_tokens_per_cell (int, *optional*):
+                Allows the user to override the model's max position embeddings for this encoding.
+                If not provided, the model's config.max_position_embeddings is used.
+
+        Returns:
+            `torch.Tensor`: The encoded representations. Shape is (N, D) if pooled,
+            or (N, L, D) if not pooled, where N is the number of input sequences,
+            L is the sequence length, and D is the hidden size.
         """
         if not hasattr(self, "atacformer"):
             raise AttributeError(
@@ -196,7 +205,11 @@ class EncodeTokenizedCellsMixin:
             )
 
         pad_id = self.config.pad_token_id
-        max_ctx = self.config.max_position_embeddings
+        max_ctx = max_tokens_per_cell or self.config.max_position_embeddings
+        if max_ctx > self.config.max_position_embeddings:
+            logger.warning(
+                f"max_tokens_per_cell ({max_ctx}) is greater than model's max_position_embeddings ({self.config.max_position_embeddings})."
+            )
 
         device = next(self.parameters()).device
         all_embs = []
