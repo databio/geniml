@@ -16,11 +16,11 @@ class BED2BEDSearchInterface(BEDSearchInterface):
         backend: Union[QdrantBackend, HNSWBackend],
         query2vec: Union[str, BED2Vec],
     ):
-        """
+        """Initialize BED2BEDSearchInterface.
 
-        :param backend: the backend where vectors are stored
-
-        :param query2vec: a BED2Vec model, or a hugging face model repository of geniml.region2vec.Region2VecExModel
+        Args:
+            backend: the backend where vectors are stored
+            query2vec: a BED2Vec model or a Hugging Face model repository of Region2VecExModel
         """
         if isinstance(query2vec, str):
             self.query2vec = BED2Vec(query2vec)
@@ -37,10 +37,17 @@ class BED2BEDSearchInterface(BEDSearchInterface):
         with_vectors: bool = True,
         offset: int = 0,
     ) -> List[Dict]:
-        """
-        :param query: a region set, s path to a BED file in disk, or a region set embedding vector
+        """Search for BED files similar to a query region set.
 
-        for rest of the parameters, check the docstring of QdrantBackend.search() or HNSWBackend.search()
+        Args:
+            query: a region set, path to a BED file on disk, or a region set embedding vector
+            limit: number of results to return
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+
+        Returns:
+            A list of dictionaries containing search results.
         """
         if isinstance(query, np.ndarray):
             search_vec = query

@@ -6,21 +6,31 @@ import pyBigWig
 
 
 def ana_region(region, start_s):
-    """Helper for saving HMM prediction into a file"""
+    """Helper for saving HMM prediction into a file.
+
+    Args:
+        region (ndarray): Region array containing state information.
+        start_s (int): Start position.
+
+    Returns:
+        tuple: Start end, end start coordinates.
+    """
     start_e = start_s + np.where(region == 1)[0][0]
     end_s = start_s + np.where(region == 2)[0][0]
     return start_e, end_s
 
 
 def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=None):
-    """
-    Save HMM prediction into a file
-    :param ndarray states: result of HMM prediction
-    :param str chrom: which chromosome is being analyzed
-    :param str bedname: path to the output file
-    :param bool save_max_cove: whether to save the maximum peak coverage to output
-     file, can result in nonstandard bed file
-    :param str cove_file: file with core coverage, require for saving maximum peak coverage
+    """Save HMM prediction into a file.
+
+    Args:
+        states (ndarray): Result of HMM prediction.
+        chrom (str): Which chromosome is being analyzed.
+        bedname (str): Path to the output file.
+        save_max_cove (bool): Whether to save the maximum peak coverage to output file.
+            Can result in non-standard BED file.
+        cove_file (str): File with core coverage, required for saving maximum peak
+            coverage.
     """
     ind = np.argwhere(states != 3)
     ind = ind.flatten()
@@ -77,11 +87,17 @@ def predictions_to_bed(states, chrom, bedname, save_max_cove=False, cove_file=No
 
 
 def find_full_full_pos(seq, gap_size=1000, area_size=500):
-    """Look for nonzero positions in coverage matrix, when most of the positions are zero
-    :param ndarray seq: vector with information about non-zero positions
-    :param int gap_size: size of minimum gap between non-zero positions that are separated
-    :param int area_size: size of the area around non-zero positions to be included in the result
-    :return list: list of starts of non-zero regions and list of ends of non-zero regions
+    """Look for nonzero positions in coverage matrix when most positions are zero.
+
+    Args:
+        seq (ndarray): Vector with information about non-zero positions.
+        gap_size (int): Size of minimum gap between non-zero positions that are
+            separated.
+        area_size (int): Size of the area around non-zero positions to be included in
+            the result.
+
+    Returns:
+        tuple: List of starts of non-zero regions and list of ends of non-zero regions.
     """
     size = len(seq)
     seq = np.argwhere(seq >= 1).flatten()
@@ -99,11 +115,17 @@ def find_full_full_pos(seq, gap_size=1000, area_size=500):
 
 
 def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
-    """Look for nonzero positions in coverage matrix, when most of the positions are nonzero
-    :param ndarray seq: vector with information about non-zero positions
-    :param int gap_size: size of minimum gap between non-zero positions that are separated
-    :param int area_size: size of the area around non-zero positions to be included in the result
-    :return list: list of starts of non-zero regions and list of ends of non-zero regions
+    """Look for nonzero positions in coverage matrix when most positions are nonzero.
+
+    Args:
+        seq (ndarray): Vector with information about non-zero positions.
+        gap_size (int): Size of minimum gap between non-zero positions that are
+            separated.
+        area_size (int): Size of the area around non-zero positions to be included in
+            the result.
+
+    Returns:
+        tuple: List of starts of non-zero regions and list of ends of non-zero regions.
     """
     size = len(seq)
     seq = np.argwhere(seq == 0).flatten()
@@ -133,7 +155,14 @@ def find_full_empty_pos(seq, gap_size=10000, area_size=1000):
 
 
 def find_full(seq):
-    """Look for nonzero positions in coverage matrix"""
+    """Look for nonzero positions in coverage matrix.
+
+    Args:
+        seq (ndarray): Coverage matrix.
+
+    Returns:
+        tuple: List of starts and ends of regions with non-zero positions.
+    """
     seq = np.sum(seq, axis=1, dtype=np.uint8)
     full_pos_no = np.sum(seq >= 1)
     if full_pos_no < len(seq) - full_pos_no:

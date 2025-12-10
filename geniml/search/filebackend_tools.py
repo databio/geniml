@@ -13,14 +13,15 @@ _LOGGER = logging.getLogger(PKG_NAME)
 def merge_backends(
     backends_to_merge: List[HNSWBackend], local_index_path: str, dim: int
 ) -> HNSWBackend:
-    """
-    Merge multiple backends into one
+    """Merge multiple backends into a single backend.
 
-    :param backends_to_merge: a list of [HNSWBackend]
-    :param local_index_path: the path to the local index file of the merged output HNSWBackend
-    :param dim: the dimension of vectors stored in the HNSWBackend
+    Args:
+        backends_to_merge: a list of HNSWBackend instances to merge
+        local_index_path: the path to the local index file of the merged output HNSWBackend
+        dim: the dimension of vectors stored in the HNSWBackend
 
-    :return: a HNSWBackend that comes from merge all HNSWBackend in the input list backends_to_merge
+    Returns:
+        A merged HNSWBackend containing all vectors from input backends.
     """
 
     result_backend = HNSWBackend(

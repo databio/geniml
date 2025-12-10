@@ -22,13 +22,16 @@ if importlib.util.find_spec(package_name) is None:
         model_core=np.array([[]]),
         model_end=np.array([[]]),
     ):
-        """
-        Finding ML path through matrix using dynamic programing without numba
-        :param ndarray cove: coverage tracks
-        :param ndarray model_start: lh model for starts
-        :param ndarray model_core: lh model for core
-        :param ndarray model_end: lh model for ends
-        :return ndarray: ML path through matrix
+        """Find ML path through matrix using dynamic programming without numba.
+
+        Args:
+            cove (ndarray): Coverage tracks.
+            model_start (ndarray): Likelihood model for starts.
+            model_core (ndarray): Likelihood model for core.
+            model_end (ndarray): Likelihood model for ends.
+
+        Returns:
+            ndarray: ML path through matrix.
         """
         mat = np.zeros((len(cove), 4))
         (N, M) = mat.shape
@@ -66,13 +69,16 @@ else:
         model_core=np.array([[]]),
         model_end=np.array([[]]),
     ):
-        """
-        Finding ML path through matrix using dynamic programing with numba
-        :param ndarray cove: coverage tracks
-        :param ndarray model_start: lh model for starts
-        :param ndarray model_core: lh model for core
-        :param ndarray model_end: lh model for ends
-        :return ndarray: ML path through matrix
+        """Find ML path through matrix using dynamic programming with numba.
+
+        Args:
+            cove (ndarray): Coverage tracks.
+            model_start (ndarray): Likelihood model for starts.
+            model_core (ndarray): Likelihood model for core.
+            model_end (ndarray): Likelihood model for ends.
+
+        Returns:
+            ndarray: ML path through matrix.
         """
         mat = np.zeros((len(cove), 4))
         (N, M) = mat.shape
@@ -102,13 +108,14 @@ else:
 
 
 def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_out):
-    """
-    Make ML flexible universe per chromosome
-    :param ModelLH model_lh: lh model
-    :param str cove_folder: path to a folder with genome coverage by tracks
-    :param str cove_prefix: prefix used in uniwig for creating coverage
-    :param str chrom: chromosome to be processed
-    :param str file_out: output file with the universe
+    """Make ML flexible universe per chromosome.
+
+    Args:
+        model_lh (ModelLH): Likelihood model.
+        cove_folder (str): Path to a folder with genome coverage by tracks.
+        cove_prefix (str): Prefix used in uniwig for creating coverage.
+        chrom (str): Chromosome to be processed.
+        file_out (str): Output file with the universe.
     """
     model_lh.read_chrom(chrom)
     chrom_model = model_lh[chrom]
@@ -134,12 +141,13 @@ def make_ml_flexible_universe(model_lh, cove_folder, cove_prefix, chrom, file_ou
 
 
 def ml_universe(model_file, cove_folder, cove_prefix, file_out):
-    """
-    Make ML flexible universe
-    :param str model_file: input name with likelihood models
-    :param str file_out: output file with the universe
-    :param str cove_folder: path to a folder with genome coverage by tracks
-    :param str cove_prefix: prefix used in uniwig for creating coverage
+    """Make ML flexible universe.
+
+    Args:
+        model_file (str): Input name with likelihood models.
+        cove_folder (str): Path to a folder with genome coverage by tracks.
+        cove_prefix (str): Prefix used in uniwig for creating coverage.
+        file_out (str): Output file with the universe.
     """
     if os.path.isfile(file_out):
         raise Exception(f"File : {file_out} exists")

@@ -13,12 +13,15 @@ _LOGGER = logging.getLogger(PKG_NAME)
 def batch_for_request(
     ids: Union[List[str], List[int]], ranks_scores: List[float], batch_size: int = 100
 ) -> List[Tuple[List, List]]:  # used ChatGPT
-    """
+    """Create batches of BED ids and scores/ranks for requests.
 
-    :param ids: collected ids of BED files matching retrieved metadata tags
-    :param ranks_scores: keep track of ranks or scores from metadata tag embedding vector search
-    :param batch_size: size of batch, > 100 may crash qdrant server
-    :return: batched BED ids and matching text-search scores/ranks
+    Args:
+        ids: collected ids of BED files matching retrieved metadata tags
+        ranks_scores: keep track of ranks or scores from metadata tag embedding vector search
+        batch_size: size of batch, > 100 may crash qdrant server
+
+    Returns:
+        Batched BED ids and matching text-search scores/ranks as list of tuples.
     """
     # Check if the lists are the same length
     if len(ids) != len(ranks_scores):
@@ -45,10 +48,12 @@ class BiVectorBackend:
         bed_backend: EmSearchBackend,
         metadata_payload_matches: str = "matched_files",
     ):
-        """
-        :param metadata_backend: search backend where embedding vectors of metadata tags are stored
-        :param bed_backend: search backend where embedding vectors of BED files are stored
-        :param metadata_payload_matches: the key in metadata backend payloads to files matching to that metadata tag
+        """Initialize the BiVectorBackend.
+
+        Args:
+            metadata_backend: search backend where embedding vectors of metadata tags are stored
+            bed_backend: search backend where embedding vectors of BED files are stored
+            metadata_payload_matches: the key in metadata backend payloads to files matching to that metadata tag
         """
         self.metadata_backend = metadata_backend
         self.bed_backend = bed_backend
@@ -66,18 +71,22 @@ class BiVectorBackend:
         distance: bool = False,
         rank: bool = False,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
-        """
-        :param query: query vector (embedding vector of query term)
-        :param limit: number of nearest neighbors to search for query vector
-        :param with_payload: whether payload is included in the result
-        :param with_vectors: whether the stored vector is included in the result
-        :param offset: the offset of the search results
-        :param p: weights to the score of metadata search, recommend 0 < p <= 1.0
-        :param q: weights to the score of BED search, recommend 0 < q <= 1.0
-        :param distance: whether the score is distance or similarity
-        :param rank: whether the result is ranked based on rank or score
-        :return: the search result(a list of dictionaries,
-            each dictionary include: storage id, vector payload (optional), vector (optional))
+        """Search for nearest neighbors in both metadata and BED embeddings.
+
+        Args:
+            query: query vector (embedding vector of query term)
+            limit: number of nearest neighbors to search for query vector
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+            p: weights to the score of metadata search, recommend 0 < p <= 1.0
+            q: weights to the score of BED search, recommend 0 < q <= 1.0
+            distance: whether the score is distance or similarity
+            rank: whether the result is ranked based on rank or score
+
+        Returns:
+            The search result as a list of dictionaries, each containing storage id,
+            vector payload (optional), and vector (optional).
         """
 
         # the key for the score in result: distance or score (cosine similarity)
@@ -109,15 +118,17 @@ class BiVectorBackend:
         with_vectors: bool = True,
         offset: int = 0,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
-        """
-        Search based on maximum rank in results of metadata embedding and results of BED embedding
+        """Search based on maximum rank in results of metadata and BED embeddings.
 
-        :param metadata_results: result of metadata search
-        :param limit: see docstring of def search
-        :param with_payload:
-        :param with_vectors:
-        :param offset:
-        :return: the search result ranked based on maximum rank
+        Args:
+            metadata_results: result of metadata search
+            limit: see docstring of search()
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+
+        Returns:
+            The search result ranked based on maximum rank.
         """
 
         text_rank = []
@@ -174,17 +185,19 @@ class BiVectorBackend:
         p: float = 1.0,
         q: float = 1.0,
     ) -> List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]:
-        """
-        Search based on weighted score from results of metadata embedding and results of BED embedding
+        """Search based on weighted score from metadata and BED embeddings.
 
-        :param metadata_results: result of metadata search
-        :param limit: see docstring of def search
-        :param with_payload:
-        :param with_vectors:
-        :param offset:
-        :param p:
-        :param q:
-        :return: the search result ranked based on weighted similarity scores
+        Args:
+            metadata_results: result of metadata search
+            limit: see docstring of search()
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+            p: weights to the score of metadata search
+            q: weights to the score of BED search
+
+        Returns:
+            The search result ranked based on weighted similarity scores.
         """
         text_scores = []
         ids_to_retrieve = []
@@ -248,15 +261,17 @@ class BiVectorBackend:
         offset: int = 0,
         rank: bool = True,
     ):
-        """
-        Sort top k result and remove repetition
+        """Sort top k results and remove duplicates.
 
-        :param scales: list of weighted scores or maximum rank
-        :param results: retrieval result
-        :param limit: number of result to return
-        :param offset: the offset of the search results
-        :param rank: whether the scale is maximum rank or not
-        :return: the top k selected result after rank
+        Args:
+            scales: list of weighted scores or maximum rank
+            results: retrieval results
+            limit: number of results to return
+            offset: the offset of the search results
+            rank: whether the scale is maximum rank or not
+
+        Returns:
+            The top k selected results after ranking.
         """
         paired_score_results = list(zip(scales, results))
 

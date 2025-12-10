@@ -54,15 +54,15 @@ class HNSWBackend(EmSearchBackend):
         ef: int = DEFAULT_EF,
         m: int = DEFAULT_M,
     ):
-        """
-        Initiate the backend
+        """Initialize the HNSWBackend.
 
-        :param local_index_path: local path where the index is saved to
-        :param space: possible options are l2, cosine or ip
-        :param dim: dimension of vectors that will be stored
-        :param ef: defines a construction time/accuracy trade-off, higher ef -> more accurate but slower
-        :param m: connected with internal dimensionality of the data, higher M -> higher accuracy/run_time
-        when ef is fixed
+        Args:
+            local_index_path: local path where the index is saved to
+            space: possible options are l2, cosine or ip
+            dim: dimension of vectors that will be stored
+            ef: defines a construction time/accuracy trade-off, higher ef -> more accurate but slower
+            m: connected with internal dimensionality of the data, higher M -> higher accuracy/run_time when ef is fixed
+            payloads: optional dictionary or path to payloads file
         """
         # super(HNSWBackend, self).__init__()
         # initiate the index
@@ -106,13 +106,12 @@ class HNSWBackend(EmSearchBackend):
         ids: Union[np.ndarray, None] = None,
         payloads: Union[List[Dict[str, str]], None] = None,
     ):
-        """
-        Upload embedding vectors into the hnsw index, and store their hnsw index id and payloads into metadata
+        """Upload embedding vectors into the HNSW index and store metadata.
 
-        :param vectors: embedding vectors, a np.ndarray with shape of (n, <vector size>)
-        :param ids: list of n point ids, or None to generate ids automatically
-        :param payloads: optional list of n dictionaries that contain vector metadata
-        :return:
+        Args:
+            vectors: embedding vectors, a np.ndarray with shape of (n, <vector size>)
+            ids: list of n point ids, or None to generate ids automatically
+            payloads: optional list of n dictionaries that contain vector metadata
         """
 
         # increase max_elements to contain new loadings
@@ -149,26 +148,19 @@ class HNSWBackend(EmSearchBackend):
         List[Dict[str, Union[int, float, Dict[str, str], np.ndarray]]],
         List[List[Dict[str, Union[int, float, Dict[str, str], np.ndarray]]]],
     ]:
-        """
-        With query vector(s), get the limit nearest neighbors.
+        """Get the limit nearest neighbors for query vector(s).
 
-        :param query: the query vector, np.ndarray with shape of (1, dim) or (dim, )
-        :param limit: number of nearest neighbors to search for query vector
-        :param with_payload: whether payload is included in the result
-        :param with_vectors: whether the stored vector is included in the result
-        :param offset: the offset of the search results
-        :return: if the shape of query vector is (<dim>, ), a list of limit dictionaries will be returned,
-        the format of dictionary will be:
-        {
-            "id": <id>
-            "distance": <distance>
-            "payload": {
-                <information of the vector>
-            }
-            "vector": [<the vector>]
-        }
-        if the shape of query vector is (n, <dim>), a 2d list will be returned,
-        which is a list of n * list of limit dictionaries
+        Args:
+            query: the query vector, np.ndarray with shape of (1, dim) or (dim, )
+            limit: number of nearest neighbors to search for query vector
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+
+        Returns:
+            If query shape is (<dim>, ), returns a list of limit dictionaries in format:
+            {"id": <id>, "distance": <distance>, "payload": {...}, "vector": [...]}
+            If query shape is (n, <dim>), returns a 2D list where each sublist has limit dictionaries.
         """
         ids, distances = self.idx.knn_query(query, k=limit + offset)
         # ids and distances are 2d array
@@ -203,11 +195,14 @@ class HNSWBackend(EmSearchBackend):
         Dict[str, Union[int, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, List[float], Dict[str, str]]]],
     ]:
-        """
-        With an id or a list of storage ids, return the information of these vectors
-        :param ids: storage id, or a list of ids
-        :param with_vectors: whether the stored vector is included in the result
-        :return:
+        """Return the information of vectors for given storage ids.
+
+        Args:
+            ids: storage id, or a list of ids
+            with_vectors: whether the stored vector is included in the result
+
+        Returns:
+            If single id, returns a dictionary. If list of ids, returns a list of dictionaries.
         """
         if not isinstance(ids, list):
             # retrieve() only takes iterable input

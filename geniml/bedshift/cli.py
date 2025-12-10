@@ -5,10 +5,13 @@ from .const import PKG_NAME
 
 
 def build_argparser(parser: VersionInHelpParser = None) -> VersionInHelpParser:
-    """
-    Builds argument parser.
+    """Build and configure the bedshift argument parser.
 
-    :return: argparse.ArgumentParser
+    Args:
+        parser (VersionInHelpParser): An existing parser instance to configure. If None, a new parser is created.
+
+    Returns:
+        VersionInHelpParser: The configured argument parser.
     """
 
     banner = "%(prog)s - randomize BED files"

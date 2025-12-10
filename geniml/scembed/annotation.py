@@ -16,16 +16,18 @@ class AnnotationServer(QdrantClient):
         timeout: float = 10,
     ):
         """
-        A class for querying a Qdrant server for cell type predictions. This class requires that you have
-        a Qdrant server running with a collection of cell type embeddings. You can create this collection using
-        the `geniml/examples/scembed/load_qdrant.ipynb` script.
+        A class for querying a Qdrant server for cell type predictions.
 
-        :param str collection_name: The name of the collection to query.
-        :param str location: The location of the Qdrant server. This should be in the format `host:port`.
-        :param str url: The URL of the Qdrant server.
-        :param int port: The port of the Qdrant server.
-        :param str api_key: The API key for the Qdrant server.
-        :param float timeout: The timeout for the Qdrant server.
+        This class requires that you have a Qdrant server running with a collection of cell type embeddings.
+        You can create this collection using the `geniml/examples/scembed/load_qdrant.ipynb` script.
+
+        Args:
+            collection_name (str): The name of the collection to query.
+            location (str): The location of the Qdrant server. This should be in the format `host:port`.
+            url (str): The URL of the Qdrant server.
+            port (int): The port of the Qdrant server.
+            api_key (str): The API key for the Qdrant server.
+            timeout (float): The timeout for the Qdrant server.
         """
         super().__init__(location, url=url, port=port, api_key=api_key, timeout=timeout)
         self.collection_name = collection_name
@@ -41,16 +43,17 @@ class Annotator:
         timeout: float = 10,
     ):
         """
-        A class for annotating single cell data with cell type predictions. This class requires that you have
-        a Qdrant server running with a collection of cell type embeddings. You can create this collection using
-        the `geniml/examples/scembed/load_qdrant.ipynb` script.
+        A class for annotating single cell data with cell type predictions.
 
-        :param str collection_name: The name of the collection to query.
-        :param str location: The location of the Qdrant server. This should be in the format `host:port`.
-        :param str url: The URL of the Qdrant server.
-        :param int port: The port of the Qdrant server.
-        :param float timeout: The timeout for the Qdrant server.
+        This class requires that you have a Qdrant server running with a collection of cell type embeddings.
+        You can create this collection using the `geniml/examples/scembed/load_qdrant.ipynb` script.
 
+        Args:
+            collection_name (str): The name of the collection to query.
+            location (str): The location of the Qdrant server. This should be in the format `host:port`.
+            url (str): The URL of the Qdrant server.
+            port (int): The port of the Qdrant server.
+            timeout (float): The timeout for the Qdrant server.
         """
         self.collection_name = collection_name
         self.url = url
@@ -69,25 +72,25 @@ class Annotator:
         adata: sc.AnnData,
         embedding_key: str = "embedding",
         key_added: str = "pred_celltype",
-        cluter_key: str = "leiden",
+        cluster_key: str = "leiden",
         knn: int = 3,
         score_threshold: float = 0.5,
     ):
         """
-        Annotate a sc.AnnData object with cell type predictions for each cluster. This functions requires
-        that you have 1) clustered your data and 2) embedded your data using some pretrained model (databio/multiome).
+        Annotate a sc.AnnData object with cell type predictions for each cluster.
 
-        You can cluster your data using the `scanpy`
+        This function requires that you have 1) clustered your data and 2) embedded your data using
+        some pretrained model (databio/multiome). It is imperative that the model used to embed your
+        single cells is the same model used to produce the embeddings in the database. Otherwise,
+        the predictions will not be accurate; in fact they will be meaningless.
 
-        It is *imperative* that the model used to embed your single cells is the same model used to produce the
-        embeddings in the database. Otherwise, the predictions will not be accurate; in fact they will be meaningless.
-
-        :param sc.AnnData adata: The annotated data.
-        :param str embedding_key: The key in `adata.obsm` where the embeddings are stored.
-        :param str key_added: The key in `adata.obs` where the cell type predictions will be stored.
-        :param str cluter_key: The key in `adata.obs` where the cluster labels are stored.
-        :param int knn: The number of nearest neighbors to use when querying the database.
-        :param float score_threshold: The score threshold to use when querying the database.
+        Args:
+            adata (sc.AnnData): The annotated data.
+            embedding_key (str): The key in `adata.obsm` where the embeddings are stored.
+            key_added (str): The key in `adata.obs` where the cell type predictions will be stored.
+            cluster_key (str): The key in `adata.obs` where the cluster labels are stored.
+            knn (int): The number of nearest neighbors to use when querying the database.
+            score_threshold (float): The score threshold to use when querying the database.
         """
 
         _temp_key = "putative_cell_type"
@@ -97,9 +100,9 @@ class Annotator:
             raise ValueError(
                 f"Embedding key '{embedding_key}' not found in adata.obsm. Please embed your data first."
             )
-        if cluter_key not in adata.obs.keys():
+        if cluster_key not in adata.obs.keys():
             raise ValueError(
-                f"Cluster key '{cluter_key}' not found in adata.obs. Please cluster your data first."
+                f"Cluster key '{cluster_key}' not found in adata.obs. Please cluster your data first."
             )
 
         # init list
@@ -139,4 +142,4 @@ class Annotator:
             ).most_common(1)[0][0]
 
         # map the cluster_to_cell_type dictionary to the leiden column
-        adata.obs[key_added] = adata.obs[cluter_key].map(cluster_celltypes)
+        adata.obs[key_added] = adata.obs[cluster_key].map(cluster_celltypes)

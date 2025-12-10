@@ -1,6 +1,7 @@
 import os
 from functools import cmp_to_key
 from logging import getLogger
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pyBigWig
@@ -21,10 +22,19 @@ _LOGGER = getLogger(PKG_NAME)
 3 -> background"""
 
 
-def norm(track, mode):
+def norm(track: np.ndarray, mode: str) -> None:
     """Normalize the coverage track depending on track type.
-    For each unique value in the track calculates the corresponding
-    quantile taking into account that values occur different number of times."""
+
+    For each unique value in the track, calculates the corresponding quantile taking
+    into account that values occur different number of times.
+
+    Args:
+        track (ndarray): Coverage track that will be modified in-place.
+        mode (str): Type of track ('ends' or 'core').
+
+    Returns:
+        None: The function modifies the track array in-place.
+    """
     important_val = track[track != 0]
     important_val_unique, counts = np.unique(important_val, return_counts=True)
     uniq_dict = {i: j for i, j in zip(important_val_unique, counts)}
@@ -44,8 +54,29 @@ def norm(track, mode):
     track[track != 0] = [val[i] for i in important_val]
 
 
-def process_bigwig(file, seq, p, chrom, chrom_size, normalize=True, mode=None):
-    """Preprocess bigWig file"""
+def process_bigwig(
+    file: pyBigWig.pyBigWig,
+    seq: np.ndarray,
+    p: int,
+    chrom: str,
+    chrom_size: int,
+    normalize: bool = True,
+    mode: Optional[str] = None,
+) -> None:
+    """Preprocess bigWig file.
+
+    Args:
+        file: BigWig file object.
+        seq (ndarray): Sequence array to store results, modified in-place.
+        p (int): Position in sequence array.
+        chrom (str): Chromosome name.
+        chrom_size (int): Chromosome size.
+        normalize (bool): Whether to normalize the track.
+        mode (str): Normalization mode ('ends' or 'core').
+
+    Returns:
+        None: The function modifies the seq array in-place.
+    """
     if pyBigWig.numpy:
         track = file.values(chrom, 0, chrom_size, numpy=True)
     else:
@@ -58,15 +89,18 @@ def process_bigwig(file, seq, p, chrom, chrom_size, normalize=True, mode=None):
     seq[:, p] = track
 
 
-def read_data(start, core, end, chrom, normalize=True):
-    """
-    Read in and preprocess data
-    :param str start: path to file with start coverage
-    :param str end: path to file with end coverage
-    :param str core: path to file with  core coverage
-    :param str chrom: chromosome to analyse
-    :param bool normalize: whether to normalize the coverage
-    :return: chromosome size, coverage matrix
+def read_data(start: str, core: str, end: str, chrom: str, normalize: bool = True) -> Tuple[int, np.ndarray]:
+    """Read in and preprocess data.
+
+    Args:
+        start (str): Path to file with start coverage.
+        core (str): Path to file with core coverage.
+        end (str): Path to file with end coverage.
+        chrom (str): Chromosome to analyse.
+        normalize (bool): Whether to normalize the coverage.
+
+    Returns:
+        tuple: Chromosome size and coverage matrix.
     """
     start = pyBigWig.open(start + ".bw")
     chroms = start.chroms()
@@ -83,9 +117,18 @@ def read_data(start, core, end, chrom, normalize=True):
     return chrom_size, seq
 
 
-def split_predict(seq, empty_starts, empty_ends, model):
-    """Make model prediction only for regions containing
-    nonzero positions"""
+def split_predict(seq: np.ndarray, empty_starts: List[int], empty_ends: List[int], model) -> np.ndarray:
+    """Make model prediction only for regions containing nonzero positions.
+
+    Args:
+        seq (ndarray): Coverage sequence.
+        empty_starts (list): List of start positions.
+        empty_ends (list): List of end positions.
+        model: HMM model.
+
+    Returns:
+        ndarray: HMM predictions.
+    """
     hmm_predictions = np.full(len(seq), 3, dtype=np.uint8)
     for s, e in zip(empty_starts, empty_ends):
         res = model.predict(seq[s:e])
@@ -93,8 +136,19 @@ def split_predict(seq, empty_starts, empty_ends, model):
     return hmm_predictions
 
 
-def run_hmm(start, core, end, chrom, normalize=True):
-    """Make HMM prediction for given chromosome"""
+def run_hmm(start: str, core: str, end: str, chrom: str, normalize: bool = True) -> Tuple[np.ndarray, any]:
+    """Make HMM prediction for given chromosome.
+
+    Args:
+        start (str): Path to start coverage file.
+        core (str): Path to core coverage file.
+        end (str): Path to end coverage file.
+        chrom (str): Chromosome to analyse.
+        normalize (bool): Whether to normalize the coverage.
+
+    Returns:
+        tuple: HMM predictions and model.
+    """
     chrom_size, seq = read_data(start, core, end, chrom, normalize=normalize)
     empty_starts, empty_ends = find_full(seq)
     model = PoissonModel(TRANSMAT, LAMBDAS, save_matrix=False).model
@@ -103,22 +157,23 @@ def run_hmm(start, core, end, chrom, normalize=True):
 
 
 def hmm_universe(
-    coverage_folder,
-    out_file,
-    prefix="all",
-    normalize=True,
-    save_max_cove=False,
-):
-    """
-    Create HMM based universe from coverage
-    :param str coverage_folder: path to folder with coverage files
-    :param str start: start coverage file name
-    :param str end: end coverage file name
-    :param str core: core coverage file name
-    :param str out_file: path to the output file with universe
-    :param bool normalize: whether to normalize file
-    :param bool save_max_cove: whether to save the maximum
-    peak coverage
+    coverage_folder: str,
+    out_file: str,
+    prefix: str = "all",
+    normalize: bool = True,
+    save_max_cove: bool = False,
+) -> None:
+    """Create HMM based universe from coverage.
+
+    Args:
+        coverage_folder (str): Path to folder with coverage files.
+        out_file (str): Path to the output file with universe.
+        prefix (str): Prefix for coverage file names.
+        normalize (bool): Whether to normalize file.
+        save_max_cove (bool): Whether to save the maximum peak coverage.
+
+    Returns:
+        None: The function writes predictions to the output file.
     """
     if os.path.isfile(out_file):
         raise Exception(f"File : {out_file} exists")
@@ -143,6 +198,13 @@ def hmm_universe(
             )
 
 
-def test_hmm(message):
-    """Just prints a test message"""
+def test_hmm(message: str) -> None:
+    """Print a test message.
+
+    Args:
+        message (str): Message to print.
+
+    Returns:
+        None: The function logs the message.
+    """
     _LOGGER.info(message)

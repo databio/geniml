@@ -21,6 +21,29 @@ def _check_and_set_n_features(model, X):
 
 
 class NBHMM(BaseHMM):
+    """Hidden Markov Model with Negative Binomial emission distributions.
+
+    This class extends BaseHMM to use Negative Binomial distributions for emission
+    probabilities, suitable for modeling count data with overdispersion.
+
+    Args:
+        n_components (int): Number of hidden states.
+        startprob_prior (float): Prior for start probabilities.
+        transmat_prior (float): Prior for transition matrix.
+        failures_prior (float): Prior for number of failures parameter.
+        prob_prior (float): Prior for success probability parameter.
+        failures_weight (float): Weight for failures prior.
+        prob_weight (float): Weight for probability prior.
+        algorithm (str): Decoding algorithm ('viterbi' or 'map').
+        random_state: Random state for reproducibility.
+        n_iter (int): Maximum number of iterations for training.
+        tol (float): Convergence threshold.
+        verbose (bool): Whether to print training progress.
+        params (str): String of parameters to update during training.
+        init_params (str): String of parameters to initialize.
+        implementation (str): Implementation type ('log' or 'scaling').
+    """
+
     def __init__(
         self,
         n_components=1,
@@ -139,14 +162,37 @@ class NBHMM(BaseHMM):
 
 
 class BetaHMM(BaseHMM):
+    """Hidden Markov Model with Beta emission distributions.
+
+    This class extends BaseHMM to use Beta distributions for emission probabilities,
+    suitable for modeling continuous data in the [0, 1] range.
+
+    Args:
+        n_components (int): Number of hidden states.
+        startprob_prior (float): Prior for start probabilities.
+        transmat_prior (float): Prior for transition matrix.
+        alpha_prior (float): Prior for alpha parameters of Beta distributions.
+        beta_prior (float): Prior for beta parameters of Beta distributions.
+        alpha_weight (float): Weight for alpha prior.
+        beta_weight (float): Weight for beta prior.
+        algorithm (str): Decoding algorithm ('viterbi' or 'map').
+        random_state: Random state for reproducibility.
+        n_iter (int): Maximum number of iterations for training.
+        tol (float): Convergence threshold.
+        verbose (bool): Whether to print training progress.
+        params (str): String of parameters to update during training.
+        init_params (str): String of parameters to initialize.
+        implementation (str): Implementation type ('log' or 'scaling').
+    """
+
     def __init__(
         self,
         n_components=1,
         startprob_prior=1.0,
         transmat_prior=1.0,
-        alfa_prior=0.0,
+        alpha_prior=0.0,
         beta_prior=0.0,
-        alfa_weight=0.0,
+        alpha_weight=0.0,
         beta_weight=0.0,
         algorithm="viterbi",
         random_state=None,
@@ -171,8 +217,8 @@ class BetaHMM(BaseHMM):
             init_params=init_params,
             implementation=implementation,
         )
-        self.alfa_prior = alfa_prior
-        self.alfa_weight = alfa_weight
+        self.alpha_prior = alpha_prior
+        self.alpha_weight = alpha_weight
         self.beta_prior = beta_prior
         self.beta_weight = beta_weight
 

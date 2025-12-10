@@ -30,19 +30,19 @@ def main(
     files: str,
     threshold: float = DEFAULT_THRESHOLD,
 ):
-    """
-    Main function for the distance pipeline
+    """Main function for the distance pipeline.
 
-    :param input: Path to the trained starSpace model
-    :param path_to_starsapce: Path to starspace folder (must be prebuilt)
-    :param metadata_test: Path to test metadata
-    :param metadata_train: Path to train metadata
-    :param universe: Path to universe file
-    :param project_name: Name of the project
-    :param output: Path to output folder to save the distance files
-    :param labels: Labels string (cell_type,target)
-    :param files: Path to files to be embedded (the data)
-    :param threshold: Threshold for filtering
+    Args:
+        input (str): Path to the trained starSpace model.
+        path_to_starspace (str): Path to starspace folder (must be prebuilt).
+        metadata_test (str): Path to test metadata.
+        metadata_train (str): Path to train metadata.
+        universe (str): Path to universe file.
+        project_name (str): Name of the project.
+        output (str): Path to output folder to save the distance files.
+        labels (str): Labels string (cell_type,target).
+        files (str): Path to files to be embedded (the data).
+        threshold (float): Threshold for filtering.
     """
     _LOGGER.info("Running distances...")
     _LOGGER.info(f"Start: {datetime.datetime.now()}")

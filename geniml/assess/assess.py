@@ -28,20 +28,21 @@ def run_all_assessment_methods(
     distance_u_t_f=False,
     distance_u_t_f_flex=False,
 ):
-    """
-    Assess universe fit to collection using overlap and distance metrics
-    :param str raw_data_folder: path to raw files from the collection
-    :param str file_list: path to file with list of files in the collection
-    :param str universe: path to universe that is being assessed
-    :param int no_workers: number of workers for multiprocessing
-    :param str folder_out: output folder
-    :param str pref: prefixed used for creating output files
-    :param bool save_each: if save output of distance metrics for each region
-    :param bool overlap: if calculate overlap metrics
-    :param bool distance_f_t_u: if calculate distance from file to universe metrics
-    :param bool distance_f_t_u_flex: if calculate flexible distance from file to universe metrics
-    :param bool distance_u_t_f: if calculate distance from universes to file metrics
-    :param bool distance_u_t_f_flex: if calculate flexible distance from universes to file metrics
+    """Assess universe fit to collection using overlap and distance metrics.
+
+    Args:
+        raw_data_folder (str): path to raw files from the collection
+        file_list (str): path to file with list of files in the collection
+        universe (str): path to universe that is being assessed
+        no_workers (int): number of workers for multiprocessing
+        folder_out (str): output folder
+        pref (str): prefixed used for creating output files
+        save_each (bool): if save output of distance metrics for each region
+        overlap (bool): if calculate overlap metrics
+        distance_f_t_u (bool): if calculate distance from file to universe metrics
+        distance_f_t_u_flex (bool): if calculate flexible distance from file to universe metrics
+        distance_u_t_f (bool): if calculate distance from universes to file metrics
+        distance_u_t_f_flex (bool): if calculate flexible distance from universes to file metrics
     """
     if not any(
         [
@@ -160,14 +161,17 @@ def get_rbs(f_t_u, u_t_f):
 
 
 def get_mean_rbs(folder, file_list, universe, no_workers, flexible=False):
-    """
-    Calculate average RBS of the collection
-    :param str folder: path to folder with the collection
-    :param str file_list: path to file with list of files in the collection
-    :param str universe: path to the universe
-    :param int no_workers: number of workers for multiprocessing
-    :param bool flexible: if to calculate flexible version of the metric
-    :return int: average RBS
+    """Calculate average RBS of the collection.
+
+    Args:
+        folder (str): path to folder with the collection
+        file_list (str): path to file with list of files in the collection
+        universe (str): path to the universe
+        no_workers (int): number of workers for multiprocessing
+        flexible (bool): if to calculate flexible version of the metric
+
+    Returns:
+        int: average RBS
     """
     file_to_uni = run_distance(
         folder,
@@ -191,11 +195,12 @@ def get_mean_rbs(folder, file_list, universe, no_workers, flexible=False):
 
 
 def get_rbs_from_assessment_file(file, cs_each_file=False, flexible=False):
-    """
-    Calculate RBS form file with results of metrics per file
-    :param str file: path to file with assessment results
-    :param bool cs_each_file: if report RBS for each file, not average for the collection
-    :param bool flexible: if use flexible version of the metric
+    """Calculate RBS form file with results of metrics per file.
+
+    Args:
+        file (str): path to file with assessment results
+        cs_each_file (bool): if report RBS for each file, not average for the collection
+        flexible (bool): if use flexible version of the metric
     """
     df = pd.read_csv(file, index_col=(0))
     if flexible:
@@ -217,13 +222,16 @@ def get_f_10_score(
     universe,
     no_workers,
 ):
-    """
-    Get F10 score for a universes and collection of files
-    :param str folder: path to folder with the collection
-    :param str file_list: path to file with list of files in the collection
-    :param str universe: path to the universe
-    :param int no_workers: number of workers for multiprocessing
-    :return int: average F10 score
+    """Get F10 score for a universes and collection of files.
+
+    Args:
+        folder (str): path to folder with the collection
+        file_list (str): path to file with list of files in the collection
+        universe (str): path to the universe
+        no_workers (int): number of workers for multiprocessing
+
+    Returns:
+        int: average F10 score
     """
     res = run_intersection(
         folder,
@@ -241,10 +249,11 @@ def get_f_10_score(
 
 
 def get_f_10_score_from_assessment_file(file, f10_each_file=False):
-    """
-    Get F10 score from assessment output file
-    :param str file: path to file with assessment results
-    :param bool f10_each_file: if report F10 for each file, not average for the collection
+    """Get F10 score from assessment output file.
+
+    Args:
+        file (str): path to file with assessment results
+        f10_each_file (bool): if report F10 for each file, not average for the collection
     """
     df = pd.read_csv(file, index_col=(0))
     r = df["universe&file"] / (df["universe&file"] + df["file/universe"])
@@ -264,15 +273,15 @@ def get_likelihood(
     flexible=False,
     save_peak_input=False,
 ):
-    """
-    Calculate universe likelihood given collection
-    :param str model_file: path to file with likelihood model
-    :param str universe: path to the universe
-    :param str cove_folder: path to the coverage folder
-    :param str cove_prefix: prefixed used for generating coverage
-    :param bool flexible: if to calculate flexible likelihood
-    :param bool save_peak_input:  if to save likelihood input of each region
-    :return:
+    """Calculate universe likelihood given collection.
+
+    Args:
+        model_file (str): path to file with likelihood model
+        universe (str): path to the universe
+        cove_folder (str): path to the coverage folder
+        cove_prefix (str): prefixed used for generating coverage
+        flexible (bool): if to calculate flexible likelihood
+        save_peak_input (bool): if to save likelihood input of each region
     """
     if flexible:
         lh = likelihood_flexible_universe(
@@ -297,17 +306,18 @@ def filter_universe(
     cove_prefix=None,
     lh_cutoff=0,
 ):
-    """
-    Filter universe by region size, coverage by collection, likelihood
-    :param str universe: path to input universe
-    :param str universe_filtered: path to output filtered universe
-    :param int min_size: minimum size of the region in the output universe
-    :param int min_coverage: minimum number coverage of universe region by collection
-    :param bool filter_lh: if use likelihood to filter universe
-    :param str model_file: path to collection likelihood model
-    :param str cove_folder: path to folder with coverage tracks
-    :param str cove_prefix: prefixed used for creating tracks
-    :param int lh_cutoff: minimum likelihood input
+    """Filter universe by region size, coverage by collection, likelihood.
+
+    Args:
+        universe (str): path to input universe
+        universe_filtered (str): path to output filtered universe
+        min_size (int): minimum size of the region in the output universe
+        min_coverage (int): minimum number coverage of universe region by collection
+        filter_lh (bool): if use likelihood to filter universe
+        model_file (str): path to collection likelihood model
+        cove_folder (str): path to folder with coverage tracks
+        cove_prefix (str): prefixed used for creating tracks
+        lh_cutoff (int): minimum likelihood input
     """
     if filter_lh:
         check_if_uni_flexible(universe)

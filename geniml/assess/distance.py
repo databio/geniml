@@ -13,10 +13,14 @@ from .utils import check_if_uni_flexible, check_if_uni_sorted, prep_data, proces
 
 
 def flexible_distance_between_two_regions(region, query):
-    """Calculate distance between region and flexible region from flexible universe
-    :param [int, int] region: region from flexible universe
-    :param int query: analyzed region
-    :return int: distance
+    """Calculate distance between region and flexible region from flexible universe.
+
+    Args:
+        region ([int, int]): region from flexible universe
+        query (int): analyzed region
+
+    Returns:
+        int: distance
     """
     if region[0] <= query <= region[1]:
         return 0
@@ -25,10 +29,14 @@ def flexible_distance_between_two_regions(region, query):
 
 
 def distance_between_two_regions(region, query):
-    """Calculate distance between region in database and region from the query
-    :param [int] region: region from hard universe
-    :param int query: analysed region
-    :return int: distance
+    """Calculate distance between region in database and region from the query.
+
+    Args:
+        region ([int]): region from hard universe
+        query (int): analysed region
+
+    Returns:
+        int: distance
     """
     return abs(region[0] - query)
 
@@ -36,17 +44,20 @@ def distance_between_two_regions(region, query):
 def distance_to_closest_region(
     db, db_queue, i, current_chrom, unused_db, pos_index, flexible, uni_to_file
 ):
-    """
-    Calculate distance from given peak to the closest region in database
-    :param file db: database file
-    :param list db_queue: queue of three last positions in database
-    :param i: analyzed position from the query
-    :param str current_chrom: current analyzed chromosome from query
-    :param list unused_db: list of positions from universe that were not compared to query
-    :param list pos_index: which indexes from universe region use to calculate distance
-    :param bool flexible: whether the universe if flexible
-    :param bool uni_to_file: whether calculate distance from universe to file
-    :return int: peak distance to universe
+    """Calculate distance from given peak to the closest region in database.
+
+    Args:
+        db (file): database file
+        db_queue (list): queue of three last positions in database
+        i: analyzed position from the query
+        current_chrom (str): current analyzed chromosome from query
+        unused_db (list): list of positions from universe that were not compared to query
+        pos_index (list): which indexes from universe region use to calculate distance
+        flexible (bool): whether the universe if flexible
+        uni_to_file (bool): whether calculate distance from universe to file
+
+    Returns:
+        int: peak distance to universe
     """
     if flexible:
         if uni_to_file:
@@ -86,17 +97,20 @@ def read_in_new_universe_regions(
     waiting,
     pos_index,
 ):
-    """
-    Read in new universe regions closest to the peak
-    :param file db: universe file
-    :param str q_chrom: new peak's chromosome
-    :param str current_chrom: chromosome that was analyzed so far
-    :param list unused_db: list of positions from universe that were not compared to query
-    :param list db_queue: que of three last positions in universe
-    :param bool waiting: whether iterating through file, without calculating
-     distance,  if present chromosome not present in universe
-    :param list pos_index: which indexes from universe region use to calculate distance
-    :return bool, str: if iterating through chromosome not present in universe; current chromosome in query
+    """Read in new universe regions closest to the peak.
+
+    Args:
+        db (file): universe file
+        q_chrom (str): new peak's chromosome
+        current_chrom (str): chromosome that was analyzed so far
+        unused_db (list): list of positions from universe that were not compared to query
+        db_queue (list): que of three last positions in universe
+        waiting (bool): whether iterating through file, without calculating
+            distance, if present chromosome not present in universe
+        pos_index (list): which indexes from universe region use to calculate distance
+
+    Returns:
+        tuple: (bool, str) - if iterating through chromosome not present in universe; current chromosome in query
     """
     if q_chrom != current_chrom:
         # change chromosome
@@ -150,19 +164,21 @@ def calc_distance_between_two_files(
     pref,
     uni_to_file=False,
 ):
-    """
-    Maine function for calculating distance between regions in file query to regions in database
-    :param str universe: path to universe
-    :param str q_folder: path to folder containing query files
-    :param str q_file: query file
-    :param boolean flexible: whether the universe if flexible
-    :param bool save_each: whether to save calculated distances for each file
-    :param str folder_out: output folder
-    :param str pref: prefix used as the name of the folder
-     containing calculated distance for each file
-    :param uni_to_file: whether to calculate distance from universe to file
-    :return str, int, int: file name; median od distance of starts to
-     starts in universe; median od distance of ends to ends in universe
+    """Main function for calculating distance between regions in file query to regions in database.
+
+    Args:
+        universe (str): path to universe
+        q_folder (str): path to folder containing query files
+        q_file (str): query file
+        flexible (bool): whether the universe if flexible
+        save_each (bool): whether to save calculated distances for each file
+        folder_out (str): output folder
+        pref (str): prefix used as the name of the folder containing calculated distance for each file
+        uni_to_file (bool): whether to calculate distance from universe to file
+
+    Returns:
+        tuple: (str, int, int) - file name; median od distance of starts to starts in universe;
+            median od distance of ends to ends in universe
     """
     query = tempfile.NamedTemporaryFile()
     prep_data(q_folder, q_file, query)
@@ -267,19 +283,22 @@ def run_distance(
     save_each=False,
     uni_to_file=False,
 ):
-    """
-    For group of files calculate distance to the nearest region in universe
-    :param str folder: path to folder containing query files
-    :param str file_list: path to file containing list of query files
-    :param str universe: path to universe file
-    :param int no_workers: number of parallel processes
-    :param bool flexible: whether the universe if flexible
-    :param str folder_out: output folder
-    :param str pref: prefix used for saving
-    :param bool save_each: whether to save calculated distances for each file
-    :param uni_to_file: whether to calculate distance from universe to file
-    :return float; float: mean of median distances from starts in query to the nearest starts in universe;
-    mean of median distances from ends in query to the nearest ends in universe
+    """For group of files calculate distance to the nearest region in universe.
+
+    Args:
+        folder (str): path to folder containing query files
+        file_list (str): path to file containing list of query files
+        universe (str): path to universe file
+        no_workers (int): number of parallel processes
+        flexible (bool): whether the universe if flexible
+        folder_out (str): output folder
+        pref (str): prefix used for saving
+        save_each (bool): whether to save calculated distances for each file
+        uni_to_file (bool): whether to calculate distance from universe to file
+
+    Returns:
+        tuple: (float, float) - mean of median distances from starts in query to the nearest starts in universe;
+            mean of median distances from ends in query to the nearest ends in universe
     """
     check_if_uni_sorted(universe)
     if flexible:
