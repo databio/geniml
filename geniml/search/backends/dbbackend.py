@@ -139,6 +139,20 @@ class QdrantBackend(EmSearchBackend):
         qdrant_port: int = DEFAULT_QDRANT_PORT,
         qdrant_api_key: str = None,
     ) -> "QdrantBackend":
+        """
+        Initialize QdrantBackend from connection parameters.
+
+        Args:
+            dim: dimension of the vectors to be stored
+            dist: distance metric used in the collection
+            collection: collection name
+            qdrant_host: host of the qdrant server
+            qdrant_port: port of the qdrant server
+            qdrant_api_key: api key for the qdrant server if needed
+
+        Returns:
+            QdrantBackend instance
+        """
 
         qd_client = QdrantClient(
             url=os.environ.get("QDRANT_HOST", qdrant_host),

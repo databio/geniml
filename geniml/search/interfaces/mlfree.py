@@ -8,8 +8,10 @@ from ..query2vec import Text2Vec
 from .abstract import BEDSearchInterface
 
 
-class BiVectorSearchInterface(BEDSearchInterface):
-    """Search interface for ML free bi-vectors searching backend"""
+class BiVectorSearchInterface:
+    """
+    Search interface for ML free bi-vectors searching backend
+    """
 
     def __init__(
         self, backend: BiVectorBackend, query2vec: Union[str, Text2Vec, TextEmbedding]
