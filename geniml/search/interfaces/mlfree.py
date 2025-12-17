@@ -1,4 +1,5 @@
 from typing import Dict, List, Union
+from fastembed import TextEmbedding
 
 import numpy as np
 
@@ -10,15 +11,17 @@ from .abstract import BEDSearchInterface
 class BiVectorSearchInterface(BEDSearchInterface):
     """Search interface for ML free bi-vectors searching backend"""
 
-    def __init__(self, backend: BiVectorBackend, query2vec: Union[str, Text2Vec]) -> None:
+    def __init__(
+        self, backend: BiVectorBackend, query2vec: Union[str, Text2Vec, TextEmbedding]
+    ) -> None:
         """
         Initiate the search interface
 
         :param backend: the backend where vectors are stored
         :param query2vec: a Text2Vec, for details, see docstrings in geniml.search.query2vec.text2vec
         """
-        if isinstance(query2vec, str):
-            self.query2vec = Text2Vec(query2vec, v2v=None)
+        if isinstance(query2vec, str) or isinstance(query2vec, TextEmbedding):
+            self.query2vec = Text2Vec(model=query2vec, v2v=None)
         else:
             self.query2vec = query2vec
         self.backend = backend

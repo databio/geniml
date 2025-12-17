@@ -13,16 +13,19 @@ from .abstract import Query2Vec
 _LOGGER = logging.getLogger(PKG_NAME)
 
 
-class Text2Vec(Query2Vec):
+class Text2Vec:
     """Map a query string into a vector into the embedding space of region sets"""
 
-    def __init__(self, hf_repo: str, v2v: Union[str, Vec2VecFNN, None]):
+    def __init__(self, model: Union[str, TextEmbedding], v2v: Union[str, Vec2VecFNN, None]):
         """
-        :param text_embedder: a model repository on Hugging Face
+        :param model: a model repository on Hugging Face
         :param v2v: a Vec2VecFNN (see geniml/text2bednn/text2bednn.py) or a model repository on Hugging Face
         """
         # Set model that embed natural language
-        self.text_embedder = TextEmbedding(model_name=hf_repo)
+        if isinstance(model, TextEmbedding):
+            self.text_embedder = model
+        else:
+            self.text_embedder = TextEmbedding(model_name=model)
         # Set model that maps natural language embeddings into the embedding space of region sets
         if isinstance(v2v, Vec2VecFNN):
             self.v2v = v2v

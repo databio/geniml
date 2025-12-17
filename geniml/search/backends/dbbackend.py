@@ -84,33 +84,28 @@ class QdrantBackend(EmSearchBackend):
 
     def __init__(
         self,
+        qdrant_client: QdrantClient,
         dim: int = DEFAULT_DIM,
         dist: Distance = DEFAULT_QDRANT_DIST,
         collection: str = DEFAULT_COLLECTION_NAME,
-        qdrant_host: str = DEFAULT_QDRANT_HOST,
-        qdrant_port: int = DEFAULT_QDRANT_PORT,
-        qdrant_api_key: str = None,
     ):
         """
         Connect to Qdrant on commandline first:
         (Ubuntu Linux terminal)
         sudo docker run -p 6333:6333     -v $(pwd)/qdrant_storage:/qdrant/storage     qdrant/qdrant
 
+        :param qdrant_client: an instance of QdrantClient that is already connected to a Qdrant server
+        :param dim: dimension of the vectors to be stored
+        :param dist: distance metric used in the collection
         :param collection: name of collection
-        :param qdrant_host: host of qdrant server
-        :param qdrant_port: port of qdrant server
-        :param qdrant_api_key: api key
         """
         super().__init__()
         self.collection = collection
         self.config = VectorParams(size=dim, distance=dist)
-        self.url = os.environ.get("QDRANT_HOST", qdrant_host)
-        self.port = os.environ.get("QDRANT_PORT", qdrant_port)
-        self.qd_client = QdrantClient(
-            url=self.url,
-            port=self.port,
-            api_key=os.environ.get("QDRANT_API_KEY", qdrant_api_key),
-        )
+
+        self.qd_client = qdrant_client
+        if not self.qd_client:
+            raise ValueError("A valid QdrantClient instance must be provided.")
 
         # Create collection only if it does not exist
         try:
@@ -126,6 +121,29 @@ class QdrantBackend(EmSearchBackend):
                     vectors_config=self.config,
                     quantization_config=DEFAULT_QUANTIZATION_CONFIG,
                 )
+
+    @classmethod
+    def from_credentials(
+        cls,
+        dim: int = DEFAULT_DIM,
+        dist: Distance = DEFAULT_QDRANT_DIST,
+        collection: str = DEFAULT_COLLECTION_NAME,
+        qdrant_host: str = DEFAULT_QDRANT_HOST,
+        qdrant_port: int = DEFAULT_QDRANT_PORT,
+        qdrant_api_key: str = None,
+    ) -> "QdrantBackend":
+
+        qd_client = QdrantClient(
+            url=os.environ.get("QDRANT_HOST", qdrant_host),
+            port=os.environ.get("QDRANT_PORT", qdrant_port),
+            api_key=os.environ.get("QDRANT_API_KEY", qdrant_api_key),
+        )
+        return cls(
+            qdrant_client=qd_client,
+            dim=dim,
+            dist=dist,
+            collection=collection,
+        )
 
     def load(
         self,
