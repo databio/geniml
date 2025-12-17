@@ -89,7 +89,9 @@ def process_bigwig(
     seq[:, p] = track
 
 
-def read_data(start: str, core: str, end: str, chrom: str, normalize: bool = True) -> Tuple[int, np.ndarray]:
+def read_data(
+    start: str, core: str, end: str, chrom: str, normalize: bool = True
+) -> Tuple[int, np.ndarray]:
     """Read in and preprocess data.
 
     Args:
@@ -117,7 +119,9 @@ def read_data(start: str, core: str, end: str, chrom: str, normalize: bool = Tru
     return chrom_size, seq
 
 
-def split_predict(seq: np.ndarray, empty_starts: List[int], empty_ends: List[int], model) -> np.ndarray:
+def split_predict(
+    seq: np.ndarray, empty_starts: List[int], empty_ends: List[int], model
+) -> np.ndarray:
     """Make model prediction only for regions containing nonzero positions.
 
     Args:
@@ -136,7 +140,9 @@ def split_predict(seq: np.ndarray, empty_starts: List[int], empty_ends: List[int
     return hmm_predictions
 
 
-def run_hmm(start: str, core: str, end: str, chrom: str, normalize: bool = True) -> Tuple[np.ndarray, any]:
+def run_hmm(
+    start: str, core: str, end: str, chrom: str, normalize: bool = True
+) -> Tuple[np.ndarray, any]:
     """Make HMM prediction for given chromosome.
 
     Args:
