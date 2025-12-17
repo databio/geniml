@@ -53,11 +53,13 @@ def find_path(hierarchy: Dict[str, Dict], path: List[str], cell_type: str) -> Op
     """
     Find the path from the root to a given cell type in a hierarchy.
 
-    :param hierarchy: A dictionary representing the hierarchy.
-    :param path: The current path.
-    :param cell_type: The cell type to find.
+    Args:
+        hierarchy: A dictionary representing the hierarchy.
+        path: The current path.
+        cell_type: The cell type to find.
 
-    :return: The path from the root to the cell type. (a list of strings, ... or None)
+    Returns:
+        The path from the root to the cell type (a list of strings or None).
     """
     if cell_type in hierarchy:
         return path + [cell_type]
@@ -74,8 +76,12 @@ def find_lca(path1: List[str], path2: List[str]) -> int:
     """
     Find the lowest common ancestor (LCA) of two paths.
 
-    :param path1: The first path.
-    :param path2: The second path.
+    Args:
+        path1: The first path.
+        path2: The second path.
+
+    Returns:
+        int: The index of the lowest common ancestor in the paths.
     """
     min_length = min(len(path1), len(path2))
     for i in range(min_length):
@@ -92,11 +98,13 @@ def compute_cell_hierarchy_distance(
 
     The distance is the number of edges between the two cells in the hierarchy.
 
-    :param hierarchy: A dictionary representing the hierarchy.
-    :param cell1: The first cell type.
-    :param cell2: The second cell type.
+    Args:
+        hierarchy: A dictionary representing the hierarchy.
+        cell1: The first cell type.
+        cell2: The second cell type.
 
-    :return: The distance between the two cell types. (an integer, ... or None)
+    Returns:
+        The distance between the two cell types (an integer or None).
     """
     # Find paths from root to both cells
     path1 = find_path(hierarchy, [], cell1)

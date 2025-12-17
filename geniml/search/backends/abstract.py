@@ -33,25 +33,37 @@ class EmSearchBackend(ABC):
         with_vectors: bool = True,
         offset: int = 0,
     ) -> List[Dict]:
-        """
-        Search for the nearest neighbors of the given embedding
+        """Search for the nearest neighbors of the given embedding.
 
-        :param query: the embedding to search for
-        :param k: the number of results to return
-        :return: a list of (id, score) pairs
+        Args:
+            query: the embedding to search for
+            limit: the number of results to return
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+
+        Returns:
+            A list of dictionaries containing search results.
         """
         raise NotImplementedError()
 
     @abstractmethod
     def __len__(self) -> int:
-        """
-        Return the number of embeddings in the backend
+        """Return the number of embeddings in the backend.
+
+        Returns:
+            The number of embeddings in the backend.
         """
         raise NotImplementedError()
 
     @abstractmethod
     def retrieve_info(self, key) -> List[Dict]:
-        """
-        with a list of storage ids, return matching vectors and their information
+        """Return matching vectors and their information for a list of storage ids.
+
+        Args:
+            key: the storage id or list of ids to retrieve.
+
+        Returns:
+            A list of dictionaries containing vectors and their information.
         """
         raise NotImplementedError()

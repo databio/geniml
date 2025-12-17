@@ -11,15 +11,16 @@ from .custom_distribution import NBHMM, BetaHMM
 
 
 class Model(ABC):
-    """Abstract class of HMM models"""
+    """Abstract class of HMM models."""
 
     def __init__(self, trans_matrix, init_para, para, save_matrix):
-        """
+        """Initialize HMM model.
 
-        :param array trans_matrix: transition matrix
-        :param str init_para: parameters that need to be initialized before training
-        :param str para: parameters that are update during training
-        :param bool save_matrix: whether to save to a file transition matrix
+        Args:
+            trans_matrix (ndarray): Transition matrix.
+            init_para (str): Parameters that need to be initialized before training.
+            para (str): Parameters that are updated during training.
+            save_matrix (bool): Whether to save transition matrix to a file.
         """
         self.init_para = init_para
         self.para = para
@@ -33,7 +34,7 @@ class Model(ABC):
 
 
 class PoissonModel(Model):
-    """HMM model with Poisson emissions"""
+    """HMM model with Poisson emissions."""
 
     def __init__(
         self,
@@ -44,10 +45,15 @@ class PoissonModel(Model):
         save_matrix=True,
         out_folder="",
     ):
-        """
+        """Initialize Poisson HMM model.
 
-        :param lambdas_matrix: Lambda values for emission probabilities
-        :param out_folder: folder to which save parameter matrix
+        Args:
+            trans_matrix (ndarray): Transition matrix.
+            lambdas_matrix (ndarray): Lambda values for emission probabilities.
+            init_para (str): Parameters to initialize.
+            para (str): Parameters to update during training.
+            save_matrix (bool): Whether to save parameter matrix.
+            out_folder (str): Folder to which save parameter matrix.
         """
         Model.__init__(
             self,
@@ -79,6 +85,8 @@ class PoissonModel(Model):
 
 
 class GaussianModel(Model):
+    """HMM model with Gaussian emissions."""
+
     def __init__(
         self,
         trans_matrix,
@@ -89,11 +97,16 @@ class GaussianModel(Model):
         save_matrix=True,
         out_folder="",
     ):
-        """
+        """Initialize Gaussian HMM model.
 
-        :param means_matrix: mean values for emission probabilities
-        :param covars_matrix: covariance values for emission probabilities
-        :param out_folder: folder to which save parameter matrix
+        Args:
+            trans_matrix (ndarray): Transition matrix.
+            means_matrix (ndarray): Mean values for emission probabilities.
+            covars_matrix (ndarray): Covariance values for emission probabilities.
+            init_para (str): Parameters to initialize.
+            para (str): Parameters to update during training.
+            save_matrix (bool): Whether to save parameter matrix.
+            out_folder (str): Folder to which save parameter matrix.
         """
         Model.__init__(
             self,
@@ -129,6 +142,8 @@ class GaussianModel(Model):
 
 
 class NBModel(Model):
+    """HMM model with Negative Binomial emissions."""
+
     def __init__(
         self,
         trans_matrix,
@@ -139,11 +154,16 @@ class NBModel(Model):
         save_matrix=True,
         out_folder="",
     ):
-        """
+        """Initialize Negative Binomial HMM model.
 
-        :param failures_matrix: number of failures for emission probabilities
-        :param prob_matrix: success probability for emission probabilities
-        :param out_folder: folder to which save parameter matrix
+        Args:
+            trans_matrix (ndarray): Transition matrix.
+            failures_matrix (ndarray): Number of failures for emission probabilities.
+            prob_matrix (ndarray): Success probability for emission probabilities.
+            init_para (str): Parameters to initialize.
+            para (str): Parameters to update during training.
+            save_matrix (bool): Whether to save parameter matrix.
+            out_folder (str): Folder to which save parameter matrix.
         """
         Model.__init__(
             self,
@@ -176,21 +196,28 @@ class NBModel(Model):
 
 
 class BetaModel(Model):
+    """HMM model with Beta emissions."""
+
     def __init__(
         self,
         trans_matrix,
-        alfa_matrix,
+        alpha_matrix,
         beta_matrix,
         init_para="",
         para="",
         save_matrix=True,
         out_folder="",
     ):
-        """
+        """Initialize Beta HMM model.
 
-        :param alfa_matrix: alfa values for emission probabilities
-        :param beta_matrix: beta values for emission probabilities
-        :param out_folder: folder to which save parameter matrix
+        Args:
+            trans_matrix (ndarray): Transition matrix.
+            alpha_matrix (ndarray): Alpha values for emission probabilities.
+            beta_matrix (ndarray): Beta values for emission probabilities.
+            init_para (str): Parameters to initialize.
+            para (str): Parameters to update during training.
+            save_matrix (bool): Whether to save parameter matrix.
+            out_folder (str): Folder to which save parameter matrix.
         """
         Model.__init__(
             self,
@@ -199,11 +226,11 @@ class BetaModel(Model):
             para=para,
             save_matrix=save_matrix,
         )
-        self.alfa_matrix = alfa_matrix
+        self.alpha_matrix = alpha_matrix
         self.beta_matrix = beta_matrix
         if save_matrix:
             super().save_tras(out_folder)
-            np.savetxt(os.path.join(out_folder, "alfa_matrix.csv"), self.alfa_matrix)
+            np.savetxt(os.path.join(out_folder, "alpha_matrix.csv"), self.alpha_matrix)
             np.savetxt(os.path.join(out_folder, "beta_matrix.csv"), self.beta_matrix)
 
         self.model = BetaHMM(
@@ -214,6 +241,6 @@ class BetaModel(Model):
         )
 
         self.model.transmat_ = self.trans_matrix
-        self.model.alfa_ = self.alfa_matrix
+        self.model.alfa_ = self.alpha_matrix
         self.model.beta_ = self.beta_matrix
         self.model.startprob_ = self.start_matrix

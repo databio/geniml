@@ -12,16 +12,18 @@ from .query2vec import Text2Vec
 def anecdotal_search_from_hf_data(
     query: str, dataset_repo: str, search_model_repo: str, text_embed_model_repo: str, k: int = 10
 ) -> List[Dict[str, Union[float, int, Dict[str, str]]]]:
-    """
-    Test the retrieval performance of a trained search model on a dataset on huggingface
+    """Test retrieval performance of a trained search model on a Hugging Face dataset.
 
-    :param query: user input search term
-    :param dataset_repo: huggingface repository of the dataset
-    :param search_model_repo: huggingface repository of the search model
-    :param text_embed_model_repo:huggingface repository of the text encoder model
-    :param k: number of returned result
-    :return:a dictionary containing search score (distance to the mapped query vector) and
-    search result metadata.
+    Args:
+        query: user input search term
+        dataset_repo: Hugging Face repository of the dataset
+        search_model_repo: Hugging Face repository of the search model
+        text_embed_model_repo: Hugging Face repository of the text encoder model
+        k: number of results to return
+
+    Returns:
+        A list of dictionaries containing search scores (distance to the mapped query vector)
+        and search result metadata.
     """
 
     # download embedding vector backends and metadata from huggingface

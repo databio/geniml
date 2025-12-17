@@ -63,15 +63,15 @@ class Timer:
     """
 
     def __init__(self):
-        """Initializes a Timer object and starts the timer."""
+        """Initialize a Timer object and start the timer."""
         self.v = time.time()
 
     def s(self):
-        """Restarts the timer."""
+        """Restart the timer."""
         self.v = time.time()
 
     def t(self):
-        """Gives the elapsed time.
+        """Give the elapsed time.
 
         Returns:
             float: The elapsed time in seconds.
@@ -157,16 +157,15 @@ class lr_scheduler:
         lr_info: Dict[str, Union[int, float, list]],
         mode: str = "linear",
     ):
-        """Initializes the learning rate scheduler.
+        """Initialize the learning rate scheduler.
 
         Args:
             init_lr (float): The initial learning rate.
             end_lr (float): The last learning rate.
             epochs (int): The number of training epochs.
-            lr_info (dict[str,Union[int,list]]): Dictionary storing information
+            lr_info (Dict[str, Union[int, float, list]]): Dictionary storing information
                 for learning rate scheduling.
-            mode (str, optional): The mode of learning rate scheduling.
-                Defaults to "linear".
+            mode (str): The mode of learning rate scheduling. Defaults to "linear".
         """
         self.lr = init_lr
         self.end_lr = end_lr
@@ -179,7 +178,7 @@ class lr_scheduler:
             self.freq = lr_info["freq"]
 
     def step(self):
-        """Updates the learning rate.
+        """Update the learning rate.
 
         Returns:
             float: Current learning rate.
@@ -198,16 +197,15 @@ class lr_scheduler:
 
 
 def ensure_dir(folder: str, default: str = "y") -> None:
-    """Makes sure the folder exists.
+    """Make sure the folder exists.
 
-    Makes sure the folder exists. If the folder exists, then asks the user to
-    keep [n] or delete [y] it. If no response received after 5 secs, then
-    deletes the folder and create a new one.
+    If the folder exists, asks the user to keep [n] or delete [y] it. If no
+    response received after 5 secs, deletes the folder and creates a new one.
 
     Args:
         folder (str): The folder to be created.
-        default (str, optional): Choose whether to delete [y] or keep [n] the
-          folder. Defaults to y.
+        default (str): Choose whether to delete [y] or keep [n] the folder.
+            Defaults to "y".
     """
     if os.path.exists(folder):
         if default == "y":
@@ -223,8 +221,7 @@ def ensure_dir(folder: str, default: str = "y") -> None:
 
 
 class LearningRateScheduler:
-    """
-    Simple class to track learning rates of the training procedure
+    """Simple class to track learning rates of the training procedure.
 
     Based off of: https://machinelearningmastery.com/using-learning-rate-schedules-deep-learning-models-python-keras/
     """
@@ -237,12 +234,16 @@ class LearningRateScheduler:
         decay: float = None,
         n_epochs: int = None,
     ):
-        """
-        :param float init_lr: The initial learning rate
-        :param float min_lr: The minimum learning rate
-        :param str type: The type of learning rate schedule to use. Must be one of ['linear', 'exponential'].
-        :param float decay: The decay rate to use. If None, this will be calculated from init_lr and n_epochs.
-        :param int n_epochs: The number of epochs to train for. Only used if decay is None.
+        """Initialize the learning rate scheduler.
+
+        Args:
+            init_lr (float): The initial learning rate.
+            min_lr (float): The minimum learning rate.
+            type (LR_TYPES): The type of learning rate schedule to use.
+                Must be one of ['linear', 'exponential'].
+            decay (float): The decay rate to use. If None, this will be calculated
+                from init_lr and n_epochs.
+            n_epochs (int): The number of epochs to train for. Only used if decay is None.
         """
         self.init_lr = init_lr
         self.min_lr = min_lr
@@ -270,20 +271,26 @@ class LearningRateScheduler:
             self.decay = decay
 
     def _update_linear(self, epoch: int):
-        """
-        Update the learning rate using a linear schedule.
+        """Update the learning rate using a linear schedule.
 
-        :param int epoch: The current epoch
+        Args:
+            epoch (int): The current epoch.
+
+        Returns:
+            float: The updated learning rate.
         """
 
         lr = self.init_lr - (self.decay * epoch)
         return max(lr, self.min_lr)
 
     def _update_exponential(self, epoch: int):
-        """
-        Update the learning rate using an exponential schedule.
+        """Update the learning rate using an exponential schedule.
 
-        :param int epoch: The current epoch
+        Args:
+            epoch (int): The current epoch.
+
+        Returns:
+            float: The updated learning rate.
         """
         lr = self.get_lr() * (1 / (1 + self.decay * epoch))
         return max(lr, self.min_lr)
@@ -310,11 +317,15 @@ def shuffle_documents(
     n_shuffles: int = 1,
     threads: int = None,
 ) -> List[List[any]]:
-    """
-    Shuffle around the genomic regions for each cell to generate a "context".
+    """Shuffle around the genomic regions for each cell to generate a "context".
 
-    :param List[List[str]] documents: the document list to shuffle.
-    :param int n_shuffles: The number of shuffles to conduct.
+    Args:
+        documents (List[List[any]]): The document list to shuffle.
+        n_shuffles (int): The number of shuffles to conduct.
+        threads (int): Optional number of threads to use for shuffling.
+
+    Returns:
+        List[List[any]]: The shuffled documents.
     """
 
     def shuffle_list(list: List[any], n: int) -> List[any]:
@@ -344,16 +355,16 @@ def export_region2vec_model(
     config_file: str = CONFIG_FILE_NAME,
     **kwargs: Dict[str, any],
 ):
-    """
-    Export the region2vec model to a folder
+    """Export the region2vec model to a folder.
 
-    :param torch.nn.Module model: The model to export
-    :param Tokenizer tokenizer: The tokenizer to export
-    :param str path: The path to export the model to
-    :param str checkpoint_file: The name of the checkpoint file to export
-    :param str universe_file: The name of the universe file to export
-    :param str config_file: The name of the config file to export
-    :param Dict[str, any] kwargs: Any additional arguments to pass to the config file
+    Args:
+        model (torch.nn.Module): The model to export.
+        tokenizer (Tokenizer): The tokenizer to export.
+        path (str): The path to export the model to.
+        checkpoint_file (str): The name of the checkpoint file to export.
+        universe_file (str): The name of the universe file to export.
+        config_file (str): The name of the config file to export.
+        **kwargs: Any additional arguments to pass to the config file.
     """
     # make sure the path exists
     if not os.path.exists(path):
@@ -377,12 +388,15 @@ def export_region2vec_model(
 def load_local_region2vec_model(
     model_path: str, config_path: str, **kwargs
 ) -> Tuple[Region2Vec, dict]:
-    """
-    Load a region2vec model from a local directory
+    """Load a region2vec model from a local directory.
 
-    :param str model_path: The path to the model checkpoint file
-    :param str config_path: The path to the model config file
-    :param kwargs: include id of padding token
+    Args:
+        model_path (str): The path to the model checkpoint file.
+        config_path (str): The path to the model config file.
+        **kwargs: Include id of padding token.
+
+    Returns:
+        Tuple[Region2Vec, dict]: The loaded model and its config.
     """
 
     # load the model state dict (weights)
@@ -422,14 +436,15 @@ class Region2VecDataset:
         shuffle: bool = True,
         convert_to_str: bool = False,
     ):
-        """
-        Initialize a Region2VecDataset.
+        """Initialize a Region2VecDataset.
 
-        The regions are stored in a parquet file, with one document (cell, BED file, etc) per row.
+        The regions are stored in a parquet file, with one document (cell, BED file, etc)
+        per row.
 
-        :param str path: Path to the parquet file containing the tokens.
-        :param bool shuffle: Whether to shuffle the tokens in each document.
-        :param bool convert_to_str: Whether to convert the tokens to strings.
+        Args:
+            path (str): Path to the parquet file containing the tokens.
+            shuffle (bool): Whether to shuffle the tokens in each document.
+            convert_to_str (bool): Whether to convert the tokens to strings.
         """
         self.table = pq.read_table(path)
         self.data = self.table["tokens"].to_pylist()
@@ -465,21 +480,22 @@ def train_region2vec_model(
     gensim_params: dict = {},
     load_from_checkpoint: str = None,
 ) -> "GensimWord2Vec":
-    """
-    Train a gensim Word2Vewc model on the given dataset.
+    """Train a gensim Word2Vec model on the given dataset.
 
-    :param Region2VecDataset data: Data to train on. This is a dataset of tokens.
-    :param int embedding_dim: Embedding dimension for the model.
-    :param int window_size: Window size for the model.
-    :param int epochs: Number of epochs to train for.
-    :param int min_count: Minimum count for a region to be included in the vocabulary.
-    :param int num_cpus: Number of cpus to use for training.
-    :param int seed: Seed to use for training.
-    :param str save_checkpoint_path: Path to save the model checkpoints to.
-    :param dict gensim_params: Additional parameters to pass to the gensim model.
-    :param str load_from_checkpoint: Path to a checkpoint to load from.
+    Args:
+        dataset (Region2VecDataset): Data to train on. This is a dataset of tokens.
+        embedding_dim (int): Embedding dimension for the model.
+        window_size (int): Window size for the model.
+        epochs (int): Number of epochs to train for.
+        min_count (int): Minimum count for a region to be included in the vocabulary.
+        num_cpus (int): Number of cpus to use for training.
+        seed (int): Seed to use for training.
+        save_checkpoint_path (str): Path to save the model checkpoints to.
+        gensim_params (dict): Additional parameters to pass to the gensim model.
+        load_from_checkpoint (str): Path to a checkpoint to load from.
 
-    :return GensimWord2Vec: The gensim model that was trained.
+    Returns:
+        GensimWord2Vec: The gensim model that was trained.
     """
     # we only need gensim if we are training
     from gensim.models import Word2Vec as GensimWord2Vec

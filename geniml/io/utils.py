@@ -21,8 +21,11 @@ def is_gzipped(file: str) -> bool:
     """
     Check if a file is gzipped.
 
-    :param file: path to file
-    :return: True if file is gzipped, else False
+    Args:
+        file (str): path to file
+
+    Returns:
+        bool: True if file is gzipped, else False
     """
     _, file_extension = os.path.splitext(file)
     return file_extension == ".gz"
@@ -32,17 +35,23 @@ def extract_maf_col_positions(file: str) -> Dict[MAF_COLUMN, Union[int, None]]:
     """
     Extract the column positions of the MAF file.
 
-    :param file: path to .maf file
-    :return: dictionary of column positions
+    Args:
+        file (str): path to .maf file
+
+    Returns:
+        Dict[MAF_COLUMN, Union[int, None]]: dictionary of column positions
     """
 
     def get_index_from_header(header: List[str], col_name: str) -> Union[int, None]:
         """
         Get the index of a column from a header.
 
-        :param header: list of column names
-        :param col_name: column name
-        :return: index of column
+        Args:
+            header (List[str]): list of column names
+            col_name (str): column name
+
+        Returns:
+            Union[int, None]: index of column
         """
         try:
             return header.index(col_name)
@@ -72,11 +81,13 @@ def extract_maf_col_positions(file: str) -> Dict[MAF_COLUMN, Union[int, None]]:
 
 def read_bedset_file(file_path: str) -> List[str]:
     """
-    Load a bedset from a text file
+    Load a bedset from a text file.
 
-    :param file_path: path to the file
+    Args:
+        file_path (str): path to the file
 
-    :return: list of bed identifiers
+    Returns:
+        List[str]: list of bed identifiers
     """
     bed_identifiers = []
 
@@ -88,10 +99,12 @@ def read_bedset_file(file_path: str) -> List[str]:
 
 def compute_md5sum_bedset(bedset: List[str]) -> str:
     """
-    Compute the md5sum of a bedset
+    Compute the md5sum of a bedset.
 
-    :param bedset: list of bed identifiers
+    Args:
+        bedset (List[str]): list of bed identifiers
 
-    :return: md5sum of the bedset
+    Returns:
+        str: md5sum of the bedset
     """
     return md5("".join(bedset).encode()).hexdigest()

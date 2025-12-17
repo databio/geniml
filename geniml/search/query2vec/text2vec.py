@@ -20,6 +20,7 @@ class Text2Vec:
         """
         :param model: a model repository on Hugging Face
         :param v2v: a Vec2VecFNN (see geniml/text2bednn/text2bednn.py) or a model repository on Hugging Face
+
         """
         # Set model that embed natural language
         if isinstance(model, TextEmbedding):
@@ -36,12 +37,13 @@ class Text2Vec:
             self.v2v = None
 
     def forward(self, query: str) -> np.ndarray:
-        """
-        Embed the query natural language string
+        """Embed a natural language query string into a vector.
 
-        :param query: a natural language string
+        Args:
+            query: a natural language string
 
-        :return: the embedding vector of query
+        Returns:
+            The embedding vector of the query.
         """
         # embed query string
         query_embedding = list(self.text_embedder.embed(query))[0]

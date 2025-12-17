@@ -37,17 +37,20 @@ def generate_window_training_data(
     padding_value: any = 0,
     return_tensor: bool = True,
 ) -> List[Tuple[List[any], any]]:
-    """
-    Generates the windowed training data by sliding across the region sets. This is for the CBOW model.
+    """Generates the windowed training data by sliding across the region sets.
 
-    :param List[any] data: The data to generate the training data from.
-    :param int window_size: The window size to use.
-    :param int n_shuffles: The number of shuffles to perform.
-    :param int threads: The number of threads to use.
-    :param any padding_value: The padding value to use.
-    :param bool return_tensor: Whether or not to return the data as a tensor.
+    This is for the CBOW model.
 
-    :return Tuple[List[List[any]], List[any]]: The contexts and targets.
+    Args:
+        data (List[any]): The data to generate the training data from.
+        window_size (int): The window size to use.
+        n_shuffles (int): The number of shuffles to perform.
+        threads (int): The number of threads to use.
+        padding_value (any): The padding value to use.
+        return_tensor (bool): Whether or not to return the data as a tensor.
+
+    Returns:
+        List[Tuple[List[any], any]]: The contexts and targets.
     """
     _LOGGER.info("Generating windowed training data.")
 
@@ -93,17 +96,21 @@ def generate_window_training_data_wrap(
     padding_value: any = 0,
     return_tensor: bool = True,
 ) -> List[Tuple[List[any], any]]:
-    """
-    Generates the windowed training data by sliding across the region sets. When the sliding window runs into the bounds of the list, it wraps around to the start or end of the array.
+    """Generates the windowed training data by sliding across the region sets.
 
-    :param List[any] data: The data to generate the training data from.
-    :param int window_size: The window size to use.
-    :param int n_shuffles: The number of shuffles to perform.
-    :param int threads: The number of threads to use.
-    :param any padding_value: The padding value to use.
-    :param bool return_tensor: Whether or not to return the data as a tensor.
+    When the sliding window runs into the bounds of the list, it wraps around to
+    the start or end of the array.
 
-    :return Tuple[List[List[any]], List[any]]: The contexts and targets.
+    Args:
+        data (List[any]): The data to generate the training data from.
+        window_size (int): The window size to use.
+        n_shuffles (int): The number of shuffles to perform.
+        threads (int): The number of threads to use.
+        padding_value (any): The padding value to use.
+        return_tensor (bool): Whether or not to return the data as a tensor.
+
+    Returns:
+        List[Tuple[List[any], any]]: The contexts and targets.
     """
     _LOGGER.info("Generating windowed training data.")
 
@@ -162,10 +169,14 @@ def generate_window_training_data_wrap(
 
 
 def generate_frequency_distribution(tokens: List[List[int]], vocab_length: int) -> torch.Tensor:
-    """
-    Generate the frequency distribution of the tokens.
+    """Generate the frequency distribution of the tokens.
 
-    :param List[List[int]] tokens: The tokens to generate the frequency distribution from.
+    Args:
+        tokens (List[List[int]]): The tokens to generate the frequency distribution from.
+        vocab_length (int): The length of the vocabulary.
+
+    Returns:
+        torch.Tensor: The frequency distribution tensor.
     """
     tokens_flat = [t for tokens in tokens for t in tokens]
 
@@ -193,11 +204,12 @@ class NegativeSampler:
         power: float = DEFAULT_NS_POWER,
         batch_size: int = None,
     ):
-        """
-        Initialize the negative sampler.
+        """Initialize the negative sampler.
 
-        :param torch.Tensor freq_dist: List of frequencies for each token. Must be normalized.
-        :param float power: The power to use for the negative sampling. It is not recommended to change this.
+        Args:
+            freq_dist (torch.Tensor): List of frequencies for each token. Must be normalized.
+            power (float): The power to use for the negative sampling. It is not recommended to change this.
+            batch_size (int): Optional batch size for sampling.
         """
         self.dist = freq_dist**power
         self.dist /= self.dist.sum()
@@ -205,10 +217,17 @@ class NegativeSampler:
         self.batch_size = batch_size
 
     def sample(self, k: int = 5, batch_size: int = None) -> torch.Tensor:
-        """
-        Sample from the negative sampler.
+        """Sample from the negative sampler.
 
-        :param int k: The number of samples to draw.
+        Args:
+            k (int): The number of samples to draw.
+            batch_size (int): Optional batch size override.
+
+        Returns:
+            torch.Tensor: The negative samples.
+
+        Raises:
+            ValueError: If batch_size is not provided.
         """
         batch_size = batch_size or self.batch_size
         if batch_size is None:
@@ -241,10 +260,15 @@ class NSLoss(nn.Module):
         negative_samples: torch.Tensor,
         target: torch.Tensor,
     ):
-        """
-        :param torch.Tensor context: The context vectors.
-        :param torch.Tensor negative_samples: The negative sample vectors.
-        :param torch.Tensor target: The target vectors.
+        """Compute the negative sampling loss.
+
+        Args:
+            context (torch.Tensor): The context vectors.
+            negative_samples (torch.Tensor): The negative sample vectors.
+            target (torch.Tensor): The target vectors.
+
+        Returns:
+            torch.Tensor: The computed loss.
         """
         # there is one target that gets mapped to each context
         target_v_context = target.unsqueeze(1).expand(

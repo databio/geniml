@@ -15,10 +15,10 @@ class BED2Vec(Query2Vec):
     """Embed a query region set into a vector"""
 
     def __init__(self, model: Union[str, Region2VecExModel]):
-        """
-        set the Region2VecExModel
+        """Initialize BED2Vec with a Region2VecExModel.
 
-        :param model: a Region2VecExModel or a model repository on Hugging Face
+        Args:
+            model: a Region2VecExModel instance or a model repository on Hugging Face
         """
         if isinstance(model, str):
             self.model = Region2VecExModel(model)
@@ -30,12 +30,13 @@ class BED2Vec(Query2Vec):
             )
 
     def forward(self, query: Union[str, RegionSet]) -> np.ndarray:
-        """
-        Embed the query region set
+        """Embed the query region set into a vector.
 
-        :param query: a RegionSet, or the path to a BED file in disk
+        Args:
+            query: a RegionSet instance or the path to a BED file on disk
 
-        :return: the region set embedding
+        Returns:
+            The region set embedding vector.
         """
         # if query is a BED file name, read it as a RegionSet class
         if isinstance(query, str):

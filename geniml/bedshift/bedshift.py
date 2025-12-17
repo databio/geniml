@@ -15,17 +15,15 @@ __all__ = ["Bedshift"]
 
 
 class Bedshift(object):
-    """
-    The bedshift object with methods to perturb regions
-    """
+    """The bedshift object with methods to perturb regions."""
 
     def __init__(self, bedfile_path, chrom_sizes=None, delimiter="\t"):
-        """
-        Read in a .bed file to pandas DataFrame format
+        """Read in a .bed file to pandas DataFrame format.
 
-        :param str bedfile_path: the path to the BED file
-        :param str chrom_sizes: the path to the chrom.sizes file
-        :param str delimiter: the delimiter used in the BED file
+        Args:
+            bedfile_path (str): The path to the BED file.
+            chrom_sizes (str): The path to the chrom.sizes file.
+            delimiter (str): The delimiter used in the BED file.
         """
         self.bedfile_path = bedfile_path
         self.chrom_lens = {}
@@ -41,10 +39,10 @@ class Bedshift(object):
         self.original_bed = self.bed.copy()
 
     def _read_chromsizes(self, fp):
-        """
-        Read chromosome sizes file
+        """Read chromosome sizes file.
 
-        :param str fp: path to the chrom sizes file
+        Args:
+            fp (str): Path to the chrom sizes file.
         """
         try:
             with open(fp) as f:
@@ -62,18 +60,16 @@ class Bedshift(object):
         self.chrom_weights = [chrom_len / total_len for chrom_len in self.chrom_lens.values()]
 
     def reset_bed(self):
-        """
-        Reset the stored bedfile to the state before perturbations
-        """
+        """Reset the stored bedfile to the state before perturbations."""
         self.bed = self.original_bed.copy()
 
     def _precheck(self, rate, requiresChromLens=False, isAdd=False):
-        """
-        Check if the rate of perturbation is too high or low
+        """Check if the rate of perturbation is too high or low.
 
-        :param float rate: the rate of perturbation
-        :param bool requiresChromLens: check if the perturbation requires a chromosome lengths file
-        :param bool isAdd: if True, do a special check for the add rate
+        Args:
+            rate (float): The rate of perturbation.
+            requiresChromLens (bool): Check if the perturbation requires a chromosome lengths file.
+            isAdd (bool): If True, do a special check for the add rate.
         """
         if isAdd:
             if rate < 0:
@@ -92,26 +88,30 @@ class Bedshift(object):
                 raise FileNotFoundError(msg)
 
     def pick_random_chroms(self, n):
-        """
-        Utility function to pick a random chromosome
+        """Utility function to pick a random chromosome.
 
-        :param str n: the number of random chromosomes to pick
-        :return str, float chrom_str, chrom_len: chromosome number and length
+        Args:
+            n (str): The number of random chromosomes to pick.
+
+        Returns:
+            zip: Tuples of (chrom_str, chrom_len) containing chromosome number and length.
         """
         chrom_strs = random.choices(list(self.chrom_lens.keys()), weights=self.chrom_weights, k=n)
         chrom_lens = [self.chrom_lens[chrom_str] for chrom_str in chrom_strs]
         return zip(chrom_strs, chrom_lens)
 
     def add(self, addrate, addmean, addstdev, valid_bed=None, delimiter="\t"):
-        """
-        Add regions
+        """Add regions.
 
-        :param float addrate: the rate to add regions
-        :param float addmean: the mean length of added regions
-        :param float addstdev: the standard deviation of the length of added regions
-        :param str valid_bed: the file with valid regions where new regions can be added
-        :param str delimiter: the delimiter used in valid_bed
-        :return int: the number of regions added
+        Args:
+            addrate (float): The rate to add regions.
+            addmean (float): The mean length of added regions.
+            addstdev (float): The standard deviation of the length of added regions.
+            valid_bed (str): The file with valid regions where new regions can be added.
+            delimiter (str): The delimiter used in valid_bed.
+
+        Returns:
+            int: The number of regions added.
         """
         if valid_bed:
             self._precheck(addrate, requiresChromLens=False, isAdd=True)
@@ -154,12 +154,15 @@ class Bedshift(object):
         return num_add
 
     def add_from_file(self, fp, addrate, delimiter="\t"):
-        """
-        Add regions from another bedfile to this perturbed bedfile
+        """Add regions from another bedfile to this perturbed bedfile.
 
-        :param float addrate: the rate to add regions
-        :param str fp: the filepath to the other bedfile
-        :return int: the number of regions added
+        Args:
+            fp (str): The filepath to the other bedfile.
+            addrate (float): The rate to add regions.
+            delimiter (str): The delimiter used in the bedfile.
+
+        Returns:
+            int: The number of regions added.
         """
         self._precheck(addrate, requiresChromLens=False, isAdd=True)
 
@@ -181,13 +184,16 @@ class Bedshift(object):
         return num_add
 
     def shift(self, shiftrate, shiftmean, shiftstdev, shift_rows=[]):
-        """
-        Shift regions
+        """Shift regions.
 
-        :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
-        :param float shiftmean: the mean shift distance
-        :param float shiftstdev: the standard deviation of the shift distance
-        :return int: the number of regions shifted
+        Args:
+            shiftrate (float): The rate to shift regions (both the start and end are shifted by the same amount).
+            shiftmean (float): The mean shift distance.
+            shiftstdev (float): The standard deviation of the shift distance.
+            shift_rows (list): Specific rows to shift.
+
+        Returns:
+            int: The number of regions shifted.
         """
         self._precheck(shiftrate, requiresChromLens=True)
 
@@ -218,6 +224,16 @@ class Bedshift(object):
         return num_shifted
 
     def _shift(self, row, mean, stdev):
+        """Shift a single region.
+
+        Args:
+            row (int): The index of the row to shift.
+            mean (float): The mean shift distance.
+            stdev (float): The standard deviation of the shift distance.
+
+        Returns:
+            tuple: A tuple of (row_index, shifted_region_dict) or (None, None) if shift is invalid.
+        """
         theshift = int(np.random.normal(mean, stdev))
 
         chrom = self.bed.loc[row][0]
@@ -230,15 +246,17 @@ class Bedshift(object):
         return row, {0: chrom, 1: start + theshift, 2: end + theshift, 3: "S"}
 
     def shift_from_file(self, fp, shiftrate, shiftmean, shiftstdev, delimiter="\t"):
-        """
-        Shift regions that overlap the specified file's regions
+        """Shift regions that overlap the specified file's regions.
 
-        :param str fp: the file on which to find overlaps
-        :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
-        :param float shiftmean: the mean shift distance
-        :param float shiftstdev: the standard deviation of the shift distance
-        :param str delimiter: the delimiter used in fp
-        :return int: the number of regions shifted
+        Args:
+            fp (str): The file on which to find overlaps.
+            shiftrate (float): The rate to shift regions (both the start and end are shifted by the same amount).
+            shiftmean (float): The mean shift distance.
+            shiftstdev (float): The standard deviation of the shift distance.
+            delimiter (str): The delimiter used in fp.
+
+        Returns:
+            int: The number of regions shifted.
         """
         self._precheck(shiftrate, requiresChromLens=True)
 
@@ -269,11 +287,13 @@ class Bedshift(object):
         return self.shift(shiftrate, shiftmean, shiftstdev, indices_of_overlap_regions)
 
     def cut(self, cutrate):
-        """
-        Cut regions to create two new regions
+        """Cut regions to create two new regions.
 
-        :param float cutrate: the rate to cut regions into two separate regions
-        :return int: the number of regions cut
+        Args:
+            cutrate (float): The rate to cut regions into two separate regions.
+
+        Returns:
+            int: The number of regions cut.
         """
         self._precheck(cutrate)
 
@@ -291,6 +311,14 @@ class Bedshift(object):
         return len(cut_rows)
 
     def _cut(self, row):
+        """Cut a single region into two regions.
+
+        Args:
+            row (int): The index of the row to cut.
+
+        Returns:
+            tuple: A tuple of (row_index, list_of_two_new_regions).
+        """
         chrom = self.bed.loc[row][0]
         start = self.bed.loc[row][1]
         end = self.bed.loc[row][2]
@@ -317,11 +345,13 @@ class Bedshift(object):
         )
 
     def merge(self, mergerate):
-        """
-        Merge two regions into one new region
+        """Merge two regions into one new region.
 
-        :param float mergerate: the rate to merge two regions into one
-        :return int: number of regions merged
+        Args:
+            mergerate (float): The rate to merge two regions into one.
+
+        Returns:
+            int: Number of regions merged.
         """
         self._precheck(mergerate)
 
@@ -340,6 +370,14 @@ class Bedshift(object):
         return len(to_drop)
 
     def _merge(self, row):
+        """Merge a region with the next region.
+
+        Args:
+            row (int): The index of the row to merge.
+
+        Returns:
+            tuple: A tuple of (list_of_rows_to_drop, merged_region_dict) or (None, None) if merge is invalid.
+        """
         # check if the regions being merged are on the same chromosome
         if row + 1 not in self.bed.index or self.bed.loc[row][0] != self.bed.loc[row + 1][0]:
             return None, None
@@ -350,11 +388,13 @@ class Bedshift(object):
         return [row, row + 1], {0: chrom, 1: start, 2: end, 3: "M"}
 
     def drop(self, droprate):
-        """
-        Drop regions
+        """Drop regions.
 
-        :param float droprate: the rate to drop/remove regions
-        :return int: the number of rows dropped
+        Args:
+            droprate (float): The rate to drop/remove regions.
+
+        Returns:
+            int: The number of rows dropped.
         """
         self._precheck(droprate)
 
@@ -365,12 +405,15 @@ class Bedshift(object):
         return len(drop_rows)
 
     def drop_from_file(self, fp, droprate, delimiter="\t"):
-        """
-        drop regions that overlap between the reference bedfile and the provided bedfile.
+        """Drop regions that overlap between the reference bedfile and the provided bedfile.
 
-        :param float droprate: the rate to drop regions
-        :param str fp: the filepath to the other bedfile containing regions to be dropped
-        :return int: the number of regions dropped
+        Args:
+            fp (str): The filepath to the other bedfile containing regions to be dropped.
+            droprate (float): The rate to drop regions.
+            delimiter (str): The delimiter used in the bedfile.
+
+        Returns:
+            int: The number of regions dropped.
         """
         self._precheck(droprate)
 
@@ -401,6 +444,14 @@ class Bedshift(object):
         return num_drop
 
     def set_seed(self, seednum):
+        """Set the random seed for reproducible perturbations.
+
+        Args:
+            seednum (int): The seed value.
+
+        Raises:
+            ValueError: If seednum cannot be converted to an integer.
+        """
         try:
             seednum = int(seednum)
             random.seed(seednum)
@@ -411,12 +462,14 @@ class Bedshift(object):
             raise ValueError(msg)
 
     def _find_overlap(self, fp, reference=None):
-        """
-        Find intersecting regions between the reference bedfile and the comparison file provided in the yaml config file.
+        """Find intersecting regions between the reference bedfile and the comparison file.
 
-        :param str fp: path to file, or pandas DataFrame, for comparison
-        :param str reference: path to file, or pandas DataFrame, for reference. If None, then defaults to the original BED file provided to the Bedshift constructor
-        :return pd.DataFrame: a DataFrame of overlapping regions
+        Args:
+            fp (str or pd.DataFrame): Path to file, or pandas DataFrame, for comparison.
+            reference (str or pd.DataFrame): Path to file, or pandas DataFrame, for reference. If None, then defaults to the original BED file provided to the Bedshift constructor.
+
+        Returns:
+            pd.DataFrame: A DataFrame of overlapping regions.
         """
         if reference is None:
             reference_bed = self.original_bed.copy()
@@ -469,26 +522,27 @@ class Bedshift(object):
         yaml=None,
         seed=None,
     ):
-        """
-        Perform all five perturbations in the order of shift, add, cut, merge, drop.
+        """Perform all five perturbations in the order of shift, add, cut, merge, drop.
 
-        :param float addrate: the rate (as a proportion of the total number of regions) to add regions
-        :param float addmean: the mean length of added regions
-        :param float addstdev: the standard deviation of the length of added regions
-        :param str addfile: the file containing regions to be added
-        :param str valid_regions: the file containing regions where new regions can be added
-        :param float shiftrate: the rate to shift regions (both the start and end are shifted by the same amount)
-        :param float shiftmean: the mean shift distance
-        :param float shiftstdev: the standard deviation of the shift distance
-        :param str shiftfile: the file containing regions to be shifted
-        :param float cutrate: the rate to cut regions into two separate regions
-        :param float mergerate: the rate to merge two regions into one
-        :param float droprate: the rate to drop/remove regions
-        :param str dropfile: the file containing regions to be dropped
-        :param str yaml: the yaml_config filepath
-        :param bedshift.Bedshift bedshifter: Bedshift instance
-        :param int seed: a seed for allowing reproducible perturbations
-        :return int: the number of total regions perturbed
+        Args:
+            addrate (float): The rate (as a proportion of the total number of regions) to add regions.
+            addmean (float): The mean length of added regions.
+            addstdev (float): The standard deviation of the length of added regions.
+            addfile (str): The file containing regions to be added.
+            valid_regions (str): The file containing regions where new regions can be added.
+            shiftrate (float): The rate to shift regions (both the start and end are shifted by the same amount).
+            shiftmean (float): The mean shift distance.
+            shiftstdev (float): The standard deviation of the shift distance.
+            shiftfile (str): The file containing regions to be shifted.
+            cutrate (float): The rate to cut regions into two separate regions.
+            mergerate (float): The rate to merge two regions into one.
+            droprate (float): The rate to drop/remove regions.
+            dropfile (str): The file containing regions to be dropped.
+            yaml (str): The yaml_config filepath.
+            seed (int): A seed for allowing reproducible perturbations.
+
+        Returns:
+            int: The number of total regions perturbed.
         """
         if seed:
             self.set_seed(seed)
@@ -518,22 +572,23 @@ class Bedshift(object):
         return n
 
     def to_bed(self, outfile_name):
-        """
-        Write a pandas dataframe back into BED file format
+        """Write a pandas dataframe back into BED file format.
 
-        :param str outfile_name: The name of the output BED file
+        Args:
+            outfile_name (str): The name of the output BED file.
         """
         self.bed.sort_values([0, 1, 2], inplace=True)
         self.bed.to_csv(outfile_name, sep="\t", header=False, index=False, float_format="%.0f")
 
     def read_bed(self, bedfile_path, delimiter="\t"):
-        """
-        Read a BED file into pandas dataframe
+        """Read a BED file into pandas dataframe.
 
-        :param str bedfile_path: The path to the BED file
-        :param str delimiter: The delimiter used in the BED file
+        Args:
+            bedfile_path (str): The path to the BED file.
+            delimiter (str): The delimiter used in the BED file.
 
-        :return pd.DataFrame: The BED file as a pandas DataFrame
+        Returns:
+            pd.DataFrame: The BED file as a pandas DataFrame.
         """
         try:
             df = pd.read_csv(

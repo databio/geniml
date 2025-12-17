@@ -76,10 +76,10 @@ class Vec2Vec(Sequential):
 
 class Vec2VecFNN:
     def __init__(self, model_path: Union[str, None] = None):
-        """
-        Initialize Vec2VecFNNtorch.
+        """Initialize Vec2VecFNN.
 
-        :param model_path: path to the pretrained model on huggingface.
+        Args:
+            model_path (Union[str, None]): Path to the pretrained model on HuggingFace.
         """
         # initialize the feedforward neural network model, which is a torch.nn.Sequential
         # self.model =
@@ -107,13 +107,15 @@ class Vec2VecFNN:
         config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
-        """
-        Initialize the model from a huggingface model. This uses the model path
-        to download the necessary files and then "build itself up" from those.
+        """Initialize the model from a HuggingFace model.
 
-        :param model_path: path to the pre-trained model on huggingface.
-        :param model_file_name: name of the model file.
-        :param config_file_name: name of the config file
+        This method uses the model path to download the necessary files and then
+        "build itself up" from those files.
+
+        Args:
+            model_path (str): Path to the pre-trained model on HuggingFace.
+            model_file_name (str): Name of the model file.
+            config_file_name (str): Name of the config file.
         """
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
         config_path = hf_hub_download(model_path, config_file_name, **kwargs)
@@ -121,11 +123,11 @@ class Vec2VecFNN:
         self.load_from_disk(model_file_path, config_path)
 
     def load_from_disk(self, model_path: str, config_path: str):
-        """
-        Load model from local files
+        """Load model from local files.
 
-        :param model_path: path of saved model file (usually in format of .pt)
-        :param config_path: path of saved config file (in format of yaml)
+        Args:
+            model_path (str): Path of saved model file (usually in format of .pt).
+            config_path (str): Path of saved config file (in format of yaml).
         """
         # get the model config (layer structure)
         with open(config_path, "r") as f:
@@ -149,13 +151,13 @@ class Vec2VecFNN:
         config_file: str = CONFIG_FILE_NAME,
         must_trained: bool = DEFAULT_MUST_TRAINED,
     ):
-        """
-        Save model weights and config
+        """Save model weights and config.
 
-        :param path: path to export the model to
-        :param checkpoint_file: name of model checkpoint file
-        :param config_file: name of model config file
-        :param must_trained: whether the model needs training to be exported
+        Args:
+            path (str): Path to export the model to.
+            checkpoint_file (str): Name of model checkpoint file.
+            config_file (str): Name of model config file.
+            must_trained (bool): Whether the model needs training to be exported.
         """
         # whether the model must be finished training to export
         if must_trained and not self.trained:
@@ -172,11 +174,13 @@ class Vec2VecFNN:
             safe_dump(self.config, f)
 
     def embedding_to_embedding(self, input_vecs: np.ndarray) -> np.ndarray:
-        """
-        Predict the region set embedding from embedding of natural language strings
+        """Predict the region set embedding from embedding of natural language strings.
 
-        :param input_vecs: input embedding vectors
-        :return: the output of the neural network model
+        Args:
+            input_vecs (np.ndarray): Input embedding vectors.
+
+        Returns:
+            np.ndarray: The output of the neural network model.
         """
         # pytorch tensor's default dtype is float 32
         return self.model(torch.from_numpy(dtype_check(input_vecs))).detach().numpy()
@@ -188,13 +192,16 @@ class Vec2VecFNN:
         learning_rate: float,
         margin: Union[float, None] = DEFAULT_MARGIN,
     ):
-        """
-        Configure the model for training. This includes setting the optimizer and loss function.
+        """Configure the model for training.
 
-        :param optimizer: the name of optimizer
-        :param loss: the name of loss function
-        :param learning_rate: the learning rate of model backpropagation
-        :param margin: should be a number from −1−1 to 1, 0 to 0.5 is suggested, only for CosineEmbeddingLoss
+        This includes setting the optimizer and loss function.
+
+        Args:
+            optimizer (str): The name of optimizer.
+            loss (str): The name of loss function.
+            learning_rate (float): The learning rate of model backpropagation.
+            margin (Union[float, None]): Should be a number from -1 to 1, 0 to 0.5 is
+                suggested, only for CosineEmbeddingLoss.
         """
 
         # set optimizer
@@ -240,26 +247,30 @@ class Vec2VecFNN:
         validating_target: Union[np.ndarray, None] = None,
         **kwargs,
     ):
-        """
-        Based on https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
-        Fit the feedforward neural network
+        """Fit the feedforward neural network.
 
-        :param training_X: embedding vectors of metadata, np.ndarray with shape of (n, <dim>)
-        :param training_Y: embedding vectors of region set, np.ndarray with shape of (n, <dim>)
-        :param validating_data: validating data, which contains validating X and validating Y
-        :param save_best: whether the best performance model is saved after each epoch (based on validation loss)
-        :param folder_path: the path to the folder to save the model and config
-        :param best_model_file_name: the name of the file of saved best model
-        :param early_stop: whether the training should be stopped early to prevent overfitting
-        :param patience: the percentage of epoches to stop training if no validation loss improvement
-        :param opt_name: name of optimizer
-        :param loss_func: name of loss function
-        :param num_epochs: number of training epoches
-        :param batch_size: size of batch for training
-        :param learning_rate: learning rate of optimizer
-        :param training_target:
-        :param validating_target:
-        :param kwargs: see units and layers in reinit_model()
+        Based on https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
+
+        Args:
+            training_X (np.ndarray): Embedding vectors of metadata with shape (n, <dim>).
+            training_Y (np.ndarray): Embedding vectors of region set with shape (n, <dim>).
+            validating_data (Union[Tuple[np.ndarray, np.ndarray], None]): Validating data
+                containing validating X and validating Y.
+            save_best (bool): Whether the best performance model is saved after each epoch
+                based on validation loss.
+            folder_path (Union[str, None]): The path to the folder to save the model and config.
+            best_model_file_name (Union[str, None]): The name of the file of saved best model.
+            early_stop (bool): Whether the training should be stopped early to prevent overfitting.
+            patience (float): The percentage of epochs to stop training if no validation loss
+                improvement.
+            opt_name (str): Name of optimizer.
+            loss_func (str): Name of loss function.
+            num_epochs (int): Number of training epochs.
+            batch_size (int): Size of batch for training.
+            learning_rate (float): Learning rate of optimizer.
+            training_target (Union[np.ndarray, None]): Target values for training data.
+            validating_target (Union[np.ndarray, None]): Target values for validating data.
+            **kwargs: See units and layers in reinit_model().
         """
         # if current model is empty, add layers
         if self.model is None:
@@ -361,12 +372,12 @@ class Vec2VecFNN:
         self.trained = True
 
     def train_one_epoch(self, training_data) -> torch.Tensor:
-        """
+        """One epoch's training loop.
+
         Based on https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
 
-        One epoch's training loop
-
-        :return: the average training loss of one epoch
+        Returns:
+            torch.Tensor: The average training loss of one epoch.
         """
         epoch_loss = 0.0
 
@@ -392,14 +403,15 @@ class Vec2VecFNN:
     def calc_loss(
         self, outputs: torch.Tensor, y: torch.Tensor, target: torch.Tensor
     ) -> torch.Tensor:
-        """
-        Calculating loss when different loss function is given
+        """Calculate loss when different loss function is given.
 
-        :param outputs: the output of model
-        :param y: the correct label
-        :param target:
-        :return: the loss
+        Args:
+            outputs (torch.Tensor): The output of model.
+            y (torch.Tensor): The correct label.
+            target (torch.Tensor): Target tensor.
 
+        Returns:
+            torch.Tensor: The loss value.
         """
 
         if not self.config["loss"]:
@@ -419,13 +431,12 @@ class Vec2VecFNN:
         plot_file_name: Union[str, None] = DEFAULT_PLOT_FILE_NAME,
         title: Union[str, None] = DEFAULT_PLOT_TITLE,
     ) -> None:
-        """
-        Plot the training & validating loss of the most recent training
+        """Plot the training and validating loss of the most recent training.
 
-        :param save_path: the path of folder where image will be saved
-        :param plot_file_name: the file name of the png file
-        :param title: the title in the image
-        :return: None
+        Args:
+            save_path (Union[str, None]): The path of folder where image will be saved.
+            plot_file_name (Union[str, None]): The file name of the png file.
+            title (Union[str, None]): The title in the image.
         """
 
         epoch_range = range(1, len(self.most_recent_train["loss"]) + 1)

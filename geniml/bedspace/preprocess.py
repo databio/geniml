@@ -12,14 +12,14 @@ _LOGGER = logging.getLogger(PKG_NAME)
 
 
 def main(data_path: str, metadata: str, universe: str, output: str, labels: str):
-    """
-    Main function for the preprocess pipeline
+    """Main function for the preprocess pipeline.
 
-    :param data_path: Path to bed files
-    :param metadata: Path to metadata file
-    :param universe: Path to universe file
-    :param output: Path to output folder
-    :param labels: Labels string (cell_type,target)
+    Args:
+        data_path (str): Path to bed files.
+        metadata (str): Path to metadata file.
+        universe (str): Path to universe file.
+        output (str): Path to output folder.
+        labels (str): Labels string (cell_type,target).
     """
     _LOGGER.info("Running preprocess...")
     _LOGGER.info(f"Start: {datetime.datetime.now()}")

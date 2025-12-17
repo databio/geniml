@@ -19,13 +19,14 @@ def verify_load_inputs(
 
 
 def single_query_eval(search_results: List, relevant_results: List) -> Tuple[float, float, float]:
-    """
-    Evaluate a single query
+    """Evaluate a single query's retrieval performance.
 
-    :param search_results: List of store ids, by the order of similarity in search
-    :param relevant_results: List if store id which are relevant search results
+    Args:
+        search_results: List of store ids ordered by similarity in search
+        relevant_results: List of store ids that are relevant search results
 
-    :return: a Tuple of (Average Precision, AUC-ROC, R-precision)
+    Returns:
+        A tuple of (Average Precision, AUC-ROC, R-precision) scores.
     """
     num_relevant = len(relevant_results)
     retrieved_relevant = 0
@@ -62,21 +63,22 @@ def single_query_eval(search_results: List, relevant_results: List) -> Tuple[flo
 
 
 def rand_eval(n: int, query_dict: Dict) -> Tuple[float, float, float]:
-    """
-    Evaluation results if the retrieval is completely random
+    """Compute evaluation scores for random retrieval performance.
 
-    :param n: total number of results
+    Args:
+        n: total number of results
 
-    :param query_dict:  a dictionary that contains query and relevant results in this format:
-        {
-            <query string>:[
-                <store id in backend>,
+        query_dict: a dictionary containing queries and relevant results in this format:
+            {
+                <query string>: [
+                    <store id in backend>,
+                    ...
+                ],
                 ...
-            ],
-            ...
-        }
+            }
 
-    :return: a Tuple of (Average Precision, AUC-ROC, R-precision)
+    Returns:
+        A tuple of (Average Precision, AUC-ROC, R-precision) scores.
     """
     sum_ap = 0  # sum of all average precisions
     sum_auc = 0

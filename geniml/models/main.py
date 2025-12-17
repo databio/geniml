@@ -29,11 +29,11 @@ class ExModel(ABC):
     @abstractmethod
     def __init__(self, model_path: str = None, tokenizer: "Tokenizer" = None, device: str = None):
         """
-        Initialize the model. If model_path is not None, load the model from
-        huggingface.
+        Initialize the model. If model_path is not None, load the model from huggingface.
 
-        :param str model_path: Path to the model on huggingface to load
-        :param Tokenizer tokenizer: Tokenizer to use
-        :param str device: Device to use (e.g. "cpu", "cuda:0", etc)
+        Args:
+            model_path: Path to the model on huggingface to load
+            tokenizer: Tokenizer to use
+            device: Device to use (e.g. "cpu", "cuda:0", etc)
         """
         pass

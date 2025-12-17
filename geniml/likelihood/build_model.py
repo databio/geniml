@@ -35,8 +35,9 @@ def model_binomial(folder_in, in_file, chrom, file_out, file_no=None):
 class ChromosomeModel:
     def __init__(self, folder, chrom):
         """
-        :param str folder: file with the model
-        :param str chrom: of which chromosome is the model
+        Args:
+            folder: file with the model
+            chrom: of which chromosome is the model
         """
         self.folder = folder
         self.chromosome = chrom
@@ -56,9 +57,11 @@ class ChromosomeModel:
     def make_model(self, coverage_folder, coverage_prefix, file_no):
         """
         Make a lh model of given chromosome from coverage files
-        :param str coverage_folder: path to name with coverage files
-        :param str coverage_prefix: prefixed used for making coverage files
-        :param int file_no: number of files from which model is being created
+
+        Args:
+            coverage_folder: path to name with coverage files
+            coverage_prefix: prefixed used for making coverage files
+            file_no: number of files from which model is being created
         """
         model_binomial(
             coverage_folder,
@@ -83,9 +86,7 @@ class ChromosomeModel:
         )
 
     def read(self):
-        """
-        Read model
-        """
+        """Read model."""
         model_folder = tarfile.open(self.folder, "r")
         for f in self.files:
             file = model_folder.extractfile(self.files[f])
@@ -94,9 +95,7 @@ class ChromosomeModel:
         model_folder.close()
 
     def read_track(self, track):
-        """
-        Read specific track from model
-        """
+        """Read specific track from model."""
         model_folder = tarfile.open(self.folder, "r")
         file = model_folder.extractfile(self.files[track])
         values = np.load(file)
@@ -108,7 +107,9 @@ class ModelLH:
     def __init__(self, file):
         """
         Likelihood model class
-        :param str file: file containing the model
+
+        Args:
+            file: file containing the model
         """
         self.name = file
         self.chromosomes_list = []
@@ -125,10 +126,12 @@ class ModelLH:
     def make(self, coverage_folder, coverage_prefix, file_no, force=False):
         """
         Make lh model for all chromosomes
-        :param str coverage_folder: folder with coverage files
-        :param str coverage_prefix: prefixed used for making coverage files
-        :param int file_no: number of file from which model is being made
-        :param bool force: if overwrite an existing model
+
+        Args:
+            coverage_folder: folder with coverage files
+            coverage_prefix: prefixed used for making coverage files
+            file_no: number of file from which model is being made
+            force: if overwrite an existing model
         """
         if os.path.exists(self.name):
             if not force:
@@ -159,23 +162,17 @@ class ModelLH:
         tar_arch.close()
 
     def read_chrom(self, chrom):
-        """
-        Read into model specific chromosome
-        """
+        """Read into model specific chromosome."""
         self.chromosomes_models[chrom] = ChromosomeModel(self.name, chrom)
         self.chromosomes_models[chrom].read()
 
     def read_chrom_track(self, chrom, track):
-        """
-        Read into model specific track for chromosome
-        """
+        """Read into model specific track for chromosome."""
         self.chromosomes_models[chrom] = ChromosomeModel(self.name, chrom)
         self.chromosomes_models[chrom].read_track(track)
 
     def clear_chrom(self, chrom):
-        """
-        Clear model for given chromosome
-        """
+        """Clear model for given chromosome."""
         self.chromosomes_models[chrom] = None
 
 
@@ -183,10 +180,12 @@ class ModelLH:
 def main(model_file, coverage_folder, coverage_prefix, file_no=None, force=False):
     """
     Crate likelihood models for all chromosomes
-    :param str model_file: output name
-    :param str coverage_folder: folder with coverage files
-    :param str coverage_prefix: prefix used for making coverage files
-    :param int file_no: number of files used for making coverage tracks
+
+    Args:
+        model_file: output name
+        coverage_folder: folder with coverage files
+        coverage_prefix: prefix used for making coverage files
+        file_no: number of files used for making coverage tracks
     """
     model = ModelLH(model_file)
     model.make(coverage_folder, coverage_prefix, file_no, force)

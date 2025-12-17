@@ -49,13 +49,19 @@ class MaxPooling(nn.Module):
 
 class RegionSet2Vec(nn.Module):
     def __init__(self, region2vec: Region2Vec, pooling: POOLING_TYPES = "mean"):
-        """
-        Initialize the RegionSet2Vec. RegionSet2Vec is a wrapper around the Region2Vec model that allows
-        pooling over a set of regions. This is useful for classification tasks where the input is a set of
-        regions, such as classifying a cell type based on the set of regions that are accessible.
+        """Initialize the RegionSet2Vec model.
 
-        :param Union[Region2Vec, str] region2vec: Either a Region2Vec instance or a path to a huggingface model.
-        :param POOLING_TYPES pooling: The pooling type to use. Either "mean" or "max".
+        RegionSet2Vec is a wrapper around the Region2Vec model that allows pooling over
+        a set of regions. This is useful for classification tasks where the input is a set
+        of regions, such as classifying a cell type based on the set of regions that are
+        accessible.
+
+        Args:
+            region2vec (Union[Region2Vec, str]): Either a Region2Vec instance or a path to a huggingface model.
+            pooling (POOLING_TYPES): The pooling type to use. Either "mean" or "max".
+
+        Raises:
+            ValueError: If pooling type is invalid.
         """
         super().__init__()
 

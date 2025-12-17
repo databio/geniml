@@ -49,9 +49,12 @@ class ScEmbed:
         """
         Initialize ScEmbed.
 
-        :param str model_path: Path to the pre-trained model on huggingface.
-        :param embedding_dim: Dimension of the embedding.
-        :param kwargs: Additional keyword arguments to pass to the model.
+        Args:
+            model_path (str): Path to the pre-trained model on huggingface.
+            tokenizer (Tokenizer): Tokenizer instance for tokenization.
+            device (str): Device to use for computation.
+            pooling_method (POOLING_TYPES): Pooling method for embeddings.
+            **kwargs: Additional keyword arguments to pass to the model.
         """
         super().__init__()
         self.model_path: str = model_path
@@ -76,7 +79,8 @@ class ScEmbed:
         """
         Initialize the tokenizer.
 
-        :param tokenizer: Tokenizer to add to the model.
+        Args:
+            tokenizer (Union[Tokenizer, str]): Tokenizer to add to the model.
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
@@ -92,7 +96,9 @@ class ScEmbed:
         """
         Initialize the core model. This will initialize the model from scratch.
 
-        :param kwargs: Additional keyword arguments to pass to the model.
+        Args:
+            tokenizer: Tokenizer instance for the model.
+            **kwargs: Additional keyword arguments to pass to the model.
         """
         self._init_tokenizer(tokenizer)
 
@@ -105,16 +111,19 @@ class ScEmbed:
     def model(self):
         """
         Get the core Region2Vec model.
+
+        Returns:
+            Region2Vec: The core Region2Vec model.
         """
         return self._model
 
     def add_tokenizer(self, tokenizer: Tokenizer, **kwargs):
         """
-        Add a tokenizer to the model. This should be use when the model
-        is not initialized with a tokenizer.
+        Add a tokenizer to the model. This should be use when the model is not initialized with a tokenizer.
 
-        :param tokenizer: Tokenizer to add to the model.
-        :param kwargs: Additional keyword arguments to pass to the model.
+        Args:
+            tokenizer (Tokenizer): Tokenizer to add to the model.
+            **kwargs: Additional keyword arguments to pass to the model.
         """
         if self._model is not None:
             raise RuntimeError("Cannot add a tokenizer to a model that is already initialized.")
@@ -127,8 +136,10 @@ class ScEmbed:
         """
         Load the model from a checkpoint.
 
-        :param str model_path: Path to the model checkpoint.
-        :param str vocab_path: Path to the vocabulary file.
+        Args:
+            model_path (str): Path to the model checkpoint.
+            vocab_path (str): Path to the vocabulary file.
+            config_path (str): Path to the config file.
         """
         _model, config = load_local_region2vec_model(model_path, config_path)
         tokenizer = Tokenizer(vocab_path)
@@ -148,14 +159,17 @@ class ScEmbed:
         **kwargs,
     ):
         """
-        Initialize the model from a huggingface model. This uses the model path
-        to download the necessary files and then "build itself up" from those. This
-        includes both the actual model and the tokenizer.
+        Initialize the model from a huggingface model.
 
-        :param str model_path: Path to the pre-trained model on huggingface.
-        :param str model_file_name: Name of the model file.
-        :param str universe_file_name: Name of the universe file.
-        :param kwargs: Additional keyword arguments to pass to the hf download function.
+        This uses the model path to download the necessary files and then "build itself up" from those.
+        This includes both the actual model and the tokenizer.
+
+        Args:
+            model_path (str): Path to the pre-trained model on huggingface.
+            model_file_name (str): Name of the model file.
+            universe_file_name (str): Name of the universe file.
+            config_file_name (str): Name of the config file.
+            **kwargs: Additional keyword arguments to pass to the hf download function.
         """
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
         universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
@@ -174,12 +188,14 @@ class ScEmbed:
         """
         Load the model from a set of files that were exported using the export function.
 
-        :param str path_to_files: Path to the directory containing the files.
-        :param str model_file_name: Name of the model file.
-        :param str universe_file_name: Name of the universe file.
-        :param str config_file_name: Name of the config file.
+        Args:
+            path_to_files (str): Path to the directory containing the files.
+            model_file_name (str): Name of the model file.
+            universe_file_name (str): Name of the universe file.
+            config_file_name (str): Name of the config file.
 
-        :return: The loaded model.
+        Returns:
+            ScEmbed: The loaded model.
         """
         model_file_path = os.path.join(path_to_files, model_file_name)
         universe_file_path = os.path.join(path_to_files, universe_file_name)
@@ -206,17 +222,19 @@ class ScEmbed:
         """
         Train the model.
 
-        :param Region2VecDataset data: Data to train on. This is a dataset of tokens.
-        :param int window_size: Window size for the model.
-        :param int epochs: Number of epochs to train for.
-        :param int min_count: Minimum count for a region to be included in the vocabulary.
-        :param int num_cpus: Number of cpus to use for training.
-        :param int seed: Seed to use for training.
-        :param str save_checkpoint_path: Path to save the model checkpoints to.
-        :param dict gensim_params: Additional parameters to pass to the gensim model.
-        :param str load_from_checkpoint: Path to a checkpoint to load from.
+        Args:
+            dataset (Region2VecDataset): Data to train on. This is a dataset of tokens.
+            window_size (int): Window size for the model.
+            epochs (int): Number of epochs to train for.
+            min_count (int): Minimum count for a region to be included in the vocabulary.
+            num_cpus (int): Number of cpus to use for training.
+            seed (int): Seed to use for training.
+            save_checkpoint_path (str): Path to save the model checkpoints to.
+            gensim_params (dict): Additional parameters to pass to the gensim model.
+            load_from_checkpoint (str): Path to a checkpoint to load from.
 
-        :return bool: Whether or not the model was trained.
+        Returns:
+            bool: Whether or not the model was trained.
         """
 
         # validate a model exists
@@ -259,11 +277,15 @@ class ScEmbed:
         config_file: str = CONFIG_FILE_NAME,
     ):
         """
-        Function to facilitate exporting the model in a way that can
-        be directly uploaded to huggingface. This exports the model
-        weights and the vocabulary.
+        Function to facilitate exporting the model in a way that can be directly uploaded to huggingface.
 
-        :param str path: Path to export the model to.
+        This exports the model weights and the vocabulary.
+
+        Args:
+            path (str): Path to export the model to.
+            checkpoint_file (str): Name of the checkpoint file.
+            universe_file (str): Name of the universe file.
+            config_file (str): Name of the config file.
         """
         # make sure the model is trained
         if not self.trained:
@@ -282,10 +304,12 @@ class ScEmbed:
         """
         Get the vector for a region.
 
-        :param Region region: Region to get the vector for.
-        :param str pooling: Pooling type to use.
+        Args:
+            regions (Union[sc.AnnData, str]): Region to get the vector for.
+            pooling (POOLING_TYPES): Pooling type to use.
 
-        :return np.ndarray: Vector for the region.
+        Returns:
+            np.ndarray: Vector for the region.
         """
         # allow the user to override the pooling method
         pooling = pooling or self.pooling_method

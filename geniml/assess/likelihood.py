@@ -9,10 +9,11 @@ from .utils import check_if_uni_flexible, check_if_uni_sorted
 
 class LhModel:
     def __init__(self, model, cove):
-        """
-        Object with combined information about lh model and coverage
-        :param ndarray model: lh model array
-        :param ndarray cove: coverage array
+        """Object with combined information about lh model and coverage.
+
+        Args:
+            model (ndarray): lh model array
+            cove (ndarray): coverage array
         """
         self.model = model
         self.cove = cove
@@ -31,21 +32,20 @@ def calc_likelihood_hard(
     s_index,
     e_index=None,
 ):
-    """
-    Calculate likelihood of universe for given type of model
-    To be used with binomial model
-    :param str  universe: path to universe file
-    :param list chroms: list of chromosomes present in model
-    :param ModelLH model_lh: likelihood model
-    :param coverage_prefix: prefix used in uniwig for creating coverage
-    :param coverage_folder: path to a folder with genome coverage by tracks
-    :param str name: suffix of model file name, which contains information
-     about model type
-    :param int s_index: from which position in universe line take assess region
-     start position
-    :param int e_index: from which position in universe line take assess region
-     end position
-    :return float: likelihood of universe for given model
+    """Calculate likelihood of universe for given type of model. To be used with binomial model.
+
+    Args:
+        universe (str): path to universe file
+        chroms (list): list of chromosomes present in model
+        model_lh (ModelLH): likelihood model
+        coverage_folder: path to a folder with genome coverage by tracks
+        coverage_prefix: prefix used in uniwig for creating coverage
+        name (str): suffix of model file name, which contains information about model type
+        s_index (int): from which position in universe line take assess region start position
+        e_index (int): from which position in universe line take assess region end position
+
+    Returns:
+        float: likelihood of universe for given model
     """
     current_chrom = ""
     missing_chrom = ""
@@ -107,14 +107,16 @@ def calc_likelihood_hard(
 
 
 def hard_universe_likelihood(model, universe, coverage_folder, coverage_prefix):
-    """
-    Calculate likelihood of hard universe based on core, start,
-    end coverage model
-    :param str model: path to file containing model
-    :param str universe: path to universe
-    :param coverage_prefix: prefix used in uniwig for creating coverage
-    :param coverage_folder: path to a folder with genome coverage by tracks
-    :return float: likelihood
+    """Calculate likelihood of hard universe based on core, start, end coverage model.
+
+    Args:
+        model (str): path to file containing model
+        universe (str): path to universe
+        coverage_folder: path to a folder with genome coverage by tracks
+        coverage_prefix: prefix used in uniwig for creating coverage
+
+    Returns:
+        float: likelihood
     """
     check_if_uni_sorted(universe)
     model_lh = ModelLH(model)
@@ -139,13 +141,16 @@ def hard_universe_likelihood(model, universe, coverage_folder, coverage_prefix):
 
 
 def likelihood_only_core(model_file, universe, coverage_folder, coverage_prefix):
-    """
-    Calculate likelihood of universe based only on core coverage model
-    :param str model_file: path to name containing model
-    :param str universe: path to universe
-    :param coverage_prefix: prefix used in uniwig for creating coverage
-    :param coverage_folder: path to a folder with genome coverage by tracks
-    :return float: likelihood
+    """Calculate likelihood of universe based only on core coverage model.
+
+    Args:
+        model_file (str): path to name containing model
+        universe (str): path to universe
+        coverage_folder: path to a folder with genome coverage by tracks
+        coverage_prefix: prefix used in uniwig for creating coverage
+
+    Returns:
+        float: likelihood
     """
     check_if_uni_sorted(universe)
     model_lh = ModelLH(model_file)
@@ -174,15 +179,18 @@ def background_likelihood(start, end, model_start, model_cove, model_end):
 
 
 def weigh_livelihood(start, end, model_process, model_cove, model_out, reverse):
-    """
-    Calculate weighted likelihood of flexible part of the region
-    :param int start: start of the region
-    :param int end: end of the region
-    :param array model_process: model for analyzed type of flexible region
-    :param array model_cove: model for coverage
-    :param array model_out: model for flexible region that is not being analyzed
-    :param bool reverse: if model_process corespondents to end we have to reverse the weighs
-    :return float: likelihood of flexible part of the region
+    """Calculate weighted likelihood of flexible part of the region.
+
+    Args:
+        start (int): start of the region
+        end (int): end of the region
+        model_process (array): model for analyzed type of flexible region
+        model_cove (array): model for coverage
+        model_out (array): model for flexible region that is not being analyzed
+        reverse (bool): if model_process corespondents to end we have to reverse the weighs
+
+    Returns:
+        float: likelihood of flexible part of the region
     """
     e_w = 1 / (end - start)  # weights for processed model
     c_w = np.linspace(start=e_w, stop=1, num=(end - start))  # weights for core in processed region
@@ -228,14 +236,17 @@ def read_coverage(cove_folder, cove_prefix, current_chrom):
 def likelihood_flexible_universe(
     model_file, universe, cove_folder, cove_prefix, save_peak_input=False
 ):
-    """
-    Likelihood of given universe under the model
-    :param str model_file: path to file with lh model
-    :param str universe: path to universe
-    :param cove_folder: path to a folder with genome coverage by tracks
-    :param cove_prefix: prefix used in uniwig for creating coverage
-    :param bool save_peak_input: whether to save universe with each peak lh
-    :return float: lh of the flexible universe
+    """Likelihood of given universe under the model.
+
+    Args:
+        model_file (str): path to file with lh model
+        universe (str): path to universe
+        cove_folder: path to a folder with genome coverage by tracks
+        cove_prefix: prefix used in uniwig for creating coverage
+        save_peak_input (bool): whether to save universe with each peak lh
+
+    Returns:
+        float: lh of the flexible universe
     """
     current_chrom = ""
     missing_chrom = ""

@@ -54,12 +54,14 @@ class Region2VecExModel(ExModel):
         pooling_method: POOLING_TYPES = "mean",
         **kwargs,
     ):
-        """
-        Initialize Region2VecExModel.
+        """Initialize Region2VecExModel.
 
-        :param str model_path: Path to the pre-trained model on huggingface.
-        :param embedding_dim: Dimension of the embedding.
-        :param kwargs: Additional keyword arguments to pass to the model.
+        Args:
+            model_path (str): Path to the pre-trained model on huggingface.
+            tokenizer (Tokenizer): Optional tokenizer to use.
+            device (str): Device to use for the model.
+            pooling_method (POOLING_TYPES): Pooling method to use.
+            **kwargs: Additional keyword arguments to pass to the model.
         """
         super().__init__()
         self.model_path: str = model_path
@@ -81,10 +83,14 @@ class Region2VecExModel(ExModel):
         )
 
     def _init_tokenizer(self, tokenizer: Union[Tokenizer, str]):
-        """
-        Initialize the tokenizer.
+        """Initialize the tokenizer.
 
-        :param tokenizer: Tokenizer to initialize.
+        Args:
+            tokenizer (Union[Tokenizer, str]): Tokenizer to initialize or path to tokenizer.
+
+        Raises:
+            ValueError: If tokenizer path does not exist.
+            TypeError: If tokenizer is not a valid type.
         """
         if isinstance(tokenizer, str):
             if os.path.exists(tokenizer):
@@ -99,10 +105,11 @@ class Region2VecExModel(ExModel):
             raise TypeError("tokenizer must be a path to a bed file or an Tokenizer object.")
 
     def _init_model(self, tokenizer, **kwargs):
-        """
-        Initialize the core model. This will initialize the model from scratch.
+        """Initialize the core model from scratch.
 
-        :param kwargs: Additional keyword arguments to pass to the model.
+        Args:
+            tokenizer: The tokenizer to use for the model.
+            **kwargs: Additional keyword arguments to pass to the model.
         """
         self._init_tokenizer(tokenizer)
         padding_idx = self.tokenizer.pad_token_id
@@ -114,18 +121,24 @@ class Region2VecExModel(ExModel):
 
     @property
     def model(self):
-        """
-        Get the core Region2Vec model.
+        """Get the core Region2Vec model.
+
+        Returns:
+            Region2Vec: The core model.
         """
         return self._model
 
     def add_tokenizer(self, tokenizer: Tokenizer, **kwargs):
-        """
-        Add a tokenizer to the model. This should be use when the model
-        is not initialized with a tokenizer.
+        """Add a tokenizer to the model.
 
-        :param tokenizer: Tokenizer to add to the model.
-        :param kwargs: Additional keyword arguments to pass to the model.
+        This should be used when the model is not initialized with a tokenizer.
+
+        Args:
+            tokenizer (Tokenizer): Tokenizer to add to the model.
+            **kwargs: Additional keyword arguments to pass to the model.
+
+        Raises:
+            RuntimeError: If the model is already initialized.
         """
         if self._model is not None:
             raise RuntimeError("Cannot add a tokenizer to a model that is already initialized.")
@@ -135,11 +148,12 @@ class Region2VecExModel(ExModel):
             self._init_model(**kwargs)
 
     def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
-        """
-        Load the model from a checkpoint.
+        """Load the model from a checkpoint.
 
-        :param str model_path: Path to the model checkpoint.
-        :param str vocab_path: Path to the vocabulary file.
+        Args:
+            model_path (str): Path to the model checkpoint.
+            vocab_path (str): Path to the vocabulary file.
+            config_path (str): Path to the config file.
         """
         tokenizer = Tokenizer(vocab_path)
 
@@ -165,15 +179,17 @@ class Region2VecExModel(ExModel):
         config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
     ):
-        """
-        Initialize the model from a huggingface model. This uses the model path
-        to download the necessary files and then "build itself up" from those. This
-        includes both the actual model and the tokenizer.
+        """Initialize the model from a huggingface model.
 
-        :param str model_path: Path to the pre-trained model on huggingface.
-        :param str model_file_name: Name of the model file.
-        :param str universe_file_name: Name of the universe file.
-        :param kwargs: Additional keyword arguments to pass to the hf download function.
+        This uses the model path to download the necessary files and then "build itself
+        up" from those. This includes both the actual model and the tokenizer.
+
+        Args:
+            model_path (str): Path to the pre-trained model on huggingface.
+            model_file_name (str): Name of the model file.
+            universe_file_name (str): Name of the universe file.
+            config_file_name (str): Name of the config file.
+            **kwargs: Additional keyword arguments to pass to the hf download function.
         """
         model_file_path = hf_hub_download(model_path, model_file_name, **kwargs)
         universe_path = hf_hub_download(model_path, universe_file_name, **kwargs)
@@ -189,12 +205,16 @@ class Region2VecExModel(ExModel):
         universe_file_name: str = UNIVERSE_FILE_NAME,
         config_file_name: str = CONFIG_FILE_NAME,
     ) -> "Region2VecExModel":
-        """
-        Load the model from a set of files that were exported using the export function.
+        """Load the model from a set of files that were exported using the export function.
 
-        :param str path_to_files: Path to the directory containing the files.
-        :param str model_file_name: Name of the model file.
-        :param str universe_file_name: Name of the universe file.
+        Args:
+            path_to_files (str): Path to the directory containing the files.
+            model_file_name (str): Name of the model file.
+            universe_file_name (str): Name of the universe file.
+            config_file_name (str): Name of the config file.
+
+        Returns:
+            Region2VecExModel: The loaded model instance.
         """
         model_file_path = os.path.join(path_to_files, model_file_name)
         universe_file_path = os.path.join(path_to_files, universe_file_name)
@@ -209,12 +229,20 @@ class Region2VecExModel(ExModel):
     def _validate_data_for_training(
         self, data: Union[List[RegionSet], List[str], List[List[Region]]]
     ) -> List[RegionSet]:
-        """
-        Validate the data for training. This will return a list of RegionSets if the data is valid.
+        """Validate the data for training.
 
-        :param Union[List[RegionSet], List[str]] data: List of data to train on. This is either
-                                                       a list of RegionSets or a list of paths to bed files.
-        :return: List of RegionSets.
+        This will return a list of RegionSets if the data is valid.
+
+        Args:
+            data (Union[List[RegionSet], List[str], List[List[Region]]]): List of data to train on.
+                This is either a list of RegionSets, a list of paths to bed files, or a list of Region lists.
+
+        Returns:
+            List[RegionSet]: The validated RegionSets.
+
+        Raises:
+            TypeError: If data is not a list.
+            ValueError: If data is empty.
         """
         if not isinstance(data, list):
             raise TypeError("data must be a list or RegionSets or a list of paths to bed files.")
@@ -241,20 +269,24 @@ class Region2VecExModel(ExModel):
         gensim_params: dict = {},
         load_from_checkpoint: str = None,
     ) -> bool:
-        """
-        Train the model.
+        """Train the model.
 
-        :param dataset Region2VecDataset: Dataset to train on.
-        :param int window_size: Window size for the model.
-        :param int epochs: Number of epochs to train for.
-        :param int min_count: Minimum count for a region to be included in the vocabulary.
-        :param int num_cpus: Number of cpus to use for training.
-        :param int seed: Seed to use for training.
-        :param str save_checkpoint_path: Path to save the model checkpoints to.
-        :param dict gensim_params: Additional parameters to pass to the gensim model.
-        :param str load_from_checkpoint: Path to a checkpoint to load from.
+        Args:
+            dataset (Region2VecDataset): Dataset to train on.
+            window_size (int): Window size for the model.
+            epochs (int): Number of epochs to train for.
+            min_count (int): Minimum count for a region to be included in the vocabulary.
+            num_cpus (int): Number of cpus to use for training.
+            seed (int): Seed to use for training.
+            save_checkpoint_path (str): Path to save the model checkpoints to.
+            gensim_params (dict): Additional parameters to pass to the gensim model.
+            load_from_checkpoint (str): Path to a checkpoint to load from.
 
-        :return np.ndarray: Loss values for each epoch.
+        Returns:
+            bool: True if training was successful.
+
+        Raises:
+            RuntimeError: If model has not been initialized.
         """
         # validate a model exists
         if self._model is None:
@@ -295,12 +327,16 @@ class Region2VecExModel(ExModel):
         universe_file: str = UNIVERSE_FILE_NAME,
         config_file: str = CONFIG_FILE_NAME,
     ):
-        """
-        Function to facilitate exporting the model in a way that can
-        be directly uploaded to huggingface. This exports the model
-        weights and the vocabulary.
+        """Export the model for huggingface upload.
 
-        :param str path: Path to export the model to.
+        This exports the model weights and the vocabulary in a format that can be
+        directly uploaded to huggingface.
+
+        Args:
+            path (str): Path to export the model to.
+            checkpoint_file (str): Name of the checkpoint file.
+            universe_file (str): Name of the universe file.
+            config_file (str): Name of the config file.
         """
 
         export_region2vec_model(
@@ -318,13 +354,20 @@ class Region2VecExModel(ExModel):
         pooling: POOLING_TYPES = None,
         batch_size: Optional[int] = 64,  # <-- new arg
     ) -> np.ndarray:
-        """
-        Vectorise one or many regions.
+        """Vectorise one or many regions.
 
-        :param regions: Region(s) to encode.
-        :param pooling: "mean" or "max" token-pooling.
-        :param batch_size: How many regions to pad/encode at once
-                           (None or 0 ➜ process all in one go).
+        Args:
+            regions (Union[str, Region, Sequence[Region], RegionSet, GRegionSet]): Region(s) to encode.
+            pooling (POOLING_TYPES): "mean" or "max" token-pooling.
+            batch_size (Optional[int]): How many regions to pad/encode at once.
+                None or 0 processes all in one go.
+
+        Returns:
+            np.ndarray: The encoded region vectors.
+
+        Raises:
+            TypeError: If regions are not valid types.
+            ValueError: If pooling method is invalid.
         """
         # ---------- input normalisation ----------
         pooling = pooling or self.pooling_method
