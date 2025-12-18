@@ -1,23 +1,22 @@
 import json
 import os.path
 import pickle
+import warnings
 from typing import Dict, List, Union
 
-import hnswlib
-import yaml
+try:
+    import hnswlib
 
+    DEP_HNSWLIB = True
+except ImportError:
+    warnings.warn(
+        "HNSWBackend requires hnswlib. Install hnswlib via 'pip install hnswlib' Warning: hnswlib needs Python<=3.11"
+    )
+    DEP_HNSWLIB = False
+
+import yaml
 from ... import _LOGGER
 
-DEP_HNSWLIB = True
-# try:
-#
-#
-#
-# except ImportError:
-#     DEP_HNSWLIB = False
-#     _LOGGER.error(
-#         "HNSWBackend requires hnswlib. Install hnswlib, or ignore this if you don't need HNSWBackend"
-#     )
 
 import numpy as np
 
@@ -31,13 +30,6 @@ from geniml.search.const import (
 
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
-
-# if not DEP_HNSWLIB:
-#
-#     class HNSWBackend(EmSearchBackend):
-#         pass
-#
-# else:
 
 
 class HNSWBackend(EmSearchBackend):

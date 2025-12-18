@@ -5,6 +5,7 @@ import pytest
 from geniml.search.backends import HNSWBackend
 from geniml.text2bednn.text2bednn import Vec2VecFNN
 from geniml.text2bednn.utils import metadata_dict_from_csv
+from geniml.search.backends.filebackend import DEP_HNSWLIB
 
 DATA_FOLDER_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data"
@@ -75,6 +76,9 @@ def test_metadata_dict(csv_path, col_names):
     assert metadata_dict1 == metadata_dict2
 
 
+@pytest.mark.skipif(
+    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
+)
 def test_vec_pair(nl_payloads, bed_payloads, tmp_path_factory):
     """
     Test extracting vector pairs for training/validating from backends
