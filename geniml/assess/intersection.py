@@ -22,12 +22,13 @@ def chrom_cmp(a, b):
 
 
 def relationship_helper(region_a, region_b, only_in, overlap):
-    """For two region calculate their overlap; for earlier region
-    calculate how many base pair only in it
-    :param [int, int] region_a: region that starts first
-    :param [int, int] region_b: region that starts second
-    :param int only_in: number of positions only in a so far
-    :param int overlap: number of overlapping so far
+    """For two region calculate their overlap; for earlier region calculate how many base pair only in it.
+
+    Args:
+        region_a ([int, int]): region that starts first
+        region_b ([int, int]): region that starts second
+        only_in (int): number of positions only in a so far
+        overlap (int): number of overlapping so far
     """
     if region_b[0] <= region_a[1]:
         only_in += region_b[0] - region_a[0]
@@ -61,19 +62,20 @@ def two_region_intersection_diff(
     waiting_d,
     waiting_q,
 ):
-    """
-    Check mutual position of two regions and calculate intersection and difference of two regions
-    :param list region_d: region from universe
-    :param list region_q: region from query
-    :param int only_in_d: number of base pair only in universe
-    :param int only_in_q: number of base pair only in query
-    :param bool inside_d: whether there is still part of the region from universe to analyse
-    :param bool inside_q: whether there is still part of the region from query to analyse
-    :param int overlap: size of overlap
-    :param int start_d: start position of currently analyzed universe region
-    :param int start_q: start position of currently analyzed query region
-    :param bool waiting_d: whether waiting for the query to finish chromosome
-    :param bool waiting_q: whether waiting for the universe to finish chromosome
+    """Check mutual position of two regions and calculate intersection and difference of two regions.
+
+    Args:
+        region_d (list): region from universe
+        region_q (list): region from query
+        only_in_d (int): number of base pair only in universe
+        only_in_q (int): number of base pair only in query
+        inside_d (bool): whether there is still part of the region from universe to analyse
+        inside_q (bool): whether there is still part of the region from query to analyse
+        overlap (int): size of overlap
+        start_d (int): start position of currently analyzed universe region
+        start_q (int): start position of currently analyzed query region
+        waiting_d (bool): whether waiting for the query to finish chromosome
+        waiting_q (bool): whether waiting for the universe to finish chromosome
     """
     if waiting_q:
         only_in_d += region_d[1] - region_d[0]
@@ -114,12 +116,15 @@ def read_in_new_line(region, start, chrom, inside, waiting, lines, c_chrom, not_
 
 
 def calc_diff_intersection(db, folder, query):
-    """
-    Difference and overlap of two files on base pair level
-    :param str db: path to universe file
-    :param str folder: path to folder with query file
-    :param str query: query file name
-    :return str; int; int; int: file name; bp only in universe; bp only in query; overlap in bp
+    """Difference and overlap of two files on base pair level.
+
+    Args:
+        db (str): path to universe file
+        folder (str): path to folder with query file
+        query (str): query file name
+
+    Returns:
+        tuple: (str, int, int, int) - file name; bp only in universe; bp only in query; overlap in bp
     """
     only_in_d, only_in_q, overlap = 0, 0, 0
     inside_d, inside_q = False, False  # inside a region
@@ -213,17 +218,20 @@ def run_intersection(
     universe,
     no_workers,
 ):
-    """
-    Calculate the base pair intersection of universe and group of files
-    :param str folder: path to folder containing query files
-    :param str file_list: path to file containing list of query files
-    :param str universe: path to universe file
-    :param int no_workers: number of parallel processes
-    :param str save_to_file: whether to save median of calculated distances for each file
-    :param str folder_out: output folder
-    :param str pref: prefix used for saving
-    :return float; float: mean of fractions of intersection of file and universe divided by universe size;
-    mean of fractions of intersection of file and universe divided by file size
+    """Calculate the base pair intersection of universe and group of files.
+
+    Args:
+        folder (str): path to folder containing query files
+        file_list (str): path to file containing list of query files
+        universe (str): path to universe file
+        no_workers (int): number of parallel processes
+        save_to_file (str): whether to save median of calculated distances for each file
+        folder_out (str): output folder
+        pref (str): prefix used for saving
+
+    Returns:
+        tuple: (float, float) - mean of fractions of intersection of file and universe divided by universe size;
+            mean of fractions of intersection of file and universe divided by file size
     """
     check_if_uni_sorted(universe)
     with open(file_list) as f:

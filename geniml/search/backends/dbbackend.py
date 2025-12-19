@@ -30,14 +30,17 @@ def queries_to_requests(
     with_vectors: bool = True,
     offset: int = 0,
 ) -> List[QueryRequest]:
-    """
-    Prepare all search requests for each query vector in a batch
+    """Prepare all search requests for each query vector in a batch.
 
-    :param queries: see docstring of QdrantBackend.batch_search
-    :param limit:
-    :param with_payload:
-    :param with_vectors:
-    :param offset:
+    Args:
+        queries: see docstring of QdrantBackend.batch_search()
+        limit: number of returned results
+        with_payload: whether payload is included in the result
+        with_vectors: whether the stored vector is included in the result
+        offset: the offset of the search results
+
+    Returns:
+        A list of QueryRequest objects for each query vector.
     """
 
     requests = []
@@ -59,13 +62,15 @@ def queries_to_requests(
 
 
 def results_processing(search_results, with_payload: bool, with_vectors: bool) -> List[Dict]:
-    """
-    Process the search result into unified format: list of dictionaries
+    """Process search results into a unified dictionary format.
 
-    :param search_results: result of qdrant client similarity search
-    :type search_results: search result of qdrant client
-    :param with_payload: see docstring of QdrantBackend.search
-    :param with_vectors:
+    Args:
+        search_results: result of qdrant client similarity search
+        with_payload: whether payload is included in the result
+        with_vectors: whether the stored vector is included in the result
+
+    Returns:
+        A list of dictionaries containing the processed search results.
     """
     output_list = []
     for result in search_results.points:
@@ -84,33 +89,30 @@ class QdrantBackend(EmSearchBackend):
 
     def __init__(
         self,
+        qdrant_client: QdrantClient,
         dim: int = DEFAULT_DIM,
         dist: Distance = DEFAULT_QDRANT_DIST,
         collection: str = DEFAULT_COLLECTION_NAME,
-        qdrant_host: str = DEFAULT_QDRANT_HOST,
-        qdrant_port: int = DEFAULT_QDRANT_PORT,
-        qdrant_api_key: str = None,
     ):
-        """
+        """Initialize QdrantBackend connection.
+
         Connect to Qdrant on commandline first:
         (Ubuntu Linux terminal)
         sudo docker run -p 6333:6333     -v $(pwd)/qdrant_storage:/qdrant/storage     qdrant/qdrant
 
+        :param qdrant_client: an instance of QdrantClient that is already connected to a Qdrant server
+        :param dim: dimension of the vectors to be stored
+        :param dist: distance metric used in the collection
         :param collection: name of collection
-        :param qdrant_host: host of qdrant server
-        :param qdrant_port: port of qdrant server
-        :param qdrant_api_key: api key
+
         """
         super().__init__()
         self.collection = collection
         self.config = VectorParams(size=dim, distance=dist)
-        self.url = os.environ.get("QDRANT_HOST", qdrant_host)
-        self.port = os.environ.get("QDRANT_PORT", qdrant_port)
-        self.qd_client = QdrantClient(
-            url=self.url,
-            port=self.port,
-            api_key=os.environ.get("QDRANT_API_KEY", qdrant_api_key),
-        )
+
+        self.qd_client = qdrant_client
+        if not self.qd_client:
+            raise ValueError("A valid QdrantClient instance must be provided.")
 
         # Create collection only if it does not exist
         try:
@@ -127,19 +129,55 @@ class QdrantBackend(EmSearchBackend):
                     quantization_config=DEFAULT_QUANTIZATION_CONFIG,
                 )
 
+    @classmethod
+    def from_credentials(
+        cls,
+        dim: int = DEFAULT_DIM,
+        dist: Distance = DEFAULT_QDRANT_DIST,
+        collection: str = DEFAULT_COLLECTION_NAME,
+        qdrant_host: str = DEFAULT_QDRANT_HOST,
+        qdrant_port: int = DEFAULT_QDRANT_PORT,
+        qdrant_api_key: str = None,
+    ) -> "QdrantBackend":
+        """
+        Initialize QdrantBackend from connection parameters.
+
+        Args:
+            dim: dimension of the vectors to be stored
+            dist: distance metric used in the collection
+            collection: collection name
+            qdrant_host: host of the qdrant server
+            qdrant_port: port of the qdrant server
+            qdrant_api_key: api key for the qdrant server if needed
+
+        Returns:
+            QdrantBackend instance
+        """
+
+        qd_client = QdrantClient(
+            url=os.environ.get("QDRANT_HOST", qdrant_host),
+            port=os.environ.get("QDRANT_PORT", qdrant_port),
+            api_key=os.environ.get("QDRANT_API_KEY", qdrant_api_key),
+        )
+        return cls(
+            qdrant_client=qd_client,
+            dim=dim,
+            dist=dist,
+            collection=collection,
+        )
+
     def load(
         self,
         vectors: np.ndarray,
         ids: Union[List[str], None] = None,
         payloads: Union[List[Dict[str, str]], None] = None,
     ):
-        """
-        Upload vectors and their labels into qdrant storage.
+        """Upload vectors and their labels into qdrant storage.
 
-        :param vectors: embedding vectors, a np.ndarray with shape of (n, <vector size>)
-        :param ids: list of n point ids, or None to generate ids automatically
-        :param payloads: optional list of n dictionaries that contain vector metadata
-        :return:
+        Args:
+            vectors: embedding vectors, a np.ndarray with shape of (n, <vector size>)
+            ids: list of n point ids, or None to generate ids automatically
+            payloads: optional list of n dictionaries that contain vector metadata
         """
 
         if not ids:
@@ -168,23 +206,23 @@ class QdrantBackend(EmSearchBackend):
         List[Dict[str, Union[int, float, Dict[str, str], List[float]]]],
         List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]],
     ]:
-        """
-         with a given query vector, get k nearest neighbors from vectors in the collection
+        """Get k nearest neighbors from vectors in the collection.
 
-        :param query: a vector to search
-        :param limit: number of returned results
-        :param with_payload: whether payload is included in the result
-        :param with_vectors: whether the stored vector is included in the result
-        :param offset: the offset of the search results
-        :return: a list of dictionary that contains the search results in this format:
-        {
-            "id": <id>
-            "score": <score>
-            "payload": {
-                <information of the vector>
+        Args:
+            query: a vector to search
+            limit: number of returned results
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+
+        Returns:
+            A list of dictionaries containing search results in this format:
+            {
+                "id": <id>,
+                "score": <score>,
+                "payload": {<information of the vector>},
+                "vector": [<the vector>]
             }
-            "vector": [<the vector>]
-        }
         """
         if query.ndim > 1:
             return self.batch_search(query, limit, with_payload, with_vectors, offset)
@@ -209,15 +247,17 @@ class QdrantBackend(EmSearchBackend):
         with_vectors: bool = True,
         offset: int = 0,
     ) -> List[List[Dict[str, Union[int, float, Dict[str, str], List[float]]]]]:
-        """
+        """Perform batch search with multiple query vectors.
 
-        :param queries: multiple search vectors, np.ndarray with shape of (n, dim)
-        :param limit: see docstring of def search
-        :type limit:
-        :param with_payload:
-        :param with_vectors:
-        :param offset:
-        :return: results of all search requests with each vector in queries
+        Args:
+            queries: multiple search vectors, np.ndarray with shape of (n, dim)
+            limit: see docstring of search()
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+
+        Returns:
+            Results of all search requests, one list per query vector.
         """
         output_list = []
         # build all search requests
@@ -234,8 +274,10 @@ class QdrantBackend(EmSearchBackend):
         return output_list
 
     def __len__(self) -> int:
-        """
-        Return the number of embeddings in the backend
+        """Return the number of embeddings in the backend.
+
+        Returns:
+            The number of embeddings in the backend.
         """
         return self.qd_client.get_collection(collection_name=self.collection).vectors_count
 
@@ -245,13 +287,15 @@ class QdrantBackend(EmSearchBackend):
         Dict[str, Union[int, str, List[float], Dict[str, str]]],
         List[Dict[str, Union[int, str, List[float], Dict[str, str]]]],
     ]:
-        """
-        With a given list of storage ids, return the information of these vectors
+        """Return the information of vectors for given storage ids.
 
-        :param ids: list of ids, or a single id
-        :param with_vectors:  whether the vectors themselves will also be returned in the output
-        :return: if ids is one id, a dictionary similar to the output of search() will be returned, without "score";
-        if ids is a list, a list of dictionaries will be returned
+        Args:
+            ids: list of ids, or a single id
+            with_vectors: whether the vectors themselves will also be returned in the output
+
+        Returns:
+            If ids is one id, a dictionary similar to the output of search() without "score".
+            If ids is a list, a list of dictionaries will be returned.
         """
         if not isinstance(ids, list):
             # retrieve() only takes iterable input

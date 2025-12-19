@@ -38,9 +38,10 @@ class Region:
         """
         Instantiate a Region object.
 
-        :param str chr: chromosome
-        :param int start: start position
-        :param int stop: stop position
+        Args:
+            chr (str): chromosome
+            start (int): start position
+            stop (int): stop position
         """
         warnings.warn(
             "Region is deprecated and will be removed in future versions.", DeprecationWarning
@@ -63,8 +64,9 @@ class RegionSet:
         If you specify `backed` as True, then the bed file will not be loaded into memory. This is useful for large
         bed files. You can still iterate over the regions, but you cannot index into them.
 
-        :param regions: path, or url to bed file or list of Region objects
-        :param backed: whether to load the bed file into memory or not [Default: False]
+        Args:
+            regions: path, or url to bed file or list of Region objects
+            backed (bool): whether to load the bed file into memory or not. Defaults to False.
         """
         warnings.warn(
             "RegionSet is deprecated and will be removed in future versions. Use RegionSet class from Gtars",
@@ -144,10 +146,13 @@ class RegionSet:
 
     def _read_gzipped_file(self, file_path: str) -> pd.DataFrame:
         """
-        Read a gzipped file into a pandas dataframe
+        Read a gzipped file into a pandas dataframe.
 
-        :param file_path: path to gzipped file
-        :return: pandas dataframe
+        Args:
+            file_path (str): path to gzipped file
+
+        Returns:
+            pd.DataFrame: pandas dataframe
         """
         return self._read_file_pd(
             file_path,
@@ -159,9 +164,10 @@ class RegionSet:
 
     def _read_file_pd(self, *args, **kwargs) -> pd.DataFrame:
         """
-        Read bed file into a pandas DataFrame, and skip header rows if needed
+        Read bed file into a pandas DataFrame, and skip header rows if needed.
 
-        :return: pandas dataframe
+        Returns:
+            pd.DataFrame: pandas dataframe
         """
         max_rows = 5
         row_count = 0
@@ -254,9 +260,10 @@ class RegionSet:
 
     def to_granges(self) -> genomicranges.GenomicRanges:
         """
-        Return GenomicRanges contained in this BED file
+        Return GenomicRanges contained in this BED file.
 
-        :return: GenomicRanges object
+        Returns:
+            genomicranges.GenomicRanges: GenomicRanges object
         """
 
         seqnames, starts, ends = zip(
@@ -271,9 +278,10 @@ class RegionSet:
 
     def compute_bed_identifier(self) -> str:
         """
-        Return bed file identifier. If it is not set, compute one
+        Return bed file identifier. If it is not set, compute one.
 
-        :return: the identifier of BED file (str)
+        Returns:
+            str: the identifier of BED file
         """
         if self._identifier is not None:
             return self._identifier
@@ -326,9 +334,12 @@ class BedSet:
         identifier: str = None,
     ):
         """
-        :param region_sets: list of BED file paths, RegionSet, or 2-dimension list of Region [Default: None - empty BedSet]
-        :param file_path: path to the .txt file with identifier of all BED files in it
-        :param identifier: the identifier of the BED set
+        Initialize a BedSet object.
+
+        Args:
+            region_sets: list of BED file paths, RegionSet, or 2-dimension list of Region. Defaults to None (empty BedSet).
+            file_path (str): path to the .txt file with identifier of all BED files in it
+            identifier (str): the identifier of the BED set
         """
 
         if isinstance(region_sets, list):
@@ -368,12 +379,12 @@ class BedSet:
 
     def add(self, bedfile: RegionSet) -> NoReturn:
         """
-        Add a BED file to the BED set
+        Add a BED file to the BED set.
 
-        !Warning: if new bedfile will be added, bedSet identifier will be changed!
+        Warning: if new bedfile will be added, bedSet identifier will be changed!
 
-        :param bedfile: RegionSet instance, that should be added to the bedSet
-        :return: NoReturn
+        Args:
+            bedfile (RegionSet): RegionSet instance, that should be added to the bedSet
         """
         self.region_sets.append(bedfile)
 
@@ -391,10 +402,10 @@ class BedSet:
 
     def compute_bedset_identifier(self) -> str:
         """
-        Return the identifier. If it is not set, compute one
+        Return the identifier. If it is not set, compute one.
 
-        :param bedset: BedSet object
-        :return: the identifier of BED set
+        Returns:
+            str: the identifier of BED set
         """
         if self._bedset_identifier is not None:
             return self._bedset_identifier
@@ -471,9 +482,12 @@ class Maf:
         """
         Extract a value from a column in a line of a MAF file.
 
-        :param col_name: name of column
-        :param line: line from MAF file
-        :return: value of column
+        Args:
+            col_name (str): name of column
+            line (str): line from MAF file
+
+        Returns:
+            any: value of column
         """
         return line[self.col_positions[col_name]] if self.col_positions[col_name] else None
 
@@ -485,10 +499,13 @@ class Maf:
         chr_rep_as_int: bool = False,
     ):
         """
-        :param maf_file: path to maf file
-        :param backed: whether to load the maf file into memory or not
-        :param bump_end_position: whether to bump the end position by 1 or not (this is useful for interval trees and interval lists)
-        :param chr_rep_as_int: whether to represent the chromosome as an int or not (this is useful for interval trees and interval lists)
+        Initialize a Maf object.
+
+        Args:
+            maf_file (str): path to maf file
+            backed (bool): whether to load the maf file into memory or not. Defaults to False.
+            bump_end_position (bool): whether to bump the end position by 1 or not (useful for interval trees and interval lists). Defaults to False.
+            chr_rep_as_int (bool): whether to represent the chromosome as an int or not (useful for interval trees and interval lists). Defaults to False.
         """
         # load from file
         if isinstance(maf_file, str):

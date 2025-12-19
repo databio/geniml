@@ -13,13 +13,13 @@ def run_scenario1(
     output: str,
     num_results: int = DEFAULT_NUM_SEARCH_RESULTS,
 ):
-    """
-    Run the search command. This is for scenario 1: Give me a label, I'll return region sets.
+    """Run the search command for scenario 1: Give me a label, I'll return region sets.
 
-    :param query: The query string (a label).
-    :param distances: The path to the distances file.
-    :param num_results: The number of results to return.
-    :param output: The path to save the barplots.
+    Args:
+        query (str): The query string (a label).
+        distances (str): The path to the distances file.
+        num_results (int): The number of results to return.
+        output (str): The path to save the barplots.
     """
     _LOGGER.info("Running search...")
 
@@ -61,13 +61,13 @@ def run_scenario2(
     output: str,
     num_results: int = DEFAULT_NUM_SEARCH_RESULTS,
 ):
-    """
-    Run the search command. This is for scenario 2: Give me a region set, I'll return labels.
+    """Run the search command for scenario 2: Give me a region set, I'll return labels.
 
-    :param query: The query string (a path to a file).
-    :param distances: The path to the distances file.
-    :param num_results: The number of results to return.
-    :param output: The path to save the barplots.
+    Args:
+        query (str): The query string (a path to a file).
+        distances (str): The path to the distances file.
+        num_results (int): The number of results to return.
+        output (str): The path to save the barplots.
     """
 
     _LOGGER.info("Running search...")
@@ -106,14 +106,13 @@ def run_scenario3(
     output: str,
     num_results: int = DEFAULT_NUM_SEARCH_RESULTS,
 ):
-    """
-    Run the search command. This is for scenario 3: Give me a region set, I'll return region sets.
+    """Run the search command for scenario 3: Give me a region set, I'll return region sets.
 
-    :param query: The query string (a path to a file).
-    :param distances: The path to the distances file.
-    :param num_results: The number of results to return.
-    :param output: The path to save the barplots.
-
+    Args:
+        query (str): The query string (a path to a file).
+        distances (str): The path to the distances file.
+        num_results (int): The number of results to return.
+        output (str): The path to save the barplots.
     """
 
     _LOGGER.info("Running search...")

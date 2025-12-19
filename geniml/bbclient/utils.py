@@ -16,10 +16,10 @@ class BedCacheManager:
         self.create_cache_folder()
 
     def create_cache_folder(self, subfolder_path: Optional[str] = None) -> None:
-        """
-        Create cache folder if it doesn't exist
+        """Create cache folder if it doesn't exist.
 
-        :param subfolder_path: path to the subfolder
+        Args:
+            subfolder_path: path to the subfolder
         """
         if subfolder_path is None:
             subfolder_path = self.cache_folder
@@ -70,13 +70,14 @@ class BedCacheManager:
 
 
 def get_abs_path(path: str = DEFAULT_CACHE_FOLDER, create_folder: bool = True) -> str:
-    """
-    Get absolute path to the folder and create it if it doesn't exist
+    """Get absolute path to the folder and create it if it doesn't exist.
 
-    :param path: path to the folder
-    :param create_folder: create folder if it doesn't exist
+    Args:
+        path (str): path to the folder
+        create_folder (bool): create folder if it doesn't exist
 
-    :return: absolute path to the folder
+    Returns:
+        str: absolute path to the folder
     """
     absolute_cache_folder = os.path.expandvars(path)
     if create_folder:

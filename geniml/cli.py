@@ -23,7 +23,8 @@ def print_inspect_beds(bb_cache_folder) -> None:
     """
     Print the bed files in the cache folder.
 
-    :param bb_cache_folder: Cache folder path
+    Args:
+        bb_cache_folder: Cache folder path
     """
     from rich.console import Console
     from rich.table import Table
@@ -57,7 +58,8 @@ def print_inspect_bedsets(bb_cache_folder) -> None:
     """
     Print the bed sets in the cache folder.
 
-    :param bb_cache_folder: Cache folder path
+    Args:
+        bb_cache_folder: Cache folder path
     """
     from rich.console import Console
     from rich.table import Table
@@ -91,7 +93,8 @@ def build_argparser():
     """
     Builds argument parser.
 
-    :return argparse.ArgumentParser: Argument parser
+    Returns:
+        argparse.ArgumentParser: Argument parser
     """
 
     banner = "%(prog)s - Genomic Interval toolkit"

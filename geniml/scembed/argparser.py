@@ -8,8 +8,11 @@ def build_argparser(parser: VersionInHelpParser = None) -> VersionInHelpParser:
     """
     Parse command-line arguments passed to the pipeline.
 
-    :param VersionInHelpParser parser: an argument parser object (argparse.ArgumentParser)
-    :return: the argument parser object
+    Args:
+        parser (VersionInHelpParser): An argument parser object (argparse.ArgumentParser).
+
+    Returns:
+        VersionInHelpParser: The argument parser object.
     """
     # Argument Parsing
     ###########################################################################

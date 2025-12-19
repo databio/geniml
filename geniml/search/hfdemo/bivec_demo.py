@@ -12,11 +12,13 @@ from ..interfaces import BiVectorSearchInterface
 
 
 def load_json(json_path: str) -> Dict:
-    """
-    Load metadata stored in json files
+    """Load metadata stored in JSON files.
 
-    :param json_path: path to json file
-    :return: dictionary stored in the json file
+    Args:
+        json_path: path to JSON file
+
+    Returns:
+        Dictionary stored in the JSON file.
     """
     with open(json_path, "r") as f:
         result = json.load(f)
@@ -24,28 +26,32 @@ def load_json(json_path: str) -> Dict:
 
 
 def load_vectors(npz_path, vec_key="vectors") -> np.ndarray:
-    """
-    Load vectors stored in .npz file
+    """Load vectors stored in .npz file.
 
-    :param npz_path: path to the npz file
-    :param vec_key: storage key of vector in the npz file
-    :return: the stored vectors
+    Args:
+        npz_path: path to the npz file
+        vec_key: storage key of vector in the npz file
+
+    Returns:
+        The stored vectors.
     """
     data = np.load(npz_path)
     return data[vec_key]
 
 
 def hf_bivec_search(query, repo: str = TEXT_ENCODER_REPO, limit=5, p=1.0, q=1.0, rank=True):
-    """
-    Demo using data loaded onto huggingface dataset
+    """Perform bi-vector search demo using data from Hugging Face.
 
-    :param query: free form query terms
-    :param repo: the huggingface repository of text encoder model
-    :param limit:see docstring of geniml.search.backend.BiVectorBackend
-    :param p:
-    :param q:
-    :param rank:
-    :return: the search result from demo dataset on huggingface
+    Args:
+        query: free form query terms
+        repo: the Hugging Face repository of text encoder model
+        limit: number of results to return (see BiVectorBackend.search())
+        p: weight for metadata search score
+        q: weight for BED file search score
+        rank: whether to rank by maximum rank or weighted score
+
+    Returns:
+        The search results from demo dataset on Hugging Face.
     """
 
     # download files from huggingface dataset

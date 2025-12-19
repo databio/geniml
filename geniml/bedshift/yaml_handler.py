@@ -6,13 +6,15 @@ import yaml
 
 
 class BedshiftYAMLHandler(object):
-    def __init__(self, bedshifter, yaml_fp, logger=None):
-        """
-        Handles Bedshift perturbations from yaml files
+    """Handle bedshift perturbations specified in YAML configuration files."""
 
-        :param bedshift.Bedshift bedshifter: a Bedshift object
-        :param str yaml_fp: path to yaml file
-        :param logging.logger logger: logger object
+    def __init__(self, bedshifter, yaml_fp, logger=None):
+        """Initialize a BedshiftYAMLHandler.
+
+        Args:
+            bedshifter (bedshift.Bedshift): A Bedshift object.
+            yaml_fp (str): Path to the YAML configuration file.
+            logger (logging.Logger): Logger object. If None, creates a new logger.
         """
         self.bedshifter = bedshifter
         self.yaml_fp = yaml_fp
@@ -22,7 +24,12 @@ class BedshiftYAMLHandler(object):
             self._LOGGER = logging.getLogger("BedshiftYAMLHandler")
 
     def _print_sample_config(self):
+        """Print a sample YAML configuration for bedshift operations.
+
+        Shows example configuration for bedshift operations including:
+        add, drop_from_file, shift_from_file, add_from_file, cut, drop, shift, merge.
         """
+        sample_config = """
         bedshift_operations:
           - add:
             rate: 0.1
@@ -31,7 +38,7 @@ class BedshiftYAMLHandler(object):
           - drop_from_file:
             file: tests/test.bed
             rate: 0.1
-            delimiter: \t
+            delimiter: \\t
           - shift_from_file:
             file: bedshifted_test.bed
             rate: 0.3
@@ -51,17 +58,29 @@ class BedshiftYAMLHandler(object):
           - merge:
             rate: 0.15
         """
-        self._LOGGER.info(self._print_sample_config.__doc__)
+        self._LOGGER.info(sample_config)
 
     def _read_from_yaml(self, fp):
+        """Read and parse a YAML configuration file.
+
+        Args:
+            fp (str): Path to the YAML file.
+
+        Returns:
+            dict: Parsed YAML configuration data.
+        """
         with open(fp, "r") as yaml_file:
             config_data = yaml.load(yaml_file, Loader=yaml.FullLoader)
         self._LOGGER.info("Loaded configuration settings from {}".format(fp))
         return config_data
 
     def handle_yaml(self):
-        """
-        Performs perturbations provided in the yaml config file in the order they were provided.
+        """Perform perturbations from the YAML configuration file.
+
+        Executes perturbations specified in the YAML config file in the order they were provided.
+
+        Returns:
+            int: The total number of regions changed by all perturbations.
         """
         data = self._read_from_yaml(self.yaml_fp)
         operations = [operation for operation in data["bedshift_operations"]]

@@ -11,13 +11,19 @@ from geniml.utils import natural_chr_sort, timer_func
 
 
 def get_uni(file, chrom, cutoff=None):
-    """For each position check if coverage is bigger than cut-off;
-    if cut-off not provided calculate value that gives
-    maximum likelihood universe
-    :param str file: coverage file
-    :param str chrom: chromosome to analyse
-    :param int cutoff: base pairs with values grater of equal to cut-off can be included in universe
-    :return ndarray: vector with universes states; 0 - background, 1- universe"""
+    """For each position check if coverage is bigger than cut-off.
+
+    If cut-off not provided, calculate value that gives maximum likelihood universe.
+
+    Args:
+        file (str): Coverage file.
+        chrom (str): Chromosome to analyse.
+        cutoff (int): Base pairs with values greater than or equal to cut-off can be
+            included in universe.
+
+    Returns:
+        ndarray: Vector with universes states; 0 - background, 1 - universe.
+    """
     file = pyBigWig.open(file)
     if pyBigWig.numpy:
         track = file.values(chrom, 0, file.chroms(chrom), numpy=True)
@@ -34,11 +40,13 @@ def get_uni(file, chrom, cutoff=None):
 
 
 def save_simple(file_out, inter_pos, chrom):
-    """
-    Save cut-off universe to a file without any processing
-    :param str file_out: output file
-    :param bool vector inter_pos: whether each position should be included in universe
-    :param str chrom: chromosome to analyse
+    """Save cut-off universe to a file without any processing.
+
+    Args:
+        file_out (str): Output file.
+        inter_pos (ndarray): Boolean vector indicating whether each position should be
+            included in universe.
+        chrom (str): Chromosome to analyse.
     """
     inter_pos_uni = np.argwhere(inter_pos)
     start = inter_pos_uni[0][0]
@@ -53,13 +61,15 @@ def save_simple(file_out, inter_pos, chrom):
 
 
 def marge_filter(file_out, inter_pos, chrom, merge_dist=100, size_flt=1000):
-    """
-    Save cut-off universe to a file with filtering region size and merging close regions
-    :param file_out: output file
-    :param bool vector inter_pos: whether each position should be included in universe
-    :param str chrom: chromosome to analyse
-    :param int merge_dist: regions closer than merge_dist will be merged into one
-    :param int size_flt: regions smaller than size_flt will not be reported
+    """Save cut-off universe to a file with filtering region size and merging close regions.
+
+    Args:
+        file_out (str): Output file.
+        inter_pos (ndarray): Boolean vector indicating whether each position should be
+            included in universe.
+        chrom (str): Chromosome to analyse.
+        merge_dist (int): Regions closer than merge_dist will be merged into one.
+        size_flt (int): Regions smaller than size_flt will not be reported.
     """
     inter_pos_uni = np.argwhere(inter_pos)
     start = inter_pos_uni[0][0]
@@ -76,14 +86,16 @@ def marge_filter(file_out, inter_pos, chrom, merge_dist=100, size_flt=1000):
 
 
 def cc_universe(cove, file_out, cove_prefix="all", merge=0, filter_size=0, cutoff=None):
-    """
-    Create cut-off coverage universe based on coverage track
-    :param str cove: path to coverage folder
-    :param str cove_prefix: prefix of the coverage file
-    :param int merge: regions closer than this value will be merged into one
-    :param int filter_size: regions smaller than this value will not be reported
-    :param str file_out: output file
-    :param int cutoff: base pairs with coverage equal to or greater than this value will be included in the universe
+    """Create cut-off coverage universe based on coverage track.
+
+    Args:
+        cove (str): Path to coverage folder.
+        file_out (str): Output file.
+        cove_prefix (str): Prefix of the coverage file.
+        merge (int): Regions closer than this value will be merged into one.
+        filter_size (int): Regions smaller than this value will not be reported.
+        cutoff (int): Base pairs with coverage equal to or greater than this value will
+            be included in the universe.
     """
     if os.path.isfile(file_out):
         raise Exception(f"File : {file_out} exists")

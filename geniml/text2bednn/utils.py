@@ -31,16 +31,20 @@ def arrays_to_torch_dataloader(
     batch_size: int = DEFAULT_BATCH_SIZE,
     shuffle: bool = DEFAULT_DATALOADER_SHUFFLE,
 ) -> DataLoader:
-    """
-    Based on https://stackoverflow.com/questions/44429199/how-to-load-a-list-of-numpy-arrays-to-pytorch-dataset-loader
-    Store np.ndarray of X and Y into a torch.DataLoader
+    """Store numpy arrays of X and Y into a torch.DataLoader.
 
-    :param X: embedding vectors of input data (natural language embeddings)
-    :param Y: embedding vectors of output data (BED file embeddings)
-    :param target: vector of 1 and -1, indicating if each vector pair of (X, Y) are target pairs or not
-    :param batch_size: size of small batch
-    :param shuffle: shuffle dataset or not
-    :return: a Dataset for pytorch training in format of torch.DataLoader
+    Based on https://stackoverflow.com/questions/44429199/how-to-load-a-list-of-numpy-arrays-to-pytorch-dataset-loader
+
+    Args:
+        X (np.ndarray): Embedding vectors of input data (natural language embeddings).
+        Y (np.ndarray): Embedding vectors of output data (BED file embeddings).
+        target (np.ndarray): Vector of 1 and -1, indicating if each vector pair of (X, Y)
+            are target pairs or not.
+        batch_size (int): Size of small batch.
+        shuffle (bool): Shuffle dataset or not.
+
+    Returns:
+        DataLoader: A Dataset for pytorch training in format of torch.DataLoader.
     """
     tensor_X = torch.from_numpy(dtype_check(X))
     tensor_Y = torch.from_numpy(dtype_check(Y))
@@ -51,13 +55,16 @@ def arrays_to_torch_dataloader(
 
 
 def dtype_check(vecs: np.ndarray) -> np.ndarray:
-    """
-    Since the default float in np is float64, but in pytorch tensor it's float32,
-    to avoid errors, the dtype will be switched
+    """Convert numpy array dtype from float64 to float32 for PyTorch compatibility.
 
-    :param vecs: input np.ndarray
+    Since the default float in numpy is float64, but in pytorch tensor it's float32,
+    the dtype will be switched to avoid errors.
 
-    :return: np.ndarray with dtype of float32
+    Args:
+        vecs (np.ndarray): Input numpy array.
+
+    Returns:
+        np.ndarray: Numpy array with dtype of float32.
     """
     if not isinstance(vecs.dtype, type(np.dtype("float32"))):
         vecs = vecs.astype(np.float32)
@@ -74,42 +81,46 @@ def metadata_dict_from_csv(
     series_key: Union[str, None] = DEFAULT_SERIES_KEY,
     chunk_size: Union[int, None] = None,
 ) -> Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]:
-    """
-    Read selected columns from a metadata csv and return metadata dictionary,
-    can filter genomes with given list of genomes and the column name of genome
+    """Read selected columns from a metadata CSV and return a metadata dictionary.
 
-    :param csv_path: path to the csv file that contain metadata
-    :param col_names: set of csv columns that contain informative metadata
-    :param file_key: name of column of file names
-    :param genomes: set of genomes
-    :param genomes_key: name of column of sample genomes
-    :param series_key: name of column of series
-    :param chunk_size: size of chunk to read when the csv file is large
+    Can filter genomes with a given list of genomes and the column name of genome.
 
-    :return: a metadata dictionary in this format:
-    if series information is in the csv, the dictionary format will be:
-    {
-        <series>:[
+    Args:
+        csv_path (str): Path to the csv file that contain metadata.
+        col_names (Set[str]): Set of csv columns that contain informative metadata.
+        file_key (str): Name of column of file names.
+        genomes (Union[Set[str], None]): Set of genomes.
+        genomes_key (Union[str, None]): Name of column of sample genomes.
+        series_key (Union[str, None]): Name of column of series.
+        chunk_size (Union[int, None]): Size of chunk to read when the csv file is large.
+
+    Returns:
+        Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]: A metadata dictionary
+            in one of two formats:
+
+            If series information is in the csv:
             {
-                "name": <file name>
-                "metadata": {
+                <series>: [
+                    {
+                        "name": <file name>,
+                        "metadata": {
+                            <csv column name>: <metadata string>,
+                            ...
+                        }
+                    },
+                    ...
+                ],
+                ...
+            }
+
+            Otherwise:
+            {
+                <file name>: {
                     <csv column name>: <metadata string>,
                     ...
-                }
-            },
-            ...
-        ],
-        ...
-    }
-
-    else, the dictionary format will be:
-    {
-        <file name>: {
-            <csv column name>: <metadata string>,
-            ...
-        },
-        ...
-    }
+                },
+                ...
+            }
     """
 
     # dictionary to store data

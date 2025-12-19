@@ -1,4 +1,5 @@
 from typing import Dict, List, Union
+from fastembed import TextEmbedding
 
 import numpy as np
 
@@ -7,18 +8,23 @@ from ..query2vec import Text2Vec
 from .abstract import BEDSearchInterface
 
 
-class BiVectorSearchInterface(BEDSearchInterface):
-    """Search interface for ML free bi-vectors searching backend"""
+class BiVectorSearchInterface:
+    """
+    Search interface for ML free bi-vectors searching backend
+    """
 
-    def __init__(self, backend: BiVectorBackend, query2vec: Union[str, Text2Vec]) -> None:
+    def __init__(
+        self, backend: BiVectorBackend, query2vec: Union[str, Text2Vec, TextEmbedding]
+    ) -> None:
         """
         Initiate the search interface
 
-        :param backend: the backend where vectors are stored
-        :param query2vec: a Text2Vec, for details, see docstrings in geniml.search.query2vec.text2vec
+        Args:
+            backend: the backend where vectors are stored
+            query2vec: a Text2Vec instance (see geniml.search.query2vec.text2vec for details)
         """
-        if isinstance(query2vec, str):
-            self.query2vec = Text2Vec(query2vec, v2v=None)
+        if isinstance(query2vec, str) or isinstance(query2vec, TextEmbedding):
+            self.query2vec = Text2Vec(model=query2vec, v2v=None)
         else:
             self.query2vec = query2vec
         self.backend = backend
@@ -35,11 +41,21 @@ class BiVectorSearchInterface(BEDSearchInterface):
         distance: bool = False,
         rank: bool = False,
     ) -> List[Dict]:
-        """
+        """Search BED files using natural language query or embedding vector.
 
-        :param query: the natural language query string, or a vector in the embedding space of region sets
+        Args:
+            query: the natural language query string or a vector in the embedding space of region sets
+            limit: number of results to return
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
+            p: weight for metadata search score
+            q: weight for BED file search score
+            distance: whether to return distance or similarity scores
+            rank: whether to rank by maximum rank or weighted score
 
-        for rest of the parameters, check the docstring of QdrantBackend.search() or HNSWBackend.search()
+        Returns:
+            A list of dictionaries containing search results.
         """
         if isinstance(query, np.ndarray):
             search_vec = query

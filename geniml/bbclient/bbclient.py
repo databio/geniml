@@ -41,12 +41,12 @@ class BBClient(BedCacheManager):
         cache_folder: Union[str, os.PathLike] = DEFAULT_CACHE_FOLDER,
         bedbase_api: str = DEFAULT_BEDBASE_API,
     ):
-        """
-        BBClient to deal with download files from bedbase and caching them.
+        """BBClient to deal with download files from bedbase and caching them.
 
-        :param cache_folder: path to local folder as cache of files from bedbase,
-        if not given it will be the environment variable `BBCLIENT_CACHE`
-        :param bedbase_api: url to bedbase
+        Args:
+            cache_folder (Union[str, os.PathLike]): path to local folder as cache of files from bedbase,
+                if not given it will be the environment variable `BBCLIENT_CACHE`
+            bedbase_api (str): url to bedbase
         """
         cache_folder = get_abs_path(cache_folder)
         super().__init__(cache_folder)
@@ -60,11 +60,13 @@ class BBClient(BedCacheManager):
         self.bedbase_api = bedbase_api
 
     def load_bedset(self, bedset_id: str) -> BedSet:
-        """
-        Load a BEDset from cache, or download and add it to the cache with its BED files
+        """Load a BEDset from cache, or download and add it to the cache with its BED files.
 
-        :param bedset_id: unique identifier of a BED set
-        :return: the BedSet object
+        Args:
+            bedset_id (str): unique identifier of a BED set
+
+        Returns:
+            BedSet: the BedSet object
         """
 
         file_path = self._bedset_path(bedset_id)
@@ -88,11 +90,13 @@ class BBClient(BedCacheManager):
         )
 
     def _download_bedset_data(self, bedset_id: str) -> List[str]:
-        """
-        Download BED set from BEDbase API and return the list of identifiers of BED files in the set
+        """Download BED set from BEDbase API and return the list of identifiers of BED files in the set.
 
-        :param bedset_id: unique identifier of a BED set
-        :return: the list of identifiers of BED files in the set
+        Args:
+            bedset_id (str): unique identifier of a BED set
+
+        Returns:
+            List[str]: the list of identifiers of BED files in the set
         """
         bedset_url = BEDSET_URL_PATTERN.format(bedbase_api=self.bedbase_api, bedset_id=bedset_id)
         response = requests.get(bedset_url)
@@ -102,11 +106,13 @@ class BBClient(BedCacheManager):
         return extracted_data
 
     def load_bed(self, bed_id: str) -> RegionSet:
-        """
-        Loads a BED file from cache, or downloads and caches it if it doesn't exist
+        """Loads a BED file from cache, or downloads and caches it if it doesn't exist.
 
-        :param bed_id: unique identifier of a BED file
-        :return: the RegionSet object
+        Args:
+            bed_id (str): unique identifier of a BED file
+
+        Returns:
+            RegionSet: the RegionSet object
         """
         file_path = self._bedfile_path(bed_id)
 
@@ -126,11 +132,13 @@ class BBClient(BedCacheManager):
         return RegionSet(file_path)
 
     def add_bedset_to_cache(self, bedset: BedSet) -> str:
-        """
-        Add a BED set to the cache
+        """Add a BED set to the cache.
 
-        :param bedset: the BED set to be added, a BedSet class
-        :return: the identifier if the BedSet object
+        Args:
+            bedset (BedSet): the BED set to be added, a BedSet class
+
+        Returns:
+            str: the identifier if the BedSet object
         """
 
         bedset_id = bedset.compute_bedset_identifier()
@@ -146,12 +154,14 @@ class BBClient(BedCacheManager):
         return bedset_id
 
     def add_bed_to_cache(self, bedfile: Union[RegionSet, str], force: bool = False) -> RegionSet:
-        """
-        Add a BED file to the cache
+        """Add a BED file to the cache.
 
-        :param bedfile: a RegionSet object or a path or url to the BED file
-        :param force: whether to overwrite the existing file in cache
-        :return: the RegionSet identifier
+        Args:
+            bedfile (Union[RegionSet, str]): a RegionSet object or a path or url to the BED file
+            force (bool): whether to overwrite the existing file in cache
+
+        Returns:
+            RegionSet: the RegionSet identifier
         """
 
         if isinstance(bedfile, str):
@@ -185,13 +195,14 @@ class BBClient(BedCacheManager):
         return bedfile
 
     def add_bed_tokens_to_cache(self, bed_id: str, universe_id: str) -> None:
-        """
-        Add a tokenized BED file to the cache
+        """Add a tokenized BED file to the cache.
 
-        :param bed_id: the identifier of the BED file
-        :param universe_id: the identifier of the universe
+        Args:
+            bed_id (str): the identifier of the BED file
+            universe_id (str): the identifier of the universe
 
-        :return: the identifier of the tokenized BED file
+        Returns:
+            str: the identifier of the tokenized BED file
         """
 
         tokens_info_url = BED_TOKENS_PATTERN.format(
@@ -222,13 +233,14 @@ class BBClient(BedCacheManager):
         self.cache_tokens(bed_id, universe_id, tokenized_bed)
 
     def load_bed_tokens(self, bed_id: str, universe_id: str) -> Array:
-        """
-        Load a tokenized BED file from cache, or download and cache it if it doesn't exist
+        """Load a tokenized BED file from cache, or download and cache it if it doesn't exist.
 
-        :param bed_id: the identifier of the BED file
-        :param universe_id: the identifier of the universe
+        Args:
+            bed_id (str): the identifier of the BED file
+            universe_id (str): the identifier of the universe
 
-        :return: the zarr array of tokens
+        Returns:
+            Array: the zarr array of tokens
         """
         try:
             zarr_array = self.zarr_cache[universe_id][bed_id]
@@ -256,14 +268,12 @@ class BBClient(BedCacheManager):
             )
 
     def cache_tokens(self, bed_id: str, universe_id: str, tokens: Union[list, Array]) -> None:
-        """
-        Cache tokenized BED file
+        """Cache tokenized BED file.
 
-        :param bed_id: the identifier of the BED file
-        :param universe_id: the identifier of the universe
-        :param tokens: the list of tokens
-
-        :return: None
+        Args:
+            bed_id (str): the identifier of the BED file
+            universe_id (str): the identifier of the universe
+            tokens (Union[list, Array]): the list of tokens
         """
 
         univers_group = self.zarr_cache.require_group(universe_id)
@@ -285,17 +295,18 @@ class BBClient(BedCacheManager):
         aws_secret_access_key: str = None,
         s3_path: str = DEFAULT_BUCKET_FOLDER,
     ) -> str:
-        """
-        Add a cached BED file to S3
+        """Add a cached BED file to S3.
 
-        :param identifier: the unique identifier of the BED file
-        :param bucket: the name of the bucket
-        :param endpoint_url: the URL of the S3 endpoint [Default: set up by the environment vars]
-        :param aws_access_key_id: the access key of the AWS account [Default: set up by the environment vars]
-        :param aws_secret_access_key: the secret access key of the AWS account [Default: set up by the environment vars]
-        :param s3_path: the path on S3
+        Args:
+            identifier (str): the unique identifier of the BED file
+            bucket (str): the name of the bucket
+            endpoint_url (str): the URL of the S3 endpoint [Default: set up by the environment vars]
+            aws_access_key_id (str): the access key of the AWS account [Default: set up by the environment vars]
+            aws_secret_access_key (str): the secret access key of the AWS account [Default: set up by the environment vars]
+            s3_path (str): the path on S3
 
-        :return: full path on S3
+        Returns:
+            str: full path on S3
         """
 
         try:
@@ -333,18 +344,21 @@ class BBClient(BedCacheManager):
         aws_secret_access_key: str = None,
         s3_path: str = DEFAULT_BUCKET_FOLDER,
     ) -> str:
-        """
-        Get a cached BED file from S3 and cache it locally
+        """Get a cached BED file from S3 and cache it locally.
 
-        :param identifier: the unique identifier of the BED file
-        :param bucket: the name of the bucket
-        :param endpoint_url: the URL of the S3 endpoint [Default: set up by the environment vars]
-        :param aws_access_key_id: the access key of the AWS account [Default: set up by the environment vars]
-        :param aws_secret_access_key: the secret access key of the AWS account [Default: set up by the environment vars]
-        :param s3_path: the path on S3
+        Args:
+            identifier (str): the unique identifier of the BED file
+            bucket (str): the name of the bucket
+            endpoint_url (str): the URL of the S3 endpoint [Default: set up by the environment vars]
+            aws_access_key_id (str): the access key of the AWS account [Default: set up by the environment vars]
+            aws_secret_access_key (str): the secret access key of the AWS account [Default: set up by the environment vars]
+            s3_path (str): the path on S3
 
-        :return: bed file id
-        :raise FileNotFoundError: if the identifier does not exist in cache
+        Returns:
+            str: bed file id
+
+        Raises:
+            FileNotFoundError: if the identifier does not exist in cache
         """
 
         try:
@@ -380,12 +394,16 @@ class BBClient(BedCacheManager):
         return identifier
 
     def seek(self, identifier: str) -> str:
-        """
-        Get local path to BED file or BED set with specific identifier
+        """Get local path to BED file or BED set with specific identifier.
 
-        :param identifier: the unique identifier
-        :return: the local path of the file
-        :raise FileNotFoundError: if the identifier does not exist in cache
+        Args:
+            identifier (str): the unique identifier
+
+        Returns:
+            str: the local path of the file
+
+        Raises:
+            FileNotFoundError: if the identifier does not exist in cache
         """
 
         # bedfile
@@ -401,12 +419,14 @@ class BBClient(BedCacheManager):
                 raise FileNotFoundError(f"{identifier} does not exist in cache.")
 
     def remove_bedset_from_cache(self, bedset_id: str, remove_bed_files: bool = False) -> NoReturn:
-        """
-        Remove a BED set from cache
+        """Remove a BED set from cache.
 
-        :param bedset_id: the identifier of BED set
-        :param remove_bed_files: whether also remove BED files in the BED set
-        :raise FileNotFoundError: if the BED set does not exist in cache
+        Args:
+            bedset_id (str): the identifier of BED set
+            remove_bed_files (bool): whether also remove BED files in the BED set
+
+        Raises:
+            FileNotFoundError: if the BED set does not exist in cache
         """
 
         file_path = self.seek(bedset_id)
@@ -421,10 +441,10 @@ class BBClient(BedCacheManager):
         # self._remove(file_path)
 
     def list_beds(self) -> Dict[str, str]:
-        """
-        List all BED files in cache
+        """List all BED files in cache.
 
-        :return: the list of identifiers of BED files
+        Returns:
+            Dict[str, str]: the list of identifiers of BED files
         """
 
         resources = self._bedfile_cache.list_resources()
@@ -437,10 +457,10 @@ class BBClient(BedCacheManager):
         return results
 
     def list_bedsets(self) -> Dict[str, str]:
-        """
-        List all BED sets in cache
+        """List all BED sets in cache.
 
-        :return: the list of identifiers of BED sets
+        Returns:
+            Dict[str, str]: the list of identifiers of BED sets
         """
 
         resources = self._bedset_cache.list_resources()
@@ -453,11 +473,13 @@ class BBClient(BedCacheManager):
         return results
 
     def _download_bed_file_from_bb(self, bedfile: str) -> bytes:
-        """
-        Download BED file from BEDbase API and return the file content as bytes
+        """Download BED file from BEDbase API and return the file content as bytes.
 
-        :param bedfile: unique identifier of a BED file
-        :return: the file content as bytes
+        Args:
+            bedfile (str): unique identifier of a BED file
+
+        Returns:
+            bytes: the file content as bytes
         """
 
         bed_url = BEDFILE_URL_PATTERN.format(bedbase_api=self.bedbase_api, bed_id=bedfile)
@@ -466,12 +488,14 @@ class BBClient(BedCacheManager):
         return response.content
 
     def _bedset_path(self, bedset_id: str, create: bool = True) -> str:
-        """
-        Get the path of a BED set's .txt file with given identifier
+        """Get the path of a BED set's .txt file with given identifier.
 
-        :param bedset_id: the identifier of BED set
-        :param create: whether the cache path needs creating
-        :return: the path to the .txt file
+        Args:
+            bedset_id (str): the identifier of BED set
+            create (bool): whether the cache path needs creating
+
+        Returns:
+            str: the path to the .txt file
         """
 
         subfolder_name = DEFAULT_BEDSET_SUBFOLDER
@@ -480,12 +504,14 @@ class BBClient(BedCacheManager):
         return self._cache_path(bedset_id, subfolder_name, file_extension, create)
 
     def _bedfile_path(self, bedfile_id: str, create: bool = True) -> str:
-        """
-        Get the path of a BED file's .bed.gz file with given identifier
+        """Get the path of a BED file's .bed.gz file with given identifier.
 
-        :param bedfile_id: the identifier of BED file
-        :param create: whether the cache path needs creating
-        :return: the path to the .bed.gz file
+        Args:
+            bedfile_id (str): the identifier of BED file
+            create (bool): whether the cache path needs creating
+
+        Returns:
+            str: the path to the .bed.gz file
         """
 
         subfolder_name = DEFAULT_BEDFILE_SUBFOLDER
@@ -500,14 +526,16 @@ class BBClient(BedCacheManager):
         file_extension: str,
         create: bool = True,
     ) -> str:
-        """
-        Get the path of a file in cache folder
+        """Get the path of a file in cache folder.
 
-        :param identifier: the identifier of BED set or BED file
-        :param subfolder_name: "bedsets" or "bedfiles"
-        :param file_extension: ".txt" or ".bed.gz"
-        :param create: whether the cache path needs creating
-        :return: the path to the file
+        Args:
+            identifier (str): the identifier of BED set or BED file
+            subfolder_name (str): "bedsets" or "bedfiles"
+            file_extension (str): ".txt" or ".bed.gz"
+            create (bool): whether the cache path needs creating
+
+        Returns:
+            str: the path to the file
         """
 
         filename = f"{identifier}{file_extension}"
@@ -517,11 +545,13 @@ class BBClient(BedCacheManager):
         return os.path.join(folder_name, filename)
 
     def remove_bedfile_from_cache(self, bedfile_id: str) -> NoReturn:
-        """
-        Remove a BED file from cache
+        """Remove a BED file from cache.
 
-        :param bedfile_id: the identifier of BED file
-        :raise FileNotFoundError: if the BED set does not exist in cache
+        Args:
+            bedfile_id (str): the identifier of BED file
+
+        Raises:
+            FileNotFoundError: if the BED set does not exist in cache
         """
 
         # commented due to bioc chacing removal method
@@ -531,8 +561,8 @@ class BBClient(BedCacheManager):
 
     @staticmethod
     def _remove(file_path: str) -> None:
-        """
-        Remove a file within the cache with given path, and remove empty subfolders after removal
+        """Remove a file within the cache with given path, and remove empty subfolders after removal.
+
         Structure of folders in cache:
         cache_folder
             bedfiles
@@ -540,8 +570,8 @@ class BBClient(BedCacheManager):
             bedsets
                 c/d/cd123hij.txt
 
-        :param file_path: the path to the file
-        :return: None
+        Args:
+            file_path (str): the path to the file
         """
         # the subfolder that matches the second digit of the identifier
         sub_folder_2 = os.path.split(file_path)[0]

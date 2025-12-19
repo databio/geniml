@@ -21,11 +21,11 @@ class Text2BEDSearchInterface(BEDSearchInterface):
         backend: Union[QdrantBackend, HNSWBackend],
         query2vec: Text2Vec,
     ):
-        """
-        Initiate the search interface
+        """Initialize the Text2BEDSearchInterface.
 
-        :param backend: the backend where vectors are stored
-        :param query2vec: a Text2Vec, for details, see docstrings in geniml.search.query2vec.text2vec
+        Args:
+            backend: the backend where vectors are stored
+            query2vec: a Text2Vec instance (see geniml.search.query2vec.text2vec for details)
         """
         self.query2vec = query2vec
         self.backend = backend
@@ -38,11 +38,17 @@ class Text2BEDSearchInterface(BEDSearchInterface):
         with_vectors: bool = True,
         offset: int = 0,
     ) -> List[Dict]:
-        """
+        """Search for BED files using natural language query or embedding vector.
 
-        :param query: the natural language query string, or a vector in the embedding space of region sets
+        Args:
+            query: the natural language query string or a vector in the embedding space of region sets
+            limit: number of results to return
+            with_payload: whether payload is included in the result
+            with_vectors: whether the stored vector is included in the result
+            offset: the offset of the search results
 
-        for rest of the parameters, check the docstring of QdrantBackend.search() or HNSWBackend.search()
+        Returns:
+            A list of dictionaries containing search results.
         """
         if isinstance(query, np.ndarray):
             search_vec = query
@@ -52,19 +58,20 @@ class Text2BEDSearchInterface(BEDSearchInterface):
         return self.backend.search(search_vec, limit, with_payload, with_vectors, offset)
 
     def eval(self, query_dict: Dict[str, List[Union[int, np.int64]]]) -> Dict[str, float]:
-        """
-        With a query dictionary, return the Mean Average Precision, AUC-ROC and R-precision of query retrieval
+        """Evaluate retrieval performance using Mean Average Precision, AUC-ROC, and R-precision.
 
-        :param query_dict:a dictionary that contains query and relevant results in this format:
-            {
-                <query string>:[
-                    <store id in backend>,
+        Args:
+            query_dict: a dictionary containing queries and relevant results in this format:
+                {
+                    <query string>: [
+                        <store id in backend>,
+                        ...
+                    ],
                     ...
-                ],
-                ...
-            }
+                }
 
-        :return: a Tuple of (Mean Average Precision, Average AUC-ROC, Average R-precision)
+        Returns:
+            A dictionary with keys: "Mean Average Precision", "Mean AUC-ROC", "Average R-Precision"
         """
 
         # number
