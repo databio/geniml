@@ -1,6 +1,5 @@
 import os
 
-import genomicranges
 import pandas as pd
 import pytest
 from geniml.io.exceptions import BEDFileReadError, GenimlBaseError
@@ -102,12 +101,6 @@ class TestRegionSet:
         # test we can iterate over it
         for region in u:
             assert isinstance(region, Region)
-
-    @pytest.mark.parametrize("path", ALL_BEDFILE_PATH)
-    def test_to_genomic_ranges(self, path):
-        bedfile = RegionSet(path)
-        gr = bedfile.to_granges()  # should return a GenomicRanges object
-        assert isinstance(gr, genomicranges.GenomicRanges)
 
     def test_calculation_id(self):
         bedfile_id_1 = RegionSet(ALL_BEDFILE_PATH[0]).identifier

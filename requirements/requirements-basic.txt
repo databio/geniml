@@ -4,7 +4,7 @@ peppy >= 0.40.7
 requests >= 2.31.0
 # botocore == 1.40.18
 # boto3 == 1.40.18
-genomicranges >= 0.4.1
+genomicranges >= 0.8.3
 
 gtars >= 0.2.5
 pybiocfilecache == 0.6.1

@@ -6,7 +6,6 @@ import os
 from hashlib import md5
 from typing import List, NoReturn, Union
 
-import genomicranges
 import numpy as np
 import pandas as pd
 from iranges import IRanges
@@ -258,7 +257,7 @@ class RegionSet:
     def identifier(self) -> str:
         return self.compute_bed_identifier()
 
-    def to_granges(self) -> genomicranges.GenomicRanges:
+    def to_granges(self):
         """
         Return GenomicRanges contained in this BED file.
 
@@ -389,16 +388,6 @@ class BedSet:
         self.region_sets.append(bedfile)
 
         self._bedset_identifier = self.compute_bedset_identifier()
-
-    def to_granges_list(self) -> genomicranges.GenomicRangesList:
-        """
-        Process a list of BED set identifiers and returns a GenomicRangesList object
-        """
-        gr_list = []
-        for regionset in self.region_sets:
-            gr_list.append(regionset.to_granges())
-
-        return genomicranges.GenomicRangesList(ranges=gr_list)
 
     def compute_bedset_identifier(self) -> str:
         """
