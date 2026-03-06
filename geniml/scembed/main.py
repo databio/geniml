@@ -75,7 +75,7 @@ class ScEmbed:
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-    def _init_tokenizer(self, tokenizer: Union[Tokenizer, str]):
+    def _init_tokenizer(self, tokenizer: Union[Tokenizer, str]) -> None:
         """
         Initialize the tokenizer.
 
@@ -92,7 +92,7 @@ class ScEmbed:
         else:
             raise TypeError("tokenizer must be of type Tokenizer or str.")
 
-    def _init_model(self, tokenizer, **kwargs):
+    def _init_model(self, tokenizer, **kwargs) -> None:
         """
         Initialize the core model. This will initialize the model from scratch.
 
@@ -108,7 +108,7 @@ class ScEmbed:
         )
 
     @property
-    def model(self):
+    def model(self) -> Region2Vec:
         """
         Get the core Region2Vec model.
 
@@ -117,7 +117,7 @@ class ScEmbed:
         """
         return self._model
 
-    def add_tokenizer(self, tokenizer: Tokenizer, **kwargs):
+    def add_tokenizer(self, tokenizer: Tokenizer, **kwargs) -> None:
         """
         Add a tokenizer to the model. This should be use when the model is not initialized with a tokenizer.
 
@@ -132,7 +132,7 @@ class ScEmbed:
         if not self.trained:
             self._init_model(**kwargs)
 
-    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str):
+    def _load_local_model(self, model_path: str, vocab_path: str, config_path: str) -> None:
         """
         Load the model from a checkpoint.
 
@@ -157,7 +157,7 @@ class ScEmbed:
         universe_file_name: str = UNIVERSE_FILE_NAME,
         config_file_name: str = CONFIG_FILE_NAME,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the model from a huggingface model.
 
@@ -275,7 +275,7 @@ class ScEmbed:
         checkpoint_file: str = MODEL_FILE_NAME,
         universe_file: str = UNIVERSE_FILE_NAME,
         config_file: str = CONFIG_FILE_NAME,
-    ):
+    ) -> None:
         """
         Function to facilitate exporting the model in a way that can be directly uploaded to huggingface.
 

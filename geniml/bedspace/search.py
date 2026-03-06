@@ -12,7 +12,7 @@ def run_scenario1(
     distances: str,
     output: str,
     num_results: int = DEFAULT_NUM_SEARCH_RESULTS,
-):
+) -> None:
     """Run the search command for scenario 1: Give me a label, I'll return region sets.
 
     Args:
@@ -60,7 +60,7 @@ def run_scenario2(
     distances: str,
     output: str,
     num_results: int = DEFAULT_NUM_SEARCH_RESULTS,
-):
+) -> None:
     """Run the search command for scenario 2: Give me a region set, I'll return labels.
 
     Args:
@@ -105,7 +105,7 @@ def run_scenario3(
     distances: str,
     output: str,
     num_results: int = DEFAULT_NUM_SEARCH_RESULTS,
-):
+) -> None:
     """Run the search command for scenario 3: Give me a region set, I'll return region sets.
 
     Args:

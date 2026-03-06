@@ -4,7 +4,7 @@ import warnings
 from typing_extensions import deprecated
 import os
 from hashlib import md5
-from typing import List, NoReturn, Union
+from typing import Iterator, List, Union
 
 import numpy as np
 import pandas as pd
@@ -50,7 +50,7 @@ class Region:
         self.start = start
         self.end = stop
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Region({self.chr}, {self.start}, {self.end})"
 
 
@@ -204,16 +204,16 @@ class RegionSet:
                     row_count += 1
         raise BEDFileReadError("Cannot read bed file.")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.length
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Region:
         if self.backed:
             raise NotImplementedError("Backed RegionSets do not currently support indexing.")
         else:
             return self.regions[key]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.path:
             if self.backed:
                 return f"RegionSet({self.path}, backed=True)"
@@ -222,7 +222,7 @@ class RegionSet:
         else:
             return f"RegionSet(n={self.length})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Region]:
         if self.backed:
             # Open function depending on file type
             if self.is_gzipped:
@@ -257,7 +257,7 @@ class RegionSet:
     def identifier(self) -> str:
         return self.compute_bed_identifier()
 
-    def to_granges(self):
+    def to_granges(self) -> "genomicranges.GenomicRanges":
         """
         Return GenomicRanges contained in this BED file.
 
@@ -362,21 +362,21 @@ class BedSet:
 
         self._bedset_identifier = identifier
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.region_sets)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Union[RegionSet, GRegionSet]]:
         for region_set in self.region_sets:
             yield region_set
 
-    def __getitem__(self, indx: int):
+    def __getitem__(self, indx: int) -> Union[RegionSet, GRegionSet]:
         return self.region_sets[indx]
 
     @property
     def identifier(self) -> str:
         return self._bedset_identifier or self.compute_bedset_identifier()
 
-    def add(self, bedfile: RegionSet) -> NoReturn:
+    def add(self, bedfile: RegionSet) -> None:
         """
         Add a BED file to the BED set.
 
@@ -434,18 +434,18 @@ class SNP:
         self.strand = strand
 
     @property
-    def start(self):
+    def start(self) -> int:
         return self.start_position
 
     @property
-    def end(self):
+    def end(self) -> int:
         return self.end_position
 
     @property
-    def chr(self):
+    def chr(self) -> str:
         return self.chromosome
 
-    def to_region(self):
+    def to_region(self) -> Region:
         chr = self.chromosome
         start = int(self.start_position)
         end = int(self.end_position)
@@ -455,10 +455,10 @@ class SNP:
 
         return Region(chr, start, end)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.end - self.start
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"SNP({self.chromosome}, {self.start_position}, {self.end_position}, {self.strand})"
 
 
@@ -467,7 +467,7 @@ class Maf:
     Python representation of a MAF file, only supports some columns for now
     """
 
-    def _extract_value_from_col(self, col_name: str, line: str) -> any:
+    def _extract_value_from_col(self, col_name: str, line: str) -> Union[str, None]:
         """
         Extract a value from a column in a line of a MAF file.
 
@@ -476,7 +476,7 @@ class Maf:
             line (str): line from MAF file
 
         Returns:
-            any: value of column
+            Union[str, None]: value of column
         """
         return line[self.col_positions[col_name]] if self.col_positions[col_name] else None
 
@@ -556,16 +556,16 @@ class Maf:
         else:
             raise ValueError("mafs must be a path to a maf file")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.length
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> SNP:
         if self.backed:
             raise NotImplementedError("Backed MAFs do not currently support indexing.")
         else:
             return self.mafs[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[SNP]:
         if self.backed:
             # Open function depending on file type
             open_func = gzip.open if is_gzipped(self.maf_file) else open
@@ -594,7 +594,7 @@ class Maf:
             for maf in self.mafs:
                 yield maf
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"MAF({self.maf_file})"
 
 
@@ -620,10 +620,10 @@ class RegionSetCollection(object):
             for glob in file_globs:
                 self.region_sets.extend([RegionSet(path) for path in glob.glob(glob)])
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> RegionSet:
         return self.region_sets[key]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.region_sets)
 
 
