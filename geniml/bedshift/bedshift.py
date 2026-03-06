@@ -101,6 +101,23 @@ class Bedshift(object):
                 _LOGGER.error(msg)
                 raise FileNotFoundError(msg)
 
+    def _validate_region(self, start, end):
+        """Return True if the region is valid (start < end and start >= 0)."""
+        return start >= 0 and start < end
+
+    def _remove_invalid_regions(self):
+        """Remove any regions where start >= end."""
+        before = len(self.bed)
+        self.bed = [r for r in self.bed if r[1] < r[2]]
+        removed = before - len(self.bed)
+        if removed > 0:
+            _LOGGER.warning(f"Removed {removed} invalid regions (start >= end)")
+        return removed
+
+    def _sort_bed(self):
+        """Sort bed by chromosome, start, end."""
+        self.bed.sort(key=lambda r: (r[0], r[1], r[2]))
+
     def pick_random_chroms(self, n):
         """Utility function to pick a random chromosome.
 
@@ -148,17 +165,23 @@ class Bedshift(object):
                 data = valid_regions[row]
                 chrom = data[0]
                 start = random.randint(data[1], data[2])
-                end = start + int(np.random.normal(addmean, addstdev))
+                length = max(1, abs(int(np.random.normal(addmean, addstdev))))
+                end = min(start + length, data[2])
+                if end <= start:
+                    end = start + 1
                 new_rows.append([chrom, start, end, "A"])
         else:
             random_chroms = self.pick_random_chroms(num_add)
             for chrom_str, chrom_len in random_chroms:
                 start = random.randint(1, chrom_len)
-                # ensure chromosome length is not exceeded
-                end = min(start + int(np.random.normal(addmean, addstdev)), chrom_len)
+                length = max(1, abs(int(np.random.normal(addmean, addstdev))))
+                end = min(start + length, chrom_len)
+                if end <= start:
+                    end = start + 1
                 new_rows.append([chrom_str, start, end, "A"])
 
         self.bed.extend(new_rows)
+        self._sort_bed()
         return num_add
 
     def add_from_file(self, fp, addrate):
@@ -189,6 +212,7 @@ class Bedshift(object):
             row = regions[i][:]
             row[3] = "A"
             self.bed.append(row)
+        self._sort_bed()
         return num_add
 
     def shift(self, shiftrate, shiftmean, shiftstdev, shift_rows=[]):
@@ -223,6 +247,7 @@ class Bedshift(object):
         for idx in sorted(to_drop, reverse=True):
             del self.bed[idx]
         self.bed.extend(new_row_list)
+        self._sort_bed()
         if invalid_shifted > 0:
             _LOGGER.warning(
                 f"{invalid_shifted} regions were prevented from being shifted outside of chromosome boundaries."
@@ -245,10 +270,14 @@ class Bedshift(object):
         chrom = self.bed[row][0]
         start = self.bed[row][1]
         end = self.bed[row][2]
-        if start + theshift < 0 or end + theshift > self.chrom_lens[str(chrom)]:
+        new_start = start + theshift
+        new_end = end + theshift
+        if new_start < 0 or new_end > self.chrom_lens[str(chrom)]:
+            return None, None
+        if new_start >= new_end:
             return None, None
 
-        return row, [chrom, start + theshift, end + theshift, "S"]
+        return row, [chrom, new_start, new_end, "S"]
 
     def shift_from_file(self, fp, shiftrate, shiftmean, shiftstdev):
         """Shift regions that overlap the specified file's regions.
@@ -301,14 +330,18 @@ class Bedshift(object):
         cut_rows = random.sample(list(range(rows)), int(rows * cutrate))
         new_row_list = []
         to_drop = []
+        num_cut = 0
         for row in cut_rows:
             drop_row, new_regions = self._cut(row)
-            new_row_list.extend(new_regions)
-            to_drop.append(drop_row)
+            if drop_row is not None and new_regions:
+                new_row_list.extend(new_regions)
+                to_drop.append(drop_row)
+                num_cut += 1
         for idx in sorted(to_drop, reverse=True):
             del self.bed[idx]
         self.bed.extend(new_row_list)
-        return len(cut_rows)
+        self._sort_bed()
+        return num_cut
 
     def _cut(self, row):
         """Cut a single region into two regions.
@@ -317,18 +350,17 @@ class Bedshift(object):
             row (int): The index of the row to cut.
 
         Returns:
-            tuple: A tuple of (row_index, list_of_two_new_regions).
+            tuple: A tuple of (row_index, list_of_two_new_regions) or (None, None) if region is too small.
         """
         chrom = self.bed[row][0]
         start = self.bed[row][1]
         end = self.bed[row][2]
 
-        # choose where to cut the region
-        thecut = (start + end) // 2
-        if thecut <= start:
-            thecut = start + 10
-        if thecut >= end:
-            thecut = end - 10
+        # Region must be at least 2bp to cut into two valid regions
+        if end - start < 2:
+            return None, None
+
+        thecut = random.randint(start + 1, end - 1)
 
         return (
             row,
@@ -349,6 +381,7 @@ class Bedshift(object):
         """
         self._precheck(mergerate)
 
+        self._sort_bed()
         rows = len(self.bed)
         merge_rows = random.sample(list(range(rows)), int(rows * mergerate))
         to_add = []
@@ -361,6 +394,7 @@ class Bedshift(object):
         for idx in sorted(set(to_drop), reverse=True):
             del self.bed[idx]
         self.bed.extend(to_add)
+        self._sort_bed()
         return len(to_drop)
 
     def _merge(self, row):
@@ -376,8 +410,8 @@ class Bedshift(object):
             return None, None
 
         chrom = self.bed[row][0]
-        start = self.bed[row][1]
-        end = self.bed[row + 1][2]
+        start = min(self.bed[row][1], self.bed[row + 1][1])
+        end = max(self.bed[row][2], self.bed[row + 1][2])
         return [row, row + 1], [chrom, start, end, "M"]
 
     def drop(self, droprate):
@@ -395,6 +429,7 @@ class Bedshift(object):
         drop_rows = random.sample(list(range(rows)), int(rows * droprate))
         for idx in sorted(drop_rows, reverse=True):
             del self.bed[idx]
+        self._sort_bed()
         return len(drop_rows)
 
     def drop_from_file(self, fp, droprate):
@@ -563,6 +598,7 @@ class Bedshift(object):
             else:
                 n += self.drop(droprate)
 
+        self._remove_invalid_regions()
         return n
 
     def to_bed(self, outfile_name):
@@ -571,7 +607,8 @@ class Bedshift(object):
         Args:
             outfile_name (str): The name of the output BED file.
         """
-        self.bed.sort(key=lambda r: (r[0], r[1], r[2]))
+        self._remove_invalid_regions()
+        self._sort_bed()
         with open(outfile_name, "w") as f:
             for row in self.bed:
                 f.write(f"{row[0]}\t{int(row[1])}\t{int(row[2])}\n")
