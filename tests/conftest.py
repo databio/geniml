@@ -1,5 +1,3 @@
-
-
 def pytest_addoption(parser):
     """
     Adding options in commandline for pytest. The options decide which tests to skip

@@ -4,7 +4,6 @@ import shlex
 import subprocess
 
 
-
 def bedtools_tokenization(
     f: str,
     bedtools_path: str,

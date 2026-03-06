@@ -18,11 +18,13 @@ extra = {"install_requires": DEPENDENCIES}
 with open(PACKAGE_NAME + "/_version.py", "r") as versionfile:
     version = versionfile.readline().split()[-1].strip("\"'\n")
 
+
 # Optional dependencies
 # Extras requires a dictionary and not a list?
 def _read_reqs(path):
     with open(path, "r") as fh:
         return [line.strip() for line in fh if line.strip() and not line.strip().startswith("#")]
+
 
 ml_dep = _read_reqs("requirements/requirements-ml.txt")
 sc_dep = _read_reqs("requirements/requirements-sc.txt")

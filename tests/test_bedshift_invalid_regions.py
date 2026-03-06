@@ -13,9 +13,7 @@ import pytest
 
 from geniml.bedshift import bedshift
 
-DATA_FOLDER_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "data", "bedshift"
-)
+DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "bedshift")
 
 
 def _count_invalid_regions(bed):
@@ -110,8 +108,10 @@ class TestCutTinyRegions:
 
     def test_cut_many_tiny_regions(self):
         """Cut a batch of tiny regions; all results must be valid."""
-        regions = [("chr1", 1000 + i * 100, 1000 + i * 100 + size)
-                   for i, size in enumerate([1, 2, 3, 5, 8, 10, 15, 19, 20])]
+        regions = [
+            ("chr1", 1000 + i * 100, 1000 + i * 100 + size)
+            for i, size in enumerate([1, 2, 3, 5, 8, 10, 15, 19, 20])
+        ]
         bs = self._make_bs_with_regions(regions)
         bs.cut(1.0)  # cut all
         assert _count_invalid_regions(bs.bed) == 0, (
@@ -205,8 +205,7 @@ class TestStressMultiRound:
             )
             invalid = _count_invalid_regions(bs.bed)
             assert invalid == 0, (
-                f"Round {round_num}: found {invalid} invalid regions "
-                f"out of {len(bs.bed)} total"
+                f"Round {round_num}: found {invalid} invalid regions out of {len(bs.bed)} total"
             )
 
 
