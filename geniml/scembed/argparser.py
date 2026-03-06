@@ -37,14 +37,14 @@ def build_argparser(parser: VersionInHelpParser = None) -> VersionInHelpParser:
         "--nothreads",
         dest="nothreads",
         default=1,
-        help="Number of available processors for  " "Word2Vec training.",
+        help="Number of available processors for  Word2Vec training.",
     )
 
     parser.add_argument(
         "--noreads",
         dest="noreads",
         default=2,
-        help="Minimum number of reads that overlap a region " "for that region to be included.",
+        help="Minimum number of reads that overlap a region for that region to be included.",
     )
 
     parser.add_argument(
@@ -65,7 +65,7 @@ def build_argparser(parser: VersionInHelpParser = None) -> VersionInHelpParser:
         "--dimension",
         dest="dimension",
         default=100,
-        help="Number of dimensions to train the word2vec " "model.",
+        help="Number of dimensions to train the word2vec model.",
     )
 
     parser.add_argument(

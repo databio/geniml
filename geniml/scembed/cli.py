@@ -58,9 +58,9 @@ def main():
             f"shuffle{args.shuffle_repeat}.model"
         )
         model_filename = os.path.join(args.output, args.title + model_name)
-        _LOGGER.info(f"Shuffling documents")
+        _LOGGER.info("Shuffling documents")
         shuffeled_documents = shuffle_documents(documents, int(args.shuffle_repeat))
-        _LOGGER.info(f"Constructing model")
+        _LOGGER.info("Constructing model")
         model = train(
             shuffeled_documents,
             window_size=int(args.window_size),
@@ -72,4 +72,4 @@ def main():
         _LOGGER.info(f"Model saved as: {model_filename}")
 
     _LOGGER.info(f"Number of words in w2v model: {len(model.wv.vocab)}")
-    _LOGGER.info(f"Pipeline Complete!")
+    _LOGGER.info("Pipeline Complete!")

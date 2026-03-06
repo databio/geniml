@@ -160,7 +160,7 @@ def metadata_dict_from_csv(
                     empty_count += 1
                 # add the metadata into output dictionary
                 else:
-                    if series_key is None or not series_key in rows_to_ite.columns:
+                    if series_key is None or series_key not in rows_to_ite.columns:
                         output_dict[row[file_key]] = metadata_dict
 
                     else:

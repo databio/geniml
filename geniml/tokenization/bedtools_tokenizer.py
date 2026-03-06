@@ -38,7 +38,6 @@ class BEDToolsTokenizer(FileTokenizer):
         # bedtools_process.communicate()
 
         # get a temporary file path using tempfile
-        import templfile
 
         with tempfile.NamedTemporaryFile() as temp_path, open(output_path, "w") as output_file:
             # sort the input file

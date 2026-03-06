@@ -5,7 +5,6 @@ import numpy as np
 
 from ..backends import BiVectorBackend
 from ..query2vec import Text2Vec
-from .abstract import BEDSearchInterface
 
 
 class BiVectorSearchInterface:

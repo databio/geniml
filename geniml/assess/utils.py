@@ -1,7 +1,6 @@
 import os
 import shlex
 import subprocess
-import tempfile
 from subprocess import PIPE, Popen
 
 

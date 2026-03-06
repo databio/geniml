@@ -305,7 +305,7 @@ class QdrantBackend(EmSearchBackend):
         for i in range(len(ids)):
             id_ = ids[i]
             if isinstance(id_, str):
-                if not "-" in id_:
+                if "-" not in id_:
                     ids[i] = f"{id_[:8]}-{id_[8:12]}-{id_[12:16]}-{id_[16:20]}-{id_[20:]}"
 
         output_list = []

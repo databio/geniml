@@ -1,4 +1,3 @@
-import logging
 import math
 import subprocess
 from functools import partial
@@ -333,9 +332,9 @@ class AdjustedRandIndexCallback(WandbMixin, TrainerCallback):
                 "scikit-learn is required for AdjustedRandIndexCallback. Please install it with `pip install scikit-learn`."
             )
 
-        assert len(input_ids) == len(
-            cell_type_labels
-        ), "Input IDs and cell type labels must have the same length."
+        assert len(input_ids) == len(cell_type_labels), (
+            "Input IDs and cell type labels must have the same length."
+        )
 
         self.initial_labels = cell_type_labels
         self.num_classes = len(set(cell_type_labels))
@@ -354,9 +353,9 @@ class AdjustedRandIndexCallback(WandbMixin, TrainerCallback):
         model = kwargs.get("model")
         step = state.global_step
 
-        assert (
-            model is not None
-        ), "Model is not available in the callback. Please check the Trainer configuration."
+        assert model is not None, (
+            "Model is not available in the callback. Please check the Trainer configuration."
+        )
 
         if model is None:
             raise ValueError(

@@ -321,9 +321,9 @@ class AtacformerForMaskedLM(EncodeTokenizedCellsMixin, AtacformerPreTrainedModel
             if outputs.dtype != required_dtype:
                 # logger.warning_once(f"casting hidden states from {outputs.dtype} to {required_dtype} before cce loss.") # Optional logging
                 outputs = outputs.to(required_dtype)
-            assert (
-                _CCE_AVAILABLE
-            ), "Cut cross entropy is not available. Please install it with `pip install cut-cross-entropy`."
+            assert _CCE_AVAILABLE, (
+                "Cut cross entropy is not available. Please install it with `pip install cut-cross-entropy`."
+            )
 
             loss = self.loss_fct(
                 e=outputs,
@@ -484,7 +484,6 @@ class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTraine
         attention_mask_negative: Optional[torch.Tensor] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutput]:
-
         if attention_mask_anchor is None:
             attention_mask_anchor = torch.ones_like(input_ids_anchor, dtype=torch.bool)
         if attention_mask_positive is None:

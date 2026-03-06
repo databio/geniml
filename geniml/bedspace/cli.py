@@ -1,8 +1,6 @@
 import logging
-import sys
 from typing import Dict
 
-import logmuse
 from ubiquerg import VersionInHelpParser
 
 from ._version import __version__
