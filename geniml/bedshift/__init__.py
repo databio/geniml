@@ -2,8 +2,8 @@
 
 import logmuse
 
-from .bedshift import Bedshift
-from .yaml_handler import BedshiftYAMLHandler
+from .bedshift import Bedshift  # noqa: F401
+from .yaml_handler import BedshiftYAMLHandler  # noqa: F401
 
 __classes__ = ["Bedshift"]
 __all__ = __classes__ + []

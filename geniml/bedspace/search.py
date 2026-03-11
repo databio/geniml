@@ -73,7 +73,6 @@ def run_scenario2(
     _LOGGER.info("Running search...")
 
     # PLACE SEARCH CODE HERE
-    file = query
     distance = pd.read_csv(distances)
     distance.file_label = distance.file_label.str.lower()
     distance.search_term = distance.search_term.str.lower()

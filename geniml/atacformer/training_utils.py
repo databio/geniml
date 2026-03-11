@@ -329,8 +329,7 @@ class AdjustedRandIndexCallback(WandbMixin, TrainerCallback):
     ):
         super().__init__()
         try:
-            from sklearn.metrics import adjusted_rand_score
-            from sklearn.cluster import KMeans
+            import sklearn  # noqa: F401
         except ImportError:
             raise ImportError(
                 "scikit-learn is required for AdjustedRandIndexCallback. Please install it with `pip install scikit-learn`."

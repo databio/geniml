@@ -257,13 +257,14 @@ class RegionSet:
     def identifier(self) -> str:
         return self.compute_bed_identifier()
 
-    def to_granges(self) -> "genomicranges.GenomicRanges":
+    def to_granges(self) -> "genomicranges.GenomicRanges":  # noqa: F821
         """
         Return GenomicRanges contained in this BED file.
 
         Returns:
             genomicranges.GenomicRanges: GenomicRanges object
         """
+        import genomicranges
 
         seqnames, starts, ends = zip(
             *[(region.chr, region.start, region.end) for region in self.regions]

@@ -323,7 +323,7 @@ class QdrantBackend(EmSearchBackend):
         for id_ in ids:
             try:
                 result = retrieval_dict[id_]
-            except:
+            except Exception:
                 _LOGGER.warning(f"Warning: no id stored in backend matches {id_}.")
                 continue
             result_dict = {"id": result.id, "payload": result.payload}

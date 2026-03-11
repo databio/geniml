@@ -27,7 +27,6 @@ def get_topk_embed(
         tuple[np.ndarray, np.ndarray]: K indexes of nearest embeddings and the
             corresponding similarities.
     """
-    num = len(embed)
     if dist == "cosine":
         nom = np.dot(embed[i : i + 1], embed.T)
         denom = np.linalg.norm(embed[i : i + 1]) * np.linalg.norm(embed, axis=1)
@@ -366,9 +365,6 @@ def get_npt_score(
                 count = count + 1
     snprs = cal_snpr(avg_ratio, avg_ratio_ref)
 
-    ratio_msg = " ".join([f"{r:.6f}" for r in avg_ratio])
-    ratio_ref_msg = " ".join([f"{r:.6f}" for r in avg_ratio_ref])
-    snprs_msg = " ".join([f"{r:.6f}" for r in snprs])
     result = {
         "K": K,
         "Avg_qNPR": avg_ratio,

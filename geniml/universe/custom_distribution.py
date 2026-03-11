@@ -86,9 +86,6 @@ class NBHMM(BaseHMM):
         super()._init(X)
         self.random_state = check_random_state(self.random_state)
 
-        mean_X = X.mean()
-        var_X = X.var()
-
         if self._needs_init("p", "prob_"):
             # initialize with method of moments based on X
             raise NotImplementedError
@@ -271,7 +268,7 @@ class BetaHMM(BaseHMM):
         ).T
 
     def _initialize_sufficient_statistics(self):
-        stats = super()._initialize_sufficient_statistics()
+        super()._initialize_sufficient_statistics()
         raise NotImplementedError
 
     def _accumulate_sufficient_statistics(
