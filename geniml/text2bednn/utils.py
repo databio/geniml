@@ -170,7 +170,7 @@ def metadata_dict_from_csv(
                         }
                         try:
                             output_dict[row[series_key]].append(payload)
-                        except:
+                        except Exception:
                             output_dict[row[series_key]] = [payload]
                             series_count += 1
                 bed_count += 1

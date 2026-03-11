@@ -18,25 +18,25 @@ extra = {"install_requires": DEPENDENCIES}
 with open(PACKAGE_NAME + "/_version.py", "r") as versionfile:
     version = versionfile.readline().split()[-1].strip("\"'\n")
 
+
 # Optional dependencies
 # Extras requires a dictionary and not a list?
-with open("requirements/requirements-ml.txt", "r") as reqs_file:
-    ml_dep = []
-    for line in reqs_file:
-        if not line.strip():
-            continue
-        ml_dep.append(line.strip())
+def _read_reqs(path):
+    with open(path, "r") as fh:
+        return [line.strip() for line in fh if line.strip() and not line.strip().startswith("#")]
 
-with open("requirements/requirements-test.txt", "r") as reqs_file:
-    test_dep = []
-    for line in reqs_file:
-        if not line.strip():
-            continue
-        test_dep.append(line.strip())
+
+ml_dep = _read_reqs("requirements/requirements-ml.txt")
+sc_dep = _read_reqs("requirements/requirements-sc.txt")
+search_dep = _read_reqs("requirements/requirements-search.txt")
+test_dep = _read_reqs("requirements/requirements-test.txt")
 
 extra["install_requires"] = DEPENDENCIES
 extra["extras_require"] = {
     "ml": ml_dep,
+    "sc": sc_dep,
+    "search": search_dep,
+    "all": ml_dep + sc_dep + search_dep,
     "test": test_dep,
 }
 

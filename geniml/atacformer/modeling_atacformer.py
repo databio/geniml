@@ -484,7 +484,6 @@ class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTraine
         attention_mask_negative: Optional[torch.Tensor] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutput]:
-
         if attention_mask_anchor is None:
             attention_mask_anchor = torch.ones_like(input_ids_anchor, dtype=torch.bool)
         if attention_mask_positive is None:

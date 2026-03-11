@@ -8,7 +8,7 @@ from .argparsers import build_distance_argparser as distance_subparser
 from .argparsers import build_preprocess_argparser as preprocess_subparser
 from .argparsers import build_search_argparser as search_subparser
 from .argparsers import build_train_argparser as train_subparser
-from .const import *
+from .const import DISTANCES_CMD, PKG_NAME, PREPROCESS_CMD, SEARCH_CMD, TRAIN_CMD
 
 global _LOGGER
 logging.basicConfig(level=logging.INFO)

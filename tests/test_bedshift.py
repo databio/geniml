@@ -18,8 +18,8 @@ def bs():
 class TestBedshift:
     def test_read_bed(self):
         reader = bedshift.Bedshift(os.path.join(DATA_FOLDER_PATH, "header_test.bed"))
-        assert list(reader.bed.columns) == [0, 1, 2, 3]
-        assert list(reader.bed.index) == [0, 1, 2]
+        assert len(reader.bed) == 3  # 3 rows
+        assert len(reader.bed[0]) == 4  # 4 fields per row: chrom, start, end, mod_flag
 
     def test_read_chrom_sizes(self, bs):
         bs._read_chromsizes(os.path.join(DATA_FOLDER_PATH, "hg19.chrom.sizes"))
@@ -47,7 +47,6 @@ class TestBedshift:
             2000,
             1000,
             valid_bed=os.path.join(DATA_FOLDER_PATH, "small_test.bed"),
-            delimiter="\t",
         )
         assert added == 500
         # bs.to_bed(os.path.join(SCRIPT_PATH, "add_valid_test.bed"))

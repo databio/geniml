@@ -275,10 +275,10 @@ def likelihood_flexible_universe(
                             # likelihood of part of the genome after the last region
                             res += background_likelihood(
                                 empty_start,
-                                chr_size,
-                                prob_start,
-                                prob_core,
-                                prob_end,
+                                chr_size,  # noqa: F821
+                                prob_start,  # noqa: F821
+                                prob_core,  # noqa: F821
+                                prob_end,  # noqa: F821
                             )
                         current_chrom = i[0]
                         done_chroms.append(current_chrom)

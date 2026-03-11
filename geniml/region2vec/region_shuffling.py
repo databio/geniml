@@ -47,7 +47,7 @@ class BEDDataset:
             dst_path (str): The destination file that stores all the generated
                 BED files; each line has regions sampled from a BED file.
         """
-        with open(dst_fname, "w") as fout:
+        with open(dst_path, "w") as fout:
             for fname in self.filename_list:
                 src_fname = os.path.join(src_path, fname)
                 sentence = []

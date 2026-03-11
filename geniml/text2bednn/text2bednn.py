@@ -446,7 +446,7 @@ class Vec2VecFNN:
         try:
             valid_loss = self.most_recent_train["val_loss"]
             plt.plot(epoch_range, valid_loss, "b", label="Validation loss")
-        except:
+        except Exception:
             pass
         plt.title(title)
         plt.legend()

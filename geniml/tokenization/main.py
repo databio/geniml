@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import shutil
 import subprocess
+from argparse import Namespace
 from typing import List
 
 import numpy as np

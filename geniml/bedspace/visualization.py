@@ -8,7 +8,7 @@ import umap.umap_ as umap
 
 matplotlib.rcParams["svg.fonttype"] = "none"
 matplotlib.rcParams["text.usetex"] = False
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa: E402
 
 # Label embedding
 
@@ -18,8 +18,6 @@ label_prefix = "__label__"
 
 
 def label_preprocessing(path_label_embedding, label_prefix, common_labels=[]):
-    labels = []
-    label_vectors = []
     label_embedding = pd.read_csv(path_label_embedding, sep="\t", header=None, skiprows=1)
     vectors = label_embedding[label_embedding[0].str.contains(label_prefix)]  # .reset_index()
 
@@ -43,7 +41,6 @@ def UMAP_plot(
     output_folder="",
 ):
     np.random.seed(3)
-    dp = 400
 
     ump = umap.UMAP(
         a=None,
@@ -111,7 +108,7 @@ def UMAP_plot(
     return fig
 
 
-from scipy.cluster import hierarchy
+from scipy.cluster import hierarchy  # noqa: E402
 
 nn = 5
 target = "target"
@@ -199,7 +196,7 @@ search = "target"
 
 
 def Scenario1(path_simfile):
-    distance = pd.read_csv(file)
+    distance = pd.read_csv(path_simfile)
     distance.file_label = distance.file_label.str.lower()
     distance.search_term = distance.search_term.str.lower()
     distance = distance.drop_duplicates()
@@ -278,7 +275,7 @@ search = "target"
 
 
 def Scenario2(path_simfile):
-    distance = pd.read_csv(file)
+    distance = pd.read_csv(path_simfile)
     distance.file_label = distance.file_label.str.lower()
     distance.search_term = distance.search_term.str.lower()
     distance = distance.drop_duplicates()

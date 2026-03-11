@@ -1,6 +1,6 @@
 from ubiquerg import VersionInHelpParser
 
-from .const import *
+from .const import SearchType
 
 
 def build_preprocess_argparser(

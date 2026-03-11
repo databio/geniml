@@ -39,7 +39,6 @@ def get_rct_score(
     """
     embed_rep, vocab = load_genomic_embeddings(path, embed_type)
     embed_bin, vocab_bin = load_genomic_embeddings(bin_path, "base")
-    region2idx = {r: i for i, r in enumerate(vocab)}
     region2idx_bin = {r: i for i, r in enumerate(vocab_bin)}
     # align embed_bin with embed_rep
     if out_dim <= 0:
@@ -156,7 +155,6 @@ def rct_eval(
             assert res[0] == batch[i][0], "key == batch[i][0]"
     mean_rct = [np.array(r).mean() for r in rct_res]
     std_rct = [np.array(r).std() for r in rct_res]
-    models = [t[0] for t in batch]
     for i in range(len(mean_rct)):
         print(f"{batch[i][0]}\n RCT (std): {mean_rct[i]:.4f} ({std_rct[i]:.4f}) \n")
     rct_arr = [(batch[i][0], rct_res[i]) for i in range(len(batch))]

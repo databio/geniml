@@ -1,1 +1,1 @@
-from .cli import build_subparser
+from .cli import build_subparser  # noqa: F401

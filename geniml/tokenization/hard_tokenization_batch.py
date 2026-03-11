@@ -3,6 +3,8 @@ import os
 import shlex
 import subprocess
 
+from . import utils
+
 
 def bedtools_tokenization(
     f: str,

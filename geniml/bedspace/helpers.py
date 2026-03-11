@@ -109,9 +109,9 @@ def get_label_embedding(path_word_embedding, label_prefix):
     # Filter rows that contain the label prefix
     vectors = word_embedding[word_embedding[0].str.contains(label_prefix)]  # .reset_index()
     # Extract label vectors and labels
-    for l in range(len(vectors)):
-        label_vectors.append((list(vectors.iloc[l])[1:]))
-        labels.append(list(vectors.iloc[l])[0].replace(label_prefix, ""))
+    for idx in range(len(vectors)):
+        label_vectors.append((list(vectors.iloc[idx])[1:]))
+        labels.append(list(vectors.iloc[idx])[0].replace(label_prefix, ""))
     return label_vectors, labels
 
 

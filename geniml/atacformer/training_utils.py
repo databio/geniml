@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import math
 import subprocess
 from functools import partial
-from typing import List, Dict
+from typing import List, Dict, TYPE_CHECKING
 from collections import defaultdict
 
 import torch
-import scanpy as sc
+
+if TYPE_CHECKING:
+    import scanpy as sc
 
 import numpy as np
 from torch.optim import Optimizer
@@ -325,8 +329,7 @@ class AdjustedRandIndexCallback(WandbMixin, TrainerCallback):
     ):
         super().__init__()
         try:
-            from sklearn.metrics import adjusted_rand_score
-            from sklearn.cluster import KMeans
+            import sklearn  # noqa: F401
         except ImportError:
             raise ImportError(
                 "scikit-learn is required for AdjustedRandIndexCallback. Please install it with `pip install scikit-learn`."
