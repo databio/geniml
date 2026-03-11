@@ -97,21 +97,21 @@ def sum_ensembl_ids(
         Map Ensembl IDs from gene mapping dictionary. If duplicate Ensembl IDs are found, sum counts together.
         """
         with lp.connect(data_directory) as data:
-            assert (
-                "ensembl_id" in data.ra.keys()
-            ), "'ensembl_id' column missing from data.ra.keys()"
+            assert "ensembl_id" in data.ra.keys(), (
+                "'ensembl_id' column missing from data.ra.keys()"
+            )
 
-            assert (
-                "ensembl_id_collapsed" not in data.ra.keys()
-            ), "'ensembl_id_collapsed' column already exists in data.ra.keys()"
+            assert "ensembl_id_collapsed" not in data.ra.keys(), (
+                "'ensembl_id_collapsed' column already exists in data.ra.keys()"
+            )
 
             assert "n_counts" in data.ca.keys(), "'n_counts' column missing from data.ca.keys()"
 
             if custom_attr_name_dict is not None:
                 for label in custom_attr_name_dict:
-                    assert (
-                        label in data.ca.keys()
-                    ), f"Attribute `{label}` not present in dataset features"
+                    assert label in data.ca.keys(), (
+                        f"Attribute `{label}` not present in dataset features"
+                    )
 
             # Get the ensembl ids that exist in data
             ensembl_ids = data.ra.ensembl_id
@@ -201,9 +201,9 @@ def sum_ensembl_ids(
 
         assert "ensembl_id" in data.var.columns, "'ensembl_id' column missing from data.var"
 
-        assert (
-            "ensembl_id_collapsed" not in data.var.columns
-        ), "'ensembl_id_collapsed' column already exists in data.var"
+        assert "ensembl_id_collapsed" not in data.var.columns, (
+            "'ensembl_id_collapsed' column already exists in data.var"
+        )
         assert "n_counts" in data.obs.columns, "'n_counts' column missing from data.obs"
 
         if custom_attr_name_dict is not None:

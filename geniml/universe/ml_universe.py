@@ -9,7 +9,7 @@ import numpy as np
 
 from geniml.likelihood.build_model import ModelLH
 
-from ..utils import natural_chr_sort, read_chromosome_from_bw, timer_func
+from ..utils import natural_chr_sort, read_chromosome_from_bw
 from .utils import find_full, predictions_to_bed
 
 package_name = "numba"

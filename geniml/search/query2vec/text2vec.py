@@ -8,7 +8,6 @@ from fastembed import TextEmbedding
 
 from ...const import PKG_NAME
 from ...text2bednn import Vec2VecFNN
-from .abstract import Query2Vec
 
 _LOGGER = logging.getLogger(PKG_NAME)
 

@@ -1,13 +1,10 @@
 import glob
-import re
-from collections import Counter
 
 import matplotlib
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import umap.umap_ as umap
-from scipy import stats
 
 matplotlib.rcParams["svg.fonttype"] = "none"
 matplotlib.rcParams["text.usetex"] = False

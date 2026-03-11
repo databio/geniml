@@ -31,7 +31,7 @@ def print_inspect_beds(bb_cache_folder) -> None:
 
     from .bbclient import BBClient
 
-    _LOGGER.info(f"Bedfiles directory:")
+    _LOGGER.info("Bedfiles directory:")
     bbc = BBClient(cache_folder=bb_cache_folder)
     result = bbc.list_beds()
 
@@ -66,7 +66,7 @@ def print_inspect_bedsets(bb_cache_folder) -> None:
 
     from .bbclient import BBClient
 
-    _LOGGER.info(f"Bedsets directory:")
+    _LOGGER.info("Bedsets directory:")
     bbc = BBClient(cache_folder=bb_cache_folder)
     result = bbc.list_bedsets()
 

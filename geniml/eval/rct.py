@@ -1,21 +1,14 @@
-import argparse
-import glob
-import multiprocessing as mp
 import os
 import pickle
-import random
-import time
 
 import numpy as np
 import sklearn.neural_network as nn
-from gensim.models import Word2Vec
 from sklearn.compose import TransformedTargetRegressor
-from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.model_selection import KFold, cross_val_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from ..utils import timer_func
-from .utils import cosine_distance, genome_distance, load_genomic_embeddings
+from .utils import load_genomic_embeddings
 
 
 def get_rct_score(

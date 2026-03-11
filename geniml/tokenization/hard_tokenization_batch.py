@@ -3,8 +3,6 @@ import os
 import shlex
 import subprocess
 
-from .utils import Timer, time_str
-
 
 def bedtools_tokenization(
     f: str,
