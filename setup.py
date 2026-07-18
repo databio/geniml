@@ -54,6 +54,7 @@ setup(
         "geniml.assess",
         "geniml.bedspace",
         "geniml.bedshift",
+        "geniml.dataset",
         "geniml.eval",
         "geniml.likelihood",
         "geniml.models",

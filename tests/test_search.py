@@ -4,6 +4,12 @@ from typing import Dict, List
 
 import numpy as np
 import pytest
+
+# geniml.search.backends imports qdrant_client at module load; it lives in the
+# `search` optional-dep group. Skip the whole module when it isn't installed
+# (execution is further gated by --qdrant/--huggingface).
+pytest.importorskip("qdrant_client")
+
 from geniml.io import RegionSet
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search import BED2BEDSearchInterface, BED2Vec, Text2BEDSearchInterface, Text2Vec
