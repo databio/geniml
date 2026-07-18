@@ -19,6 +19,7 @@ nav:
     - Cell-type prediction using KNN: tutorials/cell-type-annotation-with-knn.md
     - Tokenization: tutorials/tokenization.md
     - Tokenize a BED file on the command line: tutorials/cli-tokenization.md
+    - Build a training dataset from bedbase: tutorials/bedbase-training-dataset.md
     - Create consensus peaks: tutorials/create-consensus-peaks.md
     - Fine-tune embeddings: tutorials/fine-tune-region2vec-model.md
     - Randomize bed files: tutorials/bedshift.md
