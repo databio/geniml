@@ -2,6 +2,12 @@ import os
 
 import numpy as np
 import pytest
+
+# geniml.search.backends imports qdrant_client at module load; it lives in the
+# `search` optional-dep group. Skip the whole module when it isn't installed
+# (execution is further gated by --huggingface).
+pytest.importorskip("qdrant_client")
+
 from geniml.search.backends import HNSWBackend
 from geniml.text2bednn.text2bednn import Vec2VecFNN
 from geniml.text2bednn.utils import metadata_dict_from_csv

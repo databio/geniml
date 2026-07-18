@@ -24,17 +24,19 @@ class BEDDataset:
     def __init__(self, file_list: str) -> None:
         """Initializes a BEDDataset object.
 
+        The file-list handling is expressed on the shared dataset interface via
+        :class:`geniml.dataset.FileListSource`; the sentence-generation methods
+        below remain region2vec-specific (word2vec hard tokenization).
+
         Args:
             file_list (str): A file storing a list of BED file names that
                 should be included in the dataset.
         """
-        self.filename_list = []
-        with open(file_list, "r") as f:
-            for idx, line in enumerate(f):
-                filename = line.strip()
-                self.filename_list.append(filename)
+        from geniml.dataset import FileListSource
 
-        self.nfiles = len(self.filename_list)
+        self._source = FileListSource(file_list)
+        self.filename_list = list(self._source.paths)
+        self.nfiles = len(self._source)
 
     def regions2sentences_sampling(self, src_path: str, dst_path: str) -> None:
         """Constructs a sentence by sampling regions from a BED file.

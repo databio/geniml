@@ -3,6 +3,11 @@ import os
 import sys
 
 import pytest
+
+# scanpy (and scembed, which imports it) require the `sc` optional-dep group; skip
+# the whole module gracefully when it isn't installed (e.g. an [ml]-only CI run).
+pytest.importorskip("scanpy")
+
 import scanpy as sc
 from geniml.region2vec.utils import Region2VecDataset
 from geniml.scembed.main import ScEmbed
