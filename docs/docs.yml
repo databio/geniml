@@ -1,0 +1,77 @@
+site_name: Geniml
+nav:
+  - Geniml: README.md
+  - Getting Started:
+    - Module overviews: modules.md
+  - BBclient:
+    - Cache BED files with BBClient: bbclient/bbclient.md
+    - BBClient tutorial: tutorials/bbclient-workflow.md
+    - Use BED cache in R: bbclient/pyBiocFileCache.md
+  - Atacformer:
+    - Atacformer: atacformer/README.md
+    - Getting started:
+      - Core concepts: atacformer/core-concepts.md
+      - Quickstart: atacformer/quickstart.md
+    - Tutorials:
+      - Generating a UMAP from fragments files: atacformer/tutorials/umap_from_fragments.md
+      - Example Brain3k Processing: atacformer/tutorials/example-brain3k-processing.md
+      - Visualizing new embeddings in the latent space of a reference: atacformer/tutorials/ev-projection.md
+      - Training:
+        - Pre-tokenize data for training: atacformer/tutorials/training/pretokenize-for-training.md
+        - Train a model from scratch: atacformer/tutorials/training/train-from-scratch.md
+        - Fine-tune a model: atacformer/tutorials/training/fine-tune.md
+    - Local compute guides:
+      - Compute requirements: atacformer/local_compute/compute_requirements.md
+      - Using atacformer locally: atacformer/local_compute/local_compute.md
+      - Using atacformer with Apple Silicon: atacformer/local_compute/apple_silicon.md
+  - How-to guides:
+    - Train region2vec embeddings: tutorials/region2vec.md
+    - Train BEDspace model:
+      - Train BEDSpace embeddings: tutorials/bedspace.md
+      - BEDspace results notebook: notebooks/bedspace-analysis.ipynb
+    - Use scEmbed model:
+      - Train single-cell embeddings: tutorials/train-scembed-model.md
+      - Populate a vector store: tutorials/load-qdrant-with-cell-embeddings.md
+      - Predict cell-types using KNN: tutorials/cell-type-annotation-with-knn.md
+    - Evaluate embeddings: tutorials/evaluation.md
+    - Create consensus peaks with CLI: tutorials/create-consensus-peaks.md
+    - Create consensus peaks with Python: notebooks/create-consensus-peaks-python.ipynb
+    - Assess universe fit: notebooks/assess-universe.ipynb
+    - Fine-tune embeddings: tutorials/fine-tune-region2vec-model.md
+    - Randomize bed files: tutorials/bedshift.md
+    - Create evaluation dataset with bedshift: tutorials/bedshift-evaluation-guide.md
+    - Create search backend: tutorials/text2bednn-search-interface.md
+  - Reference:
+    - How to cite: /citations/
+    - Python API documentation:
+      - Assess: api-reference/assess.md
+      - Atacformer: api-reference/atacformer.md
+      - BBClient: api-reference/bbclient.md
+      - BEDshift: api-reference/bedshift.md
+      - BEDspace: api-reference/bedspace.md
+      - Craft: api-reference/craft.md
+      - Evaluation: api-reference/eval.md
+      - Geneformer: api-reference/geneformer.md
+      - I/O: api-reference/io.md
+      - Likelihood: api-reference/likelihood.md
+      - Models: api-reference/models.md
+      - Region2Vec: api-reference/region2vec.md
+      - scEmbed: api-reference/scembed.md
+      - Search: api-reference/search.md
+      - Text2BedNN: api-reference/text2bednn.md
+      - Tokenization: api-reference/tokenization.md
+      - Universe: api-reference/universe.md
+      - Utilities: api-reference/utils.md
+    - Support: support.md
+    - Contributing: contributing.md
+    - Changelog: changelog.md
+
+renderers:
+  - hub-notebooks:
+      include: [notebooks/*.ipynb]
+      execute: false
+  - hub-python-api:
+      package_root: ..
+      packages: [geniml]
+      include: [api-reference/*.md]
+      docstring_style: sphinx
