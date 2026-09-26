@@ -42,7 +42,6 @@ nav:
     - Create evaluation dataset with bedshift: tutorials/bedshift-evaluation-guide.md
     - Create search backend: tutorials/text2bednn-search-interface.md
   - Reference:
-    - How to cite: /citations/
     - Python API documentation:
       - Assess: api-reference/assess.md
       - Atacformer: api-reference/atacformer.md
