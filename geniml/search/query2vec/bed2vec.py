@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import logging
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 
 from ...const import PKG_NAME
 from ...io import RegionSet
-from ...region2vec.main import Region2VecExModel
 from .abstract import Query2Vec
+
+if TYPE_CHECKING:
+    from ...region2vec.main import Region2VecExModel
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -20,6 +24,9 @@ class BED2Vec(Query2Vec):
         Args:
             model: a Region2VecExModel instance or a model repository on Hugging Face
         """
+        # imported here so that importing geniml.search does not load torch
+        from ...region2vec.main import Region2VecExModel
+
         if isinstance(model, str):
             self.model = Region2VecExModel(model)
         elif isinstance(model, Region2VecExModel):

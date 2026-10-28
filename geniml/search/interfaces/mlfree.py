@@ -1,10 +1,14 @@
-from typing import Dict, List, Union
-from fastembed import TextEmbedding
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
 
 from ..backends import BiVectorBackend
 from ..query2vec import Text2Vec
+
+if TYPE_CHECKING:
+    from fastembed import TextEmbedding
 
 
 class BiVectorSearchInterface:
@@ -22,7 +26,9 @@ class BiVectorSearchInterface:
             backend: the backend where vectors are stored
             query2vec: a Text2Vec instance (see geniml.search.query2vec.text2vec for details)
         """
-        if isinstance(query2vec, str) or isinstance(query2vec, TextEmbedding):
+        # wrap a model name or a fastembed model; anything with forward() is used as is,
+        # so fastembed is not imported here
+        if isinstance(query2vec, str) or not hasattr(query2vec, "forward"):
             self.query2vec = Text2Vec(model=query2vec, v2v=None)
         else:
             self.query2vec = query2vec
