@@ -3,6 +3,18 @@
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format. 
 
 
+# [0.9.0] -- unreleased
+
+- Changed `geniml.search` to import lazily: importing `geniml.search` or `geniml.search.backends` no longer loads torch or fastembed
+- Changed `bedshift` to find overlaps with gtars `RegionSet` instead of GenomicRanges, which fixes `drop_from_file` with GenomicRanges 0.8.5 and later
+- Changed optional dependencies: `geniml[ml]` no longer installs qdrant-client, fastembed, scanpy or anndata. Use `geniml[search]` for vector search, `geniml[sc]` for single-cell, or `geniml[all]` for everything
+- Raised the minimum gtars version to 0.8.0
+- Fixed `Text2Vec` with a `v2v` model, which called a method `Vec2VecFNN` does not have
+- Fixed `len()` of a `QdrantBackend` with current qdrant-client
+- Fixed search evaluation (AUC-ROC) with numpy 2
+- Fixed importing `geniml.text2bednn` without matplotlib; it now loads only for plotting
+
+
 # [0.8.1] -- 2025-09-23
 
 - Fixed bedspace 
