@@ -50,4 +50,4 @@ class Text2Vec:
             return query_embedding
         else:
             # map the query string embedding into the embedding space of region sets
-            return self.v2v.encode(query_embedding)
+            return self.v2v.embedding_to_embedding(query_embedding)
