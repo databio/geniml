@@ -24,7 +24,7 @@ opt-in.
 """
 
 import os
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass, field
 from logging import getLogger
 from typing import Dict, Iterator, List, Optional
 

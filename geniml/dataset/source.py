@@ -16,8 +16,7 @@ The interface is deliberately minimal (see :class:`RegionSetSource`):
 
 import os
 from logging import getLogger
-from typing import Dict, Iterator, List, Optional, Tuple, Union
-from typing_extensions import Protocol, runtime_checkable
+from typing import Dict, Iterator, List, Optional, Protocol, Tuple, Union, runtime_checkable
 
 from gtars.models import RegionSet
 

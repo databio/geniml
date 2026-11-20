@@ -4,7 +4,6 @@ import os
 import random
 
 import pytest
-
 from gtars.models import RegionSet
 from gtars.tokenizers import Tokenizer
 

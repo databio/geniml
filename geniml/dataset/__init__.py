@@ -24,13 +24,6 @@ methods, so importing this package works on a base geniml install; only building
 dataset requires ``geniml[ml]``.
 """
 
-from .source import (
-    BedSetSource,
-    FileListSource,
-    RegionSetItem,
-    RegionSetSource,
-)
-from .tokenize import sample_and_remove, tokenize_regionset
 from .bedbase import (
     METADATA_COLUMNS,
     BedbaseSource,
@@ -40,6 +33,13 @@ from .bedbase import (
 )
 from .dataset import StreamingTokenizedRegionDataset, TokenizedRegionDataset
 from .manifest import cache_key, source_manifest, universe_signature, write_provenance
+from .source import (
+    BedSetSource,
+    FileListSource,
+    RegionSetItem,
+    RegionSetSource,
+)
+from .tokenize import sample_and_remove, tokenize_regionset
 
 __all__ = [
     # source interface
