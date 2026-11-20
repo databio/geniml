@@ -3,6 +3,11 @@ import os
 import sys
 
 import pytest
+
+# scanpy (and scembed, which imports it) require the `sc` optional-dep group; skip
+# the whole module gracefully when it isn't installed (e.g. an [ml]-only CI run).
+pytest.importorskip("scanpy")
+
 import scanpy as sc
 from gtars.tokenizers import Tokenizer
 from gtars.utils import write_tokens_to_gtok
