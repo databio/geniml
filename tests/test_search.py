@@ -270,7 +270,7 @@ def query_bed():
     """
     Returns: path to a BED file in testing data
     """
-    return "./data/s1_a.bed"
+    return os.path.join(DATA_FOLDER_PATH, "s1_a.bed")
 
 
 def cosine_similarity(vec1: np.array, vec2: np.array) -> float:
@@ -312,7 +312,7 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
             assert isinstance(result["payload"]["name"], str)
             assert isinstance(result["payload"]["metadata"], dict)
 
-    qd_search_backend = QdrantBackend(collection=bed_collection)
+    qd_search_backend = QdrantBackend.from_credentials(collection=bed_collection)
     # load data
     qd_search_backend.load(bed_embeddings, payloads=bed_payloads, ids=uuids)
     # test searching
@@ -528,11 +528,11 @@ def test_BiVectorBackend(
         search_result_test(search_results, rank)
 
     # test QdrantBackend
-    bed_backend = QdrantBackend(collection=bed_collection)
+    bed_backend = QdrantBackend.from_credentials(collection=bed_collection)
     # load data
     bed_backend.load(bed_embeddings, payloads=bed_payloads)
 
-    text_backend = QdrantBackend(collection=metadata_collection, dim=384)
+    text_backend = QdrantBackend.from_credentials(collection=metadata_collection, dim=384)
     text_backend.load(text_embeddings, payloads=metadata_payloads)
 
     bivec_qd_backend = BiVectorBackend(text_backend, bed_backend)
@@ -627,7 +627,7 @@ def test_text2bed_search_interface(
 
     vecs = np.array(vecs)
 
-    qd_search_backend = QdrantBackend(collection=bed_collection)
+    qd_search_backend = QdrantBackend.from_credentials(collection=bed_collection)
     qd_search_backend.load(vectors=vecs, payloads=payloads)
     # #
     text2vec = Text2Vec(nl_embed_repo, v2v_hf_repo)
@@ -693,7 +693,7 @@ def test_bed2bed_search_interface(
 
     vecs = np.array(vecs)
 
-    qd_search_backend = QdrantBackend(collection=bed_collection)
+    qd_search_backend = QdrantBackend.from_credentials(collection=bed_collection)
     qd_search_backend.load(vectors=vecs, payloads=payloads)
 
     bed2vec = BED2Vec(r2v_hf_repo)

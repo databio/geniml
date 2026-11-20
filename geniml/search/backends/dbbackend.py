@@ -279,7 +279,7 @@ class QdrantBackend(EmSearchBackend):
         Returns:
             The number of embeddings in the backend.
         """
-        return self.qd_client.get_collection(collection_name=self.collection).vectors_count
+        return self.qd_client.count(collection_name=self.collection, exact=True).count
 
     def retrieve_info(
         self, ids: Union[List[int], int, List[str], str], with_vectors: bool = False

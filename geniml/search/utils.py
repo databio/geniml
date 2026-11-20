@@ -58,7 +58,9 @@ def single_query_eval(search_results: List, relevant_results: List) -> Tuple[flo
             r_precision = retrieved_relevant / num_relevant
     average_precision = sum_precision / num_relevant
     # compute AUC-ROC
-    auc = np.trapz(y, x)
+    # numpy 2 renamed trapz to trapezoid; numpy 1.x only has trapz
+    trapezoid = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
+    auc = trapezoid(y, x)
     return average_precision, auc, r_precision
 
 
