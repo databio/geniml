@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import math
 import subprocess
-from functools import partial
-from typing import List, Dict, TYPE_CHECKING
 from collections import defaultdict
+from functools import partial
+from typing import TYPE_CHECKING, Dict, List
 
 import torch
 
@@ -12,12 +12,12 @@ if TYPE_CHECKING:
     import scanpy as sc
 
 import numpy as np
+from gtars.models import Region
+from gtars.tokenizers import Tokenizer
+from torch.nn.utils.rnn import pad_sequence
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
-from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
-from gtars.tokenizers import Tokenizer
-from gtars.models import Region
 from transformers import DataCollatorForLanguageModeling, TrainerCallback
 from transformers.integrations.integration_utils import is_wandb_available
 
@@ -350,8 +350,8 @@ class AdjustedRandIndexCallback(WandbMixin, TrainerCallback):
         """
         Log the adjusted Rand index (ARI) during training.
         """
-        from sklearn.metrics import adjusted_rand_score
         from sklearn.cluster import KMeans
+        from sklearn.metrics import adjusted_rand_score
 
         model = kwargs.get("model")
         step = state.global_step

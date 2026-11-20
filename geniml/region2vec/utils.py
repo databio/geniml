@@ -5,13 +5,11 @@ import select
 import shutil
 import sys
 import time
-
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import numpy as np
 import pyarrow.parquet as pq
-
 
 try:
     import torch

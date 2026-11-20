@@ -1,8 +1,8 @@
 import numpy as np
 import scanpy as sc
-from tqdm import tqdm
-from gtars.tokenizers import Tokenizer
 from gtars.models import Region
+from gtars.tokenizers import Tokenizer
+from tqdm import tqdm
 
 
 def tokenize_anndata(adata: sc.AnnData, tokenizer: Tokenizer):

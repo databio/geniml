@@ -1,6 +1,6 @@
 import os
 from logging import getLogger
-from typing import List, Union, Sequence, Optional
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
@@ -12,9 +12,9 @@ except ImportError:
         "Please install Machine Learning dependencies by running 'pip install geniml[ml]'"
     )
 
-from gtars.tokenizers import Tokenizer
 from gtars.models import Region as GRegion
 from gtars.models import RegionSet as GRegionSet
+from gtars.tokenizers import Tokenizer
 from huggingface_hub import hf_hub_download
 from rich.progress import track
 

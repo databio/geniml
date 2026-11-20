@@ -1,16 +1,14 @@
-from typing import Optional, Tuple, Union, Any
 from dataclasses import dataclass
-
-from transformers import PreTrainedModel
-from transformers.modeling_outputs import ModelOutput, BaseModelOutput
-from transformers.utils import logging
-
-from atacformer import AtacformerModel
-from geneformer import GeneformerModel
+from typing import Any, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from atacformer import AtacformerModel
+from geneformer import GeneformerModel
+from transformers import PreTrainedModel
+from transformers.modeling_outputs import BaseModelOutput, ModelOutput
+from transformers.utils import logging
 
 from .configuration_craft import CraftConfig
 

@@ -1,7 +1,6 @@
-from transformers import PretrainedConfig
-
 from atacformer.configuration_atacformer import AtacformerConfig
 from geneformer.configuration_geneformer import GeneformerConfig
+from transformers import PretrainedConfig
 
 
 class CraftConfig(PretrainedConfig):

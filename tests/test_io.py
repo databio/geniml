@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 import pytest
+
 from geniml.io.exceptions import BEDFileReadError, GenimlBaseError
 from geniml.io.io import SNP, Maf, Region, RegionSet
 
@@ -79,7 +80,7 @@ class TestRegionSet:
     @pytest.mark.parametrize("path", ALL_BADFILE_BAD_PATH)
     def test_broken_bed_from_path(self, path):
         with pytest.raises(BEDFileReadError):
-            region_set = RegionSet(path)
+            RegionSet(path)
 
     @pytest.mark.parametrize(
         "url",

@@ -4,6 +4,7 @@ from typing import Dict, List
 
 import numpy as np
 import pytest
+
 from geniml.io import RegionSet
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search import BED2BEDSearchInterface, BED2Vec, Text2BEDSearchInterface, Text2Vec
@@ -17,20 +18,6 @@ DATA_FOLDER_PATH = os.path.join(
 
 random.seed(100)
 np.random.seed(100)
-
-
-@pytest.fixture
-def bed_folder():
-    """
-    folder where testing bed files are stored
-    """
-
-    return os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "tests",
-        "data",
-        "hg38_sample",
-    )
 
 
 @pytest.fixture
@@ -356,9 +343,7 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
     qd_search_backend.qd_client.delete_collection(qd_search_backend.collection)
 
 
-@pytest.mark.skipif(
-    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
-)
+@pytest.mark.skipif(not DEP_HNSWLIB, reason="This test require installation of hnswlib (optional)")
 def test_HNSWBackend_load(filenames, bed_embeddings, bed_payloads, bed_hnswb, ids):
     num_upload = len(filenames)
 
@@ -377,9 +362,7 @@ def test_HNSWBackend_load(filenames, bed_embeddings, bed_payloads, bed_hnswb, id
     assert len(bed_hnswb) == num_upload
 
 
-@pytest.mark.skipif(
-    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
-)
+@pytest.mark.skipif(not DEP_HNSWLIB, reason="This test require installation of hnswlib (optional)")
 @pytest.mark.dependency(depends=["test_HNSWBackend_load"])
 def test_HNSWBackend_search(filenames, bed_hnswb, int_ids):
     def search_result_check(dict_list: List[Dict], backend: HNSWBackend, with_dist: bool = False):
@@ -447,9 +430,7 @@ def test_HNSWBackend_search(filenames, bed_hnswb, int_ids):
     search_result_check(retrieval_results, bed_hnswb, False)
 
 
-@pytest.mark.skipif(
-    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
-)
+@pytest.mark.skipif(not DEP_HNSWLIB, reason="This test require installation of hnswlib (optional)")
 @pytest.mark.dependency(depends=["test_HNSWBackend_load"])
 def test_HNSWBackend_save(filenames, bed_hnswb, bed_embeddings, temp_bed_idx_path, temp_data_dir):
     # test saving from local
@@ -467,9 +448,7 @@ def test_HNSWBackend_save(filenames, bed_hnswb, bed_embeddings, temp_bed_idx_pat
     assert len(empty_hnswb.payloads) == 0
 
 
-@pytest.mark.skipif(
-    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
-)
+@pytest.mark.skipif(not DEP_HNSWLIB, reason="This test require installation of hnswlib (optional)")
 @pytest.mark.dependency(depends=["test_HNSWBackend_load"])
 @pytest.mark.skipif(
     "not config.getoption('--qdrant')",

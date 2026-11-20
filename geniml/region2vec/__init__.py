@@ -1,6 +1,6 @@
-from .models import Region2Vec, RegionSet2Vec
 from .main import Region2VecExModel
 from .main_legacy import region2vec
+from .models import Region2Vec, RegionSet2Vec
 from .utils import Region2VecDataset
 
 __all__ = [

@@ -14,6 +14,7 @@ with open("base_embed.pt", "wb") as f:
 ### Generate Binary Embeddings
 ```python
 from geniml.eval.utils import get_bin_embeddings
+
 universe_file = "/path/to/universe.bed"
 token_files = ["file1.bed", "file2.bed"]
 bin_embed = get_bin_embeddings(universe_file, token_files)
@@ -36,8 +37,10 @@ print(ctt_score)
 
 # evaluate a batch of models and run CTT for 5 times with different random seeds
 batch = [(path, embed_type)]
-ctt_score_arr = ctt_eval(batch, num_runs=5, num_data=10000,num_workers=10)
-print(f"Model: {ctt_score_arr[0][0]}\n CTT scores:{ctt_score_arr[0][1]}") # CTT scores for the 1st model in the batch
+ctt_score_arr = ctt_eval(batch, num_runs=5, num_data=10000, num_workers=10)
+print(
+    f"Model: {ctt_score_arr[0][0]}\n CTT scores:{ctt_score_arr[0][1]}"
+)  # CTT scores for the 1st model in the batch
 ```
 
 Or use the command line
@@ -54,13 +57,17 @@ path = "/path/to/a/region2vec/model/"
 embed_type = "region2vec"
 bin_path = "/path/to/a/binary/embedding/for/the/same/tokenized/files/"
 # set out_dim to -1 use all the dimensions of the binary embeddings. Set out_dim to a small positive number to reduce computational complexity.
-rct_score = get_rct_score(path, embed_type, bin_path, out_dim=-1, cv_num=5, seed=42, num_workers=10)
+rct_score = get_rct_score(
+    path, embed_type, bin_path, out_dim=-1, cv_num=5, seed=42, num_workers=10
+)
 print(rct_score)
 
 # evaluate a batch of models and run RCT for 5 times with different random seeds
 batch = [(path, embed_type, bin_path)]
-rct_score_arr = rct_eval(batch, num_runs=5, cv_num=5, out_dim=-1, num_workers=10) 
-print(f"Model: {rct_score_arr[0][0]}\n RCT scores:{rct_score_arr[0][1]}") # RCT scores for the 1st model in the batch
+rct_score_arr = rct_eval(batch, num_runs=5, cv_num=5, out_dim=-1, num_workers=10)
+print(
+    f"Model: {rct_score_arr[0][0]}\n RCT scores:{rct_score_arr[0][1]}"
+)  # RCT scores for the 1st model in the batch
 ```
 
 Or use the command line 
@@ -79,11 +86,11 @@ from geniml.eval.gdst import get_gdst_score, gdst_eval
 
 path = "/path/to/a/region2vec/model/"
 embed_type = "region2vec"
-gdst_score = get_gdst_score(path, embed_type, num_samples=10000,seed=42)
+gdst_score = get_gdst_score(path, embed_type, num_samples=10000, seed=42)
 print(gdst_score)
 
 # evaluate a batch of models and run GDST for 5 times with different random seeds
-batch = [(path,embed_type)] 
+batch = [(path, embed_type)]
 
 gdst_score_arr = gdst_eval(batch, num_runs=5, num_samples=10000)
 ```
@@ -107,16 +114,22 @@ K = 10
 # If resolution = K gives NPT for K neighbors
 # If resolution < K, gives NPT for [resolution, resolution*2, ...] neighbors
 
-resolution = K 
-npt_score = get_npt_score(path, embed_type, K, num_samples=100, seed=0, resolution=resolution,num_workers=10)
+resolution = K
+npt_score = get_npt_score(
+    path, embed_type, K, num_samples=100, seed=0, resolution=resolution, num_workers=10
+)
 
-print(npt_score['SNPR'])
+print(npt_score["SNPR"])
 
 # evaluate a batch of models and run NPT for 5 times with different random seeds
 batch = [(path, embed_type)]
-npt_score_arr = npt_eval(batch, K, num_samples=100, num_workers=10, num_runs=5, resolution=resolution)
+npt_score_arr = npt_eval(
+    batch, K, num_samples=100, num_workers=10, num_runs=5, resolution=resolution
+)
 
-print(f"Model: {npt_score_arr[0][0]}\n NPT scores: {npt_score_arr[0][1]}") # NPT scores for the 1st model in the batch
+print(
+    f"Model: {npt_score_arr[0][0]}\n NPT scores: {npt_score_arr[0][1]}"
+)  # NPT scores for the 1st model in the batch
 ```
 
 Or use the command line (the output will be the result when resolution=K)

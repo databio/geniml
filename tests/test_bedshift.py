@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 from geniml.bedshift import BedshiftYAMLHandler, bedshift
 
 DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "bedshift")
