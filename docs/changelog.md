@@ -3,16 +3,18 @@
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format. 
 
 
-# [0.9.0] -- unreleased
+## [0.9.0] - 2026-11-20
 
-- Changed `geniml.search` to import lazily: importing `geniml.search` or `geniml.search.backends` no longer loads torch or fastembed
-- Changed `bedshift` to find overlaps with gtars `RegionSet` instead of GenomicRanges, which fixes `drop_from_file` with GenomicRanges 0.8.5 and later
-- Changed optional dependencies: `geniml[ml]` no longer installs qdrant-client, fastembed, scanpy or anndata. Use `geniml[search]` for vector search, `geniml[sc]` for single-cell, or `geniml[all]` for everything
+- Added `geniml.dataset`, a tokenized training dataset that reads region sets from bedbase or local BED files, for training with the Hugging Face `Trainer`
+- Added `__all__` to the public modules, so each module lists its public names
+- Changed `geniml.search` to load lazily, so importing it no longer loads torch or fastembed
+- Changed `bedshift` to find overlaps with gtars instead of GenomicRanges, which is faster and fixes `drop_from_file` with GenomicRanges 0.8.5 and later
+- Changed optional dependencies (breaking): `geniml[ml]` no longer installs qdrant-client, fastembed, scanpy or anndata. Use `geniml[search]` for vector search, `geniml[sc]` for single-cell, or `geniml[all]` for everything. `geniml[ml]` now installs `datasets`
 - Raised the minimum gtars version to 0.8.0
 - Fixed `Text2Vec` with a `v2v` model, which called a method `Vec2VecFNN` does not have
 - Fixed `len()` of a `QdrantBackend` with current qdrant-client
 - Fixed search evaluation (AUC-ROC) with numpy 2
-- Fixed importing `geniml.text2bednn` without matplotlib; it now loads only for plotting
+- Fixed importing `geniml.text2bednn` without matplotlib installed
 
 
 # [0.8.1] -- 2025-09-23
