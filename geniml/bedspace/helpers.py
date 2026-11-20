@@ -1,12 +1,14 @@
 import os
-import numpy as np
-import pandas as pd
-from geniml.io import RegionSet
 from multiprocessing import Pool
 from subprocess import check_output
+
+import numpy as np
+import pandas as pd
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
+
+from geniml.io import RegionSet
 
 
 def meta_preprocessing(meta_path, labels, input_path, mode, chunksize=10000):
@@ -109,9 +111,9 @@ def get_label_embedding(path_word_embedding, label_prefix):
     # Filter rows that contain the label prefix
     vectors = word_embedding[word_embedding[0].str.contains(label_prefix)]  # .reset_index()
     # Extract label vectors and labels
-    for l in range(len(vectors)):
-        label_vectors.append((list(vectors.iloc[l])[1:]))
-        labels.append(list(vectors.iloc[l])[0].replace(label_prefix, ""))
+    for idx in range(len(vectors)):
+        label_vectors.append((list(vectors.iloc[idx])[1:]))
+        labels.append(list(vectors.iloc[idx])[0].replace(label_prefix, ""))
     return label_vectors, labels
 
 

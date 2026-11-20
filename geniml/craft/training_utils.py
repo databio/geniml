@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import Dict, List
 
 import torch
 from torch.nn.utils.rnn import pad_sequence

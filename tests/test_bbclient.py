@@ -3,10 +3,11 @@ import os
 import botocore
 import genomicranges
 import pytest
+from gtars.models import RegionSet as GRegionSet
+
 from geniml.bbclient import BBClient
 from geniml.exceptions import TokenizedFileNotFoundInCacheError
 from geniml.io import BedSet
-from gtars.models import RegionSet as GRegionSet
 
 DATA_TEST_FOLDER = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

@@ -14,11 +14,8 @@ except ImportError:
     )
     DEP_HNSWLIB = False
 
-import yaml
-from ... import _LOGGER
-
-
 import numpy as np
+import yaml
 
 from geniml.search.const import (
     DEFAULT_DIM,
@@ -28,6 +25,7 @@ from geniml.search.const import (
     DEFAULT_M,
 )
 
+from ... import _LOGGER
 from ..utils import verify_load_inputs
 from .abstract import EmSearchBackend
 

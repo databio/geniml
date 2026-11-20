@@ -1,7 +1,7 @@
+import datetime
 import logging
 import os
 import subprocess
-import datetime
 
 from .const import DEFAULT_DIM, DEFAULT_LEARNING_RATE, DEFAULT_NUM_EPOCHS, PKG_NAME
 

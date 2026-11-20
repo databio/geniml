@@ -1,7 +1,7 @@
 from ubiquerg import VersionInHelpParser
 
 from ._version import __version__
-from .const import *
+from .const import MODULE_NAME
 
 
 def build_argparser(parser: VersionInHelpParser = None) -> VersionInHelpParser:
@@ -18,7 +18,7 @@ def build_argparser(parser: VersionInHelpParser = None) -> VersionInHelpParser:
     ###########################################################################
     if parser is None:
         parser = VersionInHelpParser(
-            prog=PKG_NAME,
+            prog=MODULE_NAME,
             version=__version__,
             description="%(prog)s - embed single-cell data as region vectors",
         )

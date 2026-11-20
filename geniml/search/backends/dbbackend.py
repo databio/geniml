@@ -279,7 +279,7 @@ class QdrantBackend(EmSearchBackend):
         Returns:
             The number of embeddings in the backend.
         """
-        return self.qd_client.get_collection(collection_name=self.collection).vectors_count
+        return self.qd_client.count(collection_name=self.collection, exact=True).count
 
     def retrieve_info(
         self, ids: Union[List[int], int, List[str], str], with_vectors: bool = False
@@ -323,7 +323,7 @@ class QdrantBackend(EmSearchBackend):
         for id_ in ids:
             try:
                 result = retrieval_dict[id_]
-            except:
+            except Exception:
                 _LOGGER.warning(f"Warning: no id stored in backend matches {id_}.")
                 continue
             result_dict = {"id": result.id, "payload": result.payload}

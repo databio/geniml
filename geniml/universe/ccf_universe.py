@@ -133,8 +133,8 @@ def get_uni(file, chrom, bedname):
         dist = np.absolute(uniq_val - cutoff)
         cutoff = uniq_val[dist.argmin()]
         pos = np.where(track_non_zero_sort == cutoff)[0]
-    f, l = pos[0] / len(track_non_zero_sort), pos[-1] / len(track_non_zero_sort)
-    q_cutoff = np.mean([f, l])
+    f, last = pos[0] / len(track_non_zero_sort), pos[-1] / len(track_non_zero_sort)
+    q_cutoff = np.mean([f, last])
     lower = np.quantile(track_non_zero_sort, max(0, q_cutoff - 0.2))
     upper = np.quantile(track_non_zero_sort, min(1, q_cutoff + 0.2))
     inter_pos = np.zeros(len(track), dtype=np.uint8)

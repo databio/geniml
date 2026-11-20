@@ -52,7 +52,7 @@ def anecdotal_search_from_hf_data(
             for file in metadata_dict[attribute][metadata]:
                 try:
                     search_results[result_files_id_dict[file]]["payload"][attribute] = metadata
-                except:
+                except Exception:
                     continue
 
     return search_results

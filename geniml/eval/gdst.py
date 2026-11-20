@@ -28,7 +28,6 @@ def sample_from_vocab(vocab: List[str], num_samples: int, seed: int = 42) -> Lis
     """
     chr_probs = {}
     region_dict = {}
-    num_vocab = len(vocab)
     # build stat from vocab
     for region in vocab:
         chr_str, position = region.split(":")
@@ -231,7 +230,6 @@ def gdst_eval(
 
     mean_gds = [np.array(r).mean() for r in gds_res]
     std_gds = [np.array(r).std() for r in gds_res]
-    models = [t[0] for t in batch]
     for i in range(len(mean_gds)):
         print(f"{batch[i][0]}\n GDST score (std): {mean_gds[i]:.4f} ({std_gds[i]:.4f}) \n")
     gds_arr = [(batch[i][0], gds_res[i]) for i in range(len(batch))]

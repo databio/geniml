@@ -33,9 +33,9 @@ def check_if_uni_sorted(universe):
 
 def check_if_uni_flexible(universe):
     with open(universe) as u:
-        l = u.readline()
-        l = l.split("\t")
-        if len(l) < 6:
+        line = u.readline()
+        line = line.split("\t")
+        if len(line) < 6:
             raise Exception("Universe is not flexible")
 
 

@@ -3,7 +3,6 @@ import math
 import os
 from typing import List, Tuple, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 try:
@@ -439,6 +438,8 @@ class Vec2VecFNN:
             title (Union[str, None]): The title in the image.
         """
 
+        import matplotlib.pyplot as plt
+
         epoch_range = range(1, len(self.most_recent_train["loss"]) + 1)
         train_loss = self.most_recent_train["loss"]
         plt.figure()
@@ -446,7 +447,7 @@ class Vec2VecFNN:
         try:
             valid_loss = self.most_recent_train["val_loss"]
             plt.plot(epoch_range, valid_loss, "b", label="Validation loss")
-        except:
+        except Exception:
             pass
         plt.title(title)
         plt.legend()

@@ -1,23 +1,22 @@
-from typing import Optional, Union, Tuple, List
+from typing import List, Optional, Tuple, Union
 
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from tqdm import tqdm
-
 from transformers import PreTrainedModel
-from transformers.utils import logging
 from transformers.modeling_outputs import (
-    MaskedLMOutput,
-    TokenClassifierOutput,
     BaseModelOutput,
+    MaskedLMOutput,
     SequenceClassifierOutput,
+    TokenClassifierOutput,
 )
+from transformers.utils import logging
 
 from .configuration_atacformer import AtacformerConfig
-from .modeling_utils import freeze_except_last_n
 from .functional import revgrad
+from .modeling_utils import freeze_except_last_n
 
 logger = logging.get_logger(__name__)
 
@@ -484,7 +483,6 @@ class AtacformerForCellClustering(EncodeTokenizedCellsMixin, AtacformerPreTraine
         attention_mask_negative: Optional[torch.Tensor] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], BaseModelOutput]:
-
         if attention_mask_anchor is None:
             attention_mask_anchor = torch.ones_like(input_ids_anchor, dtype=torch.bool)
         if attention_mask_positive is None:

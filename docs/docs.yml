@@ -26,6 +26,7 @@ nav:
       - Using atacformer with Apple Silicon: atacformer/local_compute/apple_silicon.md
   - How-to guides:
     - Train region2vec embeddings: tutorials/region2vec.md
+    - Build a training dataset from bedbase: tutorials/bedbase-training-dataset.md
     - Train BEDspace model:
       - Train BEDSpace embeddings: tutorials/bedspace.md
       - BEDspace results notebook: notebooks/bedspace-analysis.ipynb

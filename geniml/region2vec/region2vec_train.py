@@ -11,7 +11,7 @@ from gensim.models import Word2Vec
 from gensim.models.word2vec import LineSentence
 
 from . import utils
-from .const import *
+from .const import MAX_WAIT_TIME
 
 
 def find_dataset(data_folder: str) -> Union[str, int]:
@@ -65,7 +65,7 @@ def main(args: argparse.Namespace) -> None:
     else:
         train_alg = 0
         msg_model = "\033[94mUsing cbow, "
-    if args.hier_softmax == True or args.neg_samples == 0:
+    if args.hier_softmax or args.neg_samples == 0:
         hs = 1
         msg_model += "hierarchical softmax\033[00m"
     else:

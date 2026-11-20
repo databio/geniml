@@ -21,11 +21,14 @@ or install the latest version from the GitHub repository:
 pip install git+https://github.com/databio/geniml.git
 ```
 
-### To install Machine learning dependencies use this command:
+### Optional dependency groups
 
-From pypi:
 ```
-pip install geniml[ml]
+pip install geniml[ml]       # torch, transformers, gensim — for embeddings and ML models
+pip install geniml[sc]       # scanpy, anndata — for single-cell data processing
+pip install geniml[search]   # qdrant-client, fastembed — for vector search
+pip install geniml[all]      # everything (ml + sc + search)
+pip install geniml[ml,sc]    # ML + single-cell (for scembed, geneformer)
 ```
 
 

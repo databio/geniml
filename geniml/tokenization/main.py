@@ -2,9 +2,11 @@ import multiprocessing
 import os
 import shutil
 import subprocess
+from argparse import Namespace
 from typing import List
 
 import numpy as np
+
 from geniml.tokenization.split_file import split_file
 
 from .hard_tokenization_batch import main as hard_tokenization

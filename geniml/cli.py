@@ -553,7 +553,7 @@ def main(test_args=None):
                 _LOGGER.info(
                     "REGION COUNT | original: {}\tnew: {}\tchanged: {}\t\noutput file: {}".format(
                         bedshifter.original_num_regions,
-                        bedshifter.bed.shape[0],
+                        len(bedshifter.bed),
                         str(n),
                         outfile_base,
                     )

@@ -38,7 +38,6 @@ class BedshiftYAMLHandler(object):
           - drop_from_file:
             file: tests/test.bed
             rate: 0.1
-            delimiter: \\t
           - shift_from_file:
             file: bedshifted_test.bed
             rate: 0.3
@@ -78,6 +77,8 @@ class BedshiftYAMLHandler(object):
         """Perform perturbations from the YAML configuration file.
 
         Executes perturbations specified in the YAML config file in the order they were provided.
+        The 'delimiter' key is accepted in YAML configs for backwards compatibility but ignored
+        since RegionSet handles BED parsing internally.
 
         Returns:
             int: The total number of regions changed by all perturbations.
@@ -87,48 +88,36 @@ class BedshiftYAMLHandler(object):
         num_changed = 0
 
         for operation in operations:
+            # Strip 'delimiter' key if present (no longer used, RegionSet handles parsing)
+            op_keys = set(operation.keys()) - {"delimiter"}
+
             ##### add #####
-            if set(["add", "rate", "mean", "stdev"]) == set(list(operation.keys())):
+            if op_keys == {"add", "rate", "mean", "stdev"}:
                 rate = operation["rate"]
                 mean = operation["mean"]
                 std = operation["stdev"]
                 num_added = self.bedshifter.add(rate, mean, std)
                 num_changed += num_added
 
-            ##### add_from_file with no delimiter provided #####
-            elif set(["add_from_file", "file", "rate"]) == set(list(operation.keys())):
-                # fp = operation["file"]
+            ##### add_from_file #####
+            elif op_keys == {"add_from_file", "file", "rate"}:
                 fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     add_rate = operation["rate"]
                     num_added = self.bedshifter.add_from_file(fp, add_rate)
                     num_changed += num_added
                 else:
-                    self._logger.error("File '{}' does not exist.".format(fp))
-                    sys.exit(1)
-
-            ##### add_from_file with delimiter provided #####
-            elif set(["add_from_file", "file", "rate", "delimiter"]) == set(
-                list(operation.keys())
-            ):
-                fp = os.path.expandvars(operation["file"])
-                if os.path.isfile(fp):
-                    add_rate = operation["rate"]
-                    delimiter = operation["delimiter"]
-                    num_added = self.bedshifter.add_from_file(fp, add_rate, delimiter)
-                    num_changed += num_added
-                else:
-                    self._logger.error("File '{}' does not exist.".format(fp))
+                    self._LOGGER.error("File '{}' does not exist.".format(fp))
                     sys.exit(1)
 
             ##### drop #####
-            elif set(["drop", "rate"]) == set(list(operation.keys())):
+            elif op_keys == {"drop", "rate"}:
                 rate = operation["rate"]
                 num_dropped = self.bedshifter.drop(rate)
                 num_changed += num_dropped
 
-            ##### drop_from_file with no delimiter provided #####
-            elif set(["drop_from_file", "file", "rate"]) == set(list(operation.keys())):
+            ##### drop_from_file #####
+            elif op_keys == {"drop_from_file", "file", "rate"}:
                 fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     drop_rate = operation["rate"]
@@ -138,22 +127,8 @@ class BedshiftYAMLHandler(object):
                     self._LOGGER.error("File '{}' does not exist.".format(fp))
                     sys.exit(1)
 
-            ##### drop_from_file with delimiter provided #####
-            elif set(["drop_from_file", "file", "rate", "delimiter"]) == set(
-                list(operation.keys())
-            ):
-                fp = os.path.expandvars(operation["file"])
-                if os.path.isfile(fp):
-                    drop_rate = operation["rate"]
-                    delimiter = operation["delimiter"]
-                    num_dropped = self.bedshifter.drop_from_file(fp, drop_rate, delimiter)
-                    num_changed += num_dropped
-                else:
-                    self._LOGGER.error("File '{}' does not exist.".format(fp))
-                    sys.exit(1)
-
             ##### shift #####
-            elif set(["shift", "rate", "mean", "stdev"]) == set(list(operation.keys())):
+            elif op_keys == {"shift", "rate", "mean", "stdev"}:
                 rate = operation["rate"]
                 mean = operation["mean"]
                 std = operation["stdev"]
@@ -161,9 +136,7 @@ class BedshiftYAMLHandler(object):
                 num_changed += num_shifted
 
             ##### shift_from_file #####
-            elif set(["shift_from_file", "file", "rate", "mean", "stdev"]) == set(
-                list(operation.keys())
-            ):
+            elif op_keys == {"shift_from_file", "file", "rate", "mean", "stdev"}:
                 fp = os.path.expandvars(operation["file"])
                 if os.path.isfile(fp):
                     rate = operation["rate"]
@@ -175,30 +148,14 @@ class BedshiftYAMLHandler(object):
                     self._LOGGER.error("File '{}' does not exist.".format(fp))
                     sys.exit(1)
 
-            ##### shift_from_file with delimiter provided #####
-            elif set(["shift_from_file", "file", "rate", "mean", "stdev", "delimiter"]) == set(
-                list(operation.keys())
-            ):
-                fp = os.path.expandvars(operation["file"])
-                if os.path.isfile(fp):
-                    rate = operation["rate"]
-                    mean = operation["mean"]
-                    std = operation["stdev"]
-                    delimiter = operation["delimiter"]
-                    num_shifted = self.bedshifter.shift_from_file(fp, rate, mean, std, delimiter)
-                    num_changed += num_shifted
-                else:
-                    self._LOGGER.error("File '{}' does not exist.".format(fp))
-                    sys.exit(1)
-
             ##### cut #####
-            elif set(["cut", "rate"]) == set(list(operation.keys())):
+            elif op_keys == {"cut", "rate"}:
                 rate = operation["rate"]
                 num_cut = self.bedshifter.cut(rate)
                 num_changed += num_cut
 
             ##### merge #####
-            elif set(["merge", "rate"]) == set(list(operation.keys())):
+            elif op_keys == {"merge", "rate"}:
                 rate = operation["rate"]
                 num_merged = self.bedshifter.merge(rate)
                 num_changed += num_merged

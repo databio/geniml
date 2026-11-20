@@ -28,7 +28,7 @@ jobs:
         run: if [ -f requirements/requirements-test.txt ]; then uv pip install -r requirements/requirements-test.txt --system; fi
 
       - name: Install package
-        run: uv pip install .[ml] --system
+        run: uv pip install .[all] --system
 
       - name: Run pytest tests
         run: pytest tests -x -vv --remote-data
