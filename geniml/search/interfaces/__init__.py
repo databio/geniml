@@ -1,3 +1,23 @@
-from .bed2bed import BED2BEDSearchInterface  # noqa: F401
-from .mlfree import BiVectorSearchInterface  # noqa: F401
-from .text2bed import Text2BEDSearchInterface  # noqa: F401
+"""Lazily imported (see ``geniml.search``), so no model library loads on import."""
+
+from importlib import import_module
+
+_LAZY = {
+    "BED2BEDSearchInterface": ".bed2bed",
+    "BiVectorSearchInterface": ".mlfree",
+    "Text2BEDSearchInterface": ".text2bed",
+}
+
+__all__ = list(_LAZY)
+
+
+def __getattr__(name):
+    if name in _LAZY:
+        value = getattr(import_module(_LAZY[name], __name__), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(list(globals()) + __all__)
