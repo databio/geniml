@@ -1,13 +1,10 @@
 name: Lint
 
-on: 
-  pull_request:
-    branches: master
+on: [push, pull_request]
 
 jobs:
+  # Shared org-wide lint job (ruff check + ruff format --check); the ruff
+  # version is pinned in databio/actions so every repo moves together.
   lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-      - uses: psf/black@stable
+    name: Lint
+    uses: databio/actions/.github/workflows/ruff.yml@master

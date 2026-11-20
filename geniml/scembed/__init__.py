@@ -1,6 +1,6 @@
+from .annotation import AnnotationServer, Annotator
+from .exceptions import ModelNotTrainedError, ScembedException
 from .main import ScEmbed
-from .annotation import Annotator, AnnotationServer
-from .exceptions import ScembedException, ModelNotTrainedError
 
 __all__ = [
     "ScEmbed",

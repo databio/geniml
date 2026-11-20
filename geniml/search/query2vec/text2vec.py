@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 import logging
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 
-# from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from fastembed import TextEmbedding
-
 from ...const import PKG_NAME
-from ...text2bednn import Vec2VecFNN
+
+if TYPE_CHECKING:
+    from fastembed import TextEmbedding
+
+    from ...text2bednn import Vec2VecFNN
 
 _LOGGER = logging.getLogger(PKG_NAME)
 
@@ -21,6 +24,11 @@ class Text2Vec:
         :param v2v: a Vec2VecFNN (see geniml/text2bednn/text2bednn.py) or a model repository on Hugging Face
 
         """
+        # imported here so that importing geniml.search does not load fastembed or torch
+        from fastembed import TextEmbedding
+
+        from ...text2bednn import Vec2VecFNN
+
         # Set model that embed natural language
         if isinstance(model, TextEmbedding):
             self.text_embedder = model
@@ -50,4 +58,4 @@ class Text2Vec:
             return query_embedding
         else:
             # map the query string embedding into the embedding space of region sets
-            return self.v2v.encode(query_embedding)
+            return self.v2v.embedding_to_embedding(query_embedding)

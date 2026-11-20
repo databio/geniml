@@ -1,12 +1,14 @@
 import os
-import numpy as np
-import pandas as pd
-from geniml.io import RegionSet
 from multiprocessing import Pool
 from subprocess import check_output
+
+import numpy as np
+import pandas as pd
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
+
+from geniml.io import RegionSet
 
 
 def meta_preprocessing(meta_path, labels, input_path, mode, chunksize=10000):

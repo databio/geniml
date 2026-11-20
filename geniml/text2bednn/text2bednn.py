@@ -3,7 +3,6 @@ import math
 import os
 from typing import List, Tuple, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 try:
@@ -438,6 +437,8 @@ class Vec2VecFNN:
             plot_file_name (Union[str, None]): The file name of the png file.
             title (Union[str, None]): The title in the image.
         """
+
+        import matplotlib.pyplot as plt
 
         epoch_range = range(1, len(self.most_recent_train["loss"]) + 1)
         train_loss = self.most_recent_train["loss"]

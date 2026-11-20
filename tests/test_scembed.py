@@ -9,11 +9,12 @@ import pytest
 pytest.importorskip("scanpy")
 
 import scanpy as sc
-from geniml.region2vec.utils import Region2VecDataset
-from geniml.scembed.main import ScEmbed
 from gtars.tokenizers import Tokenizer
 from gtars.utils import write_tokens_to_gtok
 from tqdm import tqdm
+
+from geniml.region2vec.utils import Region2VecDataset
+from geniml.scembed.main import ScEmbed
 
 DATA_FOLDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 

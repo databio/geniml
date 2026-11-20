@@ -5,11 +5,6 @@ from typing import Dict, List
 import numpy as np
 import pytest
 
-# geniml.search.backends imports qdrant_client at module load; it lives in the
-# `search` optional-dep group. Skip the whole module when it isn't installed
-# (execution is further gated by --qdrant/--huggingface).
-pytest.importorskip("qdrant_client")
-
 from geniml.io import RegionSet
 from geniml.region2vec.main import Region2VecExModel
 from geniml.search import BED2BEDSearchInterface, BED2Vec, Text2BEDSearchInterface, Text2Vec
@@ -23,20 +18,6 @@ DATA_FOLDER_PATH = os.path.join(
 
 random.seed(100)
 np.random.seed(100)
-
-
-@pytest.fixture
-def bed_folder():
-    """
-    folder where testing bed files are stored
-    """
-
-    return os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "tests",
-        "data",
-        "hg38_sample",
-    )
 
 
 @pytest.fixture
@@ -276,7 +257,7 @@ def query_bed():
     """
     Returns: path to a BED file in testing data
     """
-    return "./data/s1_a.bed"
+    return os.path.join(DATA_FOLDER_PATH, "s1_a.bed")
 
 
 def cosine_similarity(vec1: np.array, vec2: np.array) -> float:
@@ -318,7 +299,7 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
             assert isinstance(result["payload"]["name"], str)
             assert isinstance(result["payload"]["metadata"], dict)
 
-    qd_search_backend = QdrantBackend(collection=bed_collection)
+    qd_search_backend = QdrantBackend.from_credentials(collection=bed_collection)
     # load data
     qd_search_backend.load(bed_embeddings, payloads=bed_payloads, ids=uuids)
     # test searching
@@ -362,9 +343,7 @@ def test_QdrantBackend(filenames, bed_embeddings, bed_payloads, bed_collection, 
     qd_search_backend.qd_client.delete_collection(qd_search_backend.collection)
 
 
-@pytest.mark.skipif(
-    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
-)
+@pytest.mark.skipif(not DEP_HNSWLIB, reason="This test require installation of hnswlib (optional)")
 def test_HNSWBackend_load(filenames, bed_embeddings, bed_payloads, bed_hnswb, ids):
     num_upload = len(filenames)
 
@@ -383,9 +362,7 @@ def test_HNSWBackend_load(filenames, bed_embeddings, bed_payloads, bed_hnswb, id
     assert len(bed_hnswb) == num_upload
 
 
-@pytest.mark.skipif(
-    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
-)
+@pytest.mark.skipif(not DEP_HNSWLIB, reason="This test require installation of hnswlib (optional)")
 @pytest.mark.dependency(depends=["test_HNSWBackend_load"])
 def test_HNSWBackend_search(filenames, bed_hnswb, int_ids):
     def search_result_check(dict_list: List[Dict], backend: HNSWBackend, with_dist: bool = False):
@@ -453,9 +430,7 @@ def test_HNSWBackend_search(filenames, bed_hnswb, int_ids):
     search_result_check(retrieval_results, bed_hnswb, False)
 
 
-@pytest.mark.skipif(
-    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
-)
+@pytest.mark.skipif(not DEP_HNSWLIB, reason="This test require installation of hnswlib (optional)")
 @pytest.mark.dependency(depends=["test_HNSWBackend_load"])
 def test_HNSWBackend_save(filenames, bed_hnswb, bed_embeddings, temp_bed_idx_path, temp_data_dir):
     # test saving from local
@@ -473,9 +448,7 @@ def test_HNSWBackend_save(filenames, bed_hnswb, bed_embeddings, temp_bed_idx_pat
     assert len(empty_hnswb.payloads) == 0
 
 
-@pytest.mark.skipif(
-    DEP_HNSWLIB == False, reason="This test require installation of hnswlib (optional)"
-)
+@pytest.mark.skipif(not DEP_HNSWLIB, reason="This test require installation of hnswlib (optional)")
 @pytest.mark.dependency(depends=["test_HNSWBackend_load"])
 @pytest.mark.skipif(
     "not config.getoption('--qdrant')",
@@ -534,11 +507,11 @@ def test_BiVectorBackend(
         search_result_test(search_results, rank)
 
     # test QdrantBackend
-    bed_backend = QdrantBackend(collection=bed_collection)
+    bed_backend = QdrantBackend.from_credentials(collection=bed_collection)
     # load data
     bed_backend.load(bed_embeddings, payloads=bed_payloads)
 
-    text_backend = QdrantBackend(collection=metadata_collection, dim=384)
+    text_backend = QdrantBackend.from_credentials(collection=metadata_collection, dim=384)
     text_backend.load(text_embeddings, payloads=metadata_payloads)
 
     bivec_qd_backend = BiVectorBackend(text_backend, bed_backend)
@@ -633,7 +606,7 @@ def test_text2bed_search_interface(
 
     vecs = np.array(vecs)
 
-    qd_search_backend = QdrantBackend(collection=bed_collection)
+    qd_search_backend = QdrantBackend.from_credentials(collection=bed_collection)
     qd_search_backend.load(vectors=vecs, payloads=payloads)
     # #
     text2vec = Text2Vec(nl_embed_repo, v2v_hf_repo)
@@ -699,7 +672,7 @@ def test_bed2bed_search_interface(
 
     vecs = np.array(vecs)
 
-    qd_search_backend = QdrantBackend(collection=bed_collection)
+    qd_search_backend = QdrantBackend.from_credentials(collection=bed_collection)
     qd_search_backend.load(vectors=vecs, payloads=payloads)
 
     bed2vec = BED2Vec(r2v_hf_repo)

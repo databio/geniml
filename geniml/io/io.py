@@ -1,16 +1,16 @@
 import gzip
 import logging
-import warnings
-from typing_extensions import deprecated
 import os
+import warnings
 from hashlib import md5
 from typing import Iterator, List, Union
 
 import numpy as np
 import pandas as pd
-from iranges import IRanges
-from ubiquerg import is_url
 from gtars.models import RegionSet as GRegionSet
+from iranges import IRanges
+from typing_extensions import deprecated
+from ubiquerg import is_url
 
 from .const import (
     MAF_CENTER_COL_NAME,

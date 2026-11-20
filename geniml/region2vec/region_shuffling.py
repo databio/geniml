@@ -7,6 +7,7 @@ import time
 from typing import List
 
 import numpy as np
+
 from geniml.region2vec import utils
 
 

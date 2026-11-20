@@ -1,7 +1,6 @@
 from ._version import VERSION
-
-from .modeling_craft import CraftModel, CraftForContrastiveLearning, CraftForGeneActivityPrediction
 from .configuration_craft import CraftConfig
+from .modeling_craft import CraftForContrastiveLearning, CraftForGeneActivityPrediction, CraftModel
 from .training_utils import DataCollatorForCraft, DataCollatorForCraftGeneActivityPrediction
 
 __all__ = [

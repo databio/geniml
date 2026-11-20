@@ -5,9 +5,9 @@ from typing import Union
 import numpy as np
 import scanpy as sc
 import torch
+from gtars.tokenizers import Tokenizer
 from huggingface_hub import hf_hub_download
 from rich.progress import track
-from gtars.tokenizers import Tokenizer
 
 from ..region2vec.const import (
     CONFIG_FILE_NAME,

@@ -3,12 +3,13 @@ import os
 import numpy as np
 import pytest
 import torch
-from geniml.region2vec.main import Region2Vec, Region2VecExModel
-from geniml.region2vec.utils import Region2VecDataset
 
 # from geniml.io.io import Region, RegionSet
 from gtars.models import Region, RegionSet
 from gtars.tokenizers import Tokenizer
+
+from geniml.region2vec.main import Region2Vec, Region2VecExModel
+from geniml.region2vec.utils import Region2VecDataset
 
 DATA_FOLDER_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests", "data"

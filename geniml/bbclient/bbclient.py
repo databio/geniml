@@ -2,17 +2,17 @@ import os
 from contextlib import suppress
 from logging import getLogger
 from typing import Dict, List, NoReturn, Union
-from typing_extensions import deprecated
+
 import requests
 import s3fs
 import zarr
-
+from gtars.models import RegionSet
 from pybiocfilecache import BiocFileCache
 from pybiocfilecache.exceptions import RnameExistsError
+from typing_extensions import deprecated
 from zarr import Array
 from zarr.errors import PathNotFoundError
 
-from gtars.models import RegionSet
 from ..exceptions import TokenizedFileNotFoundError, TokenizedFileNotFoundInCacheError
 from ..io.io import BedSet
 from .const import (
