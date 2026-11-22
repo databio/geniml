@@ -35,6 +35,7 @@ from .const import (
     EMBEDDING_DIM_KEY,
     EMBEDDING_DIM_KEY_OLD,
     LR_TYPES,
+    MAX_SENTENCE_LEN,
     MODEL_FILE_NAME,
     MODULE_NAME,
     UNIVERSE_FILE_NAME,
@@ -459,8 +460,16 @@ class Region2VecDataset:
         return [str(t) for t in tokens] if self.convert_to_str else tokens
 
     def __iter__(self):
+        """Yield each document in pieces of at most MAX_SENTENCE_LEN tokens.
+
+        gensim silently drops every token past MAX_SENTENCE_LEN in a sentence, so a
+        document with 50,000 regions would otherwise train on only its first 10,000.
+        Tokens are shuffled first, so splitting loses nothing a context window could see.
+        """
         for i in range(len(self)):
-            yield self[i]
+            tokens = self[i]
+            for start in range(0, len(tokens), MAX_SENTENCE_LEN):
+                yield tokens[start : start + MAX_SENTENCE_LEN]
 
     def __repr__(self):
         return f"Region2VecDataset(data={self.data}, shuffle={self.shuffle})"

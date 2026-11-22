@@ -15,6 +15,8 @@ DEFAULT_EPOCHS = 10
 DEFAULT_INIT_LR = 0.1  # https://github.com/databio/gitk/issues/6#issuecomment-1476273162
 DEFAULT_MIN_LR = 0.0001  # gensim default
 DEFAULT_NS_POWER = 0.75
+# gensim Word2Vec ignores every token past this one in a sentence (gensim MAX_WORDS_IN_BATCH)
+MAX_SENTENCE_LEN = 10000
 
 CONFIG_FILE_NAME = "config.yaml"
 MODEL_FILE_NAME = "checkpoint.pt"

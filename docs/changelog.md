@@ -3,6 +3,10 @@
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format. 
 
 
+## [Unreleased]
+
+- Fixed region2vec training on region sets with more than 10,000 regions. gensim ignores every token past the 10,000th in a sentence, so most of a large BED file was never trained on. Each file is now split into pieces of at most 10,000 tokens after shuffling
+
 ## [0.9.0] - 2026-11-20
 
 - Added `geniml.dataset`, a tokenized training dataset that reads region sets from bedbase or local BED files, for training with the Hugging Face `Trainer`
