@@ -1,6 +1,4 @@
 pytest
 pytest-remotedata
 pytest-mock
-black
 ruff
-isort
