@@ -1,6 +1,8 @@
 import os
 
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 import torch
 
@@ -8,6 +10,7 @@ import torch
 from gtars.models import Region, RegionSet
 from gtars.tokenizers import Tokenizer
 
+from geniml.region2vec.const import MAX_SENTENCE_LEN
 from geniml.region2vec.main import Region2Vec, Region2VecExModel
 from geniml.region2vec.utils import Region2VecDataset
 
@@ -35,6 +38,20 @@ def test_make_region2vec_dataset():
 
     first = next(iter(dataset))
     assert all([isinstance(x, int) for x in first])
+
+
+def test_region2vec_dataset_splits_long_documents(tmp_path):
+    from gensim.models.word2vec import MAX_WORDS_IN_BATCH
+
+    assert MAX_SENTENCE_LEN == MAX_WORDS_IN_BATCH
+
+    docs = [list(range(25_000)), list(range(10)), list(range(MAX_SENTENCE_LEN))]
+    path = tmp_path / "tokens.parquet"
+    pq.write_table(pa.table({"tokens": docs}), path)
+
+    chunks = list(Region2VecDataset(str(path)))
+    assert [len(c) for c in chunks] == [10_000, 10_000, 5_000, 10, 10_000]
+    assert sorted(t for c in chunks[:3] for t in c) == list(range(25_000))
 
 
 @pytest.mark.skip(reason="Model is too big to download in the runner, takes too long.")
